@@ -1,0 +1,86 @@
+import React from 'react';
+import {makeStyles, useTheme} from "@material-ui/core/styles/index";
+import TextField from '@material-ui/core/TextField';
+import Button from "@material-ui/core/es/Button/Button";
+import Dialog from '@material-ui/core/Dialog';
+import DialogActions from '@material-ui/core/DialogActions';
+import DialogContent from '@material-ui/core/DialogContent';
+import DialogContentText from '@material-ui/core/DialogContentText';
+import DialogTitle from '@material-ui/core/DialogTitle'
+import Autocomplete from '@material-ui/lab/Autocomplete';
+import Stepper from '@material-ui/core/Stepper';
+import Step from '@material-ui/core/Step';
+import StepLabel from '@material-ui/core/StepLabel';
+
+const useStyles = makeStyles(theme => ({
+    root: {
+        height: '100%',
+        display: 'flex',
+        flexWrap: 'wrap',
+    },
+    semanticContainer:{
+        display: 'flex',
+        flexDirection: 'row',
+        width:'100%'
+    },
+    formInput:{
+        margin : theme.spacing(1)
+    }
+}));
+
+
+export default function RegisterDialog({ontClasses, ontClass, setOntClass,graph,handleGraphChange,graphs,handleFetchService, handleFetchSemantic,openDialog, handleCloseDialog, ...props}) {
+
+    const classes = useStyles();
+    const theme = useTheme();
+
+    const [serviceURL, setServiceURL] = React.useState('');
+    const [semantic, setSemantic] = React.useState('');
+
+    const handleFetch = () => {
+    }
+
+    return (
+        <Dialog open={openDialog} fullWidth={true} maxWidth={'sm'} onClose={handleCloseDialog} aria-labelledby="form-dialog-register">
+            <DialogTitle id="form-dialog-title">Register Context Provider</DialogTitle>
+            <DialogContent>
+                <DialogContentText>
+                    Enter the following information:
+                </DialogContentText>
+                <form className={classes.root} noValidate autoComplete="off">
+                    <TextField onBlur={(e)=>handleFetchService(e.target.value)}  className={classes.formInput} id="service-url" value={serviceURL} label="Service URL" fullWidth={true} onChange={(e)=>setServiceURL(e.target.value)}/>
+                    <Autocomplete
+                        id="ont-graph"
+                        options={graphs}
+                        value={graph}
+                        onChange={(e,v)=>handleGraphChange(v)}
+                        getOptionLabel={option => option}
+                        style={{ width: '100%' }}
+                        renderInput={params => (
+                            <TextField {...params} label="Semantic Vocabulary" fullWidth />
+                        )}
+                    />
+                    <Autocomplete
+                        id="ont-class"
+                        options={ontClasses}
+                        value={ontClass}
+                        onChange={(e,v)=>setOntClass(v)}
+                        getOptionLabel={option => option}
+                        style={{ width: '100%' }}
+                        renderInput={params => (
+                            <TextField {...params} label="Entity Type"  fullWidth />
+                        )}
+                    />
+                </form>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleCloseDialog} color="primary">
+                    Cancel
+                </Button>
+                <Button onClick={handleFetch} color="primary">
+                    Process
+                </Button>
+            </DialogActions>
+        </Dialog>
+    )
+}

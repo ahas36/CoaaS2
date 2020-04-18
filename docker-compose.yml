@@ -1,0 +1,128 @@
+version: "3.1"
+services:
+    casm:
+        image: coaas/casm:latest
+        container_name: "casm"
+        ports:
+          - "8080:8080"
+          - "4848:4848"
+          - "8181:8181"
+          - "9009:9009"
+        environment:
+            - CQE_BROKER=cqe
+        links:
+            - cqc:cqc
+            - svm:svm
+        depends_on:
+            - svm
+            - cqc
+
+    svm:
+        image: coaas/svm:latest
+        container_name: "svm"
+        ports:
+          - "9191:9191"
+        restart: always
+        links:
+            - fuseki:fuseki
+        depends_on:
+            - fuseki
+
+    csi:
+        image: coaas/csi:latest
+        container_name: "csi"
+        ports:
+          - "8582:8582"
+        restart: always
+        links:
+            - postgres:postgres
+        depends_on:
+            - postgres
+
+
+    cqp:
+        image: coaas/cqp:latest
+        container_name: "cqp"
+        ports:
+          - "8585:8585"
+        restart: always
+
+
+    cqc:
+        image: coaas/cqc:latest
+        container_name: "cqc"
+        ports:
+          - "8484:8484"
+        restart: always
+        links:
+            - cqp:cqp
+            - sqem:sqem
+            - csi:csi
+        depends_on:
+            - cqp
+            - sqem
+            - csi
+
+    sqem:
+        image: coaas/sqem:latest
+        container_name: "sqem"
+        ports:
+          - "8686:8686"
+        restart: always
+        depends_on:
+          - mongodb
+        links:
+          - mongodb
+
+
+    mongodb:
+        image: mongo:latest
+        container_name: "mongodb"
+        environment:
+          - MONGO_DATA_DIR=/data/db
+          - MONGO_LOG_DIR=/dev/null
+          - MONGODB_USER=alex
+          - MONGODB_PASS=contextstorage_17
+        volumes:
+          #for mac
+          - ./data/db:/data/db
+          #for windows
+          #- /userlogin/pgdata:/var/lib/postgresql/data
+        ports:
+            - 27017:27017
+        command: mongod --logpath=/dev/null # --quiet
+
+    mongo-seed:
+        build: ./mongo-seed
+        restart: on-failure
+        depends_on:
+          - mongodb
+        links:
+          - mongodb
+
+    fuseki:
+        container_name: fuseki
+        image: stain/jena-fuseki
+        environment:
+          - ADMIN_PASSWORD=admin
+          - JVM_ARGS=-Xmx2g
+        ports:
+         - 27018:3030
+        volumes:
+         - ./data/jena:/data/jena
+#         - /userlogin/jena:/var/lib/jena/data
+
+    postgres:
+        image: postgres:9.6.1
+        container_name: "postgres"
+        environment:
+          - POSTGRES_USER=coaas
+          - POSTGRES_PASSWORD=PostCoaaS2020
+          - POSTGRES_DB=coaas
+        volumes:
+          - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+          - ./pgdata:/var/lib/postgresql/data
+          #for windows
+          #- /userlogin/pgdata:/var/lib/postgresql/data
+        ports:
+            - 5433:5432

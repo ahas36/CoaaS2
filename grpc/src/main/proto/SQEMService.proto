@@ -1,0 +1,59 @@
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_generic_services = true;
+
+package au.coaas.sqem.proto;
+
+import "CQPService.proto";
+
+
+message SQEMResponse {
+    
+    string status = 1;
+    string body = 2;
+}
+
+
+message ContextRequest
+{
+    au.coaas.cqp.proto.ContextEntityType et = 1;
+    repeated au.coaas.cqp.proto.ContextAttribute returnAttributes = 2;
+    au.coaas.cqp.proto.Condition condition = 3;
+}
+
+message RegisterEntityRequest
+{
+    string json = 1;
+    au.coaas.cqp.proto.ContextEntityType et = 2;
+}
+
+message UpdateEntityRequest
+{
+    string json = 1;
+    au.coaas.cqp.proto.ContextEntityType et = 2;
+    string key = 3;
+}
+
+
+message RegisterContextServiceRequest
+{
+    string json = 1;
+}
+
+
+message UpdateContextServiceStatusRequest
+{
+    string status = 1;
+    string id = 2;
+}
+
+
+service SQEMService {
+    rpc handleContextRequest (ContextRequest) returns (SQEMResponse);
+    rpc RegisterContextEntity (RegisterEntityRequest) returns (SQEMResponse);
+    rpc UpdateContextEntity (UpdateEntityRequest) returns (SQEMResponse);
+    rpc RegisterContextService (RegisterContextServiceRequest) returns (SQEMResponse);
+    rpc updateContextServiceStatus (UpdateContextServiceStatusRequest) returns (SQEMResponse);
+}

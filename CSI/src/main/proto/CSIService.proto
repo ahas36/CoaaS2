@@ -1,0 +1,35 @@
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_generic_services = true;
+
+package au.coaas.csi.proto;
+
+
+message CSIResponse {
+    
+    string status = 1;
+    string body = 2;
+}
+
+
+message ContextService
+{
+    string json = 1;
+    string mongoID = 2;
+}
+
+message ContextServiceInvokerRequest
+{
+    ContextService contextService = 1;
+    map<string,string> params = 2;
+}
+
+
+service CSIService {
+    rpc fetch (ContextServiceInvokerRequest) returns (CSIResponse);
+    rpc createFetchJob (ContextService) returns (CSIResponse);
+    rpc updateFetchJob (ContextService) returns (CSIResponse);
+    rpc cancelFetchJob (ContextService) returns (CSIResponse);
+}

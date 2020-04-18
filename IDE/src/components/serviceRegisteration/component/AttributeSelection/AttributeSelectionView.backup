@@ -1,0 +1,135 @@
+import React, {useEffect,useState} from 'react';
+import {makeStyles, useTheme} from "@material-ui/core/styles/index";
+import MUIDataTable from "mui-datatables";
+import {
+    createMuiTheme,
+    MuiThemeProvider
+} from "@material-ui/core/styles";
+
+const useStyles = makeStyles(theme => ({
+    root: {
+        minHeight: '80vh',
+        maxHeight: '80vh',
+        overflow: 'hidden'
+    },
+    content: {
+        height: 'calc(80vh - 205px)',
+        overflow: 'hidden'
+    },
+    semanticContainer: {
+        display: 'flex',
+        flexDirection: 'row',
+        width: '100%'
+    },
+    button: {
+        marginRight: theme.spacing(1),
+    },
+    instructions: {
+        marginTop: theme.spacing(1),
+        marginBottom: theme.spacing(1),
+    },
+}));
+
+function getSteps() {
+    return ['Enter Service Information', 'Map to Semantic Vocabulary', 'Register'];
+}
+
+export default function AttributeSelection({scondary,baseURL,graph,ontClass, ...props}) {
+
+    const classes = useStyles();
+    const theme = useTheme();
+
+    const [terms,setTerms] = useState([]);
+
+    useEffect(() => {
+
+        if(terms.length != 0)
+            return;
+        fetch(`${baseURL}/sv/terms/${encodeURIComponent(graph)}/${encodeURIComponent(ontClass)}`, {method: 'GET'})
+            .then((response) => {
+                return response.json();
+            })
+            .then((myJson) => {
+                setTerms(myJson);
+            });
+    });
+
+    const columns = [
+        {name: "subject", label: "Title"},
+        {name: "range", label: "range", options: {display: 'false'}},
+    ];
+    let counter = 0;
+    const options = {
+        filter: false,
+        selectableRowsOnClick: true,
+        responsive: 'scrollMaxHeight',
+        selectableRows: 'multiple',
+        print: false,
+        download: false,
+        disableToolbarSelect: true,
+        expandableRows: true,
+        expandableRowsOnClick: true,
+        renderExpandableRow: (rowData, rowMeta) => {
+
+            const rangeData = rowData[1];
+            const rangeLastIndex = rangeData.lastIndexOf('/');
+            const rangeUrl = rangeData.trim().substring(0, rangeLastIndex);
+            const range = rangeData.trim().substring(rangeLastIndex + 1);
+            return <div style={{width: '100%'}}><AttributeSelection scondary={true} baseURL={baseURL} graph={rangeUrl} ontClass={range}/></div>
+        },
+        customToolbarSelect: (selectedRows, displayData, setSelectedRows) => (
+            <span></span>
+        ),
+        viewColumns: false,
+        onRowClick: (rowData, rowMeta) => {
+        }
+    };
+
+    if(scondary)
+    {
+        options.rowsPerPage = 500;
+        options.customHeadRender = () => <span></span>;
+        options.customFooter = () => <span></span> ;
+        options.customToolbarSelect = () => <span></span> ;
+        options.customToolbar = () => <span></span> ;
+        options.responsive = 'scrollFullHeight';
+    }
+
+    const [semantic, setSemantic] = React.useState('');
+    const [expanded, setExpanded] = React.useState([]);
+
+    const handleChange = (event, nodes) => {
+        setExpanded(nodes);
+    };
+
+    const myTheme = createMuiTheme({
+        overrides: {
+            MuiTableHead: {
+                root: {
+                    //display: 'none'
+                }
+            },
+            MUIDataTable: {
+                responsiveScrollMaxHeight: {
+                    maxHeight: 'calc(80vh - 323px)',
+                    height: 'calc(80vh - 323px)'
+                }
+            }
+        }
+    });
+
+
+    const getTerms = () => {
+        return terms != null ? Object.values(terms) : [];
+    }
+
+
+    return (
+        <MuiThemeProvider theme={myTheme}>
+            {terms != null &&
+            <MUIDataTable key={terms.length} title={"Select Attributes"}
+                          data={getTerms()} columns={columns} options={options}/>
+            }
+        </MuiThemeProvider>
+    )
+}

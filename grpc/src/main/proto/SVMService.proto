@@ -6,9 +6,7 @@ option java_generic_services = true;
 
 package au.coaas.svm.proto;
 
-message ListOfString {
-   repeated string value = 1;
-}
+import "CoaaSBase.proto";
 
 message SemanticVocabURL
 {
@@ -23,6 +21,12 @@ message SemanticVocabClass
 
 message SemanticVocabRegisterationResponse
 {
+     int32 code = 1;
+     string body = 2;
+}
+
+message SemanticVocabResponse
+{
     int32 code = 1;
     string body = 2;
 }
@@ -35,10 +39,11 @@ message Terms
 message empty {}
 
 service SVMService {
-    rpc getClasses (SemanticVocabURL) returns (ListOfString);
+    rpc getClasses (SemanticVocabURL) returns (au.coaas.base.proto.ListOfString);
     rpc registerVocabulary (SemanticVocabClass) returns (SemanticVocabRegisterationResponse);
     rpc getTerms (SemanticVocabClass) returns (Terms);
-    rpc getParentClasses (SemanticVocabClass) returns (ListOfString);
-    rpc getGraphs (empty) returns (ListOfString);
+    rpc getRawGraph (SemanticVocabURL) returns (SemanticVocabResponse);
+    rpc getParentClasses (SemanticVocabClass) returns (au.coaas.base.proto.ListOfString);
+    rpc getGraphs (empty) returns (au.coaas.base.proto.ListOfString);
 }
 

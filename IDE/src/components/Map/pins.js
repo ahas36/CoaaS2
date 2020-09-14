@@ -36,14 +36,40 @@ export default class Pins extends PureComponent {
             let lastValue = 0;
             for(let item in data)
             {
-                if(data[item].results!=null)
+                if(data[item].results!=null && data[item].results.length)
                 {
                     typeLength.push(lastValue + data[item].results.length);
                     lastValue = data[item].results.length;
                     result.push(...data[item].results);
+                }else{
+                    typeLength.push(lastValue + 1);
+                    lastValue = 1;
+                    result.push(data[item]);
                 }
             }
             return result;
+        }
+
+        const generatePin = (item,index) =>{
+            try{
+                return <Marker key={`marker-${index}`} longitude={parseFloat(item.geo.longitude)} latitude={parseFloat(item.geo.latitude)}>
+                    <svg
+                        height={SIZE}
+                        viewBox="0 0 24 24"
+                        style={{
+                            cursor: 'pointer',
+                            fill: getColour(index),
+                            stroke: 'none',
+                            transform: `translate(${-SIZE / 2}px,${-SIZE}px)`
+                        }}
+                        onClick={() => onClick(item)}
+                    >
+                        <path d={ICON}/>
+                    </svg>
+                </Marker>;
+            }catch(ex){
+                return;
+            }
         }
 
         const getColour = (index) =>
@@ -59,21 +85,7 @@ export default class Pins extends PureComponent {
         return (
             <React.Fragment>
                 {data!=null && parse(data).map((item, index) => (
-                    <Marker key={`marker-${index}`} longitude={parseFloat(item.geo.longitude)} latitude={parseFloat(item.geo.latitude)}>
-                        <svg
-                            height={SIZE}
-                            viewBox="0 0 24 24"
-                            style={{
-                                cursor: 'pointer',
-                                fill: getColour(index),
-                                stroke: 'none',
-                                transform: `translate(${-SIZE / 2}px,${-SIZE}px)`
-                            }}
-                            onClick={() => onClick(item)}
-                        >
-                            <path d={ICON}/>
-                        </svg>
-                    </Marker>
+                    generatePin(item,index)
                     ))}
             </React.Fragment>
         )

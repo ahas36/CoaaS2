@@ -51,6 +51,7 @@ export default class ResultMap extends Component {
     }
 
     componentDidUpdate(prevProps, prevState) {
+
         const result = this.props.result;
         if (this.props.result != prevProps.result) {
             let lat = 0;
@@ -59,26 +60,37 @@ export default class ResultMap extends Component {
             for (let item in result) {
                 try {
                     let entities = result[item].results;
-                    for (let instance in entities) {
+                    if (entities) {
+                        for (let instance in entities) {
+                            try {
+                                lat += parseFloat(entities[instance].geo.latitude);
+                                lng += parseFloat(entities[instance].geo.longitude);
+                                counter++;
+                            } catch (e) {
+
+                            }
+
+                        }
+                    } else {
                         try {
-                            lat += parseFloat(entities[instance].geo.latitude);
-                            lng += parseFloat(entities[instance].geo.longitude);
+                            lat += parseFloat(result[item].geo.latitude);
+                            lng += parseFloat(result[item].geo.longitude);
                             counter++;
-                        }
-                        catch (e) {
+                        } catch (e) {
 
                         }
-
                     }
-                }
-                catch (e) {
+
+                } catch (e) {
                 }
             }
+            if (counter > 0) {
+                let viewport = this.state.viewport;
+                viewport.latitude = lat / counter;
+                viewport.longitude = lng / counter;
+                this.setState({viewport});
+            }
 
-            let viewport = this.state.viewport;
-            viewport.latitude = lat / counter;
-            viewport.longitude = lng / counter;
-            this.setState({viewport});
         }
     }
 

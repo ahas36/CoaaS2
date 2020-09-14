@@ -17,11 +17,14 @@ public class JobSchedulerManager {
         schedulerFactory = new StdSchedulerFactory();
         scheduler = schedulerFactory.getScheduler();
 
+        scheduler.clear();
+
         JobDetail job = JobBuilder.newJob(FetchJob.class)
                 .withIdentity("fetch-job", "cs-fetch-job")
                 .storeDurably()
                 .build();
-        scheduler.addJob(job,true);
+
+        scheduler.addJob(job, true);
     }
 
     public static JobSchedulerManager getInstance() throws SchedulerException {
@@ -43,35 +46,53 @@ public class JobSchedulerManager {
     private Scheduler scheduler;
 
 
+    private long convertTime2MilliSecond(JSONObject timeObject) {
+        switch (timeObject.getString("unit")) {
+            case "s":
+                return timeObject.getInt("value") * 1000;
+            case "min":
+                return timeObject.getInt("value") * 1000 * 60;
+            case "hour":
+                return timeObject.getInt("value") * 1000 * 60 * 60;
+            case "day":
+                return timeObject.getInt("value") * 1000 * 60 * 60 * 24;
+            default:
+                return timeObject.getLong("value");
+        }
+    }
+
     public CSIResponse registerJob(ContextService cs) throws SchedulerException {
         if (!scheduler.isStarted()) {
             throw new SchedulerException("Scheduler not started");
         }
 
-       JobDataMap jobDataMap = new JobDataMap();
+        JobDataMap jobDataMap = new JobDataMap();
 
-        jobDataMap.put("cs",cs.getJson());
+        jobDataMap.put("cs", cs.getJson());
 
         JSONObject contextService = new JSONObject(cs.getJson());
 
-        jobDataMap.put("key",contextService.getJSONObject("info").get("key").toString());
+        jobDataMap.put("key", contextService.getJSONObject("sla").get("key").toString());
 
         String ontClass = contextService.getJSONObject("info").getString("ontClass").trim();
-        ontClass = ontClass.substring(1,ontClass.length()-1);
+        ontClass = ontClass.substring(1, ontClass.length() - 1);
         String[] ontClassSplit = ontClass.split("/");
-        ontClass = ontClassSplit[ontClassSplit.length-1];
-        jobDataMap.put("ontClass",ontClass);
+        ontClass = ontClassSplit[ontClassSplit.length - 1];
+        jobDataMap.put("ontClass", ontClass);
 
         String graph = contextService.getJSONObject("info").getString("graph").trim();
-        graph = graph.substring(1,graph.length()-1);
-        jobDataMap.put("graph",graph);
+
+        long updateFrequency = this.convertTime2MilliSecond(contextService.getJSONObject("sla").getJSONObject("updateFrequency"));
+
+        graph = graph.substring(1, graph.length() - 1);
+        jobDataMap.put("graph", graph);
 
         SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
                 .withIdentity(cs.getMongoID(), "cs-fetch-trigger")
                 .forJob("fetch-job", "cs-fetch-job")
                 .usingJobData(jobDataMap)
                 .withSchedule(SimpleScheduleBuilder.simpleSchedule().repeatForever()
-                .withIntervalInSeconds(2))
+                        .withIntervalInMilliseconds(updateFrequency))
                 .startNow()
                 .build();
 

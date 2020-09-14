@@ -49,11 +49,44 @@ message UpdateContextServiceStatusRequest
     string id = 2;
 }
 
+message ContextServiceRequest
+{
+    au.coaas.cqp.proto.ContextEntityType et = 1;
+    repeated string params = 2;
+}
+
+message EntityTypeRequest
+{
+    string name = 1;
+}
+
+message SituationFunctionRequest
+{
+    string name = 1;
+}
+
+message Empty {}
+
+message RegisterSituationRequest {
+    string raw = 1;
+    string title = 2;
+    au.coaas.cqp.proto.SituationFunction sFunction = 3;
+}
+
 
 service SQEMService {
     rpc handleContextRequest (ContextRequest) returns (SQEMResponse);
     rpc RegisterContextEntity (RegisterEntityRequest) returns (SQEMResponse);
     rpc UpdateContextEntity (UpdateEntityRequest) returns (SQEMResponse);
+    rpc getAllEntityTypes (Empty) returns (SQEMResponse);
+    rpc clearEntityType (EntityTypeRequest) returns (SQEMResponse);
+    rpc removeEntityType (EntityTypeRequest) returns (SQEMResponse);
     rpc RegisterContextService (RegisterContextServiceRequest) returns (SQEMResponse);
     rpc updateContextServiceStatus (UpdateContextServiceStatusRequest) returns (SQEMResponse);
+    rpc discoverMatchingServices (ContextServiceRequest) returns (SQEMResponse);
+    rpc getAllContextServices (Empty) returns (SQEMResponse);
+    rpc getAllSituations (Empty) returns (SQEMResponse);
+    rpc getAllSubscriptions (Empty) returns (SQEMResponse);
+    rpc registerSituationFunction (RegisterSituationRequest) returns (SQEMResponse);
+    rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
 }

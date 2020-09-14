@@ -5,8 +5,8 @@
  */
 package au.coaas.cqp.util;
 
+import au.coaas.base.proto.ListOfString;
 import au.coaas.cqp.proto.CDQLQuery;
-import au.coaas.cqp.proto.ListOfString;
 
 /**
  *

@@ -8,7 +8,6 @@ package au.coaas.csi.proto;
 
 
 message CSIResponse {
-    
     string status = 1;
     string body = 2;
 }

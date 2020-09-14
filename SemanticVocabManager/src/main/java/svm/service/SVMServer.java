@@ -7,6 +7,7 @@ package svm.service;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import svm.finder.SemanticVocabularyManger;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -20,6 +21,7 @@ public class SVMServer {
 
     static public void main (String [] args) throws IOException, InterruptedException
     {
+        SemanticVocabularyManger.init();
         log.info("Starting");
         Server server = ServerBuilder.forPort(9191).addService(new SVMServiceImpl()).build();
         server.start();

@@ -98,6 +98,8 @@ class CodeEditorView extends React.Component{
         parents: []
     }};
 
+
+
     addTerm = (item) =>
     {
 

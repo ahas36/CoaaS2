@@ -1,14 +1,13 @@
 package au.coaas.csi.fetch;
 
 import au.coaas.cqp.proto.ContextEntityType;
-import au.coaas.csi.client.SQEMChannel;
+import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.UpdateEntityRequest;
-import org.json.JSONObject;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;

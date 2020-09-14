@@ -71,7 +71,7 @@ function AttributeTree({serviceSampleResponse, onDelete,onEdit,onAdd, ...props})
         return <TreeItem key={nodeId} nodeId={nodeId++}
                          label={
                              <span className={classes.treeItem}>
-                                 <Typography className={classes.treeItemText}>{item.key.subject + ' : ' + item.value}</Typography>
+                                 <Typography className={classes.treeItemText}>{item.key.subject + ' : ' + item.value + '(' + item.sampleValue + ')'}</Typography>
                                  <ButtonGroup variant="contained" color="primary" aria-label="contained primary button group">
                                      <IconButton aria-label="delete" className={classes.margin} onClick={(e)=>{e.stopPropagation(); onDelete(item,index,parent);}}>
                                          <DeleteIcon fontSize="small"/>

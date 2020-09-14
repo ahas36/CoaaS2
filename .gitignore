@@ -2,3 +2,11 @@
 pgdata
 data
 .idea
+/PhSHI/target/
+/pubsub-master
+/PhSHI
+/pgdata
+/matching-algorithm-master
+/lib
+/GrafanaWrapper
+/data

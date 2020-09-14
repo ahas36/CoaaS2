@@ -12,12 +12,20 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class ContextEntityHandler {
+
+
+//    private static Document preprocess
 
     public static SQEMResponse createEntity(RegisterEntityRequest registerRequest) {
         try {
@@ -38,6 +46,68 @@ public class ContextEntityHandler {
         }
     }
 
+    public static SQEMResponse updateEntities(UpdateEntityRequest updateRequest) {
+        String json = updateRequest.getJson();
+        if (json.trim().startsWith("[")) {
+            JSONArray items = new JSONArray(json);
+            int numberOfThreads = 10;
+
+            int numberOfItemsPerTask = 100;
+
+            int numberOfIterations = (int) (items.length() / numberOfItemsPerTask);
+
+            ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+
+            UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder().setKey(updateRequest.getKey()).setEt(updateRequest.getEt());
+
+            AtomicInteger error = new AtomicInteger();
+            AtomicInteger success = new AtomicInteger();
+            for (int factor = 0; factor < numberOfIterations; factor++) {
+                int finalFactor = factor;
+                executorService.submit(() -> {
+                    int start = numberOfItemsPerTask * finalFactor;
+                    int end = Math.min(items.length(), start + numberOfItemsPerTask);
+                    for (int i = start; i < end; i++) {
+                        SQEMResponse sqemResponse = updateEntity(builder.setJson(items.getJSONObject(i).toString()).build());
+                        if (sqemResponse.getStatus().equals("200")) {
+                            success.getAndIncrement();
+                        } else {
+                            error.getAndIncrement();
+                        }
+                    }
+                });
+            }
+
+            executorService.shutdown();
+
+            try {
+                executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+            } catch (InterruptedException e) {
+
+            }
+            JSONObject body = new JSONObject();
+            body.put("success", success.intValue());
+            body.put("error", error.intValue());
+            return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
+        } else {
+            return updateEntity(updateRequest);
+        }
+    }
+
+
+    private static Object getValueByKey(String item, String key) {
+        String[] keys = key.split("\\.");
+        Object value = new JSONObject(item);
+        for (String k : keys) {
+            if (k.matches("\\d+")) {
+                value = ((JSONArray) value).get(Integer.valueOf(k));
+            } else {
+                value = ((JSONObject) value).get(k);
+            }
+        }
+        return value;
+    }
+
     public static SQEMResponse updateEntity(UpdateEntityRequest updateRequest) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
@@ -53,15 +123,19 @@ public class ContextEntityHandler {
 
             for (String attributeName : attributes.keySet()) {
                 Object item = attributes.get(attributeName);
-                updateFields.append(attributeName, item.toString());
+                if (item instanceof JSONArray || item instanceof JSONObject) {
+                    updateFields.append(attributeName, Document.parse(item.toString()));
+                } else {
+                    updateFields.append(attributeName, item);
+                }
             }
 
             BasicDBObject query = new BasicDBObject();
 
-            JSONObject key = new JSONObject(updateRequest.getKey());
+            JSONArray key = new JSONArray(updateRequest.getKey());
 
-            for (String keyName : key.keySet()) {
-                query.put(keyName, key.get(keyName));
+            for (int i = 0; i < key.length(); i++) {
+                query.put(key.getString(i), getValueByKey(updateRequest.getJson(), key.getString(i)));
             }
 
             UpdateResult ur = collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
@@ -80,4 +154,36 @@ public class ContextEntityHandler {
     }
 
 
+    public static SQEMResponse remove(String name) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("mydb");
+        MongoCollection<Document> collection = db.getCollection(name);
+        collection.drop();
+        return SQEMResponse.newBuilder().setStatus("200").build();
+    }
+
+    public static SQEMResponse clear(String name) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("mydb");
+        MongoCollection<Document> collection = db.getCollection(name);
+        DeleteResult deleteResult = collection.deleteMany(new BasicDBObject());
+        JSONObject jo = new JSONObject();
+        jo.put("DeletedCount", deleteResult.getDeletedCount());
+        return SQEMResponse.newBuilder().setStatus("200").setBody(jo.toString()).build();
+    }
+
+    public static SQEMResponse getAllTypes() {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("mydb");
+        MongoIterable<String> collection = db.listCollectionNames();
+        MongoCursor<String> cursor = collection.iterator();
+        JSONArray ja = new JSONArray();
+        while (cursor.hasNext()) {
+            String table = cursor.next();
+            if (table.equals("contextService"))
+                continue;
+            ja.put(table);
+        }
+        return SQEMResponse.newBuilder().setBody(ja.toString()).setStatus("200").build();
+    }
 }

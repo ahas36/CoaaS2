@@ -1,0 +1,3 @@
+au/coaas/grafanawrapper/ApplicationConfig.class
+au/coaas/grafanawrapper/GenericResource.class
+au/coaas/grafanawrapper/Timeseries.class

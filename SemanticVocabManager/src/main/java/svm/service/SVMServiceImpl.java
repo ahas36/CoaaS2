@@ -5,8 +5,10 @@
  */
 package svm.service;
 
+import au.coaas.base.proto.ListOfString;
 import au.coaas.svm.proto.*;
-import svm.jenna.ConnectionManager;
+import svm.finder.SemanticVocabularyManger;
+import svm.jenna.JennaManager;
 
 import java.util.List;
 import java.util.logging.Logger;
@@ -23,33 +25,38 @@ public class SVMServiceImpl extends SVMServiceGrpc.SVMServiceImplBase {
         return ListOfString.newBuilder().addAllValue(list).build();
     }
 
+
+    //ToDo check for json schema
     @Override
-    public void getClasses(au.coaas.svm.proto.SemanticVocabURL request,
-                           io.grpc.stub.StreamObserver<au.coaas.svm.proto.ListOfString> responseObserver) {
+    public void registerVocabulary(au.coaas.svm.proto.SemanticVocabClass request,
+                                   io.grpc.stub.StreamObserver<au.coaas.svm.proto.SemanticVocabRegisterationResponse> responseObserver) {
         try {
-            responseObserver.onNext(this.toListOfString(ConnectionManager.getClasses(request.getUrl())));
+            responseObserver.onNext(JennaManager.register(request.getOntologyClass(),request.getUrl()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }
         responseObserver.onCompleted();
     }
 
+    //ToDo check for json schema
     @Override
-    public void registerVocabulary(au.coaas.svm.proto.SemanticVocabClass request,
-                                   io.grpc.stub.StreamObserver<au.coaas.svm.proto.SemanticVocabRegisterationResponse> responseObserver) {
+    public void getParentClasses(au.coaas.svm.proto.SemanticVocabClass request,
+                              io.grpc.stub.StreamObserver<ListOfString> responseObserver) {
         try {
-            responseObserver.onNext(ConnectionManager.register(request.getOntologyClass(),request.getUrl()));
+            responseObserver.onNext(this.toListOfString(JennaManager.getParentClasses(request.getUrl(),request.getOntologyClass())));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }
         responseObserver.onCompleted();
     }
+
+
 
     @Override
     public void getTerms(au.coaas.svm.proto.SemanticVocabClass request,
                          io.grpc.stub.StreamObserver<au.coaas.svm.proto.Terms> responseObserver) {
         try {
-            responseObserver.onNext(Terms.newBuilder().setBody(ConnectionManager.getTerms(request.getUrl(),request.getOntologyClass()).toString()).build());
+            responseObserver.onNext(Terms.newBuilder().setBody(SemanticVocabularyManger.getTerms(request.getUrl(),request.getOntologyClass()).toString()).build());
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }
@@ -57,10 +64,10 @@ public class SVMServiceImpl extends SVMServiceGrpc.SVMServiceImplBase {
     }
 
     @Override
-    public void getParentClasses(au.coaas.svm.proto.SemanticVocabClass request,
-                              io.grpc.stub.StreamObserver<au.coaas.svm.proto.ListOfString> responseObserver) {
+    public void getClasses(au.coaas.svm.proto.SemanticVocabURL request,
+                           io.grpc.stub.StreamObserver<ListOfString> responseObserver) {
         try {
-            responseObserver.onNext(this.toListOfString(ConnectionManager.getParentClasses(request.getUrl(),request.getOntologyClass())));
+            responseObserver.onNext(this.toListOfString(SemanticVocabularyManger.getClasses(request.getUrl())));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }
@@ -69,9 +76,9 @@ public class SVMServiceImpl extends SVMServiceGrpc.SVMServiceImplBase {
 
     @Override
     public void getGraphs(au.coaas.svm.proto.empty request,
-                                 io.grpc.stub.StreamObserver<au.coaas.svm.proto.ListOfString> responseObserver) {
+                                 io.grpc.stub.StreamObserver<ListOfString> responseObserver) {
         try {
-            responseObserver.onNext(this.toListOfString(ConnectionManager.getGraphs()));
+            responseObserver.onNext(this.toListOfString(SemanticVocabularyManger.getOntology()));
         } catch (Exception ex) {
             log.info(ex.getMessage());
             responseObserver.onError(ex);

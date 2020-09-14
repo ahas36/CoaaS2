@@ -5,10 +5,12 @@
  */
 package au.coaas.cqp.parser;
 
+import au.coaas.base.proto.ListOfString;
 import au.coaas.cqp.exception.CDQLSyntaxtErrorException;
+import au.coaas.cqp.proto.CDQLConstruct;
 import au.coaas.cqp.proto.CDQLQuery;
+import au.coaas.cqp.proto.CDQLType;
 import au.coaas.cqp.proto.ContextEntity;
-import au.coaas.cqp.proto.ListOfString;
 import au.coaas.cqp.util.AddError;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -22,7 +24,8 @@ import java.util.*;
  */
 public class MainParser {
 
-    public static Object parse(String stringQuery) throws CDQLSyntaxtErrorException {
+    public static CDQLConstruct parse(String stringQuery) throws CDQLSyntaxtErrorException {
+        CDQLConstruct.Builder cdqlConstructBuilder = CDQLConstruct.newBuilder();
         StringBuilder res = new StringBuilder();
         ANTLRInputStream input = new ANTLRInputStream(stringQuery); // create a lexer that feeds off of input CharStream
         CdqlLexer lexer = new CdqlLexer(input); // create a buffer of tokens pulled from the lexer
@@ -62,12 +65,11 @@ public class MainParser {
                 }
                 throw new CDQLSyntaxtErrorException(error);
             }
-
-            return query.build();
+            return cdqlConstructBuilder.setType(CDQLType.QUERY).setQuery(query.build()).build();
         }
-//        else if (stringCDQLBaseVisitor.getContextFunction() != null) {
-//            return stringCDQLBaseVisitor.getContextFunction();
-//        }
+        else if (stringCDQLBaseVisitor.getContextFunction() != null) {
+            return cdqlConstructBuilder.setType(CDQLType.FUNCTION_DEF).setFunction(stringCDQLBaseVisitor.getContextFunction().build()).build();
+        }
         return null;
     }
 

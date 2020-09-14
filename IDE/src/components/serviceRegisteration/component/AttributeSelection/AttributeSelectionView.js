@@ -47,7 +47,7 @@ const useStyles = makeStyles(theme => ({
     selectEmpty: {
         marginTop: theme.spacing(2),
     },
-    formContainer :{
+    formContainer: {
         display: 'flex',
         flexWrap: 'wrap',
     }
@@ -58,12 +58,15 @@ function getSteps() {
     return ['Enter Service Information', 'Map to Semantic Vocabulary', 'Register'];
 }
 
-export default function AttributeSelection({attributes, setAttributes,serviceSampleResponse, baseURL, graph, ontClass, ...props}) {
+export default function AttributeSelection({attributes, resultTag, setAttributes, serviceSampleResponse, baseURL, graph, ontClass, ...props}) {
 
     const classes = useStyles();
     const theme = useTheme();
     const [treeKey, setTreeKey] = useState(0);
+    const [sampleResponse, setSampleResponse] = useState({});
     const [selectedType, setSelectedType] = useState("");
+
+    const [schema, setSchema] = useState(null);
 
     const [typeSelectDialogOpen, setTypeSelectDialogOpen] = useState({
         isOpen: false,
@@ -98,9 +101,43 @@ export default function AttributeSelection({attributes, setAttributes,serviceSam
         });
     }
 
+    useEffect(() => {
 
-    const addAttribute = (key, value, index, parent) => {
+        fetch(`${baseURL}/sv/terms/${encodeURIComponent(graph)}/${encodeURIComponent(ontClass)}`, {method: 'GET'})
+            .then((response) => {
+                return response.json();
+            })
+            .then((myJson) => {
+                if (myJson.svmType === 'json') {
+                    setSchema(myJson);
+                }
+            });
 
+    }, [ontClass, graph]);
+
+
+    useEffect(() => {
+        try{
+            let tempServiceSampleResponse;
+            if(resultTag){
+                tempServiceSampleResponse = JSON.parse(JSON.stringify(serviceSampleResponse[resultTag]));
+            }else {
+                tempServiceSampleResponse = JSON.parse(JSON.stringify(serviceSampleResponse));
+            }
+            if (serviceSampleResponse instanceof Array) {
+                if (serviceSampleResponse.length > 0) {
+                    setSampleResponse(tempServiceSampleResponse[0]);
+                }
+            } else {
+                setSampleResponse(tempServiceSampleResponse);
+            }
+        }catch (e) {
+            setSampleResponse({});
+        }
+
+    }, [serviceSampleResponse,resultTag]);
+
+    const addAttribute = (key, value, index, parent, GeoJson, hasValue, sampleValue) => {
         if (parent != null) {
             let attr = attributes[parent[0]].attrs;
             let lastParent = attributes[parent[0]];
@@ -114,21 +151,51 @@ export default function AttributeSelection({attributes, setAttributes,serviceSam
                 attr = lastParent.attrs;
             }
 
+            if (lastParent.GeoJson) {
+
+                let sv = JSON.stringify(sampleValue).replace(/"/gi, '').trim();
+                const isLat = /^(\+|-)?(?:90(?:(?:\.0{1,20})?)|(?:[0-9]|[1-8][0-9])(?:(?:\.[0-9]{1,20})?))$/g.test(sv);
+                const isLng = /^(\+|-)?(?:180(?:(?:\.0{1,20})?)|(?:[0-9]|[1-9][0-9]|1[0-7][0-9])(?:(?:\.[0-9]{1,20})?))$/g.test(sv);
+                if (key.subject.toLowerCase().indexOf("lat") !== -1 && isLat) {
+                    lastParent.type = "Point";
+                    if (lastParent.coordinates) {
+                        lastParent.coordinates[1] = value;
+                    } else {
+                        lastParent.coordinates = [];
+                        lastParent.coordinates[1] = value;
+                    }
+                } else if (key.subject.toLowerCase().indexOf("lng") !== -1 || key.subject.toLowerCase().indexOf("lon") !== -1 && isLng) {
+                    lastParent.type = "Point";
+                    if (lastParent.coordinates) {
+                        lastParent.coordinates[0] = value;
+                    } else {
+                        lastParent.coordinates = [];
+                        lastParent.coordinates[0] = value;
+                    }
+                }
+            }
+
             if (index != -1) {
+                attr[index].hasValue = hasValue;
+                attr[index].GeoJson = GeoJson;
                 attr[index].key = key;
                 attr[index].value = value;
+                attr[index].sampleValue = sampleValue;
             }
             else {
-                attr.push({key, value});
+                attr.push({key, value, GeoJson, hasValue, sampleValue});
             }
         }
         else {
             if (index != -1) {
+                attributes[index].hasValue = hasValue;
                 attributes[index].key = key;
                 attributes[index].value = value;
+                attributes[index].GeoJson = GeoJson;
+                attributes[index].sampleValue = sampleValue;
             }
             else {
-                attributes.push({key, value});
+                attributes.push({key, value, GeoJson, hasValue, sampleValue});
             }
         }
         setTreeKey(treeKey + 1);
@@ -162,8 +229,8 @@ export default function AttributeSelection({attributes, setAttributes,serviceSam
             attr = attributes[index];
         }
 
-        itemValue.key = attr.key;
-        itemValue.value = attr.value;
+        // itemValue.key = attr.key;
+        // itemValue.value = attr.value;
 
         if (Array.isArray(semanticData)) {
             setTypeSelectDialogOpen({
@@ -175,7 +242,7 @@ export default function AttributeSelection({attributes, setAttributes,serviceSam
                     graph: g,
                     parent: parent,
                     index: index,
-                    item: itemValue
+                    item: attr
                 }
             });
         }
@@ -190,11 +257,10 @@ export default function AttributeSelection({attributes, setAttributes,serviceSam
                 graph: g,
                 parent: parent,
                 index: index,
-                item: itemValue
+                item: attr
             });
         }
     }
-
 
     const getSemanticData = (rangeData) => {
         if (Array.isArray(rangeData)) {
@@ -320,9 +386,10 @@ export default function AttributeSelection({attributes, setAttributes,serviceSam
             </TreeView>
 
             <AddAttributeDialog addAttribute={addAttribute}
-                                serviceSampleResponse={serviceSampleResponse}
+                                serviceSampleResponse={sampleResponse}
                                 baseURL={baseURL} openDialog={dialogOpen}
-                                handleCloseDialog={closeDialog}/>
+                                handleCloseDialog={closeDialog}
+                                schema={schema}/>
 
             <Dialog open={typeSelectDialogOpen.isOpen} onClose={handleCloseTypeSelectDialog}
                     aria-labelledby="type-select-dialog">
@@ -340,9 +407,10 @@ export default function AttributeSelection({attributes, setAttributes,serviceSam
                                 id="demo-simple-select"
                                 value={selectedType}
                                 onChange={handleChangeType}
-                                input={<Input />}
+                                input={<Input/>}
                             >
-                                {typeSelectDialogOpen.items.map(item => <MenuItem value={item}>{item.range}</MenuItem>)}
+                                {typeSelectDialogOpen.items.map(item => <option style={{'cursor': 'pointer'}}
+                                                                                value={item}>{item.range}</option>)}
                             </Select>
                         </FormControl>
                     </form>

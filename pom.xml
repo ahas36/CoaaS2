@@ -29,6 +29,7 @@
         <module>SME</module>
         <module>CSI</module>
         <module>grpc</module>
+        <module>CRE</module>
     </modules>
 
     <dependencies>
@@ -47,6 +48,18 @@
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20190722</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-web-api</artifactId>
+            <version>7.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 

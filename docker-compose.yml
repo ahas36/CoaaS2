@@ -4,10 +4,9 @@ services:
         image: coaas/casm:latest
         container_name: "casm"
         ports:
-          - "8080:8080"
-          - "4848:4848"
-          - "8181:8181"
-          - "9009:9009"
+          - "8070:8080"
+          - "4838:4848"
+          - "8171:8181"
         environment:
             - CQE_BROKER=cqe
         links:
@@ -17,11 +16,20 @@ services:
             - svm
             - cqc
 
+    cre:
+        image: coaas/cre:latest
+        container_name: "cre"
+        ports:
+          - "8583"
+          - "8008:8008"
+        restart: always
+
     svm:
         image: coaas/svm:latest
         container_name: "svm"
         ports:
-          - "9191:9191"
+          - "9191"
+          - "8004:8004"
         restart: always
         links:
             - fuseki:fuseki
@@ -32,19 +40,23 @@ services:
         image: coaas/csi:latest
         container_name: "csi"
         ports:
-          - "8582:8582"
+          - "8582"
+          - "8002:8002"
         restart: always
         links:
             - postgres:postgres
+            - sqem:sqem
         depends_on:
             - postgres
+            - sqem
 
 
     cqp:
         image: coaas/cqp:latest
         container_name: "cqp"
         ports:
-          - "8585:8585"
+          - "8585"
+          - "8007:8007"
         restart: always
 
 
@@ -52,7 +64,8 @@ services:
         image: coaas/cqc:latest
         container_name: "cqc"
         ports:
-          - "8484:8484"
+          - "8484"
+          - "8001:8001"
         restart: always
         links:
             - cqp:cqp
@@ -67,14 +80,25 @@ services:
         image: coaas/sqem:latest
         container_name: "sqem"
         ports:
-          - "8686:8686"
+          - "8686"
+          - "8003:8003"
         restart: always
         depends_on:
           - mongodb
         links:
           - mongodb
 
-
+#    grafana:
+#        image: grafana/grafana:5.1.0
+#        expose:
+#          - "3000"
+#        ports:
+#          - "3000:3000"
+#        environment:
+#          - GF_INSTALL_PLUGINS=grafana-simple-json-datasource
+#        user: "104"
+#        network_mode: "bridge"
+#
     mongodb:
         image: mongo:latest
         container_name: "mongodb"

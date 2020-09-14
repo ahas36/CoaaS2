@@ -48,12 +48,22 @@
             <artifactId>mongo-java-driver</artifactId>
             <version>3.7.0</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
+            <version>3.11.1</version>
+        </dependency>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20180813</version>
             <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>au.coaas</groupId>
+            <artifactId>grpc</artifactId>
+            <version>2.0.1</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

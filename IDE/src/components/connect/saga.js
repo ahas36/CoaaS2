@@ -23,7 +23,7 @@ import showError from '../../utils/ShowError';
 
 export function* connect(data) {
     yield put(sendingRequest(true));
-    const requestURL = `${data}/health`;
+    const requestURL = `${data}/generic/health`;
 
     try {
         let outcome = yield call(request, requestURL,

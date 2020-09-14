@@ -30,13 +30,16 @@ import showError from '../../utils/ShowError';
 export function* fetchService(data) {
     yield put(sendingRequest(true));
     try {
-        let outcome = yield call(request, data,
+        var proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+        let outcome = yield call(request, proxyUrl+data,
             {
+                redirect: 'follow',
                 method: 'GET',
                 headers: {'Accept': 'application/json'}
             });
         yield put(fetchServiceSuccess(outcome));
     } catch (error) {
+        console.log(error);
         yield put(fetchServiceFailure());
         yield put(showNotification({
             type: 'error',
@@ -86,6 +89,7 @@ export function* fetchGraphsFlow() {
 export function* fetchClasses(data) {
     yield put(sendingRequest(true));
     try {
+
         let outcome = yield call(request, `${data.baseURL}/sv/classes/${encodeURIComponent(data.graph.trim().substring(1,data.graph.length-1))}`,
             {
                 method: 'GET',
@@ -143,7 +147,6 @@ export function* fetchTermsFlow() {
 export function* registerServiceDescription(data) {
     yield put(sendingRequest(true));
     try {
-debugger;
         let outcome = yield call(request, `${data.baseURL}/service/register`,
             {
                 method: 'POST', // *GET, POST, PUT, DELETE, etc.
@@ -155,12 +158,17 @@ debugger;
                 },
                 redirect: 'follow', // manual, *follow, error
                 referrerPolicy: 'no-referrer', // no-referrer, *client
-                body: JSON.stringify(data.serviceDescription)
-            });
+                body: data.serviceDescription
+            },'plain');
+        yield put(showNotification({
+            type: 'shipped',
+            message: 'Service Registered',
+            category: 'service'
+        }));
         yield put(registerServiceSuccess());
     } catch (error) {
+        const e = error;
         yield put(registerServiceFailure());
-        yield call(showError,error.response,'service');
         yield put(showNotification({
             type: 'error',
             message: 'Unable to Register the service',

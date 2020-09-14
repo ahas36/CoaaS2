@@ -7,6 +7,7 @@ import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextRequest;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.util.CollectionDiscovery;
+import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -61,6 +62,8 @@ public class ContextRequestHandler {
                         return Double.valueOf(token.getStringValue().replaceAll("\"", ""));
                     case String:
                         return token.getStringValue().replaceAll("\"", "");
+                    case Boolean:
+                        return Boolean.parseBoolean(token.getStringValue());
                     default:
                         return token.getStringValue().replaceAll("\"", "");
                 }
@@ -297,56 +300,59 @@ public class ContextRequestHandler {
 
         Stack<ExtendedCdqlConditionToken> stack = new Stack<>();
 
-        ExtendedCdqlConditionToken extendedToken = new ExtendedCdqlConditionToken(RPNcondition.poll());
 
-        CdqlConditionToken token = extendedToken.getCdqlConditionToken();
-        try {
-            while (token != null) {
-                switch (token.getType()) {
-                    case Attribute:
-                        conditionContextAttribiutes.add((String) tokenToString(token));
-                        stack.push(new ExtendedCdqlConditionToken(token));
-                        break;
-                    case Constant:
-                        stack.push(extendedToken);
-                        break;
-                    case Function:
+        Bson finalQuery = new BasicDBObject();
+        if (!RPNcondition.isEmpty()) {
+            ExtendedCdqlConditionToken extendedToken = new ExtendedCdqlConditionToken(RPNcondition.poll());
+            CdqlConditionToken token = extendedToken.getCdqlConditionToken();
+            try {
+                while (token != null) {
+                    switch (token.getType()) {
+                        case Attribute:
+                            conditionContextAttribiutes.add((String) tokenToString(token));
+                            stack.push(new ExtendedCdqlConditionToken(token));
+                            break;
+                        case Constant:
+                            stack.push(extendedToken);
+                            break;
+                        case Function:
 
-                        for (Operand argument : token.getFunctionCall().getArgumentsList()) {
-                            if (argument.getType() == OperandType.CONTEXT_ATTRIBUTE) {
-                                ContextAttribute ca = argument.getContextAttribute();
-                                String location_prefix = ca.getAttributeName();
-                                if (ca.getPrefix() != null && !ca.getPrefix().isEmpty()) {
-                                    location_prefix = ca.getPrefix();
+                            for (Operand argument : token.getFunctionCall().getArgumentsList()) {
+                                if (argument.getType() == OperandType.CONTEXT_ATTRIBUTE) {
+                                    ContextAttribute ca = argument.getContextAttribute();
+                                    String location_prefix = ca.getAttributeName();
+                                    if (ca.getPrefix() != null && !ca.getPrefix().isEmpty()) {
+                                        location_prefix = ca.getPrefix();
+                                    }
+                                    conditionContextAttribiutes.add(location_prefix);
                                 }
-                                conditionContextAttribiutes.add(location_prefix);
                             }
-                        }
-                        switch (token.getFunctionCall().getFunctionName().toLowerCase()) {
-                            case "distance":
-                                processDistanceToken(token, stack, RPNcondition, entityType);
-                                break;
-                        }
-                        break;
-                    case Operator:
-                        processSimpleLogicToken(token.getStringValue(), stack, RPNcondition);
-                        break;
+                            switch (token.getFunctionCall().getFunctionName().toLowerCase()) {
+                                case "distance":
+                                    processDistanceToken(token, stack, RPNcondition, entityType);
+                                    break;
+                            }
+                            break;
+                        case Operator:
+                            processSimpleLogicToken(token.getStringValue(), stack, RPNcondition);
+                            break;
+                    }
+                    extendedToken = new ExtendedCdqlConditionToken(RPNcondition.poll());
+                    token = extendedToken.getCdqlConditionToken();
                 }
-                extendedToken = new ExtendedCdqlConditionToken(RPNcondition.poll());
-                token = extendedToken.getCdqlConditionToken();
+            } catch (Exception e) {
+                return createErrorResponse(e.getMessage());
             }
-        } catch (Exception e) {
-            return createErrorResponse(e.getMessage());
-        }
 
-        Bson finalQuery = stack.pop().getBson();
+            finalQuery = stack.pop().getBson();
+        }
 
         MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("mydb");
         MongoCollection<Document> entityCollection = db.getCollection(CollectionDiscovery.discover(contextRequest.getEt()));
         final JSONArray finalResultJsonArr = new JSONArray();
         String monogQueryString = finalQuery.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson();
 
-       // LOG.info(monogQueryString);
+        // LOG.info(monogQueryString);
 
         Block<Document> printBlock = new Block<Document>() {
             @Override
@@ -361,8 +367,9 @@ public class ContextRequestHandler {
             }
         };
 
-        entityCollection.find(finalQuery).limit(10).forEach(printBlock);
-
+        //ToDo add limit and sort function
+//        entityCollection.find(finalQuery).limit(10).forEach(printBlock);
+        entityCollection.find(finalQuery).forEach(printBlock);
         return SQEMResponse.newBuilder().setStatus("200").setBody(finalResultJsonArr.toString()).build();
     }
 

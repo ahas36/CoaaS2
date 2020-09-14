@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useRef} from 'react';
 import {makeStyles, useTheme} from "@material-ui/core/styles/index";
 import TextField from '@material-ui/core/TextField';
 import Button from "@material-ui/core/es/Button/Button";
@@ -31,7 +31,7 @@ import Tab from '@material-ui/core/Tab';
 import AceEditor from 'react-ace'
 import "ace-builds/src-noconflict/mode-json";
 import "ace-builds/src-noconflict/theme-github";
-
+import findIndex from 'lodash/findIndex';
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -81,32 +81,23 @@ function getSteps() {
     return ['Enter Service Information', 'Map to Semantic Vocabulary', 'Meta data', 'Review'];
 }
 
-export default function RegisterDialog({handleRegisterService, baseURL, ontClassDetails, serviceSampleResponse, terms, ontClasses, handleGraphChange, graphs, handleFetchService, handleFetchSemantic, openDialog, handleCloseDialog, ...props}) {
+export default function RegisterDialog({serviceDescription,setServiceDescription,handleRegisterService, baseURL, ontClassDetails, serviceSampleResponse, terms, ontClasses, handleGraphChange, graphs, handleFetchService, handleFetchSemantic, openDialog, handleCloseDialog, ...props}) {
 
     const classes = useStyles();
     const theme = useTheme();
+
+    const aceEditorInfo = useRef(null);
+    const aceEditorAttrs = useRef(null);
+    const aceEditorSLA = useRef(null);
+
 
     const [semantic, setSemantic] = React.useState('');
     const [expanded, setExpanded] = React.useState([]);
     const [graphClasses, setGraphClasses] = React.useState([]);
     const [tab, setTab] = React.useState([0, 0, 0]);
     const [selectedLeaf, setSelectedLeaf] = React.useState(null);
-    const [serviceDescription, setServiceDescription] = React.useState({
-        info: {
-            serviceURL: 'https://data.melbourne.vic.gov.au/resource/vh2v-4nfs.json',
-            ontClass: '',
-            graph: '',
-            params: []
-        },
-        sla: {
-            cache: false,
-            cost: {unit: 'aud', value: 0},
-            updateFrequency: {unit: 's', value: 120},
-            autoFetch: true,
-            freshness: {unit: 's', value: 120},
-        },
-        attributes: []
-    });
+
+
     const [rangeSelectDialog, setRangeSelectDialog] = React.useState({
         isOpen: false,
         tempParams: null,
@@ -144,6 +135,8 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
 
 
     const serviceURLChanged = (e) => {
+        debugger;
+
         const regex = /{(.*?)}/gm;
         let m;
         const newParms = [];
@@ -157,7 +150,13 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
             // The result can be accessed through the `m`-variable.
             m.forEach((match, groupIndex) => {
                 if (match.startsWith('{')) {
-                    newParms.push({name: match, g: '', class: '', term: [], value: '', key: index++, termParent: ''});
+                    let itemIndex = findIndex(serviceDescription.info.params,(i)=>i.name == match);
+                    if(itemIndex!=-1){
+                        newParms.push(serviceDescription.info.params[itemIndex]);
+                        index++;
+                    }else{
+                        newParms.push({name: match, g: '', class: '', term: [], value: '', key: index++, termParent: ''});
+                    }
                 }
             });
         }
@@ -206,7 +205,8 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
             }
         }
         catch (e) {
-
+            debugger;
+            return "asd";
         }
         return rangeData;
     }
@@ -255,6 +255,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
     }
 
     const changeParam = (index, key, value, noUpdate) => {
+        debugger;
         const tempParams = JSON.parse(JSON.stringify(serviceDescription.info.params));
         tempParams[index][key] = value;
         if (key == 'class') {
@@ -278,7 +279,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
             tempParams[index].termParent = '';
             tempParams[index].term = [];
         }
-        else if ('term') {
+        else if (key == 'term') {
             if (tempParams[index].term.length > 0) {
                 if (tempParams[index].term.length < serviceDescription.info.params[index].term.length) {
                     let i = 0;
@@ -334,7 +335,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
 
     const fetchClassTerms = (parent, callback) => {
         try {
-            debugger;
+
             const item = getTermAndClass(parent);
             fetch(`${baseURL}/sv/terms/${encodeURIComponent(item.domain)}/${encodeURIComponent(item.range)}`, {method: 'GET'})
                 .then((response) => {
@@ -352,12 +353,39 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
 
     const handleChangeTab = (newTab, step) => {
         const tempTap = JSON.parse(JSON.stringify(tab));
+        if(tempTap[step] == 1 && newTab == 0)
+        {
+            try{
+                switch (step) {
+                case 0:
+                    setServiceDescription({
+                        ...serviceDescription,
+                        info: JSON.parse(aceEditorInfo.current.editor.getValue())
+                    })
+                    break;
+                case 1:
+                    setServiceDescription({
+                        ...serviceDescription,
+                        attributes: JSON.parse(aceEditorAttrs.current.editor.getValue())
+                    })
+                    break;
+                case 2:
+                    setServiceDescription({
+                        ...serviceDescription,
+                        sla: JSON.parse(aceEditorSLA.current.editor.getValue())
+                    })
+                    break;
+            }
+            }catch (e) {
+                return;
+            }
+        }
         tempTap[step] = newTab;
         setTab(tempTap);
     };
 
     const getCandidateKOptions = (attrs, prefix = '') => {
-        debugger;
+
         let result = [];
         if (attrs == null)
             return result;
@@ -397,6 +425,23 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                     </Paper>
 
                     {tab[step] == 0 && <form className={classes.tabContent} noValidate autoComplete="off">
+
+
+                        <TextField id="service-name" value={serviceDescription.info.name} label="Service Name"
+                                   fullWidth={true}
+                                   onChange={(e) => setServiceDescription({
+                                       ...serviceDescription,
+                                       info: {...serviceDescription.info, name: e.target.value}
+                                   })}/>
+
+                        <TextField id="service-desc" value={serviceDescription.info.description} label="Service Description"
+                                   fullWidth={true}
+                                   multiline
+                                   onChange={(e) => setServiceDescription({
+                                       ...serviceDescription,
+                                       info: {...serviceDescription.info, description: e.target.value}
+                                   })}/>
+
                         <TextField id="service-url" value={serviceDescription.info.serviceURL} label="Service URL"
                                    fullWidth={true}
                                    onChange={serviceURLChanged}/>
@@ -437,7 +482,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                                 options={classTerms[p.termParent] != null ? classTerms[p.termParent] : []}
                                 value={p.term}
                                 onChange={(e, v) => {
-                                    debugger;
+
                                     changeParam(index, 'term', v)
                                 }}
                                 getOptionLabel={option => getTerm(option.subject)}
@@ -452,7 +497,6 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                                     <TextField {...params} label="Term" fullWidth/>
                                 )}
                             />
-
 
                             <TextField style={{flex: .1}} value={p.value}
                                        onChange={(e) => changeParam(index, 'value', e.target.value, true)}
@@ -490,12 +534,21 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                                 <TextField {...params} label="Entity Type" fullWidth/>
                             )}
                         />
+
+                        <TextField id="service-tag" value={serviceDescription.info.resultTag} label="Result Tag"
+                                   fullWidth={true}
+                                   onChange={(e) => setServiceDescription({
+                                       ...serviceDescription,
+                                       info: {...serviceDescription.info, resultTag: e.target.value==''?null:e.target.value}
+                                   })}/>
+
                     </form>
                     }
                     {tab[step] == 1 &&
                     <AceEditor
                         mode="json"
                         className={classes.editor}
+                        ref={aceEditorInfo}
                         defaultValue={JSON.stringify(serviceDescription.info, null, 2)}
                         theme="github"
                         name="editor-info"
@@ -524,6 +577,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                                                                attributes: attributes
                                                            })}
                                                            serviceSampleResponse={serviceSampleResponse}
+                                                           resultTag={serviceDescription.info.resultTag}
                                                            secondary={false}
                                                            baseURL={baseURL} graph={ontClassDetails.g}
                                                            ontClass={ontClassDetails.c}/>}
@@ -532,6 +586,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                     <AceEditor
                         mode="json"
                         className={classes.editor}
+                        ref={aceEditorAttrs}
                         defaultValue={JSON.stringify(serviceDescription.attributes, null, 2)}
                         theme="github"
                         name="editor-attributes"
@@ -666,6 +721,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                     {tab[step] == 1 &&
                     <AceEditor
                         mode="json"
+                        ref={aceEditorSLA}
                         className={classes.editor}
                         defaultValue={JSON.stringify(serviceDescription.sla, null, 2)}
                         theme="github"
@@ -679,7 +735,7 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
                 return <div className={classes.content}><AceEditor
                     mode="json"
                     onLoad={(editor, v2, v3, v4) => {
-                        debugger;
+
                         reviewEditor = editor
                     }}
                     className={classes.editorReview}
@@ -722,6 +778,13 @@ export default function RegisterDialog({handleRegisterService, baseURL, ontClass
     };
 
     const handleBack = () => {
+        if(activeStep == 3){
+            try{
+                setServiceDescription(JSON.parse(reviewEditor.getValue()));
+            }catch (e) {
+
+            }
+        }
         setActiveStep(prevActiveStep => prevActiveStep - 1);
     };
 

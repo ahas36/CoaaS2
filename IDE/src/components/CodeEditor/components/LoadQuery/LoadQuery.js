@@ -28,11 +28,13 @@ export default function LoadQuery(props) {
     const classes = useStyles();
     const theme = useTheme();
 
-    const [cdql, setCDQL] = React.useState('');
+    const [cdql, setCDQL] = React.useState({cdql: '', index: null});
     const [queries, setQueries] = React.useState(store.get("savedCDQL", []));
 
     //constructor
-    useEffect(() => setQueries(store.get("savedCDQL", [])), [props.open]);
+    useEffect(() => {
+        setQueries(store.get("savedCDQL", []));
+    }, [props.open]);
 
 
     const columns = [
@@ -52,14 +54,13 @@ export default function LoadQuery(props) {
         viewColumns: false,
         rowsExpanded: [],
         onRowsSelect: (currentRowsSelected, allRowsSelected) => {
-            if (allRowsSelected.length == 0)
-            {
-                setCDQL('');
+            if (allRowsSelected.length == 0) {
+                cdql.cdql = '';
             }
-            if(queries[allRowsSelected[0].dataIndex])
-            {
-                setCDQL(queries[allRowsSelected[0].dataIndex].cdql);
+            else if (queries[allRowsSelected[0].dataIndex]) {
+                cdql.cdql = queries[allRowsSelected[0].dataIndex].cdql;
             }
+            return true;
         },
         renderExpandableRow: (rowData, rowMeta) => {
             const colSpan = rowData.length + 1;
@@ -87,11 +88,9 @@ export default function LoadQuery(props) {
     }
 
     const load = () => {
-        props.loadQuery(cdql);
         props.handleClose();
+        props.loadQuery(cdql.cdql);
     }
-
-
 
 
     return (
@@ -107,7 +106,7 @@ export default function LoadQuery(props) {
                 <Button onClick={props.handleClose} color="primary">
                     Cancel
                 </Button>
-                <Button disabled={cdql==''} onClick={load} color="primary">
+                <Button onClick={load} color="primary">
                     Load
                 </Button>
             </DialogActions>

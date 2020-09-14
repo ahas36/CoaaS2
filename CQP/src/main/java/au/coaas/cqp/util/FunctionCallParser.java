@@ -9,7 +9,6 @@ package au.coaas.cqp.util;
 import au.coaas.cqp.parser.CdqlLexer;
 import au.coaas.cqp.parser.CdqlParser;
 import au.coaas.cqp.proto.*;
-import com.google.protobuf.ByteString;
 import org.antlr.v4.runtime.CommonToken;
 import org.antlr.v4.runtime.tree.ParseTree;
 

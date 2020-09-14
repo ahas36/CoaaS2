@@ -3,6 +3,7 @@ package au.coaas.csi.fetch;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
+import netscape.javascript.JSObject;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -31,7 +32,7 @@ public class FetchManager {
         String serviceUrl = info.getString("serviceURL");
 
         for (Map.Entry<String, String> entry : contextService.getParamsMap().entrySet()) {
-            serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue());
+            serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
         }
 
         OkHttpClient client = new OkHttpClient();
@@ -43,9 +44,24 @@ public class FetchManager {
 
         try {
             Response response = client.newCall(request).execute();
-            String res = response.body().string();
-            Object result = semanticMapper(cs.getJSONArray("attributes"), res);
-            return CSIResponse.newBuilder().setStatus("200").setBody(result.toString()).build();
+            String res = response.body().string().trim();
+            if(cs.has("attributes")){
+                Object result = semanticMapper(cs.getJSONArray("attributes"), res, info.optString("resultTag",null));
+                return CSIResponse.newBuilder().setStatus("200").setBody(result.toString()).build();
+            }
+            JSONObject rawResult = null;
+            if(res.startsWith("{")){
+                rawResult = new JSONObject(res);
+            }else if (res.startsWith("[")){
+                rawResult = new JSONObject();
+                rawResult.put("result", new JSONArray(res));
+            }else {
+                rawResult = new JSONObject();
+                rawResult.put("result", res);
+            }
+
+
+            return CSIResponse.newBuilder().setStatus("200").setBody(rawResult.toString()).build();
         } catch (IOException e) {
             e.printStackTrace();
             JSONObject error = new JSONObject();
@@ -105,34 +121,71 @@ public class FetchManager {
         return evaluateExpression(expression);
     }
 
-    private static JSONObject mapJsonObject(JSONArray attributes, String service)
+    private static JSONArray parseCoordintes(JSONArray ja,String res)
     {
-        JSONObject result = new JSONObject();
-        for (int i = 0; i < attributes.length(); i++) {
-            JSONObject attribute = attributes.getJSONObject(i);
-            Object value;
-            if (attribute.has("attrs")) {
-                value = mapJsonObject(attribute.getJSONArray("attrs"), service);
-            } else {
-                value = getResponseValue(service, attribute.getString("value"));
+        JSONArray result = new JSONArray();
+        for (int i = 0; i<ja.length();i++)
+        {
+            Object item = ja.get(i);
+            if(item instanceof JSONArray)
+            {
+                result.put(parseCoordintes((JSONArray) item,res));
+            }else {
+                result.put(Double.valueOf(getResponseValue(res,item.toString()).toString()));
             }
-            result.put(attribute.getJSONObject("key").getString("label"), value);
         }
         return result;
     }
 
+    private static JSONObject mapJsonObject(JSONArray attributes, String service)
+    {
+        try {
+            JSONObject result = new JSONObject();
+            for (int i = 0; i < attributes.length(); i++) {
+                JSONObject attribute = attributes.getJSONObject(i);
+                Object value;
+                if (attribute.has("attrs")) {
+                    value = mapJsonObject(attribute.getJSONArray("attrs"), service);
+                    if(attribute.has("GeoJson") && attribute.getBoolean("GeoJson")){
+                        ((JSONObject) value).put("type",attribute.optString("type","Point"));
+                        JSONArray coordinates = new JSONArray();
+                        coordinates.put(((JSONObject) value).optDouble("longitude"));
+                        coordinates.put(((JSONObject) value).optDouble("latitude"));
+                        ((JSONObject) value).put("coordinates",coordinates);
+                    }
+                } else {
+                    value = getResponseValue(service, attribute.getString("value"));
+                }
+                result.put(attribute.getJSONObject("key").getString("label"), value);
+            }
+            return result;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+        return new JSONObject();
+    }
 
-    private static Object semanticMapper(JSONArray attributes, String service) {
-        if(service.trim().startsWith("["))
+
+    private static Object semanticMapper(JSONArray attributes, String service,String resultTag) {
+        if(service.trim().startsWith("[") || resultTag!=null)
         {
             JSONArray result = new JSONArray();
-            JSONArray items = new JSONArray(service);
+
+            JSONArray items;
+            if(service.trim().startsWith("[")){
+                items = new JSONArray(service);
+            }else{
+                items = new JSONObject(service).getJSONArray(resultTag);
+            }
+
 
             int numberOfThreads = 10;
 
             int numberOfItemsPerTask = 100;
 
-            int numberOfIterations = (int)(items.length()/numberOfItemsPerTask);
+            int numberOfIterations = (int)(items.length()/numberOfItemsPerTask) + 1;
 
             ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
 
@@ -156,8 +209,9 @@ public class FetchManager {
             } catch (InterruptedException e) {
 
             }
-
-            return result;
+            JSONObject finalResult = new JSONObject();
+            finalResult.put("results",result);
+            return finalResult;
         }else {
             return mapJsonObject(attributes,service);
         }

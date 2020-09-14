@@ -4,7 +4,8 @@ import
     FETCH_CLASSES_FAILURE, FETCH_CLASSES_SUCCESS,
     FETCH_GRAPHS_FAILURE, FETCH_GRAPHS_SUCCESS,
     FETCH_TERMS_FAILURE, FETCH_TERMS_SUCCESS,
-    FETCH_SERVICE_FAILURE, FETCH_SERVICE_SUCCESS
+    FETCH_SERVICE_FAILURE, FETCH_SERVICE_SUCCESS,
+    REGISTER_SERVICE_SUCCESS
 }
     from './constants';
 
@@ -14,17 +15,18 @@ const initialState = {
     serviceSampleResponse: null,
     semanticResponse: null,
     terms: [],
+    registeredService : 0,
     graphs: [],
     ontClasses: []
 };
 
-
+let counter = 0;
 export default function ServiceReducer(state = initialState, action) {
     switch (action.type) {
-        case FETCH_SERVICE_SUCCESS:
+        case REGISTER_SERVICE_SUCCESS:
             return {
                 ...state,
-                serviceSampleResponse: action.serviceSampleResponse
+                registeredService: ++counter
             };
         case FETCH_SERVICE_FAILURE:
             return {

@@ -1,6 +1,7 @@
 package au.coaas.cqp.util;
 
 
+import au.coaas.base.proto.ListOfString;
 import au.coaas.cqp.parser.CdqlParser;
 import au.coaas.cqp.proto.*;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -15,8 +16,10 @@ public class ConditionBuilder {
 
     public static Condition buildCondition(ParseTree infix, String entityId) throws UnsupportedEncodingException {
         Condition.Builder condition = Condition.newBuilder();
-        ConditionBuilder.parseCondition(infix, condition);
-        condition.removeDependency(entityId);
+        if (infix != null) {
+            ConditionBuilder.parseCondition(infix, condition);
+            condition.removeDependency(entityId);
+        }
         return condition.build();
     }
 
@@ -118,18 +121,18 @@ public class ConditionBuilder {
             if (condition.containsDependency(dependentEntity) && attribute != null) {
                 ListOfString los = condition.getDependencyMap().get(dependentEntity);
                 los.toBuilder().addValue(attribute);
-                condition.putDependency(dependentEntity,los);
+                condition.putDependency(dependentEntity, los);
             } else {
                 List<String> attrs = new ArrayList<>();
                 if (attribute != null) {
                     attrs.add(attribute);
                 }
                 ListOfString.Builder los = ListOfString.newBuilder().addAllValue(attrs);
-                condition.putDependency(dependentEntity,los.build());
+                condition.putDependency(dependentEntity, los.build());
             }
         } else if (op instanceof CdqlParser.Rule_FunctionCallContext) {
             token = CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Function).setStringValue(op.getText()).setFunctionCall(
-                        FunctionCallParser.visitFunctionCall((CdqlParser.Rule_FunctionCallContext) op).build()).build();
+                    FunctionCallParser.visitFunctionCall((CdqlParser.Rule_FunctionCallContext) op).build()).build();
             for (int i = 0; i < op.getChildCount(); i++) {
                 if (op.getChild(i) instanceof CdqlParser.Rule_call_OperandContext) {
                     addDependentEntities(op.getChild(i).getChild(0).getChild(0), condition);
@@ -139,7 +142,11 @@ public class ConditionBuilder {
             String operandText = op.getText();
             CdqlConstantConditionTokenType type;
             if (op.getChild(0) instanceof CdqlParser.JsonContext) {
-                type = CdqlConstantConditionTokenType.Json;
+                if (operandText.equalsIgnoreCase("true") || operandText.equalsIgnoreCase("false")) {
+                    type = CdqlConstantConditionTokenType.Boolean;
+                } else {
+                    type = CdqlConstantConditionTokenType.Json;
+                }
             } else {
                 try {
                     Double.valueOf(operandText);
@@ -149,7 +156,7 @@ public class ConditionBuilder {
                 }
             }
             token = CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Constant).setStringValue(operandText).setConstantTokenType(type).build();
-                    
+
         }
         return token;
     }

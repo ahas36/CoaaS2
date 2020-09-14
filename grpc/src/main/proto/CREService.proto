@@ -1,0 +1,37 @@
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_generic_services = true;
+
+package au.coaas.cre.proto;
+
+import "CQPService.proto";
+
+
+message CREResponse {
+    string status = 1;
+    repeated ReasoningResponse body = 2;
+}
+
+message ReasoningResponse {
+    string situationTitle = 1;
+
+    double confidence = 2;
+}
+
+message SituationInferenceRequest
+{
+    repeated au.coaas.cqp.proto.SituationDescription situationDescriptions = 1;
+    repeated AttributeValue attributeValues = 2;
+}
+
+message AttributeValue {
+    string attributeName = 1;
+    string value = 2;
+}
+
+
+service CREService {
+    rpc infer (SituationInferenceRequest) returns (CREResponse);
+}

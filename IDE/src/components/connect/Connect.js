@@ -26,7 +26,7 @@ export default function ConnectView({ handleConnect, openDialog, handleCloseDial
     const classes = useStyles();
     const theme = useTheme();
 
-    const [baseURL, setBaseURL] = React.useState(store.get("url","http://localhost:8080/CASM-2.0.1/webresources/generic"));
+    const [baseURL, setBaseURL] = React.useState(store.get("url","http://localhost:8080/CASM-2.0.1/webresources/"));
 
     const connect = () => {
         let url = baseURL;

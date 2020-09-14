@@ -1,4 +1,3 @@
-
 syntax = "proto3";
 
 option java_multiple_files = true;
@@ -6,45 +5,48 @@ option java_generic_services = true;
 
 package au.coaas.cqp.proto;
 
-message ListOfString {
-   repeated string value = 1;
-}
+import "CoaaSBase.proto";
+
 
 message ListOfContextEntities {
     repeated ContextEntity value = 1;
 }
 
 message CDQLQuery {
-    
-    map<string, ListOfString> warnings = 1;
-    
-    map<string, ListOfString> errors = 2;
-    
-    CDQLType queryType = 3;
-    
+
+    map<string, au.coaas.base.proto.ListOfString> warnings = 1;
+
+    map<string, au.coaas.base.proto.ListOfString> errors = 2;
+
+    QueryType queryType = 3;
+
     map<string, string> nameSpaces = 4;
-    
+
     CDQLSelect select = 5;
-    
+
     CDQLWhen when = 6;
-    
+
     CDQLRepeat repeat = 7;
-    
+
     CDQLDefine define = 8;
-    
+
     CDQLConfig config = 9;
-    
+
     CDQLCallback callback = 10;
-    
-    map<int32, ListOfString> executionPlan = 11;
+
+    map<int32, au.coaas.base.proto.ListOfString> executionPlan = 11;
 }
 
 enum CDQLType {
     UNKNOWN_CDQL_TYPE = 0;
+    QUERY = 2;
+    FUNCTION_DEF = 3;
+}
+
+enum QueryType {
+    UNKNOWN_QUERY_TYPE = 0;
     PUSH_BASED = 1;
     PULL_BASED = 2;
-    SITUATION_DEF = 3;
-    QUERY = 4;
 }
 
 message ContextAttribute {
@@ -70,40 +72,45 @@ enum OperandType {
 
 message Operand {
     OperandType type = 1;
-    
-    bytes value = 2;
+
+    ContextAttribute contextAttribute = 2;
+
+    FunctionCall functioncall = 3;
+
+    ContextEntity contextEntity = 5;
+
+    string stringValue = 4;
 }
 
 message FunctionCall {
     string functionName = 1;
-    
+
     repeated Operand arguments = 2;
-    
+
     repeated string subItems = 3;
 }
 
-message CDQLSelect {    
+message CDQLSelect {
     map<string, ListOfContextAttribute> selectAttrs = 1;
-    
-    repeated FunctionCall selectFunctions = 2;   
-    
-    
+
+    repeated FunctionCall selectFunctions = 2;
+
 }
 
-message CDQLWhen{
+message CDQLWhen {
     bool isLifeTime = 1;
-    
+
     Condition condition = 2;
-    
+
     int64 time = 3;
 }
 
-message Condition{
+message Condition {
     repeated string contextAttribiutes = 1;
-    
+
     repeated CdqlConditionToken RPNCondition = 2;
-    
-    map<string,ListOfString> dependency = 3;
+
+    map<string, au.coaas.base.proto.ListOfString> dependency = 3;
 }
 
 enum CdqlConditionTokenType {
@@ -122,21 +129,21 @@ enum CdqlConstantConditionTokenType {
     String = 2;
     Json = 3;
     Array = 4;
+    Boolean = 5;
 }
 
 
-message CdqlConditionToken{
+message CdqlConditionToken {
     string stringValue = 1;
-        
+
     CdqlConditionTokenType type = 2;
-    
-    
-    CdqlConstantConditionTokenType constantTokenType = 7;
+
+
+    CdqlConstantConditionTokenType constantTokenType = 6;
     ContextAttribute contextAttribute = 3;
     ContextEntity contextEntity = 4;
-    bytes bson = 5;
-    FunctionCall functionCall = 6;
-    
+    FunctionCall functionCall = 5;
+
 }
 
 message ContextEntityType {
@@ -144,13 +151,13 @@ message ContextEntityType {
     string vocabURI = 2;
 }
 
-message ContextEntity{
+message ContextEntity {
     ContextEntityType type = 1;
-    
+
     string entityID = 2;
-    
+
     Condition condition = 3;
-    
+
     map<string, string> contextAttributes = 4;
 }
 
@@ -164,33 +171,33 @@ enum TimeUnit {
     DAY = 6;
     MONTH = 7;
     YEAR = 8;
-} 
+}
 
 message CDQLRepeat {
     double interval = 1;
-    
+
     TimeUnit unit = 2;
 }
-    
+
 message CDQLDefine {
     repeated ContextEntity definedEntities = 1;
 }
-    
-enum OutputStructureType{
+
+enum OutputStructureType {
     UNKNOWN_OUTPUT_TYPE = 0;
     JSON = 1;
     ODF = 2;
     XML = 3;
 }
 
-message OutputConfig{
+message OutputConfig {
     OutputStructureType outputStructure = 1;
 }
-    
+
 message CDQLConfig {
     OutputConfig outputConfig = 1;
 }
-    
+
 enum CallBackMethod {
     UNKNOWN_METHOD_TYPE = 0;
     FCM = 1;
@@ -199,7 +206,7 @@ enum CallBackMethod {
 
 message CDQLCallback {
     CallBackMethod callbackMethod = 1;
-    
+
     string httpURL = 2;
 
     string fcmTopic = 3;
@@ -217,11 +224,63 @@ message CDQLCallback {
     string password = 9;
 }
 
-message ParseRequest
-{
+message ParseRequest {
     string cdql = 1;
+
 }
 
+enum ContextFunctionType {
+    UNKNOWN_FUNCTION_TYPE = 0;
+    AGGREGATION = 1;
+    SITUATION = 2;
+}
+
+message ContextFunction {
+    string package = 1;
+    string functionTitle = 2;
+    ContextFunctionType type = 3;
+    SituationFunction sFunction = 4;
+    AggregationFunction aFunction = 5;
+}
+
+message SituationFunction {
+    map<string, string> nameSpaces = 3;
+    map<string, ContextEntityType> relatedEntities = 4;
+    repeated SituationDescription situations = 5;
+    repeated string allAttributes = 6;
+}
+
+message SituationDescription {
+    string situationName = 1;
+    repeated WeightedAttributeDescription attributes = 2;
+}
+
+message WeightedAttributeDescription {
+    AttributeDescription attribute = 1;
+    int32 weight = 2;
+}
+
+message AttributeDescription {
+    string attributeName = 1;
+    repeated RegionDescription regions = 2;
+}
+
+message RegionDescription {
+    string regionValue = 1;
+    double regionBelief = 2;
+}
+
+message AggregationFunction {
+    string url = 1;
+}
+
+message CDQLConstruct {
+    CDQLType type = 1;
+    ContextFunction function = 2;
+    CDQLQuery query = 3;
+}
+
+
 service CQPService {
-    rpc parse (ParseRequest) returns (CDQLQuery);
+    rpc parse (ParseRequest) returns (CDQLConstruct);
 }

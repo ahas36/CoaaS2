@@ -1,14 +1,14 @@
 package au.coaas.cqc.executor;
 
-import au.coaas.cqc.grpc.client.SQEMChannel;
+import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.cqc.proto.CdqlResponse;
 import au.coaas.cqc.proto.ExecutionRequest;
-import au.coaas.cqc.server.CQCServiceImpl;
 import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.sqem.proto.RegisterEntityRequest;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.UpdateEntityRequest;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.logging.Logger;
@@ -38,7 +38,7 @@ public class ContextEntityManager {
         JSONObject data = new JSONObject(request.getCdql());
         JSONObject entityType = data.getJSONObject("EntityType");
         JSONObject entity = data.getJSONObject("Attributes");
-        JSONObject keys = data.getJSONObject("key");
+        JSONArray keys = data.getJSONArray("key");
         SQEMResponse sqemResponse = sqemStub.updateContextEntity(UpdateEntityRequest.newBuilder().setJson(entity.toString())
                 .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
                 .setKey(keys.toString())

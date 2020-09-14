@@ -27,6 +27,10 @@ function parsePlain(response) {
  * @return {object|undefined} Returns either the response, or throws an error
  */
 function checkStatus(response) {
+    debugger;
+    if(response.status  == 0){
+        return response;
+    }
     if (response.status >= 200 && response.status < 300) {
         return response;
     }

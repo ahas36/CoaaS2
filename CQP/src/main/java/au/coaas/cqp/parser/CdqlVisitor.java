@@ -1,5 +1,6 @@
 package au.coaas.cqp.parser;
 
+import au.coaas.base.proto.ListOfString;
 import au.coaas.cqp.proto.*;
 import au.coaas.cqp.util.ConditionBuilder;
 import au.coaas.cqp.util.FunctionCallParser;
@@ -18,8 +19,7 @@ public class CdqlVisitor extends CdqlBaseVisitor<String> {
 
     private CDQLQuery.Builder query;
 
-//    private ContextFunction contextFunction;
-
+    private ContextFunction.Builder contextFunction;
     
     private HashMap<String, String> nameSpaces;
 
@@ -33,6 +33,7 @@ public class CdqlVisitor extends CdqlBaseVisitor<String> {
     @Override
     public String visitRule_query(CdqlParser.Rule_queryContext ctx) {
         query = CDQLQuery.newBuilder();
+        query.setQueryType(QueryType.PULL_BASED);
         return super.visitRule_query(ctx);
     }
 
@@ -66,7 +67,6 @@ public class CdqlVisitor extends CdqlBaseVisitor<String> {
                 break;
             case HTTPPOST:
                 callback.setHttpURL(jo.getString("url"));
-                Map headers = callback.getHeadersMap();
                 if (jo.has("headers")) {
                     JSONObject joHeaders = jo.getJSONObject("headers");
                     for (String key : joHeaders.keySet()) {
@@ -83,7 +83,7 @@ public class CdqlVisitor extends CdqlBaseVisitor<String> {
                             }
                             continue;
                         }
-                        headers.put(key, joHeaders.getString(key));
+                        callback.putHeaders(key, joHeaders.getString(key));
                     }
                 }
                 break;
@@ -93,7 +93,7 @@ public class CdqlVisitor extends CdqlBaseVisitor<String> {
 
     @Override
     public String visitRuel_Push(CdqlParser.Ruel_PushContext ctx) {
-        query.setQueryType(CDQLType.PUSH_BASED);
+        query.setQueryType(QueryType.PUSH_BASED);
         return super.visitRuel_Push(ctx);
     }
 
@@ -271,132 +271,136 @@ public class CdqlVisitor extends CdqlBaseVisitor<String> {
     }
 
     //ToDo 
-//    @Override
-//    public String visitRule_aFunction(CdqlParser.Rule_aFunctionContext ctx) {
-//        return super.visitRule_aFunction(ctx);
-//    }
-//
-//    @Override
-//    public String visitRule_sFunction(CdqlParser.Rule_sFunctionContext ctx) {
-//        contextFunction = new SituationalFunction();
-//        ((SituationalFunction) contextFunction).setNameSpaces(nameSpaces);
-//        return super.visitRule_sFunction(ctx);
-//    }
-//
-//    @Override
-//    public String visitRule_function_id(CdqlParser.Rule_function_idContext ctx) {
-//        contextFunction.setFunctionTitle(ctx.getText());
-//        return null;
-//    }
-//
-//    @Override
-//    public String visitRule_is_on_entity(CdqlParser.Rule_is_on_entityContext ctx) {
-//        String[] split = ctx.getChild(0).getText().split(":");
-//        ContextEntityType cet = null;
-//        if (split.length == 2) {
-//            cet = new ContextEntityType(split[1], nameSpaces.get(split[0]));
-////            if (nameSpaces.getNamespaceByKey(split[0]) == null) {
-////                query.addError("Define  Entity", "cannot find namespace " + split[0]);
-////            }
-//        } else {
-//            cet = new ContextEntityType(split[0]);
-//        }
-//        String id = ctx.getChild(2).getText();
-//        ((SituationalFunction) contextFunction).addRelatedEntity(id, cet);
-//        return null;
-//    }
-//
-//    @Override
-//    public String visitRule_single_situatuin(CdqlParser.Rule_single_situatuinContext ctx) {
-//        String situationName = ctx.getChild(0).getText().replaceAll("\"", "");
-//        SituationDescription sd = new SituationDescription();
-//        sd.setSituationName(situationName);
-//        List<WeightedAttributeDescription> weightedAttributeDescriptions = new ArrayList<>();
-//        for (int i = 3; i < ctx.getChildCount(); i += 2) {
-//            WeightedAttributeDescription wad = this.visit_situation_def((CdqlParser.Rule_situation_pairContext) ctx.getChild(i));
-//            if (wad == null) {
-//                continue;
+    @Override
+    public String visitRule_aFunction(CdqlParser.Rule_aFunctionContext ctx) {
+        contextFunction = ContextFunction.newBuilder().setType(ContextFunctionType.AGGREGATION);
+        return super.visitRule_aFunction(ctx);
+    }
+
+    @Override
+    public String visitRule_sFunction(CdqlParser.Rule_sFunctionContext ctx) {
+        contextFunction = ContextFunction.newBuilder().setType(ContextFunctionType.SITUATION);
+        contextFunction.getSFunctionBuilder().putAllNameSpaces(nameSpaces);
+        return super.visitRule_sFunction(ctx);
+    }
+
+    @Override
+    public String visitRule_function_id(CdqlParser.Rule_function_idContext ctx) {
+        contextFunction.setFunctionTitle(ctx.getText());
+        return null;
+    }
+
+    @Override
+    public String visitRule_is_on_entity(CdqlParser.Rule_is_on_entityContext ctx) {
+        String[] split = ctx.getChild(0).getText().split(":");
+        ContextEntityType cet = null;
+        if (split.length == 2) {
+            cet = ContextEntityType.newBuilder().setType(split[1]).setVocabURI(nameSpaces.get(split[0])).build();
+//            if (nameSpaces.getNamespaceByKey(split[0]) == null) {
+//                query.addError("Define  Entity", "cannot find namespace " + split[0]);
 //            }
-//            weightedAttributeDescriptions.add(wad);
-//        }
-//        sd.setAttributes(weightedAttributeDescriptions);
-//        ((SituationalFunction) contextFunction).addSituation(sd);
-//        return null;
-//    }
-//
-//    private WeightedAttributeDescription visit_situation_def(CdqlParser.Rule_situation_pairContext ctx) {
-//
-//        String stringAttributes = ctx.getChild(0).getText().replaceAll("\\[", "").replaceAll("\\]", "");
-//
-//        String[] arrayAttributes = stringAttributes.split(",");
-//
-//        List<ContextAttribute> contextAttributes = new ArrayList<>();
-//
-//        for (String attribute : arrayAttributes) {
-//            String[] arrayAttribute = attribute.split("\\.", 2);
-//            ContextAttribute ca;
-//            if (arrayAttribute.length == 2) {
-//                ca = new ContextAttribute(arrayAttribute[0], arrayAttribute[1]);
-//            } else {
-//                ca = new ContextAttribute(attribute);
-//            }
-//            contextAttributes.add(ca);
-//        }
-//
-//        if (contextAttributes.size() > 1) {
-//            System.err.println("Multi attribute in CST situations is not supported");
-//            return null;
-//        }
-//
-//        CdqlParser.Situation_pair_valuesContext values = (CdqlParser.Situation_pair_valuesContext) ctx.getChild(3);
-//
-//        WeightedAttributeDescription result = visit_situation_pari_value(values);
-//        result.getAttribute().setAttributeName(stringAttributes);
-//        return result;
-//    }
-//
-//    private WeightedAttributeDescription visit_situation_pari_value(CdqlParser.Situation_pair_valuesContext ctx) {
-//        WeightedAttributeDescription result = new WeightedAttributeDescription();
-//        CdqlParser.Situation_weightContext weightContext;
-//        CdqlParser.Situation_range_valuesContext rangeContext;
-//        if (ctx.getChild(0) instanceof CdqlParser.Situation_weightContext) {
-//            weightContext = (CdqlParser.Situation_weightContext) ctx.getChild(0);
-//            rangeContext = (CdqlParser.Situation_range_valuesContext) ctx.getChild(2);
-//        } else {
-//            weightContext = (CdqlParser.Situation_weightContext) ctx.getChild(2);
-//            rangeContext = (CdqlParser.Situation_range_valuesContext) ctx.getChild(0);
-//        }
-//
-//        String weight = weightContext.getChild(2).getText();
-//        result.setWeight(Integer.valueOf(weight));
-//        List<RegionDescription> regions = new ArrayList<>();
-//        for (int i = 3; i < rangeContext.getChildCount(); i += 2) {
-//            RegionDescription visit_Region = visit_Region((CdqlParser.Situation_pair_values_itemContext) rangeContext.getChild(i));
-//            regions.add(visit_Region);
-//        }
-//        AttributeDescription ad = new AttributeDescription();
-//        ad.setRegions(regions);
-//        result.setAttribute(ad);
-//        return result;
-//    }
-//
-//    private RegionDescription visit_Region(CdqlParser.Situation_pair_values_itemContext ctx) {
-//        RegionDescription result = new RegionDescription();
-//        CdqlParser.Rule_situation_beliefContext beliefContext;
-//        CdqlParser.Rule_situation_valueContext valueContext;
-//        if (ctx.getChild(1) instanceof CdqlParser.Rule_situation_beliefContext) {
-//            beliefContext = (CdqlParser.Rule_situation_beliefContext) ctx.getChild(1);
-//            valueContext = (CdqlParser.Rule_situation_valueContext) ctx.getChild(3);
-//        } else {
-//            beliefContext = (CdqlParser.Rule_situation_beliefContext) ctx.getChild(3);
-//            valueContext = (CdqlParser.Rule_situation_valueContext) ctx.getChild(1);
-//        }
-//        result.setRegionBelief(Double.valueOf(beliefContext.getChild(2).getText()));
-//
-//        result.setRegionValue(valueContext.getChild(2).getText());
-//
-//        return result;
-//    }
+        } else {
+            cet = ContextEntityType.newBuilder().setType(split[1]).build();
+        }
+        String id = ctx.getChild(2).getText();
+        contextFunction.getSFunctionBuilder().putRelatedEntities(id, cet);
+        return null;
+    }
+
+    @Override
+    public String visitRule_single_situatuin(CdqlParser.Rule_single_situatuinContext ctx) {
+        String situationName = ctx.getChild(0).getText().replaceAll("\"", "");
+        SituationDescription.Builder sd = SituationDescription.newBuilder();
+        sd.setSituationName(situationName);
+        List<WeightedAttributeDescription> weightedAttributeDescriptions = new ArrayList<>();
+        for (int i = 3; i < ctx.getChildCount(); i += 2) {
+            WeightedAttributeDescription wad = this.visit_situation_def((CdqlParser.Rule_situation_pairContext) ctx.getChild(i));
+            if (wad == null) {
+                continue;
+            }
+            weightedAttributeDescriptions.add(wad);
+        }
+        sd.addAllAttributes(weightedAttributeDescriptions);
+        sd.getAttributesList().stream().forEach((attribute) -> {
+            contextFunction.getSFunctionBuilder().addAllAttributes(attribute.getAttribute().getAttributeName());
+        });
+        contextFunction.getSFunctionBuilder().addSituations(sd);
+        return null;
+    }
+
+    private WeightedAttributeDescription visit_situation_def(CdqlParser.Rule_situation_pairContext ctx) {
+
+        String stringAttributes = ctx.getChild(0).getText().replaceAll("\\[", "").replaceAll("\\]", "");
+
+        String[] arrayAttributes = stringAttributes.split(",");
+
+        List<ContextAttribute> contextAttributes = new ArrayList<>();
+
+        for (String attribute : arrayAttributes) {
+            String[] arrayAttribute = attribute.split("\\.", 2);
+            ContextAttribute ca;
+            if (arrayAttribute.length == 2) {
+                ca = ContextAttribute.newBuilder().setEntityName(arrayAttribute[0]).setAttributeName(arrayAttribute[1]).build();
+            } else {
+                ca = ContextAttribute.newBuilder().setEntityName(attribute).build();
+            }
+            contextAttributes.add(ca);
+        }
+
+        if (contextAttributes.size() > 1) {
+            System.err.println("Multi attribute in CST situations is not supported");
+            return null;
+        }
+
+        CdqlParser.Situation_pair_valuesContext values = (CdqlParser.Situation_pair_valuesContext) ctx.getChild(3);
+
+        WeightedAttributeDescription.Builder result = visit_situation_pari_value(values);
+        result.getAttributeBuilder().setAttributeName(stringAttributes);
+        return result.build();
+    }
+
+    private WeightedAttributeDescription.Builder visit_situation_pari_value(CdqlParser.Situation_pair_valuesContext ctx) {
+        WeightedAttributeDescription.Builder result = WeightedAttributeDescription.newBuilder();
+        CdqlParser.Situation_weightContext weightContext;
+        CdqlParser.Situation_range_valuesContext rangeContext;
+        if (ctx.getChild(0) instanceof CdqlParser.Situation_weightContext) {
+            weightContext = (CdqlParser.Situation_weightContext) ctx.getChild(0);
+            rangeContext = (CdqlParser.Situation_range_valuesContext) ctx.getChild(2);
+        } else {
+            weightContext = (CdqlParser.Situation_weightContext) ctx.getChild(2);
+            rangeContext = (CdqlParser.Situation_range_valuesContext) ctx.getChild(0);
+        }
+
+        String weight = weightContext.getChild(2).getText();
+        result.setWeight(Integer.valueOf(weight));
+        List<RegionDescription> regions = new ArrayList<>();
+        for (int i = 3; i < rangeContext.getChildCount(); i += 2) {
+            RegionDescription visit_Region = visit_Region((CdqlParser.Situation_pair_values_itemContext) rangeContext.getChild(i));
+            regions.add(visit_Region);
+        }
+        AttributeDescription.Builder ad = AttributeDescription.newBuilder();
+        ad.addAllRegions(regions);
+        result.setAttribute(ad.build());
+        return result;
+    }
+
+    private RegionDescription visit_Region(CdqlParser.Situation_pair_values_itemContext ctx) {
+        RegionDescription.Builder result = RegionDescription.newBuilder();
+        CdqlParser.Rule_situation_beliefContext beliefContext;
+        CdqlParser.Rule_situation_valueContext valueContext;
+        if (ctx.getChild(1) instanceof CdqlParser.Rule_situation_beliefContext) {
+            beliefContext = (CdqlParser.Rule_situation_beliefContext) ctx.getChild(1);
+            valueContext = (CdqlParser.Rule_situation_valueContext) ctx.getChild(3);
+        } else {
+            beliefContext = (CdqlParser.Rule_situation_beliefContext) ctx.getChild(3);
+            valueContext = (CdqlParser.Rule_situation_valueContext) ctx.getChild(1);
+        }
+        result.setRegionBelief(Double.valueOf(beliefContext.getChild(2).getText()));
+
+        result.setRegionValue(valueContext.getChild(2).getText());
+
+        return result.build();
+    }
 
     public CDQLQuery.Builder getQuery() {
         return query;
@@ -406,12 +410,8 @@ public class CdqlVisitor extends CdqlBaseVisitor<String> {
         this.query = query;
     }
 
-//    public ContextFunction getContextFunction() {
-//        return contextFunction;
-//    }
-//
-//    public void setContextFunction(ContextFunction contextFunction) {
-//        this.contextFunction = contextFunction;
-//    }
+    public ContextFunction.Builder getContextFunction() {
+        return contextFunction;
+    }
 
 }

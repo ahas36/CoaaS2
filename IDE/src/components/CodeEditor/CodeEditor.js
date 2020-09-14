@@ -21,9 +21,8 @@ import './css/codemirror-editor.css';
 import './css/codemirror-icons.css';
 import LoadQuery from "./components/LoadQuery/LoadQuery";
 import {AutoCompleteEvent, AutoCompletionHandler} from "antlr4-editor";
+import CircularProgress from "@material-ui/core/CircularProgress";
 
-
-const createEditor = require('../editor').createCDQLEditor;
 const fetch = window.require('node-fetch');
 const Store = window.require('electron-store');
 const store = new Store();
@@ -89,6 +88,12 @@ const useStyles = makeStyles(theme => ({
     visible: {
         display: 'block'
     },
+    progress:{
+        position: "absolute",
+        top : "5px",
+        right: "5px",
+        zIndex : "9999"
+    }
 }));
 
 
@@ -131,17 +136,18 @@ const ruleNames = ["rule_Cdql", "rule_ddl_statement", "rule_dml_statement",
     "search", "searchparameter", "port", "path", "normal_path",
     "path_param", "json", "obj", "pair", "array", "value"];
 
-const editor = createEditor();
 
-
-export default function CodeEditorView({isConnected, handleNotificationCall, ...props}) {
+export default function CodeEditorView({editor,isConnected, handleNotificationCall, ...props}) {
 
     //get classes and theme
     const classes = useStyles();
     const theme = useTheme();
 
+
+
+    const [isLoading, setIsLoading] = React.useState(false);
     const [editorHeight, setEditorHeight] = React.useState(200);
-    const [cdql, setCdql] = React.useState("");
+    const [cdql2, setCdql] = React.useState("");
     const [result, setResult] = React.useState({});
     const [tabIndex, setTabIndex] = React.useState(0);
     const [openSaveDialog, setOpenSaveDialog] = React.useState(false);
@@ -160,7 +166,7 @@ export default function CodeEditorView({isConnected, handleNotificationCall, ...
     });
 
     //create a ref to ace instance
-    const editorRef = useRef();
+    const editorRef = useRef(null);
 
 
     //constructor
@@ -312,16 +318,26 @@ export default function CodeEditorView({isConnected, handleNotificationCall, ...
 
         editor.addChangeListener(cdqlChanged);
 
+
+
+        editor.setText(props.cdql);
+
         const el = editor.getDomElement();
+
         editorRef.current.appendChild(el);
+
+        if(props.executeWhenOpen)
+        {
+            run();
+        }
     }, []);
 
     const cdqlChanged = (editor) => {
         setCdql(editor.editor.getText());
     }
 
-    const loadQuery = (cdql) => {
-        editor.setText(cdql);
+    const loadQuery = (q) => {
+        editor.setText(q);
     }
 
     const handleChangeTab = (event, newValue) => {
@@ -358,7 +374,8 @@ export default function CodeEditorView({isConnected, handleNotificationCall, ...
     }
 
     const run = () => {
-        fetch(store.get("url"), {method: 'POST', headers: {'Content-Type': 'text/plain'}, body: cdql})
+        setIsLoading(true);
+        fetch(store.get("url")+"/query/", {method: 'POST', headers: {'Content-Type': 'text/plain'}, body: cdql2})
             .then(res => {
                 return res.json();
             })
@@ -368,11 +385,12 @@ export default function CodeEditorView({isConnected, handleNotificationCall, ...
             })
             .catch(err => {
                 handleNotificationCall({type: 'error', message: 'Failed to execute'});
-            });
+            }).then(function() { setIsLoading(false) });
     }
 
     return (
         <div className={classes.root}>
+            {isLoading && <CircularProgress className={classes.progress} />}
             <AppBar position="static" className={classes.toolbar}>
                 <Toolbar variant='dense' className={classes.topbar}>
                     <Tooltip enterDelay={600} title="Load" aria-label="load">
@@ -442,7 +460,7 @@ export default function CodeEditorView({isConnected, handleNotificationCall, ...
                         [classes.visible]: 0 === tabIndex
                     })}>
 
-                        <JSONTree data={debugRule} theme={theme} invertTheme={false}/>
+                        <JSONTree data={result} theme={theme} invertTheme={false}/>
                     </div>
                     <div className={clsx({
                         [classes.tabContent]: true,
@@ -461,7 +479,7 @@ export default function CodeEditorView({isConnected, handleNotificationCall, ...
 
                 </div>
             </SplitPane>
-            <SaveQuery open={openSaveDialog} handleClose={() => setOpenSaveDialog(false)} cdql={cdql}/>
+            <SaveQuery open={openSaveDialog} handleClose={() => setOpenSaveDialog(false)} cdql={cdql2}/>
             <LoadQuery open={openLoadDialog} handleClose={() => setOpenLoadDialog(false)} loadQuery={loadQuery}/>
         </div>
 

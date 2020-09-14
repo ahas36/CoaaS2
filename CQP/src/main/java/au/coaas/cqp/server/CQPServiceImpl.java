@@ -7,6 +7,7 @@ package au.coaas.cqp.server;
 
 import au.coaas.cqp.exception.CDQLSyntaxtErrorException;
 import au.coaas.cqp.parser.MainParser;
+import au.coaas.cqp.proto.CDQLConstruct;
 import au.coaas.cqp.proto.CDQLQuery;
 import au.coaas.cqp.proto.CQPServiceGrpc;
 
@@ -22,11 +23,11 @@ public class CQPServiceImpl extends CQPServiceGrpc.CQPServiceImplBase {
 
     @Override
     public void parse(au.coaas.cqp.proto.ParseRequest request,
-        io.grpc.stub.StreamObserver<CDQLQuery> responseObserver){
+        io.grpc.stub.StreamObserver<CDQLConstruct> responseObserver){
         try {
             //log.info("Request received");
             //log.info(request.getCdql());
-            CDQLQuery cdql = (CDQLQuery) MainParser.parse(request.getCdql());
+            CDQLConstruct cdql = MainParser.parse(request.getCdql());
             responseObserver.onNext(cdql);
         } catch (CDQLSyntaxtErrorException ex) {
             responseObserver.onError(ex);

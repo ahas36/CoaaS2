@@ -240,6 +240,10 @@ public class PullBasedExecutor {
             return executeAggregationFunction(fCallTemp.build());
         } else if (fCall.getFunctionName().equals("cluster")) {
             return groupByLocation(fCallTemp.build());
+        } else if (fCall.getFunctionName().equals("now")) {
+            return now(fCallTemp.build());
+        } else if (fCall.getFunctionName().equals("embed")) {
+            return embedSituation(fCallTemp.build(),ce,query);
         } else {
             SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
@@ -277,6 +281,11 @@ public class PullBasedExecutor {
         }
 
         return result;
+    }
+
+    private static Long now(FunctionCall fCall) {
+        Long offset = Long.valueOf(fCall.getArguments(0).getStringValue().replaceAll("\"", ""));
+        return System.currentTimeMillis() + offset;
     }
 
     private static JSONObject groupByLocation(FunctionCall fCall) {
@@ -328,12 +337,38 @@ public class PullBasedExecutor {
             }
             result = computeAverage(result, numberOfInstances);
             result.put("geo", geo);
+            result.put("identifier",entry.getKey());
             result.put("entityType", jo.get("entityType"));
             finalResult.put(result);
         }
         JSONObject objectResult = new JSONObject();
-        objectResult.put("entityType",jo.get("entityType"));
+        objectResult.put("entityType", jo.get("entityType"));
         objectResult.put("results", finalResult);
+        return objectResult;
+    }
+
+    private static JSONObject embedSituation(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query) {
+
+        JSONObject jo = new JSONObject(fCall.getArguments(0).getStringValue());
+        JSONArray entities = jo.getJSONArray("results");
+        String entityType = jo.get("entityType").toString();
+        String functionName = fCall.getArguments(1).getStringValue().replaceAll("\"","");
+        String [] names = functionName.split("\\.");
+        functionName = names[0];
+
+        for (int i = 0; i < entities.length(); i++) {
+            JSONObject entity = entities.getJSONObject(i);
+            entity.put("entityType",entityType);
+            FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(functionName);
+            for (int j = 1; j<names.length;j++){
+                fCallTemp.addSubItems(names[j]);
+            }
+            fCallTemp.addArguments(Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(entity.toString()));
+            entity.put(functionName, executeFunctionCall(fCallTemp.build(), ce, query));
+        }
+
+        JSONObject objectResult = new JSONObject();
+        objectResult.put("results", entities);
         return objectResult;
     }
 
@@ -402,7 +437,7 @@ public class PullBasedExecutor {
         return jo2;
     }
 
-    private static JSONObject executeSituationFunction(SituationFunction function, FunctionCall fCall) {
+    private static Object executeSituationFunction(SituationFunction function, FunctionCall fCall) {
 
         CREServiceGrpc.CREServiceBlockingStub creStub
                 = CREServiceGrpc.newBlockingStub(CREChannel.getInstance().getChannel());
@@ -510,9 +545,13 @@ public class PullBasedExecutor {
             }
             finalResult.put(itemResult);
         }
-        JSONObject resultWrapper = new JSONObject();
-        resultWrapper.put("results", finalResult);
-        return resultWrapper;
+        if(finalResult.length()==1){
+            return finalResult.getJSONObject(0).get("outcome");
+        }else{
+            JSONObject resultWrapper = new JSONObject();
+            resultWrapper.put("results", finalResult);
+            return resultWrapper;
+        }
     }
 
     private static JSONObject executeFetch(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, String contextServicesText) {
@@ -562,7 +601,6 @@ public class PullBasedExecutor {
         return null;
     }
 
-
     private static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce) {
         ArrayList<CdqlConditionToken> list = new ArrayList(targetEntity.getCondition().getRPNConditionList());
 
@@ -572,6 +610,11 @@ public class PullBasedExecutor {
             switch (item.getType()) {
                 case Function:
                     FunctionCall.Builder fCall = item.getFunctionCall().toBuilder();
+                    FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(fCall.getFunctionName());
+                    if(fCall.getFunctionName().equals("distance")){
+                        continue;
+                    }
+                    fCallTemp.addAllSubItems(fCall.getSubItemsList());
                     int requiredArgs = fCall.getArgumentsList().size();
                     for (int j = 0; j < fCall.getArgumentsList().size(); j++) {
                         Operand argument = fCall.getArgumentsList().get(j);
@@ -584,7 +627,7 @@ public class PullBasedExecutor {
                                 JSONObject operandEntity = ce.get(entityID);
                                 operandEntity.put("entityType", entityTypeString);
                                 String handelQuantitativeValue = handelQuantitativeValue(operandEntity.toString());
-                                fCall.addArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
+                                fCallTemp.addArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
                                 requiredArgs--;
                             }
 
@@ -594,13 +637,23 @@ public class PullBasedExecutor {
                             String attributeNameTemp = ca.getAttributeName();
                             if (!entityNameTemp.equals(targetEntity.getEntityID())) {
                                 String handelQuantitativeValue = handelQuantitativeValue(ce.get(entityNameTemp).get(attributeNameTemp).toString());
-                                fCall.addArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
+                                fCallTemp.addArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
                                 requiredArgs--;
                             }
+                        } else if (argument.getType() == OperandType.FUNCTION_CALL) {
+                            //toDo
+                        } else {
+                            fCallTemp.addArguments(j, Operand.newBuilder().setType(argument.getType()).setStringValue(argument.getStringValue()));
+                            requiredArgs--;
                         }
                     }
                     if (requiredArgs == 0) {
-                        // ToDo execute function call
+                        String val = executeFunctionCall(fCallTemp.build(), ce, query).toString();
+                        CdqlConstantConditionTokenType constantType = getConstantType(val);
+                        CdqlConditionToken constantToken = CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Constant)
+                                .setStringValue(val)
+                                .setConstantTokenType(constantType).build();
+                        list.set(i, constantToken);
                     }
                     break;
                 case Attribute: {
@@ -645,7 +698,6 @@ public class PullBasedExecutor {
 
         return cr;
     }
-
 
     private static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub

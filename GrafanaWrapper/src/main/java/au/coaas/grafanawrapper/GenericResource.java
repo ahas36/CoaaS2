@@ -82,7 +82,7 @@ public class GenericResource {
 
             RequestBody body = RequestBody.create(mediaType, data.getString("query"));
             Request request = new Request.Builder()
-                    .url("http://localhost:8070/CASM-2.0.1/api/query")
+                    .url("http://35.189.8.15:8070/CASM-2.0.1/api/query")
                     .method("POST", body)
                     .addHeader("Content-Type", "text/plain")
                     .build();
@@ -95,6 +95,7 @@ public class GenericResource {
                 JSONObject queryResponse = new JSONObject(strResponse);
                 JSONArray allData = queryResponse.getJSONObject(headers[0]).getJSONArray("results");
                 Long timeStamp = System.currentTimeMillis();
+                JSONArray ts = new JSONArray();
                 for (int j = 0; j < Math.min(100, allData.length()); j++) {
                     JSONObject dataItem = allData.getJSONObject(j);
                     JSONArray geo = dataItem.getJSONObject("geo").getJSONArray("coordinates");
@@ -148,33 +149,39 @@ public class GenericResource {
 
                     JSONObject item;
 
-                    if (timeseries.containsKey(data.getString("id") + "_" + dataItem.getString("identifier"))) {
-                        item = timeseries.get(data.getString("id") + "_" + dataItem.getString("identifier"));
-                        item.getJSONArray("rows").put(values);
-                    } else {
+//                    if (timeseries.containsKey(data.getString("id") + "_" + dataItem.optString("identifier","test"))) {
+//                        item = timeseries.get(data.getString("id") + "_" + dataItem.optString("identifier","test"));
+//                        item.getJSONArray("rows").put(values);
+//                    } else
+                    {
                         item = new JSONObject();
-                        JSONArray ts = new JSONArray();
+                        
                         ts.put(values);
                         item.put("rows", ts);
                         item.put("columns", columns);
-                        item.put("name", "Parking " + dataItem.getString("identifier"));
+                        item.put("name", "Parking " + dataItem.optString("identifier","test"));
 
                         JSONObject tag = new JSONObject();
 
-                        tag.put("latitude", geo.get(0));
-                        tag.put("longitude", geo.get(1));
-                        item.put("latitude", geo.get(0));
-                        item.put("longitude", geo.get(1));
+                        tag.put("latitude", geo.get(1));
+                        tag.put("longitude", geo.get(0));
+                        item.put("latitude", geo.get(1));
+                        item.put("longitude", geo.get(0));
+                        item.put("name", dataItem.optString("identifier","test"));
                         item.put("tags", tag);
                         item.put("LatLng", tag);
-                        timeseries.put(data.getString("id") + "_" + dataItem.getString("identifier"), item);
+                        timeseries.put(data.getString("id") + "_" + dataItem.optString("identifier","test"), item);
                     }
+                    
                     result.put(item);
                 }
+                
+                JSONObject finalREs = result.getJSONObject(0);
+                finalREs.put("rows", ts);
 
 //                JSONObject jo = new JSONObject();
 //                jo.put("series", result);
-                return Response.ok(result.toString()).build();
+                return Response.ok("["+finalREs.toString()+"]").build();
             } else {
                 Object queryResponse = new JSONObject(strResponse);
                 for (int j = 0; j < headers.length - 1; j++) {

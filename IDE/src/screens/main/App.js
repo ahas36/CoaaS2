@@ -125,7 +125,7 @@ function AppView({handleNotificationCall, isConnected, openConnectDialog, setOpe
         {
             label: "CDQL Editor",
             key: keyCounter++,
-            content: <CodeEditor editor={createEditor()} cdql={""} handleNotificationCall={handleNotificationCall}/>
+            content: <CodeEditor editor={createEditor()} cdql={""} handleNotificationCall={props.showNotification}/>
         }
     ]);
     useEffect(() => {
@@ -154,7 +154,7 @@ function AppView({handleNotificationCall, isConnected, openConnectDialog, setOpe
                     label: "CDQL Editor",
                     key: keyCounter++,
                     content: <CodeEditor editor={createEditor()} cdql={""}
-                                         handleNotificationCall={handleNotificationCall}/>
+                                         handleNotificationCall={props.showNotification}/>
                 });
                 setTabIndex(tabs.length - 1);
                 break;
@@ -172,7 +172,7 @@ function AppView({handleNotificationCall, isConnected, openConnectDialog, setOpe
                     label: `View all ${tab.item}`,
                     key: keyCounter++,
                     content: <CodeEditor editor={createEditor()} cdql={tab.cdql}
-                                         handleNotificationCall={handleNotificationCall} executeWhenOpen={true}/>
+                                         handleNotificationCall={props.showNotification} executeWhenOpen={true}/>
                 });
                 setTabIndex(tabs.length - 1);
                 break;

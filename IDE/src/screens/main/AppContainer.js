@@ -2,6 +2,8 @@ import React from "react";
 import { compose, withState, withHandlers, lifecycle } from "recompose";
 import { connect } from "react-redux";
 import Notification from "../../components/Notification/Notification";
+import {showNotification} from "../../components/Notification/NotificationState";
+
 import AppView from "./App";
 import { withStyles } from "@material-ui/core";
 import { toast } from "react-toastify";
@@ -17,7 +19,7 @@ export default compose(
             baseURL : state.connect.baseURL,
             notification : state.notification.notification,
         }),
-        {disconnectRequest}
+        {disconnectRequest, showNotification}
     ),
     withState('openConnectDialog', 'setOpenConnectDialog', false),
     withState('openRegisterDialog', 'setOpenRegisterDialog', false),

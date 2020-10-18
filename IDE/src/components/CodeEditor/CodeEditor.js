@@ -22,6 +22,8 @@ import './css/codemirror-icons.css';
 import LoadQuery from "./components/LoadQuery/LoadQuery";
 import {AutoCompleteEvent, AutoCompletionHandler} from "antlr4-editor";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import {showNotification} from '../Notification/NotificationState';
+import { connect } from "react-redux";
 
 const fetch = window.require('node-fetch');
 const Store = window.require('electron-store');
@@ -384,7 +386,10 @@ export default function CodeEditorView({editor,isConnected, handleNotificationCa
                 setResult(json);
             })
             .catch(err => {
-                handleNotificationCall({type: 'error', message: 'Failed to execute'});
+                debugger;
+                handleNotificationCall({type: 'error',
+                    message: 'Context Query Execution failed!',
+                    category: 'service'});
             }).then(function() { setIsLoading(false) });
     }
 
@@ -490,3 +495,4 @@ export default function CodeEditorView({editor,isConnected, handleNotificationCa
 CodeEditorView.propTypes = {
     cdql: PropTypes.string.isRequired
 };
+

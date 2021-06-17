@@ -1,5 +1,6 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cqp.proto.ContextEntity;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.RegisterEntityRequest;
 import au.coaas.sqem.proto.SQEMResponse;
@@ -7,6 +8,7 @@ import au.coaas.sqem.proto.UpdateEntityRequest;
 import au.coaas.sqem.util.CollectionDiscovery;
 import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.QueryBuilder;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
@@ -18,6 +20,8 @@ import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -26,6 +30,8 @@ public class ContextEntityHandler {
 
 
 //    private static Document preprocess
+
+    public final static int BUCKET_SIZE = 20;
 
     public static SQEMResponse createEntity(RegisterEntityRequest registerRequest) {
         try {
@@ -108,11 +114,13 @@ public class ContextEntityHandler {
         return value;
     }
 
+    //this method will get an update request as input and either update the entities that matches the provided key or create a new one
     public static SQEMResponse updateEntity(UpdateEntityRequest updateRequest) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("mydb");
 
+            //it finds the collection based on the entity type
             String collectionName = CollectionDiscovery.discover(updateRequest.getEt());
 
             MongoCollection<Document> collection = db.getCollection(collectionName);
@@ -121,6 +129,7 @@ public class ContextEntityHandler {
 
             JSONObject attributes = new JSONObject(updateRequest.getJson());
 
+            //form a query to find all the matching entities that needs to be updated
             for (String attributeName : attributes.keySet()) {
                 Object item = attributes.get(attributeName);
                 if (item instanceof JSONArray || item instanceof JSONObject) {
@@ -138,8 +147,13 @@ public class ContextEntityHandler {
                 query.put(key.getString(i), getValueByKey(updateRequest.getJson(), key.getString(i)));
             }
 
+            //execute the update
             UpdateResult ur = collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
 
+            //todo it might be better to create a separate thread and update the historical db there instead of blocking main thread
+            ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query);
+
+            //if not row is updated, it means no matching. Create a new one.
             if (ur.getMatchedCount() == 0) {
                 Document myDoc = Document.parse(updateRequest.getJson());
                 collection.insertOne(myDoc);
@@ -148,6 +162,106 @@ public class ContextEntityHandler {
                 return SQEMResponse.newBuilder().setStatus("200").setBody(ur.getMatchedCount() + " entity updated").build();
             }
         } catch (Exception e) {
+            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
+        }
+
+    }
+
+    //this function will store the update in mongodb based on the Size-based bucketing policy
+    private static SQEMResponse updateHistoricalDatabase(String collectionName, JSONArray keys, JSONObject attributes, BasicDBObject query) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("historical_db");
+
+            MongoCollection<Document> collection = db.getCollection(collectionName);
+
+            String todayDate = new SimpleDateFormat("dd-MM-yyyy").format(new Date());
+
+            query.put("day", todayDate);
+
+            query.put("nsamples", Document.parse("{$lt: " + ContextEntityHandler.BUCKET_SIZE + "}"));
+
+            JSONObject updateStatement = new JSONObject();
+
+            int samplesInUpdate = 0;
+
+            //todo for now, we are considering the time of arrival only. Needed to be change to consider the time coming in the data
+            long currentTime = System.currentTimeMillis();
+
+            //used to create the entity if no matching entities found
+            JSONObject entity = new JSONObject();
+            entity.put("day", todayDate);
+
+            JSONObject min = new JSONObject();
+            JSONObject max = new JSONObject();
+            JSONObject inc = new JSONObject();
+            JSONObject samples = new JSONObject();
+
+            for (String attributeName : attributes.keySet()) {
+                Object attributeValue = attributes.get(attributeName);
+                //to check if the attributeName is a key, then skip
+                if (keys != null) {
+                    boolean stopFlag = false;
+                    for (int i = 0; i < keys.length(); i++) {
+                        if (keys.optString(i, "").equals(attributeName)) {
+                            stopFlag = true;
+                            break;
+                        }
+                    }
+                    if (stopFlag) {
+                        entity.put(attributeName, attributeValue);
+                        continue;
+                    }
+                }
+
+                JSONObject entityAttr = new JSONObject();
+
+                samplesInUpdate++;
+
+                min.put(attributeName + ".first", currentTime);
+                entityAttr.put("start", currentTime);
+
+
+                max.put(attributeName + ".last", currentTime);
+                entityAttr.put("end", currentTime);
+
+
+                inc.put(attributeName + ".nsamples", 1);
+                entityAttr.put("nsamples", 1);
+
+
+                JSONObject itemValue = new JSONObject();
+                itemValue.put("val", attributeValue);
+                itemValue.put("time", currentTime);
+                samples.put(attributeName + ".samples", itemValue);
+                JSONArray samplesValue = new JSONArray();
+                samplesValue.put(itemValue);
+                entityAttr.put("samples", samplesValue);
+
+                entity.put(attributeName, entityAttr);
+            }
+
+            inc.put("nsamples", samplesInUpdate);
+            entity.put("nsamples", samplesInUpdate);
+
+            updateStatement.put("$push", samples);
+            updateStatement.put("$inc", inc);
+            updateStatement.put("$max", max);
+            updateStatement.put("$min", min);
+
+            Document updateDocument = Document.parse(updateStatement.toString());
+
+            UpdateResult updateResult = collection.updateMany(query, updateDocument, new UpdateOptions().upsert(false));
+
+            if (updateResult.getMatchedCount() == 0) {
+                Document myDoc = Document.parse(entity.toString());
+                collection.insertOne(myDoc);
+                return SQEMResponse.newBuilder().setStatus("200").setBody(String.valueOf(1)).build();
+            }
+
+            return SQEMResponse.newBuilder().setStatus("200").setBody(String.valueOf(updateResult.getMatchedCount())).build();
+        } catch (
+                Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
 

@@ -11,6 +11,7 @@
 
     <artifactId>CRE</artifactId>
 
+
     <dependencies>
         <dependency>
             <groupId>com.google.guava</groupId>
@@ -22,7 +23,8 @@
             <groupId>csiro.perccom.csto</groupId>
             <artifactId>cst-o</artifactId>
             <version>0.0.1</version>
-            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}\cst-o-0.0.1-SNAPSHOT-jar-with-dependencies.jar</systemPath>
         </dependency>
 
         <dependency>

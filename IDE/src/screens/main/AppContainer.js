@@ -3,7 +3,6 @@ import { compose, withState, withHandlers, lifecycle } from "recompose";
 import { connect } from "react-redux";
 import Notification from "../../components/Notification/Notification";
 import {showNotification} from "../../components/Notification/NotificationState";
-
 import AppView from "./App";
 import { withStyles } from "@material-ui/core";
 import { toast } from "react-toastify";

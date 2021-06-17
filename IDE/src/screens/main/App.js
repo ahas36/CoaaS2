@@ -4,6 +4,7 @@ import SplitPane from 'react-split-pane';
 import CodeEditor from '../../components/CodeEditor/CodeEditorContainer.js';
 import RegisterDialog from '../../components/serviceRegisteration/RegisterDialogContainer';
 import PostAddIcon from '@material-ui/icons/PostAdd';
+import GrainIcon from '@material-ui/icons/Grain';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import clsx from 'clsx';
@@ -21,6 +22,8 @@ import Toolbar from '@material-ui/core/Toolbar';
 import ToolbarContainer from '../../components/Toolbar/ToolbarContainer';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
+import DataSimulator from "../../components/DataSimulator/DataSimulator";
+
 const createEditor = require('../../components/editor').createCDQLEditor;
 
 const Mousetrap = require('mousetrap');
@@ -161,6 +164,14 @@ function AppView({handleNotificationCall, isConnected, openConnectDialog, setOpe
             case 3:
                 setOpenRegisterDialog(true);
                 break;
+            case 4:
+                tabs.push({
+                    label: "Data Simulator",
+                    key: keyCounter++,
+                    content: <DataSimulator handleNotificationCall={props.showNotification}/>
+                });
+                setTabIndex(tabs.length - 1);
+                break;
         }
     };
 
@@ -295,6 +306,19 @@ function AppView({handleNotificationCall, isConnected, openConnectDialog, setOpe
                             size={'small'}
                         >
                             <PostAddIcon fontSize="small"/>
+                        </IconButton>
+                    </Tooltip>
+
+                    <Tooltip enterDelay={100} title="Data Simulator" aria-label="Data Simulator">
+                        <IconButton
+                            edge="start"
+                            className={classes.menuButton}
+                            color="inherit"
+                            onClick={() => handleActionBarClick(4)}
+                            aria-label="Data Simulator"
+                            size={'small'}
+                        >
+                            <GrainIcon fontSize="small"/>
                         </IconButton>
                     </Tooltip>
                 </Toolbar>

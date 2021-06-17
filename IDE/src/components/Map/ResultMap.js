@@ -12,7 +12,7 @@ import ReactJson from 'react-json-view'
 
 import CITIES from './cities.json';
 
-const TOKEN = 'pk.eyJ1IjoiYWhhczM2IiwiYSI6ImNrNW95MjkwNzAyMmMza3F4bHNsZnJ1MmwifQ.N9_HUZjsstO38vnTLd1ntQ'; // Set your mapbox token here
+export const TOKEN = 'pk.eyJ1IjoiYWhhczM2IiwiYSI6ImNrNW95MjkwNzAyMmMza3F4bHNsZnJ1MmwifQ.N9_HUZjsstO38vnTLd1ntQ'; // Set your mapbox token here
 
 const fullscreenControlStyle = {
     position: 'absolute',

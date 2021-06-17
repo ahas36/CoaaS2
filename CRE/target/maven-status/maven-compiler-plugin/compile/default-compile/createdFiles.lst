@@ -1,3 +1,3 @@
-au/coaas/cre/server/CREServiceImpl.class
-au/coaas/cre/reasoner/SituationReasoner.class
-au/coaas/cre/server/CREServer.class
+au\coaas\cre\server\CREServer.class
+au\coaas\cre\server\CREServiceImpl.class
+au\coaas\cre\reasoner\SituationReasoner.class

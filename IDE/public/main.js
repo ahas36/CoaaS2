@@ -1,3 +1,4 @@
+
 const electron = require('electron');
 
 const app = electron.app;
@@ -14,6 +15,14 @@ const isDev = require('electron-is-dev');
 const path = require('path');
 
 let mainWindow=false;
+
+const ipcMain = electron.ipcMain;
+
+const {Client} = require("@googlemaps/google-maps-services-js");
+
+const client = new Client({});
+
+
 
 
 function createWindow(args) {
@@ -32,7 +41,12 @@ function createWindow(args) {
         'minHeight': 768,
         'position': 'center',
         'showDevTools': false,
-        'resizable': true
+        'resizable': true,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+            enableRemoteModule: true
+        }
     });
     mainWindow.open();
 
@@ -76,3 +90,23 @@ app.on('activate', () => {
         createWindow();
     }
 });
+
+
+function getDirection ({api_key, origin,destination,departureTime,travelMode}) {
+    return client.directions({
+        params: {
+            key: api_key,
+            origin: `${origin[1]},${origin[0]}`,
+            destination: `${destination[1]},${destination[0]}`,
+            mode: travelMode,
+            departure_time: departureTime
+        }
+    });
+}
+
+ipcMain.handle('google_direction', async (event, arg) => {
+    const res = await getDirection(arg);
+    let { data } = res;
+    console.log(JSON.stringify(data))
+    return JSON.stringify(data);
+})

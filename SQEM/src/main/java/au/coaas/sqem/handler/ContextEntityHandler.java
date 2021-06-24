@@ -1,6 +1,7 @@
 package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.ContextEntity;
+import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.RegisterEntityRequest;
 import au.coaas.sqem.proto.SQEMResponse;
@@ -31,7 +32,7 @@ public class ContextEntityHandler {
 
 //    private static Document preprocess
 
-    public final static int BUCKET_SIZE = 20;
+    public final static int BUCKET_SIZE = 200;
 
     public static SQEMResponse createEntity(RegisterEntityRequest registerRequest) {
         try {
@@ -60,11 +61,10 @@ public class ContextEntityHandler {
 
             int numberOfItemsPerTask = 100;
 
-            int numberOfIterations = (int) (items.length() / numberOfItemsPerTask);
+            int numberOfIterations = (int)Math.ceil(1.0 * items.length() / numberOfItemsPerTask);
 
             ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
 
-            UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder().setKey(updateRequest.getKey()).setEt(updateRequest.getEt());
 
             AtomicInteger error = new AtomicInteger();
             AtomicInteger success = new AtomicInteger();
@@ -74,7 +74,15 @@ public class ContextEntityHandler {
                     int start = numberOfItemsPerTask * finalFactor;
                     int end = Math.min(items.length(), start + numberOfItemsPerTask);
                     for (int i = start; i < end; i++) {
-                        SQEMResponse sqemResponse = updateEntity(builder.setJson(items.getJSONObject(i).toString()).build());
+                        JSONObject data = items.getJSONObject(i);
+                        JSONObject entityType = data.getJSONObject("EntityType");
+                        JSONObject entity = data.getJSONObject("Attributes");
+                        JSONArray keys = data.getJSONArray("key");
+                        UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder().setJson(entity.toString())
+                                .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
+                                .setKey(keys.toString());
+
+                        SQEMResponse sqemResponse = updateEntity(builder.build());
                         if (sqemResponse.getStatus().equals("200")) {
                             success.getAndIncrement();
                         } else {
@@ -177,9 +185,9 @@ public class ContextEntityHandler {
 
             String todayDate = new SimpleDateFormat("dd-MM-yyyy").format(new Date());
 
-            query.put("day", todayDate);
+            query.put("coaas:meta:day", todayDate);
 
-            query.put("nsamples", Document.parse("{$lt: " + ContextEntityHandler.BUCKET_SIZE + "}"));
+            query.put("coaas:meta:nsamples", Document.parse("{$lt: " + ContextEntityHandler.BUCKET_SIZE + "}"));
 
             JSONObject updateStatement = new JSONObject();
 
@@ -190,7 +198,7 @@ public class ContextEntityHandler {
 
             //used to create the entity if no matching entities found
             JSONObject entity = new JSONObject();
-            entity.put("day", todayDate);
+            entity.put("coaas:meta:day", todayDate);
 
             JSONObject min = new JSONObject();
             JSONObject max = new JSONObject();
@@ -218,31 +226,31 @@ public class ContextEntityHandler {
 
                 samplesInUpdate++;
 
-                min.put(attributeName + ".first", currentTime);
-                entityAttr.put("start", currentTime);
+                min.put(attributeName + ".coaas:meta:first", currentTime);
+                entityAttr.put("coaas:meta:start", currentTime);
 
 
-                max.put(attributeName + ".last", currentTime);
-                entityAttr.put("end", currentTime);
+                max.put(attributeName + ".coaas:meta:last", currentTime);
+                entityAttr.put("coaas:meta:end", currentTime);
 
 
-                inc.put(attributeName + ".nsamples", 1);
-                entityAttr.put("nsamples", 1);
+                inc.put(attributeName + ".coaas:meta:nsamples", 1);
+                entityAttr.put("coaas:meta:nsamples", 1);
 
 
                 JSONObject itemValue = new JSONObject();
-                itemValue.put("val", attributeValue);
-                itemValue.put("time", currentTime);
-                samples.put(attributeName + ".samples", itemValue);
+                itemValue.put("coaas:meta:val", attributeValue);
+                itemValue.put("coaas:meta:time", currentTime);
+                samples.put(attributeName + ".coaas:meta:samples", itemValue);
                 JSONArray samplesValue = new JSONArray();
                 samplesValue.put(itemValue);
-                entityAttr.put("samples", samplesValue);
+                entityAttr.put("coaas:meta:samples", samplesValue);
 
                 entity.put(attributeName, entityAttr);
             }
 
-            inc.put("nsamples", samplesInUpdate);
-            entity.put("nsamples", samplesInUpdate);
+            inc.put("coaas:meta:nsamples", samplesInUpdate);
+            entity.put("coaas:meta:nsamples", samplesInUpdate);
 
             updateStatement.put("$push", samples);
             updateStatement.put("$inc", inc);

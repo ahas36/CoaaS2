@@ -35,14 +35,21 @@ public class ContextEntityManager {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        JSONObject data = new JSONObject(request.getCdql());
-        JSONObject entityType = data.getJSONObject("EntityType");
-        JSONObject entity = data.getJSONObject("Attributes");
-        JSONArray keys = data.getJSONArray("key");
-        SQEMResponse sqemResponse = sqemStub.updateContextEntity(UpdateEntityRequest.newBuilder().setJson(entity.toString())
-                .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
-                .setKey(keys.toString())
-                .build());
+        String rawRequest = request.getCdql();
+        UpdateEntityRequest.Builder updateRequestBuilder = UpdateEntityRequest.newBuilder();
+        if(rawRequest.trim().startsWith("[")){
+            updateRequestBuilder.setJson(rawRequest);
+        }else{
+            JSONObject data = new JSONObject(request.getCdql());
+            JSONObject entityType = data.getJSONObject("EntityType");
+            JSONObject entity = data.getJSONObject("Attributes");
+            JSONArray keys = data.getJSONArray("key");
+            updateRequestBuilder.setJson(entity.toString())
+                    .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
+                    .setKey(keys.toString());
+        }
+
+        SQEMResponse sqemResponse = sqemStub.updateContextEntity(updateRequestBuilder.build());
         return CdqlResponse.newBuilder().setBody(sqemResponse.getBody()).setStatus(sqemResponse.getStatus()).build();
     }
 

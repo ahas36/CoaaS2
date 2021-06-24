@@ -30,6 +30,7 @@
         <module>CSI</module>
         <module>grpc</module>
         <module>CRE</module>
+        <module>SeeSenseDataWrapper</module>
     </modules>
 
     <dependencies>

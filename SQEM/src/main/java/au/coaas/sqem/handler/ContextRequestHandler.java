@@ -12,12 +12,19 @@ import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Accumulators;
+import com.mongodb.client.model.Aggregates;
+import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Filters;
+import com.sun.org.apache.xpath.internal.operations.Bool;
+import org.bson.BSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,14 +53,14 @@ public class ContextRequestHandler {
         }
     };
 
-    private static Object tokenToString(CdqlConditionToken token) throws WrongOperatorException {
+    private static Object tokenToString(CdqlConditionToken token, String attribute) throws WrongOperatorException {
         switch (token.getType()) {
             case Attribute:
 
                 if (token.getContextAttribute().getPrefix() == null || token.getContextAttribute().getPrefix().isEmpty()) {
-                    return token.getContextAttribute().getAttributeName();
+                    return attribute +  token.getContextAttribute().getAttributeName();
                 }
-                return token.getContextAttribute().getPrefix();
+                return attribute + token.getContextAttribute().getPrefix();
             case Constant:
                 switch (token.getConstantTokenType()) {
                     case Json:
@@ -73,7 +80,7 @@ public class ContextRequestHandler {
         }
     }
 
-    private static void processSimpleLogicToken(String operator, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition) throws WrongOperatorException {
+    private static void processSimpleLogicToken(String operator, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String attributePrefix) throws WrongOperatorException {
         String mongoQuery = null;
         boolean andFlag = false; //is next operation AND again?
         String tempStr;
@@ -99,8 +106,8 @@ public class ContextRequestHandler {
                             operator, operand1.getCdqlConditionToken(), operand2.getCdqlConditionToken());
                 }
 
-                String token1 = (String) tokenToString(operand1.getCdqlConditionToken());
-                Bson eqDefault = Filters.eq(token1, tokenToString(operand2.getCdqlConditionToken()));
+                String token1 = (String) tokenToString(operand1.getCdqlConditionToken(), attributePrefix);
+                Bson eqDefault = Filters.eq(token1, tokenToString(operand2.getCdqlConditionToken(), attributePrefix));
                 stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
                 break;
             }
@@ -160,10 +167,10 @@ public class ContextRequestHandler {
                     throwWrongOpException("the second operand in the expression should be a constant value",
                             operator, operand1.getCdqlConditionToken(), operand2.getCdqlConditionToken());
                 }
-                String token1 = (String) tokenToString(operand1.getCdqlConditionToken());
+                String token1 = (String) tokenToString(operand1.getCdqlConditionToken(), attributePrefix);
 
                 stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(),
-                        generateComparisonFilter(token1, tokenToString(operand2.getCdqlConditionToken()), operator)));
+                        generateComparisonFilter(token1, tokenToString(operand2.getCdqlConditionToken(), attributePrefix), operator)));
 
                 //less than with complex functions like distance, cost, commute time, etc.
                 //is parsed separately in a function that is responsible for these parameters
@@ -173,7 +180,7 @@ public class ContextRequestHandler {
 
     }
 
-    private static void processDistanceToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType) throws WrongOperatorException {
+    private static void processDistanceToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType, String attributePrefix) throws WrongOperatorException {
 
         String mongoQuery;
 
@@ -204,7 +211,7 @@ public class ContextRequestHandler {
             throw new WrongOperatorException(result);
 
         }
-        Bson eqDefault = Filters.geoWithinCenterSphere(location_prefix, Double.valueOf(dest_lon), Double.valueOf(dest_lat), distance / 6371000.0);
+        Bson eqDefault = Filters.geoWithinCenterSphere(attributePrefix + location_prefix, Double.valueOf(dest_lon), Double.valueOf(dest_lat), distance / 6371000.0);
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }
 
@@ -300,6 +307,9 @@ public class ContextRequestHandler {
 
         Stack<ExtendedCdqlConditionToken> stack = new Stack<>();
 
+        Boolean isHistoricalQuery = contextRequest.hasMeta() && contextRequest.getMeta().hasTimeWindow();
+
+        String attributePrefix = isHistoricalQuery ? "coaas:samples.coaas:value." : "";
 
         Bson finalQuery = new BasicDBObject();
         if (!RPNcondition.isEmpty()) {
@@ -309,7 +319,7 @@ public class ContextRequestHandler {
                 while (token != null) {
                     switch (token.getType()) {
                         case Attribute:
-                            conditionContextAttribiutes.add((String) tokenToString(token));
+                            conditionContextAttribiutes.add((String) tokenToString(token, attributePrefix));
                             stack.push(new ExtendedCdqlConditionToken(token));
                             break;
                         case Constant:
@@ -329,12 +339,12 @@ public class ContextRequestHandler {
                             }
                             switch (token.getFunctionCall().getFunctionName().toLowerCase()) {
                                 case "distance":
-                                    processDistanceToken(token, stack, RPNcondition, entityType);
+                                    processDistanceToken(token, stack, RPNcondition, entityType, attributePrefix);
                                     break;
                             }
                             break;
                         case Operator:
-                            processSimpleLogicToken(token.getStringValue(), stack, RPNcondition);
+                            processSimpleLogicToken(token.getStringValue(), stack, RPNcondition, attributePrefix);
                             break;
                     }
                     extendedToken = new ExtendedCdqlConditionToken(RPNcondition.poll());
@@ -347,12 +357,9 @@ public class ContextRequestHandler {
             finalQuery = stack.pop().getBson();
         }
 
-        MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("mydb");
-        MongoCollection<Document> entityCollection = db.getCollection(CollectionDiscovery.discover(contextRequest.getEt()));
-        final JSONArray finalResultJsonArr = new JSONArray();
-        String monogQueryString = finalQuery.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson();
+        String collectionName = CollectionDiscovery.discover(contextRequest.getEt());
 
-        // LOG.info(monogQueryString);
+        final JSONArray finalResultJsonArr = new JSONArray();
 
         Block<Document> printBlock = new Block<Document>() {
             @Override
@@ -367,13 +374,86 @@ public class ContextRequestHandler {
             }
         };
 
-        //ToDo add limit and sort function
-//        entityCollection.find(finalQuery).limit(10).forEach(printBlock);
-        entityCollection.find(finalQuery).forEach(printBlock);
+        if (isHistoricalQuery) {
+            Long start = contextRequest.getMeta().getTimeWindow().getStart();
+            Long end = contextRequest.getMeta().getTimeWindow().getEnd();
+            queryHistoricalData(collectionName, finalQuery, conditionContextAttribiutes, start, end,printBlock);
+        } else {
+            String monogQueryString = finalQuery.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson();
+            MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("mydb");
+            MongoCollection<Document> entityCollection = db.getCollection(collectionName);
+            //ToDo add limit and sort function
+//            entityCollection.find(finalQuery).limit(10).forEach(printBlock);
+            entityCollection.find(finalQuery).forEach(printBlock);
+        }
+
         return SQEMResponse.newBuilder().setStatus("200").setBody(finalResultJsonArr.toString()).build();
     }
+
+    private static JSONArray queryHistoricalData(String collectionName, Bson finalQuery, Set<String> conditionContextAttributes, Long startDate, Long endDate, Block printBlock) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("historical_db");
+        MongoCollection<Document> collection = db.getCollection(collectionName);
+
+        List<Bson> query = new ArrayList<>();
+
+        query.add(Aggregates.match(generateDateFilter(startDate, endDate, "coaas:day", false)));
+
+
+        query.add(Aggregates.unwind("$coaas:samples"));
+
+        query.add(Aggregates.match(generateDateFilter(startDate, endDate, "coaas:samples.coaas:time", true)));
+
+        query.add(Aggregates.match(finalQuery));
+
+        query.add(Aggregates.group("$coaas:key", Accumulators.push("samples","$coaas:samples")));
+
+        collection.aggregate(query).forEach(printBlock);
+
+        System.out.println(queryToString(query));
+        return null;
+    }
+
+    private static String queryToString(List<Bson> query) {
+        String result = "[\n";
+        for (Bson item : query) {
+            result += item.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson() + ",\n";
+        }
+        result += "]";
+        return result;
+    }
+
+    private static Bson generateDateFilter(Long startDate, Long endDate, String attributeName, boolean isExact) {
+        Bson dateFilterMatch = null;
+        if (startDate != 0 && endDate != 0) {
+            dateFilterMatch = Filters.and(Filters.gte(attributeName, getDateFromLong(startDate, isExact)), Filters.lte(attributeName, getDateFromLong(endDate, isExact)));
+        } else {
+            if (startDate != 0) {
+                dateFilterMatch = Filters.gte(attributeName, getDateFromLong(startDate, isExact));
+            } else if (endDate != 0) {
+                dateFilterMatch = Filters.lte(attributeName, getDateFromLong(endDate, isExact));
+            }
+        }
+        return dateFilterMatch;
+    }
+
+
+    private static Object getDateFromLong(Long dateLong, boolean isExact) {
+        if (isExact) {
+            return dateLong;
+        }
+        Calendar cal = new GregorianCalendar();
+        cal.setTime(new Date(dateLong));
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
+    }
+
 
     private static SQEMResponse createErrorResponse(String errorMessage) {
         return SQEMResponse.newBuilder().setBody(errorMessage).setStatus("500").build();
     }
+
 }

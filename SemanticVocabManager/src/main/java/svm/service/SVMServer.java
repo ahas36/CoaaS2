@@ -12,6 +12,8 @@ import svm.finder.SemanticVocabularyManger;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+
 /**
  *
  * @author ali
@@ -23,7 +25,7 @@ public class SVMServer {
     {
         SemanticVocabularyManger.init();
         log.info("Starting");
-        Server server = ServerBuilder.forPort(9191).addService(new SVMServiceImpl()).build();
+        Server server = ServerBuilder.forPort(9191).addService(new SVMServiceImpl()).maxInboundMessageSize(MAX_MESSAGE_SIZE).build();
         server.start();
         log.info("Server started on port 9191");
         server.awaitTermination();

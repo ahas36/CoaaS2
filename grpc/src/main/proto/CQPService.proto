@@ -34,6 +34,8 @@ message CDQLQuery {
 
     CDQLCallback callback = 10;
 
+    CDQLMeta meta = 12;
+
     map<int32, au.coaas.base.proto.ListOfString> executionPlan = 11;
 }
 
@@ -197,6 +199,17 @@ message OutputConfig {
 message CDQLConfig {
     OutputConfig outputConfig = 1;
 }
+
+message CDQLMeta {
+    string body = 1;
+    TimeWindow timeWindow = 2;
+}
+
+message TimeWindow{
+    int64 start = 1;
+    int64 end = 2;
+}
+
 
 enum CallBackMethod {
     UNKNOWN_METHOD_TYPE = 0;

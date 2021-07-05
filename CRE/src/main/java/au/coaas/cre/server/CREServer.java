@@ -11,6 +11,8 @@ import io.grpc.ServerBuilder;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+
 /**
  *
  * @author ali
@@ -21,7 +23,7 @@ public class CREServer {
     static public void main (String [] args) throws IOException, InterruptedException
     {
         log.info("Starting");
-        Server server = ServerBuilder.forPort(8583).addService(new CREServiceImpl()).build();
+        Server server = ServerBuilder.forPort(8583).maxInboundMessageSize(MAX_MESSAGE_SIZE).addService(new CREServiceImpl()).build();
         server.start();
         log.info("Server started on port 8583");
         server.awaitTermination();

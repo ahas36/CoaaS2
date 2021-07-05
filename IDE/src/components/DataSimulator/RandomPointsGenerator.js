@@ -36,7 +36,7 @@ const store = new Store();
  **/
 
 
-function getMapSvg(number, polygon, properties, fc, box, details, callback) {
+function getMapSvg(number, polygon, properties, fc, box, details, callback,progressUpdate) {
 
     let requestOptions = {
         method: 'GET',
@@ -55,7 +55,7 @@ function getMapSvg(number, polygon, properties, fc, box, details, callback) {
 
                 canvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
                 try{
-                    const data = await process(number, polygon, properties, fc, canvas, box, details);
+                    const data = await process(number, polygon, properties, fc, canvas, box, details, progressUpdate);
                     callback(data);
                 }catch (e){
                     alert("An error happened during data simulation : e= " + e);
@@ -69,11 +69,11 @@ function getMapSvg(number, polygon, properties, fc, box, details, callback) {
         .catch(error => console.log('error', error));
 }
 
-const randomPointsOnPolygon = (number, polygon, properties, fc, bbox, details, callback) => {
-    getMapSvg(number, polygon, properties, fc, bbox, details, callback);
+const randomPointsOnPolygon = (number, polygon, properties, fc, bbox, details, callback, progressUpdate) => {
+    getMapSvg(number, polygon, properties, fc, bbox, details, callback, progressUpdate);
 }
 
-async function process(number, polygon, properties, fc, canvas, boundingBox, details) {
+async function process(number, polygon, properties, fc, canvas, boundingBox, details, progressUpdate) {
     const result = [];
 
     if (typeof properties === 'boolean') {
@@ -184,6 +184,7 @@ async function process(number, polygon, properties, fc, canvas, boundingBox, det
                 });
                 dataItem.direction = JSON.parse(direction);
                 result.push(dataItem);
+                progressUpdate(result.length);
                 break;
             } else {
                 coordinates.splice(index, 1);

@@ -694,6 +694,7 @@ public class PullBasedExecutor {
         //ToDo fix return attribute section
         ContextRequest cr = ContextRequest.newBuilder().setEt(targetEntity.getType())
                 .setCondition(tempContextEntity.getCondition())
+                .setMeta(query.getMeta())
                 .addAllReturnAttributes(returnAttributes).build();
 
         return cr;

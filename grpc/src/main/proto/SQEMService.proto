@@ -21,6 +21,7 @@ message ContextRequest
     au.coaas.cqp.proto.ContextEntityType et = 1;
     repeated au.coaas.cqp.proto.ContextAttribute returnAttributes = 2;
     au.coaas.cqp.proto.Condition condition = 3;
+    au.coaas.cqp.proto.CDQLMeta meta = 4;
 }
 
 message RegisterEntityRequest

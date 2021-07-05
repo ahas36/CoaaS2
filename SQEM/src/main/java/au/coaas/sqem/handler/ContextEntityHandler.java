@@ -15,14 +15,19 @@ import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
 import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
+import org.bson.conversions.Bson;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -61,7 +66,7 @@ public class ContextEntityHandler {
 
             int numberOfItemsPerTask = 100;
 
-            int numberOfIterations = (int)Math.ceil(1.0 * items.length() / numberOfItemsPerTask);
+            int numberOfIterations = (int) Math.ceil(1.0 * items.length() / numberOfItemsPerTask);
 
             ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
 
@@ -161,6 +166,7 @@ public class ContextEntityHandler {
             //todo it might be better to create a separate thread and update the historical db there instead of blocking main thread
             ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query);
 
+
             //if not row is updated, it means no matching. Create a new one.
             if (ur.getMatchedCount() == 0) {
                 Document myDoc = Document.parse(updateRequest.getJson());
@@ -183,96 +189,98 @@ public class ContextEntityHandler {
 
             MongoCollection<Document> collection = db.getCollection(collectionName);
 
-            String todayDate = new SimpleDateFormat("dd-MM-yyyy").format(new Date());
 
-            query.put("coaas:meta:day", todayDate);
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
 
-            query.put("coaas:meta:nsamples", Document.parse("{$lt: " + ContextEntityHandler.BUCKET_SIZE + "}"));
+            Date todayDate = cal.getTime();
 
-            JSONObject updateStatement = new JSONObject();
+            query.put("coaas:day", todayDate);
+
+            query.put("coaas:nsamples", Document.parse("{$lt: " + ContextEntityHandler.BUCKET_SIZE + "}"));
 
             int samplesInUpdate = 0;
 
             //todo for now, we are considering the time of arrival only. Needed to be change to consider the time coming in the data
             long currentTime = System.currentTimeMillis();
 
-            //used to create the entity if no matching entities found
-            JSONObject entity = new JSONObject();
-            entity.put("coaas:meta:day", todayDate);
+            JSONObject keysObject = new JSONObject();
 
-            JSONObject min = new JSONObject();
-            JSONObject max = new JSONObject();
-            JSONObject inc = new JSONObject();
-            JSONObject samples = new JSONObject();
-
-            for (String attributeName : attributes.keySet()) {
-                Object attributeValue = attributes.get(attributeName);
-                //to check if the attributeName is a key, then skip
-                if (keys != null) {
-                    boolean stopFlag = false;
-                    for (int i = 0; i < keys.length(); i++) {
-                        if (keys.optString(i, "").equals(attributeName)) {
-                            stopFlag = true;
-                            break;
-                        }
-                    }
-                    if (stopFlag) {
-                        entity.put(attributeName, attributeValue);
-                        continue;
-                    }
+            String keySet = "";
+            if(keys != null){
+                for(int i=0;i<keys.length();i++){
+                    String key = keys.getString(i);
+                    keysObject.put(key,attributes.opt(key));
+                    keySet+=attributes.optString(key, key+"NA")+":";
+//                    attributes.remove(key);
                 }
-
-                JSONObject entityAttr = new JSONObject();
-
-                samplesInUpdate++;
-
-                min.put(attributeName + ".coaas:meta:first", currentTime);
-                entityAttr.put("coaas:meta:start", currentTime);
-
-
-                max.put(attributeName + ".coaas:meta:last", currentTime);
-                entityAttr.put("coaas:meta:end", currentTime);
-
-
-                inc.put(attributeName + ".coaas:meta:nsamples", 1);
-                entityAttr.put("coaas:meta:nsamples", 1);
-
-
-                JSONObject itemValue = new JSONObject();
-                itemValue.put("coaas:meta:val", attributeValue);
-                itemValue.put("coaas:meta:time", currentTime);
-                samples.put(attributeName + ".coaas:meta:samples", itemValue);
-                JSONArray samplesValue = new JSONArray();
-                samplesValue.put(itemValue);
-                entityAttr.put("coaas:meta:samples", samplesValue);
-
-                entity.put(attributeName, entityAttr);
             }
 
-            inc.put("coaas:meta:nsamples", samplesInUpdate);
-            entity.put("coaas:meta:nsamples", samplesInUpdate);
+            Document updateDocument = new Document();
+            updateDocument.put("coaas:time",currentTime);
+            updateDocument.put("coaas:value", convertJSONObject2Document(attributes));
 
-            updateStatement.put("$push", samples);
-            updateStatement.put("$inc", inc);
-            updateStatement.put("$max", max);
-            updateStatement.put("$min", min);
+            List<Bson> updateStatement = new ArrayList<>();
 
-            Document updateDocument = Document.parse(updateStatement.toString());
+            updateStatement.add(Updates.set("coaas:day",todayDate));
+            updateStatement.add(Updates.set("coaas:key",keySet));
+            updateStatement.add(Updates.push("coaas:samples",updateDocument));
+            updateStatement.add(Updates.min("coaas:first",currentTime));
+            updateStatement.add(Updates.max("coaas:last",currentTime));
+            updateStatement.add(Updates.inc("coaas:nsamples",1));
 
-            UpdateResult updateResult = collection.updateMany(query, updateDocument, new UpdateOptions().upsert(false));
 
-            if (updateResult.getMatchedCount() == 0) {
-                Document myDoc = Document.parse(entity.toString());
-                collection.insertOne(myDoc);
-                return SQEMResponse.newBuilder().setStatus("200").setBody(String.valueOf(1)).build();
-            }
+            UpdateResult updateResult = collection.updateMany(query, Updates.combine(updateStatement), new UpdateOptions().upsert(true));
+
+//            if (updateResult.getMatchedCount() == 0) {
+//                Document myDoc = convertJSONObject2Document(entity);
+//                collection.insertOne(myDoc);
+//                return SQEMResponse.newBuilder().setStatus("200").setBody(String.valueOf(1)).build();
+//            }
+
 
             return SQEMResponse.newBuilder().setStatus("200").setBody(String.valueOf(updateResult.getMatchedCount())).build();
-        } catch (
-                Exception e) {
+        } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
 
+    }
+
+
+    private static List<Object> parseJsonArray(JSONArray ja) {
+        List<Object> result = new ArrayList<>();
+        for (int i = 0; i < ja.length(); i++) {
+            Object subItem = ja.get(i);
+            if (subItem instanceof JSONObject) {
+                result.add(convertJSONObject2Document(subItem));
+            } else if (subItem instanceof JSONArray) {
+                result.add(parseJsonArray((JSONArray) subItem));
+            } else {
+                result.add(subItem);
+            }
+        }
+        return result;
+    }
+
+    private static Document convertJSONObject2Document(Object item) {
+        Document document = new Document();
+        if (item instanceof JSONObject) {
+            JSONObject jo = (JSONObject) item;
+            for (String key : jo.keySet()) {
+                Object subItem = jo.get(key);
+                if (subItem instanceof JSONObject) {
+                    document.put(key, convertJSONObject2Document(subItem));
+                } else if (subItem instanceof JSONArray) {
+                    document.put(key,parseJsonArray((JSONArray) subItem));
+                } else {
+                    document.put(key, subItem);
+                }
+            }
+        }
+        return document;
     }
 
 
@@ -280,6 +288,9 @@ public class ContextEntityHandler {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
         MongoDatabase db = mongoClient.getDatabase("mydb");
         MongoCollection<Document> collection = db.getCollection(name);
+        collection.drop();
+        MongoDatabase historicalDb = mongoClient.getDatabase("historical_db");
+        collection = historicalDb.getCollection(name);
         collection.drop();
         return SQEMResponse.newBuilder().setStatus("200").build();
     }
@@ -290,7 +301,12 @@ public class ContextEntityHandler {
         MongoCollection<Document> collection = db.getCollection(name);
         DeleteResult deleteResult = collection.deleteMany(new BasicDBObject());
         JSONObject jo = new JSONObject();
-        jo.put("DeletedCount", deleteResult.getDeletedCount());
+        long deletedCount = deleteResult.getDeletedCount();
+
+        MongoDatabase historicalDb = mongoClient.getDatabase("historical_db");
+        collection = historicalDb.getCollection(name);
+        deleteResult = collection.deleteMany(new BasicDBObject());
+        jo.put("DeletedCount", deletedCount + deleteResult.getDeletedCount());
         return SQEMResponse.newBuilder().setStatus("200").setBody(jo.toString()).build();
     }
 

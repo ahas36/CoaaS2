@@ -11,6 +11,8 @@ import io.grpc.ServerBuilder;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+
 /**
  *
  * @author ali
@@ -20,9 +22,8 @@ public class SQEMServer {
 
     static public void main (String [] args) throws IOException, InterruptedException
     {
-
         log.info("Starting");
-        Server server = ServerBuilder.forPort(8686).addService(new SQEMServiceImpl()).build();
+        Server server = ServerBuilder.forPort(8686).maxInboundMessageSize(MAX_MESSAGE_SIZE).addService(new SQEMServiceImpl()).build();
         server.start();
         log.info("Server started on port 8686");
         server.awaitTermination();

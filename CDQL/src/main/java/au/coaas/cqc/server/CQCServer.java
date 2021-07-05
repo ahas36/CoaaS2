@@ -22,7 +22,8 @@ public class CQCServer {
     {
 
         log.info("Starting");
-        Server server = ServerBuilder.forPort(8484).addService(new CQCServiceImpl()).build();
+        Server server = ServerBuilder.forPort(8484).addService(new CQCServiceImpl())
+                .maxInboundMessageSize(MAX_MESSAGE_SIZE).build();
         server.start();
         log.info("Server started on port 8484");
         server.awaitTermination();

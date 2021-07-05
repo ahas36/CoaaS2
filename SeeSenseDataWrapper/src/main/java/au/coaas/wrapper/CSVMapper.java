@@ -18,11 +18,15 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import okhttp3.*;
 import org.apache.commons.io.IOUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- *
  * @author DELL
  */
 public class CSVMapper {
@@ -42,29 +46,20 @@ public class CSVMapper {
 
     public static void postJsonEntity(String jsonInputString) throws MalformedURLException, IOException {
 
-        URL url = new URL("http://localhost:8070/CASM-2.0.1/api/entity/update");
-        //URL url = new URL("https://reqres.in/api/users");
-        HttpURLConnection con = (HttpURLConnection) url.openConnection();
-        con.addRequestProperty("User-Agent", "Mozilla");
-        con.setRequestMethod("POST");
-        con.setRequestProperty("Content-Type", "text/plain; charset=UTF-8");
-        con.setRequestProperty("Accept", "text/plain");
-        con.setDoOutput(true);
+        String baseUrl = "https://sit-coaas-dev.deakin.edu.au/";
+//        String baseUrl = "http://localhost:8070/";
+        OkHttpClient client = new OkHttpClient().newBuilder()
+                .build();
+        MediaType mediaType = MediaType.parse("text/plain");
+        RequestBody body = RequestBody.create(mediaType, jsonInputString);
+        Request request = new Request.Builder()
+                .url(baseUrl+"CASM-2.0.1/api/entity/update")
+                .method("POST", body)
+                .addHeader("Content-Type", "text/plain")
+                .build();
+        Response response = client.newCall(request).execute();
+        System.out.println(response.body().string());
 
-        try (OutputStream os = con.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes("utf-8");
-            os.write(input, 0, input.length);
-        }
-
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(con.getInputStream(), "utf-8"))) {
-            StringBuilder response = new StringBuilder();
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-            System.out.println(response.toString());
-        }
 
     }
 
@@ -90,60 +85,132 @@ public class CSVMapper {
     public static void readCSV() throws FileNotFoundException, IOException {
         //parsing a CSV file into Scanner class constructor  
 
-        BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Ali\\Downloads\\cyclistData.csv"));
+        BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Ali\\Desktop\\extended datapoint.csv"));
 
+        reader.readLine();
+        int bucketSize = 5000;
+        int counter = 0;
+        JSONArray ja = new JSONArray();
         while (true) {
+
             String line = reader.readLine();
             if (line == null) {
+                if (counter != 0) {
+                    postJsonEntity(ja.toString());
+                }
                 break;
             }
 
-            
             //if it is not the first line of csv
-            if (!line.contains("light_id")) {
-                String[] attributes = line.split(",");
-                String json = buildJsonInputString(attributes);
-                postJsonEntity (json);
-                
+            String[] attributes = line.split(",");
+            ja.put(buildJsonInputString(attributes));
+            counter++;
+            if (counter == bucketSize) {
+                postJsonEntity(ja.toString());
+                ja = new JSONArray();
+                counter = 0;
             }
-
-            
-
         }
 
     }
 
-    public static String buildJsonInputString(String[] csvLine) throws IOException {
+    final static String regexDouble = "-?\\d+(\\.\\d+)";
+    final static Pattern patternDouble = Pattern.compile(regexDouble, Pattern.MULTILINE);
 
-        
-            
-            return "{\"EntityType\":{\"namespace\":\"fiware-scheme.org\",\"type\":\"cyclistPoint\"},\"Attributes\":{"
-                    + "\"lightID\":" + csvLine[0] + ","
-                    + "\"UTCTime\":" + csvLine[1] + ","
-                    + "\"lng\":" + csvLine[2] + ","
-                    + "\"lat\":" + csvLine[3] + ","
-                    + "\"speed\":" + csvLine[4] + ","
-                    + "\"x\":" + csvLine[5] + ","
-                    + "\"y\":" + csvLine[6] + ","
-                    + "\"z\":" + csvLine[7] + ","
-                    + "\"localTime\":" + csvLine[8] + ","
-                    + "\"lightProjectID\":" + csvLine[9] + ","
-                    + "\"os\":" + csvLine[10] + ","
-                    + "\"userID\":" + csvLine[11] + ","
-                    + "\"userProjectID\":" + csvLine[12] + ","
-                    + "\"userEmail\":" + csvLine[13] + ","
-                    + "\"macAddress\":" + csvLine[14] + ","
-                    + "\"age\":" + csvLine[15] + ","
-                    + "\"gender\":" + csvLine[16] + ","
-                    + "\"bikeMake\":" + csvLine[17] + ","
-                    + "\"bikeModel\":" + csvLine[18] + ","
-                    + "\"isBikeElectric\":" + csvLine[19] + ","
-                    + "\"year\":" + csvLine[20] + ","
-                    + "\"month\":" + csvLine[21] + ","
-                    + "\"day\":" + csvLine[22] + ","
-                    + "\"hour\":" + csvLine[23] + "},"                    
-                    
-                    + "\"key\":[\"lightID\"]}";
-  
+    final static String regexLong = "-?\\d+";
+    final static Pattern patternLong = Pattern.compile(regexLong, Pattern.MULTILINE);
+
+    public static Object parseValue(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value.startsWith("\"") && value.endsWith("\"")) {
+            value = value.substring(1, value.length() - 1);
+        }
+
+        try {
+            value = value.trim().toLowerCase();
+
+            if (value.equals("false") || value.equals("true")) {
+                return Boolean.valueOf(value);
+            }
+
+            final Matcher matcherDouble = patternDouble.matcher(value);
+
+            if (matcherDouble.matches()) {
+                return Double.valueOf(value);
+            }
+
+            final Matcher matcherLong = patternLong.matcher(value);
+
+            if (matcherLong.matches()) {
+                return Long.valueOf(value);
+            }
+
+
+        } catch (Exception e) {
+
+        }
+
+        return value;
+    }
+
+    public static JSONObject buildJsonInputString(String[] csvLine) throws IOException {
+
+        JSONObject result = new JSONObject();
+
+        JSONObject et = new JSONObject();
+        et.put("namespace", "fiware-scheme.org");
+        et.put("type", "cyclistPoint");
+        result.put("EntityType", et);
+
+
+        JSONObject attributes = new JSONObject();
+        attributes.put("lightID", parseValue(csvLine[0]));
+
+
+        attributes.put("UTCTime", parseValue(csvLine[1]));
+
+        JSONObject geo = new JSONObject();
+        JSONArray coords = new JSONArray();
+        coords.put(parseValue(csvLine[2]));
+        coords.put(parseValue(csvLine[3]));
+        geo.put("coordinates", coords);
+        geo.put("type", "Point");
+        attributes.put("geo", geo);
+
+        attributes.put("latitude", parseValue(csvLine[3]));
+        attributes.put("longitude", parseValue(csvLine[2]));
+        attributes.put("speed", parseValue(csvLine[4]));
+        attributes.put("x", parseValue(csvLine[5]));
+        attributes.put("y", parseValue(csvLine[6]));
+        attributes.put("z", parseValue(csvLine[7]));
+        attributes.put("localTime", parseValue(csvLine[8]));
+        attributes.put("lightProjectID", parseValue(csvLine[9]));
+        attributes.put("os", parseValue(csvLine[10]));
+        attributes.put("userID", parseValue(csvLine[11]));
+        attributes.put("lightProjectID", parseValue(csvLine[12]));
+        attributes.put("userEmail", parseValue(csvLine[13]));
+        attributes.put("macAddress", parseValue(csvLine[14]));
+        attributes.put("age", parseValue(csvLine[15]));
+        attributes.put("gender", parseValue(csvLine[16]));
+        attributes.put("bikeMake", parseValue(csvLine[17]));
+        attributes.put("bikeModel", parseValue(csvLine[18]));
+        attributes.put("isBikeElectric", parseValue(csvLine[19]));
+        attributes.put("year", parseValue(csvLine[20]));
+        attributes.put("month", parseValue(csvLine[21]));
+        attributes.put("day", parseValue(csvLine[22]));
+        attributes.put("hour", parseValue(csvLine[23]));
+        attributes.put("journey_id", parseValue(csvLine[24]));
+
+        result.put("Attributes", attributes);
+
+        JSONArray keys = new JSONArray();
+        keys.put("lightID");
+        result.put("key", keys);
+
+        return result;
+
     }
 }

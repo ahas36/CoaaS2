@@ -8,6 +8,8 @@ package au.coaas.grpc.client;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+
 /**
  *
  * @author ali
@@ -20,6 +22,7 @@ public class SVMChannel {
 
     private SVMChannel() {
         channel = ManagedChannelBuilder.forAddress("svm", 9191)
+                .maxInboundMessageSize(MAX_MESSAGE_SIZE)
                 .usePlaintext()
                 .build();
     }

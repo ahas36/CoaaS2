@@ -44,7 +44,7 @@ public class MainParser {
             }
             throw new CDQLSyntaxtErrorException(error);
         }
-        CdqlVisitor stringCDQLBaseVisitor = new CdqlVisitor();
+        CdqlVisitorImpl stringCDQLBaseVisitor = new CdqlVisitorImpl();
         // Walk the tree created during the parse, trigger callbacks
         res.append(tree.toStringTree(parser));
         stringCDQLBaseVisitor.visit(tree);

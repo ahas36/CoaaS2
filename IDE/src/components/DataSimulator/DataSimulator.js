@@ -20,7 +20,6 @@ import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import Backdrop from '@material-ui/core/Backdrop';
 import CircularProgress from '@material-ui/core/CircularProgress';
-
 import {
     MuiPickersUtilsProvider,
     KeyboardTimePicker,
@@ -32,6 +31,9 @@ import Circle from '@turf/circle';
 import Bbox from '@turf/bbox';
 import randomPointsOnPolygon from './RandomPointsGenerator';
 import JSONTree from "react-json-tree";
+import {getRandomInt} from "./RandomNumberGenerator";
+
+let moment = require('moment');
 
 const polylineDecoder = require('google-polyline');
 const Store = window.require('electron-store');
@@ -65,7 +67,7 @@ function saveFile(content, exnt) {
 
         // fileName is a string that contains the path and filename created in the save file dialog.
         if (!fileName.endsWith(exnt)) {
-            fileName = fileName + '.'+exnt;
+            fileName = fileName + '.' + exnt;
         }
         fs.writeFile(fileName, content, (err) => {
             if (err) {
@@ -138,6 +140,7 @@ export default function AffiliationDashboard({updateAffiliationRequest, ...props
     const steps = getSteps();
 
     const [isLoading, setIsLoading] = React.useState(false);
+    const [journeyPointsGenerationProgress, setJourneyPointsGenerationProgress] = React.useState('0');
     const [activeStep, setActiveStep] = React.useState(0);
 
     const [simulatedData, setSimulatedData] = React.useState({});
@@ -538,6 +541,8 @@ export default function AffiliationDashboard({updateAffiliationRequest, ...props
         return (
             <div className={classes.stepContentContainer}>
                 {isLoading && <Backdrop className={classes.backdrop} open={isLoading}>
+                    <Typography>{journeyPointsGenerationProgress}</Typography>
+                    <br/>
                     <CircularProgress color="inherit"/>
                 </Backdrop>}
                 <MapGL
@@ -585,6 +590,10 @@ export default function AffiliationDashboard({updateAffiliationRequest, ...props
                     (result) => {
                         setJourneyPoints(result);
                         setIsLoading(false);
+                        setJourneyPointsGenerationProgress('0');
+                    },
+                    (progress)=>{
+                        setJourneyPointsGenerationProgress(progress+' out of '+details.numberOfInstances);
                     });
             } catch (e) {
                 console.log(e);
@@ -655,7 +664,7 @@ export default function AffiliationDashboard({updateAffiliationRequest, ...props
             const generatedPolyline = polylineDecoder.encode(encodePoints);
 
             sensorData.push({
-                journey_id: "journey_"+journey_id++,
+                journey_id: "journey_" + journey_id++,
                 generatedPolyline: generatedPolyline,
                 googlePolyline: journey.direction.routes[0].overview_polyline.points,
                 departureTime: journey.departureTime,
@@ -674,27 +683,95 @@ export default function AffiliationDashboard({updateAffiliationRequest, ...props
         saveFile(JSON.stringify(simulatedData), 'json');
     }
 
+    const generateUserProfile = (pn) => {
+        const ups = [];
+        for (let i = 0; i < pn; i++) {
+            ups.push({
+                gender: getRandomInt(1) == 0 ? "male" : "female",
+                light_id: 'light_id_' + i,
+                light_project_id: 1,
+                os: getRandomInt(1) == 0 ? "Android" : "iOS",
+                user_id: 'user_id_' + i,
+                user_project_id: 1,
+                user_email: 'user_' + i + '@email.com',
+                mac_address: 'mac_address_' + i,
+                age: 10 + getRandomInt(45),
+                bike_make:'bike_make_'+getRandomInt(15),
+                bike_model:'bike_model_'+getRandomInt(5),
+                is_bike_electric: getRandomInt(1) == 0 ? "TRUE" : "FALSE",
+            });
+        }
+        return ups;
+    }
+
     const exportCSV = () => {
-        let header = ["journey_id",
-            "latitude",
-            "longitude",
-            "speed","ts"];
+        const ups = generateUserProfile(Math.ceil(Math.sqrt(simulatedData.length)));
+        let header = [
+            "light_id",
+            "utc_time",
+            "lng",
+            "lat",
+            "speed",
+            "x",
+            "y",
+            "z",
+            "local_time",
+            "light_project_id",
+            "os",
+            "user_id",
+            "user_project_id",
+            "user_email",
+            "mac_address"
+            , "age",
+            "gender",
+            "bike_make",
+            "bike_model",
+            "is_bike_electric",
+            "year",
+            "month",
+            "day",
+            "hour",
+            "journey_id"];
         let arrayData = [];
+        moment.locale('en-au');
+        let jId = 0;
         for (let journey of simulatedData) {
-            for(let di of journey.d){
+            const up = ups[getRandomInt(ups.length-1)];
+            for (let di of journey.d) {
+                const mmDate = moment.utc(di.time);
                 arrayData.push([
-                    journey.journey_id,
-                    di.point[1],
+                    up.light_id,
+                    moment.utc(di.time).format('DD/MM/YYYY hh:mm:ss A'),
                     di.point[0],
+                    di.point[1],
                     di.speed,
-                    di.time
+                    getRandomInt(100),
+                    getRandomInt(100),
+                    getRandomInt(100),
+                    mmDate.format('DD/MM/YYYY hh:mm:ss A'),
+                    up.light_project_id,
+                    up.os,
+                    up.user_id,
+                    up.user_project_id,
+                    up.user_email,
+                    up.mac_address,
+                    up.age,
+                    up.gender,
+                    up.bike_make,
+                    up.bike_model,
+                    up.is_bike_electric,
+                    mmDate.year(),
+                    mmDate.month(),
+                    mmDate.day(),
+                    mmDate.hour(),
+                    journey.journey_id,,
                 ])
             }
         }
 
         let content = header.toString();
-        for (let line of arrayData){
-            content+= "\n"+line.toString();
+        for (let line of arrayData) {
+            content += "\n" + line.toString();
         }
         saveFile(content, 'csv');
     }
@@ -717,7 +794,7 @@ export default function AffiliationDashboard({updateAffiliationRequest, ...props
                     </Grid>
                 </Grid>
             </div>
-            );
+        );
     }
 
 

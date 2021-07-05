@@ -11,6 +11,8 @@ import io.grpc.ServerBuilder;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+
 /**
  *
  * @author ali
@@ -22,7 +24,7 @@ public class CEQServer {
     {
 
         log.info("Starting");
-        Server server = ServerBuilder.forPort(8585).addService(new CQPServiceImpl()).build();
+        Server server = ServerBuilder.forPort(8585).addService(new CQPServiceImpl()).maxInboundMessageSize(MAX_MESSAGE_SIZE).build();
         server.start();
         log.info("Server started on port 8585");
         server.awaitTermination();

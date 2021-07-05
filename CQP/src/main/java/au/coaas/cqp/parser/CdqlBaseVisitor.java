@@ -1,16 +1,16 @@
-// Generated from /Users/ali/CDQLParserV3/Cdql.g4 by ANTLR 4.6
+// Generated from D:/Projects/CoaaS/CDQL\Cdql.g4 by ANTLR 4.9.1
 package au.coaas.cqp.parser;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
 /**
- * This class provides an empty implementation of {@link ICdqlVisitor},
+ * This class provides an empty implementation of {@link CdqlVisitor},
  * which can be extended to create a visitor which only needs to handle a subset
  * of the available methods.
  *
  * @param <T> The return type of the visit operation. Use {@link Void} for
  * operations with no return type.
  */
-public class CdqlBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements ICdqlVisitor<T> {
+public class CdqlBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements CdqlVisitor<T> {
 	/**
 	 * {@inheritDoc}
 	 *
@@ -101,6 +101,13 @@ public class CdqlBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements I
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitRule_Set_Meta(CdqlParser.Rule_Set_MetaContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitRule_Set_Config(CdqlParser.Rule_Set_ConfigContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
@@ -116,6 +123,13 @@ public class CdqlBaseVisitor<T> extends AbstractParseTreeVisitor<T> implements I
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitRule_Output_Config(CdqlParser.Rule_Output_ConfigContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitRule_Meta_Config(CdqlParser.Rule_Meta_ConfigContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

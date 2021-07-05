@@ -12,7 +12,7 @@ rule_ddl_statement :  rule_create_function | rule_create_package |
 
 rule_dml_statement : rule_query;
 
-rule_query : (rule_Pull | ruel_Push rule_When rule_repeat?)  rule_Define rule_Set_Config? rule_Set_Callback?;
+rule_query : (rule_Pull | ruel_Push rule_When rule_repeat?)  rule_Define rule_Set_Config? rule_Set_Callback? rule_Set_Meta?;
 
 rule_create_function : CREATE (rule_sFunction | rule_aFunction) rule_set_package?;
 
@@ -30,11 +30,15 @@ rule_drop_function: DROP FUNCTION rule_function_id;
 
 rule_package_title: ID;
 
+rule_Set_Meta : SET (rule_Meta_Config);
+
 rule_Set_Config : SET (rule_Output_Config);
 
 rule_Set_Callback : SET (rule_Callback_Config);
 
 rule_Output_Config : OUTPUT COLON obj;
+
+rule_Meta_Config : META COLON obj;
 
 rule_Callback_Config : CALLBACK COLON obj;
 
@@ -50,11 +54,11 @@ rule_select_Attribute : rule_Attribute | rule_EntityTitle DOT ASTERISK;
 
 rule_select_FunctionCall : rule_FunctionCall;
 
-rule_Attribute : rule_EntityTitle (DOT rule_AttributeTitle)*;
+rule_Attribute : rule_EntityTitle (DOT rule_AttributeTitle)+;
 
 rule_EntityTitle : ID;
 
-rule_AttributeTitle : ATTRIBUTEID;
+rule_AttributeTitle : ID;
 
 rule_FunctionCall : rule_call_FunctionTitle LPAREN rule_call_Operand (COMMA rule_call_Operand)* RPAREN rule_function_call_method_chaining ;
 
@@ -331,6 +335,8 @@ OP : '$op';
 
 OUTPUT : 'output';
 
+META : 'meta';
+
 CALLBACK : 'callback';
 
 TIME_ZONE :  'UT'
@@ -381,8 +387,6 @@ STRING
 
 
 ID : ('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')* ;
-
-ATTRIBUTEID : '@'? ('a'..'z' | 'A'..'Z' | '_') ('a'..'z' | 'A'..'Z' | '_' | '0'..'9')* ;
 
 
 fragment ESC

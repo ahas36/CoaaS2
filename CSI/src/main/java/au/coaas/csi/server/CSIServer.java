@@ -17,6 +17,8 @@ import org.quartz.impl.StdSchedulerFactory;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+
 /**
  *
  * @author ali
@@ -28,7 +30,7 @@ public class CSIServer {
         JobSchedulerManager jobScheduler = JobSchedulerManager.getInstance();
         log.info("Starting");
         log.info("Scheduler started");
-        Server server = ServerBuilder.forPort(8582).addService(new CSIServiceImpl()).build();
+        Server server = ServerBuilder.forPort(8582).addService(new CSIServiceImpl()).maxInboundMessageSize(MAX_MESSAGE_SIZE).build();
         server.start();
         jobScheduler.start();
 

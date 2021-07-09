@@ -68,7 +68,7 @@ public class PullBasedExecutor {
         return result;
     }
 
-    public static CdqlResponse executePullBaseQuery(CDQLQuery query, int page) {
+    public static CdqlResponse executePullBaseQuery(CDQLQuery query, int page, int limit) {
 
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
@@ -157,7 +157,7 @@ public class PullBasedExecutor {
                 }
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
                 if (contextService == null) {
-                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce,page));
+                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce,page , limit));
                     continue;
                 }
                 ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
@@ -562,7 +562,7 @@ public class PullBasedExecutor {
         final ContextServiceInvokerRequest.Builder fetchRequest = ContextServiceInvokerRequest.newBuilder();
         JSONArray contextServices = new JSONArray(contextServicesText);
 
-        ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce, 0);
+        ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce, 0, 0);
 
         List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
 
@@ -602,7 +602,7 @@ public class PullBasedExecutor {
         return null;
     }
 
-    private static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page) {
+    private static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
         ArrayList<CdqlConditionToken> list = new ArrayList(targetEntity.getCondition().getRPNConditionList());
 
         for (int i = 0; i < list.size(); i++) {
@@ -697,16 +697,17 @@ public class PullBasedExecutor {
                 .setCondition(tempContextEntity.getCondition())
                 .setMeta(query.getMeta())
                 .setPage(page)
+                .setLimit(limit)
                 .addAllReturnAttributes(returnAttributes).build();
 
         return cr;
     }
 
-    private static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page) {
+    private static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        ContextRequest cr = generateContextRequest(targetEntity, query, ce , page);
+        ContextRequest cr = generateContextRequest(targetEntity, query, ce , page, limit);
 
         SQEMResponse sqemResponse = sqemStub.handleContextRequest(cr);
 

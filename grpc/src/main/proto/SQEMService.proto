@@ -24,6 +24,7 @@ message ContextRequest
     au.coaas.cqp.proto.Condition condition = 3;
     au.coaas.cqp.proto.CDQLMeta meta = 4;
     int32 page = 5;
+    int32 limit = 6;
 }
 
 message RegisterEntityRequest

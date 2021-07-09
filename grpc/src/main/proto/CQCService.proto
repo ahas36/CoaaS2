@@ -19,6 +19,7 @@ message ExecutionRequest
 {
     string cdql = 1;
     int32 page = 2;
+    int32 limit = 3;
 }
 
 service CQCService {

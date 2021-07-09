@@ -34,10 +34,10 @@ public class QueryInterface {
     @POST
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response parseQuery(String query,@QueryParam("page") @DefaultValue("0") int page) {
+    public Response parseQuery(String query,@QueryParam("page") @DefaultValue("-1") int page, @QueryParam("limit") @DefaultValue("-1") int limit) {
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
-        CdqlResponse cdql =  stub.execute(ExecutionRequest.newBuilder().setCdql(query).setPage(page).build());
+        CdqlResponse cdql =  stub.execute(ExecutionRequest.newBuilder().setCdql(query).setPage(page).setLimit(limit).build());
         return Response.ok(cdql.getBody()).build();
     }
 

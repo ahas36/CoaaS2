@@ -450,7 +450,7 @@ public class ContextRequestHandler {
             Long start = contextRequest.getMeta().getTimeWindow().getStart();
             Long end = contextRequest.getMeta().getTimeWindow().getEnd();
             //todo page
-            queryHistoricalData(collectionName, finalQuery, conditionContextAttribiutes, start, end,printBlock, contextRequest.getPage());
+            queryHistoricalData(collectionName, finalQuery, conditionContextAttribiutes, start, end,printBlock, contextRequest.getPage(), contextRequest.getLimit());
         } else {
             String monogQueryString = finalQuery.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson();
             MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("mydb");
@@ -463,7 +463,7 @@ public class ContextRequestHandler {
         return SQEMResponse.newBuilder().setStatus("200").setBody(printBlock.getResultString()).setMeta(printBlock.getMeta()).build();
     }
 
-    private static void queryHistoricalData(String collectionName, Bson finalQuery, Set<String> conditionContextAttributes, Long startDate, Long endDate, MongoBlock printBlock, int page) {
+    private static void queryHistoricalData(String collectionName, Bson finalQuery, Set<String> conditionContextAttributes, Long startDate, Long endDate, MongoBlock printBlock, int page, int limit) {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
         MongoDatabase db = mongoClient.getDatabase("historical_db");
         MongoCollection<Document> collection = db.getCollection(collectionName);
@@ -501,16 +501,16 @@ public class ContextRequestHandler {
         sort.put("time",-1);
         query.add(Aggregates.sort(sort));
 
-        query.add(Aggregates.skip(PAGE_SIZE * page));
-//
-        query.add(Aggregates.limit(PAGE_SIZE));
 
+        if(page>-1){
+            query.add(Aggregates.skip(limit * page));
+            query.add(Aggregates.limit(limit));
+            printBlock.setLimit(limit);
+            printBlock.setPage(page);
+        }
 
         printBlock.setHistorical(true);
         printBlock.setTotalCount(total);
-        printBlock.setLimit(PAGE_SIZE);
-        printBlock.setPage(page);
-
         collection.aggregate(query).allowDiskUse(true).forEach(printBlock);
 
         System.out.println(queryToString(query));

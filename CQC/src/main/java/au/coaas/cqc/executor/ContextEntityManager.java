@@ -44,8 +44,10 @@ public class ContextEntityManager {
             JSONObject entityType = data.getJSONObject("EntityType");
             JSONObject entity = data.getJSONObject("Attributes");
             JSONArray keys = data.getJSONArray("key");
+            Long timestamp = data.optLong("observedTime");
             updateRequestBuilder.setJson(entity.toString())
                     .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
+                    .setObservedTime(timestamp)
                     .setKey(keys.toString());
         }
 

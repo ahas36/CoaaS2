@@ -35,6 +35,19 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.jcraft</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.55</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/jsch/jsch -->
+        <dependency>
+            <groupId>jsch</groupId>
+            <artifactId>jsch</artifactId>
+            <version>0.1.29</version>
+        </dependency>
+
+        <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
         </dependency>

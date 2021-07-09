@@ -126,11 +126,15 @@ rule_fcm_token: TOKEN EQ STRING;
 
 rule_callback_url : rule_url;
 
-rule_Define : DEFINE rule_Define_Context_Entity (COMMA rule_Define_Context_Function)?;
+rule_Define : DEFINE rule_Define_Context_Entity;
 
 rule_Define_Context_Entity:  rule_context_entity (COMMA rule_context_entity)*;
 
-rule_context_entity : ENTITY rule_entity_id IS_FROM rule_entity_type  (WHERE rule_Condition)?;
+rule_context_entity : ENTITY rule_entity_id IS_FROM rule_entity_type  (WHERE rule_Condition)? ;//(GROUP_BY rule_group_by)? (SORT_BY rule_sort_by)?;
+
+rule_group_by : rule_Attribute ('`' rule_Attribute)*;
+
+rule_sort_by : rule_Attribute ('`' rule_Attribute)*;
 
 rule_entity_type : (ID COLON)? ID (DOT ID)?;
 
@@ -218,6 +222,13 @@ normal_path : ID;
 
 path_param : '{' ID '}';
 
+ACS : 'asc';
+
+DESC : 'desc';
+
+GROUP_BY: 'group by';
+
+SORT_BY: 'sort by';
 
 TITLE : 'title';
 

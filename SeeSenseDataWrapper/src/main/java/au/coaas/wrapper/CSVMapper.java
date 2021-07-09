@@ -17,7 +17,15 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.Scanner;
+import java.util.TimeZone;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,7 +44,7 @@ public class CSVMapper {
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, ParseException {
 
         // TODO code application logic here
         //au.coaas.wrapper.CSVMapper.Post_JSON();
@@ -82,13 +90,13 @@ public class CSVMapper {
         return stringBuilder.toString();
     }
 
-    public static void readCSV() throws FileNotFoundException, IOException {
+    public static void readCSV() throws FileNotFoundException, IOException, ParseException {
         //parsing a CSV file into Scanner class constructor  
 
         BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Ali\\Desktop\\extended datapoint.csv"));
 
         reader.readLine();
-        int bucketSize = 5000;
+        int bucketSize = 1000;
         int counter = 0;
         JSONArray ja = new JSONArray();
         while (true) {
@@ -156,7 +164,17 @@ public class CSVMapper {
         return value;
     }
 
-    public static JSONObject buildJsonInputString(String[] csvLine) throws IOException {
+    private static SimpleDateFormat localSDF = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss a");
+    {
+        localSDF.setTimeZone(TimeZone.getTimeZone("Australia/Melbourne"));
+    }
+
+    private static SimpleDateFormat utcSDF = new SimpleDateFormat("dd/MM/yyyy hh:mm:ss a");
+    static {
+        utcSDF.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
+
+    public static JSONObject buildJsonInputString(String[] csvLine) throws IOException, ParseException {
 
         JSONObject result = new JSONObject();
 
@@ -169,8 +187,11 @@ public class CSVMapper {
         JSONObject attributes = new JSONObject();
         attributes.put("lightID", parseValue(csvLine[0]));
 
+        Date d = localSDF.parse(csvLine[8]);
+        Calendar c = Calendar.getInstance(TimeZone.getTimeZone("Australia/Melbourne"));
+        c.setTime(d);
 
-        attributes.put("UTCTime", parseValue(csvLine[1]));
+        attributes.put("utc_time", utcSDF.format(d));
 
         JSONObject geo = new JSONObject();
         JSONArray coords = new JSONArray();
@@ -180,8 +201,10 @@ public class CSVMapper {
         geo.put("type", "Point");
         attributes.put("geo", geo);
 
-        attributes.put("latitude", parseValue(csvLine[3]));
-        attributes.put("longitude", parseValue(csvLine[2]));
+
+
+        attributes.put("lat", parseValue(csvLine[3]));
+        attributes.put("lng", parseValue(csvLine[2]));
         attributes.put("speed", parseValue(csvLine[4]));
         attributes.put("x", parseValue(csvLine[5]));
         attributes.put("y", parseValue(csvLine[6]));
@@ -198,10 +221,10 @@ public class CSVMapper {
         attributes.put("bikeMake", parseValue(csvLine[17]));
         attributes.put("bikeModel", parseValue(csvLine[18]));
         attributes.put("isBikeElectric", parseValue(csvLine[19]));
-        attributes.put("year", parseValue(csvLine[20]));
-        attributes.put("month", parseValue(csvLine[21]));
-        attributes.put("day", parseValue(csvLine[22]));
-        attributes.put("hour", parseValue(csvLine[23]));
+        attributes.put("year", c.get(Calendar.YEAR));
+        attributes.put("month", c.get(Calendar.MONTH));
+        attributes.put("day", c.get(Calendar.DAY_OF_MONTH));
+        attributes.put("hour", c.get(Calendar.HOUR_OF_DAY));
         attributes.put("journey_id", parseValue(csvLine[24]));
 
         result.put("Attributes", attributes);
@@ -210,6 +233,11 @@ public class CSVMapper {
         keys.put("lightID");
         result.put("key", keys);
 
+        try {
+            result.put("observedTime", localSDF.parse(attributes.getString("localTime")).getTime());
+        }catch (Exception e){
+
+        }
         return result;
 
     }

@@ -13,6 +13,7 @@ message SQEMResponse {
     
     string status = 1;
     string body = 2;
+    string meta = 3;
 }
 
 
@@ -22,6 +23,7 @@ message ContextRequest
     repeated au.coaas.cqp.proto.ContextAttribute returnAttributes = 2;
     au.coaas.cqp.proto.Condition condition = 3;
     au.coaas.cqp.proto.CDQLMeta meta = 4;
+    int32 page = 5;
 }
 
 message RegisterEntityRequest
@@ -35,6 +37,7 @@ message UpdateEntityRequest
     string json = 1;
     au.coaas.cqp.proto.ContextEntityType et = 2;
     string key = 3;
+    int64 observedTime = 4;
 }
 
 

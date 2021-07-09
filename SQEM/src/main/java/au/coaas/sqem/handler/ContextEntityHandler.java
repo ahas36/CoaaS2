@@ -83,8 +83,10 @@ public class ContextEntityHandler {
                         JSONObject entityType = data.getJSONObject("EntityType");
                         JSONObject entity = data.getJSONObject("Attributes");
                         JSONArray keys = data.getJSONArray("key");
+                        Long timestamp = data.optLong("observedTime");
                         UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder().setJson(entity.toString())
                                 .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
+                                .setObservedTime(timestamp)
                                 .setKey(keys.toString());
 
                         SQEMResponse sqemResponse = updateEntity(builder.build());
@@ -164,7 +166,7 @@ public class ContextEntityHandler {
             UpdateResult ur = collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
 
             //todo it might be better to create a separate thread and update the historical db there instead of blocking main thread
-            ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query);
+            ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query, updateRequest.getObservedTime());
 
 
             //if not row is updated, it means no matching. Create a new one.
@@ -182,7 +184,7 @@ public class ContextEntityHandler {
     }
 
     //this function will store the update in mongodb based on the Size-based bucketing policy
-    private static SQEMResponse updateHistoricalDatabase(String collectionName, JSONArray keys, JSONObject attributes, BasicDBObject query) {
+    private static SQEMResponse updateHistoricalDatabase(String collectionName, JSONArray keys, JSONObject attributes, BasicDBObject query, Long observedTime) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("historical_db");
@@ -190,7 +192,9 @@ public class ContextEntityHandler {
             MongoCollection<Document> collection = db.getCollection(collectionName);
 
 
+
             Calendar cal = Calendar.getInstance();
+            cal.setTime(new Date(observedTime));
             cal.set(Calendar.HOUR_OF_DAY, 0);
             cal.set(Calendar.MINUTE, 0);
             cal.set(Calendar.SECOND, 0);
@@ -202,9 +206,6 @@ public class ContextEntityHandler {
 
             query.put("coaas:nsamples", Document.parse("{$lt: " + ContextEntityHandler.BUCKET_SIZE + "}"));
 
-            int samplesInUpdate = 0;
-
-            //todo for now, we are considering the time of arrival only. Needed to be change to consider the time coming in the data
             long currentTime = System.currentTimeMillis();
 
             JSONObject keysObject = new JSONObject();
@@ -220,7 +221,8 @@ public class ContextEntityHandler {
             }
 
             Document updateDocument = new Document();
-            updateDocument.put("coaas:time",currentTime);
+            updateDocument.put("coaas:time",observedTime);
+            updateDocument.put("coaas:arrivalTime",currentTime);
             updateDocument.put("coaas:value", convertJSONObject2Document(attributes));
 
             List<Bson> updateStatement = new ArrayList<>();
@@ -228,8 +230,8 @@ public class ContextEntityHandler {
             updateStatement.add(Updates.set("coaas:day",todayDate));
             updateStatement.add(Updates.set("coaas:key",keySet));
             updateStatement.add(Updates.push("coaas:samples",updateDocument));
-            updateStatement.add(Updates.min("coaas:first",currentTime));
-            updateStatement.add(Updates.max("coaas:last",currentTime));
+            updateStatement.add(Updates.min("coaas:first",observedTime));
+            updateStatement.add(Updates.max("coaas:last",observedTime));
             updateStatement.add(Updates.inc("coaas:nsamples",1));
 
 

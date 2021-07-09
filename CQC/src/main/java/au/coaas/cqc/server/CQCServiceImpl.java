@@ -27,7 +27,7 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
     public void execute(au.coaas.cqc.proto.ExecutionRequest request,
         io.grpc.stub.StreamObserver<CdqlResponse> responseObserver){
         try {
-            CdqlResponse response = CDQLExecutor.execute(request.getCdql());
+            CdqlResponse response = CDQLExecutor.execute(request.getCdql(),request.getPage());
             responseObserver.onNext(response);
         } catch (Exception ex) {
             responseObserver.onError(ex);

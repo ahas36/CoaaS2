@@ -18,6 +18,7 @@ message CdqlResponse {
 message ExecutionRequest
 {
     string cdql = 1;
+    int32 page = 2;
 }
 
 service CQCService {

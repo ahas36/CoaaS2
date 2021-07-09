@@ -13,6 +13,7 @@ import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.cqc.proto.*;
 import au.coaas.cqp.proto.*;
 import au.coaas.sqem.proto.ContextRequest;
+import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.SituationFunctionRequest;
 import com.google.gson.Gson;
@@ -67,7 +68,7 @@ public class PullBasedExecutor {
         return result;
     }
 
-    public static CdqlResponse executePullBaseQuery(CDQLQuery query) {
+    public static CdqlResponse executePullBaseQuery(CDQLQuery query, int page) {
 
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
@@ -156,7 +157,7 @@ public class PullBasedExecutor {
                 }
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
                 if (contextService == null) {
-                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce));
+                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce,page));
                     continue;
                 }
                 ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
@@ -561,7 +562,7 @@ public class PullBasedExecutor {
         final ContextServiceInvokerRequest.Builder fetchRequest = ContextServiceInvokerRequest.newBuilder();
         JSONArray contextServices = new JSONArray(contextServicesText);
 
-        ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce);
+        ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce, 0);
 
         List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
 
@@ -601,7 +602,7 @@ public class PullBasedExecutor {
         return null;
     }
 
-    private static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce) {
+    private static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page) {
         ArrayList<CdqlConditionToken> list = new ArrayList(targetEntity.getCondition().getRPNConditionList());
 
         for (int i = 0; i < list.size(); i++) {
@@ -611,7 +612,7 @@ public class PullBasedExecutor {
                 case Function:
                     FunctionCall.Builder fCall = item.getFunctionCall().toBuilder();
                     FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(fCall.getFunctionName());
-                    if(fCall.getFunctionName().equals("distance")){
+                    if(fCall.getFunctionName().toLowerCase().equals("distance") || fCall.getFunctionName().toLowerCase().equals("geoinside") || fCall.getFunctionName().toLowerCase().equals("geoinsidebox")){
                         continue;
                     }
                     fCallTemp.addAllSubItems(fCall.getSubItemsList());
@@ -695,18 +696,25 @@ public class PullBasedExecutor {
         ContextRequest cr = ContextRequest.newBuilder().setEt(targetEntity.getType())
                 .setCondition(tempContextEntity.getCondition())
                 .setMeta(query.getMeta())
+                .setPage(page)
                 .addAllReturnAttributes(returnAttributes).build();
 
         return cr;
     }
 
-    private static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce) {
+    private static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        ContextRequest cr = generateContextRequest(targetEntity, query, ce);
+        ContextRequest cr = generateContextRequest(targetEntity, query, ce , page);
 
-        JSONObject invoke = new JSONObject().put("results", new JSONArray(sqemStub.handleContextRequest(cr).getBody()));
+        SQEMResponse sqemResponse = sqemStub.handleContextRequest(cr);
+
+        JSONObject invoke = new JSONObject().put("results", new JSONArray(sqemResponse.getBody()));
+
+        if(sqemResponse.getMeta() != null){
+            invoke.put("meta",new JSONObject(sqemResponse.getMeta()));
+        }
 
         //ToDo validate return entities
 //        JSONArray result = new JSONArray();

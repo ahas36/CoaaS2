@@ -10,7 +10,7 @@ public class CDQLExecutor {
 
     private static Logger log = Logger.getLogger(CDQLExecutor.class.getName());
 
-    public static CdqlResponse execute(String cdql) {
+    public static CdqlResponse execute(String cdql, int page) {
         //parse the incoming query
         CQPServiceGrpc.CQPServiceBlockingStub stub
                 = CQPServiceGrpc.newBlockingStub(CQPChannel.getInstance().getChannel());
@@ -20,7 +20,7 @@ public class CDQLExecutor {
                 CDQLQuery query = cdqlConstruct.getQuery();
                 if(query.getQueryType().equals(QueryType.PULL_BASED))
                 {
-                    return PullBasedExecutor.executePullBaseQuery(query);
+                    return PullBasedExecutor.executePullBaseQuery(query,page);
                 }else {
                     return PushBasedExecutor.executePushBaseQuery(query);
                 }

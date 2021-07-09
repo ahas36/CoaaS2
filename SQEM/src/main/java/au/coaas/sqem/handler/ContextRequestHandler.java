@@ -7,29 +7,25 @@ import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextRequest;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.util.CollectionDiscovery;
+import au.coaas.sqem.util.MongoBlock;
 import com.mongodb.BasicDBObject;
-import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Accumulators;
 import com.mongodb.client.model.Aggregates;
-import com.mongodb.client.model.Field;
 import com.mongodb.client.model.Filters;
-import com.sun.org.apache.xpath.internal.operations.Bool;
-import org.bson.BSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.json.JSONArray;
-import org.json.JSONObject;
 
-import java.text.SimpleDateFormat;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ContextRequestHandler {
+
+    private static final int PAGE_SIZE = 2000;
 
     private static final Logger LOG = Logger.getLogger(ContextRequestHandler.class.getName());
 
@@ -182,8 +178,6 @@ public class ContextRequestHandler {
 
     private static void processDistanceToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType, String attributePrefix) throws WrongOperatorException {
 
-        String mongoQuery;
-
         FunctionCall fCall = token.getFunctionCall();
 
         //build a Mongo query
@@ -214,6 +208,90 @@ public class ContextRequestHandler {
         Bson eqDefault = Filters.geoWithinCenterSphere(attributePrefix + location_prefix, Double.valueOf(dest_lon), Double.valueOf(dest_lat), distance / 6371000.0);
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }
+
+    private static void processGeoInsideToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType, String attributePrefix) throws WrongOperatorException {
+
+        FunctionCall fCall = token.getFunctionCall();
+
+        //build a Mongo query
+        ContextAttribute ca = (ContextAttribute) fCall.getArgumentsList().get(0).getContextAttribute();
+        String location_prefix = ca.getAttributeName();
+
+        if (ca.getPrefix() != null && !ca.getPrefix().isEmpty()) {
+            location_prefix = ca.getPrefix();
+        }
+
+        String geoType = fCall.getArgumentsList().get(1).getStringValue().replaceAll("\"", "");
+        String coordinates = fCall.getArgumentsList().get(2).getStringValue().replaceAll("\"", "");
+
+        String inside_str = RPNcondition.poll().getStringValue();
+        boolean  isNot = !Boolean.valueOf(inside_str);
+
+        //get next comparison operator
+        //only "=" supported
+        String comparisonOp = RPNcondition.poll().getStringValue();
+        if (!"=".equals(comparisonOp)) {
+            LOG.log(Level.INFO, "{0} not supported with Distance function", comparisonOp);
+
+            //WE NEED TO RETURN ERROR HERE
+            String result = "Only = (equal) is supported with geoInside function";
+            throw new WrongOperatorException(result);
+
+        }
+
+        Document geometry = new Document();
+
+        geometry.put("type",geoType);
+        geometry.put("coordinates", Document.parse("{\"temp\":"+coordinates+"}").get("temp"));
+
+        Bson eqDefault = Filters.geoWithin(attributePrefix + location_prefix, geometry);
+        if(isNot){
+            eqDefault = Filters.not(eqDefault);
+        }
+        stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
+    }
+
+
+    private static void processGeoInsideBBoxToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType, String attributePrefix) throws WrongOperatorException {
+
+        FunctionCall fCall = token.getFunctionCall();
+
+        //build a Mongo query
+        ContextAttribute ca = (ContextAttribute) fCall.getArgumentsList().get(0).getContextAttribute();
+        String location_prefix = ca.getAttributeName();
+
+        if (ca.getPrefix() != null && !ca.getPrefix().isEmpty()) {
+            location_prefix = ca.getPrefix();
+        }
+
+        Double left_x = Double.valueOf(fCall.getArgumentsList().get(1).getStringValue().replaceAll("\"", ""));
+        Double left_y = Double.valueOf(fCall.getArgumentsList().get(2).getStringValue().replaceAll("\"", ""));
+        Double right_x = Double.valueOf(fCall.getArgumentsList().get(3).getStringValue().replaceAll("\"", ""));
+        Double right_y = Double.valueOf(fCall.getArgumentsList().get(4).getStringValue().replaceAll("\"", ""));
+
+        boolean  isNot = !Boolean.valueOf(RPNcondition.poll().getStringValue());
+
+        //get next comparison operator
+        //only "=" supported
+        String comparisonOp = RPNcondition.poll().getStringValue();
+        if (!"=".equals(comparisonOp)) {
+            LOG.log(Level.INFO, "{0} not supported with Distance function", comparisonOp);
+
+            //WE NEED TO RETURN ERROR HERE
+            String result = "Only = (equal) is supported with geoInside function";
+            throw new WrongOperatorException(result);
+
+        }
+
+        Bson eqDefault = Filters.geoWithinBox(attributePrefix + location_prefix, left_x,left_y,right_x,right_y);
+
+        if(isNot){
+            eqDefault = Filters.not(eqDefault);
+        }
+
+        stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
+    }
+
 
     private static Bson generateComparisonFilter(String token1, Object token2, String op) throws WrongOperatorException {
 
@@ -341,6 +419,12 @@ public class ContextRequestHandler {
                                 case "distance":
                                     processDistanceToken(token, stack, RPNcondition, entityType, attributePrefix);
                                     break;
+                                case "geoinside":
+                                    processGeoInsideToken(token, stack, RPNcondition, entityType, attributePrefix);
+                                    break;
+                                case "geoinsidebox":
+                                    processGeoInsideBBoxToken(token, stack, RPNcondition, entityType, attributePrefix);
+                                    break;
                             }
                             break;
                         case Operator:
@@ -359,25 +443,14 @@ public class ContextRequestHandler {
 
         String collectionName = CollectionDiscovery.discover(contextRequest.getEt());
 
-        final JSONArray finalResultJsonArr = new JSONArray();
 
-        Block<Document> printBlock = new Block<Document>() {
-            @Override
-            public void apply(final Document document) {
-
-                //We need to filter out results, that passed initial datastore filtering, but do not comply with complex attributes
-                JSONObject resultJSON = new JSONObject(document.toJson());
-
-                //FINAL ARRAY (return to Query Engine)
-                finalResultJsonArr.put(resultJSON);
-
-            }
-        };
+        MongoBlock printBlock = new MongoBlock();
 
         if (isHistoricalQuery) {
             Long start = contextRequest.getMeta().getTimeWindow().getStart();
             Long end = contextRequest.getMeta().getTimeWindow().getEnd();
-            queryHistoricalData(collectionName, finalQuery, conditionContextAttribiutes, start, end,printBlock);
+            //todo page
+            queryHistoricalData(collectionName, finalQuery, conditionContextAttribiutes, start, end,printBlock, contextRequest.getPage());
         } else {
             String monogQueryString = finalQuery.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson();
             MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("mydb");
@@ -387,10 +460,10 @@ public class ContextRequestHandler {
             entityCollection.find(finalQuery).forEach(printBlock);
         }
 
-        return SQEMResponse.newBuilder().setStatus("200").setBody(finalResultJsonArr.toString()).build();
+        return SQEMResponse.newBuilder().setStatus("200").setBody(printBlock.getResultString()).setMeta(printBlock.getMeta()).build();
     }
 
-    private static JSONArray queryHistoricalData(String collectionName, Bson finalQuery, Set<String> conditionContextAttributes, Long startDate, Long endDate, Block printBlock) {
+    private static void queryHistoricalData(String collectionName, Bson finalQuery, Set<String> conditionContextAttributes, Long startDate, Long endDate, MongoBlock printBlock, int page) {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
         MongoDatabase db = mongoClient.getDatabase("historical_db");
         MongoCollection<Document> collection = db.getCollection(collectionName);
@@ -406,12 +479,41 @@ public class ContextRequestHandler {
 
         query.add(Aggregates.match(finalQuery));
 
-        query.add(Aggregates.group("$coaas:key", Accumulators.push("samples","$coaas:samples")));
 
-        collection.aggregate(query).forEach(printBlock);
+
+//        query.add(Aggregates.group("$coaas:key", Accumulators.push("samples","$coaas:samples")));
+
+        Document project = new Document();
+
+        project.put("_id",0);
+        project.put("time","$coaas:samples.coaas:time");
+        project.put("value","$coaas:samples.coaas:value");
+
+        List<Bson> countQuery = new ArrayList<>(query);
+
+        countQuery.add(Aggregates.count("total"));
+
+        Long total = Long.valueOf(collection.aggregate(countQuery).cursor().next().get("total").toString());
+
+        query.add(Aggregates.project(project));
+
+        Document sort = new Document();
+        sort.put("time",-1);
+        query.add(Aggregates.sort(sort));
+
+        query.add(Aggregates.skip(PAGE_SIZE * page));
+//
+        query.add(Aggregates.limit(PAGE_SIZE));
+
+
+        printBlock.setHistorical(true);
+        printBlock.setTotalCount(total);
+        printBlock.setLimit(PAGE_SIZE);
+        printBlock.setPage(page);
+
+        collection.aggregate(query).allowDiskUse(true).forEach(printBlock);
 
         System.out.println(queryToString(query));
-        return null;
     }
 
     private static String queryToString(List<Bson> query) {

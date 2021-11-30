@@ -47,6 +47,13 @@ message RegisterContextServiceRequest
     string json = 1;
 }
 
+message Chunk
+{
+    bytes data = 1;
+    int32 total = 2;
+    int32 index = 3;
+}
+
 
 message UpdateContextServiceStatusRequest
 {
@@ -70,6 +77,12 @@ message SituationFunctionRequest
     string name = 1;
 }
 
+message CDQLLog
+{
+    string rawQuery = 1;
+}
+
+
 message Empty {}
 
 message RegisterSituationRequest {
@@ -80,7 +93,7 @@ message RegisterSituationRequest {
 
 
 service SQEMService {
-    rpc handleContextRequest (ContextRequest) returns (SQEMResponse);
+    rpc handleContextRequest (ContextRequest) returns (stream Chunk);
     rpc RegisterContextEntity (RegisterEntityRequest) returns (SQEMResponse);
     rpc UpdateContextEntity (UpdateEntityRequest) returns (SQEMResponse);
     rpc getAllEntityTypes (Empty) returns (SQEMResponse);
@@ -94,4 +107,6 @@ service SQEMService {
     rpc getAllSubscriptions (Empty) returns (SQEMResponse);
     rpc registerSituationFunction (RegisterSituationRequest) returns (SQEMResponse);
     rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
+    rpc getAllQueryLogs (Empty) returns (SQEMResponse);
+    rpc logQuery (CDQLLog) returns (SQEMResponse);
 }

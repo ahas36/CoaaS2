@@ -12,11 +12,10 @@ import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.cqc.proto.*;
 import au.coaas.cqp.proto.*;
-import au.coaas.sqem.proto.ContextRequest;
-import au.coaas.sqem.proto.SQEMResponse;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
-import au.coaas.sqem.proto.SituationFunctionRequest;
+import au.coaas.sqem.proto.*;
 import com.google.gson.Gson;
+import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.GeoCoord;
 import org.json.JSONArray;
@@ -27,6 +26,8 @@ import java.net.URLEncoder;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
 
 public class PullBasedExecutor {
@@ -157,7 +158,7 @@ public class PullBasedExecutor {
                 }
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
                 if (contextService == null) {
-                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce,page , limit));
+                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
                     continue;
                 }
                 ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
@@ -244,7 +245,7 @@ public class PullBasedExecutor {
         } else if (fCall.getFunctionName().equals("now")) {
             return now(fCallTemp.build());
         } else if (fCall.getFunctionName().equals("embed")) {
-            return embedSituation(fCallTemp.build(),ce,query);
+            return embedSituation(fCallTemp.build(), ce, query);
         } else {
             SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
@@ -338,7 +339,7 @@ public class PullBasedExecutor {
             }
             result = computeAverage(result, numberOfInstances);
             result.put("geo", geo);
-            result.put("identifier",entry.getKey());
+            result.put("identifier", entry.getKey());
             result.put("entityType", jo.get("entityType"));
             finalResult.put(result);
         }
@@ -353,15 +354,15 @@ public class PullBasedExecutor {
         JSONObject jo = new JSONObject(fCall.getArguments(0).getStringValue());
         JSONArray entities = jo.getJSONArray("results");
         String entityType = jo.get("entityType").toString();
-        String functionName = fCall.getArguments(1).getStringValue().replaceAll("\"","");
-        String [] names = functionName.split("\\.");
+        String functionName = fCall.getArguments(1).getStringValue().replaceAll("\"", "");
+        String[] names = functionName.split("\\.");
         functionName = names[0];
 
         for (int i = 0; i < entities.length(); i++) {
             JSONObject entity = entities.getJSONObject(i);
-            entity.put("entityType",entityType);
+            entity.put("entityType", entityType);
             FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(functionName);
-            for (int j = 1; j<names.length;j++){
+            for (int j = 1; j < names.length; j++) {
                 fCallTemp.addSubItems(names[j]);
             }
             fCallTemp.addArguments(Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(entity.toString()));
@@ -546,9 +547,9 @@ public class PullBasedExecutor {
             }
             finalResult.put(itemResult);
         }
-        if(finalResult.length()==1){
+        if (finalResult.length() == 1) {
             return finalResult.getJSONObject(0).get("outcome");
-        }else{
+        } else {
             JSONObject resultWrapper = new JSONObject();
             resultWrapper.put("results", finalResult);
             return resultWrapper;
@@ -612,7 +613,7 @@ public class PullBasedExecutor {
                 case Function:
                     FunctionCall.Builder fCall = item.getFunctionCall().toBuilder();
                     FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(fCall.getFunctionName());
-                    if(fCall.getFunctionName().toLowerCase().equals("distance") || fCall.getFunctionName().toLowerCase().equals("geoinside") || fCall.getFunctionName().toLowerCase().equals("geoinsidebox")){
+                    if (fCall.getFunctionName().toLowerCase().equals("distance") || fCall.getFunctionName().toLowerCase().equals("geoinside") || fCall.getFunctionName().toLowerCase().equals("geoinsidebox")) {
                         continue;
                     }
                     fCallTemp.addAllSubItems(fCall.getSubItemsList());
@@ -707,15 +708,28 @@ public class PullBasedExecutor {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        ContextRequest cr = generateContextRequest(targetEntity, query, ce , page, limit);
+        ContextRequest cr = generateContextRequest(targetEntity, query, ce, page, limit);
 
-        SQEMResponse sqemResponse = sqemStub.handleContextRequest(cr);
+        Iterator<Chunk> data = sqemStub.handleContextRequest(cr);
 
-        JSONObject invoke = new JSONObject().put("results", new JSONArray(sqemResponse.getBody()));
+        ByteString.Output output = ByteString.newOutput();
 
-        if(sqemResponse.getMeta() != null){
-            invoke.put("meta",new JSONObject(sqemResponse.getMeta()));
+        data.forEachRemaining(c -> {
+            output.write(c.getData().toByteArray(), c.getIndex() * MAX_MESSAGE_SIZE, c.getData().size());
+        });
+
+        JSONObject invoke = new JSONObject();
+
+        try {
+            SQEMResponse sqemResponse = SQEMResponse.parseFrom(output.toByteString());
+            if (sqemResponse.getMeta() != null) {
+                invoke.put("results", new JSONArray(sqemResponse.getBody()));
+                invoke.put("meta", new JSONObject(sqemResponse.getMeta()));
+            }
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
         }
+
 
         //ToDo validate return entities
 //        JSONArray result = new JSONArray();

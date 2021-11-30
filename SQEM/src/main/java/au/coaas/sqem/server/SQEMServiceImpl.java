@@ -7,10 +7,14 @@ package au.coaas.sqem.server;
 
 
 import au.coaas.sqem.handler.*;
+import au.coaas.sqem.proto.Chunk;
+import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
+import com.google.protobuf.ByteString;
 
 import java.util.logging.Logger;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 import static io.grpc.stub.ClientCalls.asyncUnaryCall;
 import static io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall;
 
@@ -21,11 +25,23 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
 
     private static Logger log = Logger.getLogger(SQEMServiceImpl.class.getName());
 
+
     @Override
     public void handleContextRequest(au.coaas.sqem.proto.ContextRequest request,
-                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Chunk> responseObserver) {
         try {
-            responseObserver.onNext(ContextRequestHandler.handle(request));
+            SQEMResponse response = ContextRequestHandler.handle(request);
+            byte[] bytes = response.toByteArray();
+
+            int size = bytes.length;
+
+            int total = (int)Math.ceil((bytes.length * 1.0) / MAX_MESSAGE_SIZE);
+
+            for (int i = 0 ; i< total; i++){
+                Chunk.Builder chunk = Chunk.newBuilder().setTotal(size).setIndex(i).setData(ByteString.copyFrom(bytes,i*MAX_MESSAGE_SIZE,
+                        Math.min(size,(i+1)*MAX_MESSAGE_SIZE)));
+                responseObserver.onNext(chunk.build());
+            }
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }
@@ -189,6 +205,31 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
                                      io.grpc.stub.StreamObserver<au.coaas.cqp.proto.SituationFunction> responseObserver) {
         try {
             responseObserver.onNext(SituationHandler.findSituationByTitle(request.getName()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+
+    /////// Logs functions
+
+    @Override
+    public void getAllQueryLogs(au.coaas.sqem.proto.Empty request,
+                                 io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(LogHandler.getAllLogs());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void logQuery(au.coaas.sqem.proto.CDQLLog request,
+                                io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(LogHandler.logQuery(request));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

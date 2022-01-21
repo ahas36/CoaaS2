@@ -93,7 +93,7 @@ public class CSVMapper {
     public static void readCSV() throws FileNotFoundException, IOException, ParseException {
         //parsing a CSV file into Scanner class constructor  
 
-        BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Ali\\Desktop\\extended datapoint.csv"));
+        BufferedReader reader = new BufferedReader(new FileReader("D:\\Desktop\\extended datapoint.csv"));
 
         reader.readLine();
         int bucketSize = 1000;

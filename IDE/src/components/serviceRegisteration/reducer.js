@@ -33,6 +33,12 @@ export default function ServiceReducer(state = initialState, action) {
                 ...state,
                 serviceSampleResponse: null,
             };
+        case FETCH_SERVICE_SUCCESS:
+            debugger;
+            return {
+                ...state,
+                serviceSampleResponse: action.data,
+            };
         case FETCH_TERMS_SUCCESS:
             return {
                 ...state,

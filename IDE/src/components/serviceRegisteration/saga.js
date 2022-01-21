@@ -1,5 +1,6 @@
 import {showNotification} from '../Notification/NotificationState';
 
+
 import {
     put,
     call,
@@ -25,19 +26,49 @@ import {
 import request from '../../utils/request';
 import showError from '../../utils/ShowError';
 
-
+const electron = window.require('electron');
+const ipcRenderer = electron.ipcRenderer;
 
 export function* fetchService(data) {
     yield put(sendingRequest(true));
     try {
-        var proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-        let outcome = yield call(request, proxyUrl+data,
-            {
-                redirect: 'follow',
-                method: 'GET',
-                headers: {'Accept': 'application/json'}
-            });
-        yield put(fetchServiceSuccess(outcome));
+        // var proxyUrl = '';//'https://cors-anywhere.herokuapp.com/';
+        // let outcome = yield call(request, proxyUrl+data,
+        //     {
+        //         redirect: 'follow',
+        //         method: 'GET',
+        //         headers: {'Accept': 'application/json'}
+        //     });
+
+        let outcome = yield call(ipcRenderer.invoke, 'http_request',{
+            config: {
+                method: 'get',
+                url: data,
+                headers: { 'Access-Control-Allow-Origin': '*' }
+            }});
+
+        yield put(fetchServiceSuccess(JSON.parse(outcome)));
+        console.log(outcome);
+        //     {
+        //         method: 'GET',
+        //     });
+        //
+        // ipcRenderer.invoke('http_request', {
+        //     config: {
+        //         method: 'get',
+        //         url: data,
+        //         headers: { 'Access-Control-Allow-Origin': '*' }
+        //     }
+        // }).then((d) => {
+        //     fetchServiceSuccess( JSON.parse(d));
+        // })
+        //     .catch((e) => {
+        //     })
+        //     .finally(() => {
+        //     });
+
+
+
     } catch (error) {
         console.log(error);
         yield put(fetchServiceFailure());

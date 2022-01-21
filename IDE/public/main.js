@@ -3,6 +3,8 @@ const electron = require('electron');
 
 const app = electron.app;
 
+var axios = require('axios');
+
 const windowManager = require('electron-window-manager');
 
 const protocol = electron.protocol;
@@ -68,6 +70,24 @@ function createWindow(args) {
     });
 
 }
+
+
+
+ipcMain.handle('http_request', async (event, arg) => {
+    const config = arg.config;
+
+    const res = await axios(arg.config);
+
+    let { data } = res;
+
+    console.log(data);
+
+    return JSON.stringify(data);
+})
+
+
+
+
 
 const quitApp = (isHome)=>
 {

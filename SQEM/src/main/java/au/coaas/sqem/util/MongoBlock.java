@@ -69,8 +69,8 @@ public class MongoBlock implements Block<Document> {
     }
 
     public String getMeta(){
-        if(!isHistorical){
-            return null;
+        if(!isHistorical || this.page == null){
+            return "{}";
         }
         JSONObject resultJSON = new JSONObject();
         resultJSON.put("totalNumberOfDocuments",this.totalCount);

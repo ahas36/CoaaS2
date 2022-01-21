@@ -13,8 +13,8 @@ export function fetchServiceRequest(data) {
     return {type: FETCH_SERVICE_REQUEST, data}
 }
 
-export function fetchServiceSuccess(serviceSampleResponse) {
-    return {type: FETCH_SERVICE_SUCCESS, serviceSampleResponse}
+export function fetchServiceSuccess(data) {
+    return {type: FETCH_SERVICE_SUCCESS, data}
 }
 
 export function fetchServiceFailure() {

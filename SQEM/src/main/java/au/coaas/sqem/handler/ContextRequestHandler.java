@@ -52,13 +52,18 @@ public class ContextRequestHandler {
     private static Object tokenToString(CdqlConditionToken token, String attribute) throws WrongOperatorException {
         switch (token.getType()) {
             case Attribute:
-
+                // What is the purpose of prefix to the attribute? Why check it?
                 if (token.getContextAttribute().getPrefix() == null || token.getContextAttribute().getPrefix().isEmpty()) {
+                    // Why concat the attribute with attribute?
                     return attribute +  token.getContextAttribute().getAttributeName();
                 }
+                // If the prefix is in the token, why concat with the attribute before it later?
+                // According to line 418, the 2nd parameter 'attribute' is rather the attribute prefix.
+                // So, the result is like "coaas:samples.coaas:value.temperature"
                 return attribute + token.getContextAttribute().getPrefix();
             case Constant:
                 switch (token.getConstantTokenType()) {
+                    // This one is clear. If the token is a "constant" type, then read the value in string format
                     case Json:
                         return token.getStringValue().replaceAll("\"", "");
                     case Numeric:
@@ -76,17 +81,18 @@ public class ContextRequestHandler {
         }
     }
 
+    // This method process logical and mathematical operations.
     private static void processSimpleLogicToken(String operator, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String attributePrefix) throws WrongOperatorException {
         String mongoQuery = null;
         boolean andFlag = false; //is next operation AND again?
         String tempStr;
         //how many operands shall we use?
+        // Seems the number of operands of fixed to 2. What if there is more than 2? Possibly all the actions poping from the stack would go out of sync too.
         switch (operator) {
             case "=": {
                 //if the token is numeric - we don't need ""
                 ExtendedCdqlConditionToken operand2 = stack.pop();
                 ExtendedCdqlConditionToken operand1 = stack.pop();
-
 
                 if (operand1.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant && operand2.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant) {
                     stack.push(processConstantValues(operand1, operand2, operator));
@@ -97,6 +103,9 @@ public class ContextRequestHandler {
                     throwWrongOpException("the first operand in the expression should be an attribute",
                             operator, operand1.getCdqlConditionToken(), operand2.getCdqlConditionToken());
                 }
+
+                // The following logic makes sense when the operation is like if(var = 3) type. So, the value compared the variable is constant.
+                // But what if, (var1 = var2)? then both should be an attribute (ideally, the same attribute of may be a target entity)?
                 if (operand2.getCdqlConditionToken().getType() != CdqlConditionTokenType.Constant) {
                     throwWrongOpException("the second operand in the expression should be a constant value",
                             operator, operand1.getCdqlConditionToken(), operand2.getCdqlConditionToken());
@@ -122,6 +131,7 @@ public class ContextRequestHandler {
 
                 while (!RPNcondition.isEmpty() && "and".equals(RPNcondition.peek().getStringValue())) {
                     RPNcondition.poll();
+                    // I'm not clear what the 3rd operand is about?
                     ExtendedCdqlConditionToken operand3 = stack.pop();
                     if (operand3.getCdqlConditionToken().getType() != CdqlConditionTokenType.Expression) {
                         throwWrongOpException("Wrong Operand. Expression expected",
@@ -140,12 +150,14 @@ public class ContextRequestHandler {
                     throwWrongOpException("Wrong Operand. Expression expected",
                             operator, operand1.getCdqlConditionToken(), operand2.getCdqlConditionToken());
                 }
+                // Compared to the AND operator, OR is clear. This doesn't have the 3rd operand.
                 Bson orObject = Filters.or(operand1.getBson(), operand2.getBson());
                 stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), orObject));
                 break;
             }
             default: {
                 // Comparison operators (except equality)  (less than and similar types of operators)
+                // So, only '>' and '<'.
                 ExtendedCdqlConditionToken operand2 = stack.pop();
                 ExtendedCdqlConditionToken operand1 = stack.pop();
 
@@ -158,7 +170,9 @@ public class ContextRequestHandler {
                     throwWrongOpException("the first operand in the expression should be an attribute",
                             operator, operand1.getCdqlConditionToken(), operand2.getCdqlConditionToken());
                 }
-                //Maybe only numeric and String????
+                // Maybe only numeric and String????
+                // Same comment as the equality condition. What if the comparison is nested? e.g., var1 < (var2 +1)
+                // I'm also not clear how conditions like ent.att < {'unit':'m','value': 5} OR distance() < {'unit':'km','value': 1} is handled?
                 if (operand2.getCdqlConditionToken().getType() != CdqlConditionTokenType.Constant) {
                     throwWrongOpException("the second operand in the expression should be a constant value",
                             operator, operand1.getCdqlConditionToken(), operand2.getCdqlConditionToken());
@@ -176,11 +190,15 @@ public class ContextRequestHandler {
 
     }
 
+    // This methods compiles a BSON object to run the 'distance' aggregation function
     private static void processDistanceToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType, String attributePrefix) throws WrongOperatorException {
 
         FunctionCall fCall = token.getFunctionCall();
 
         //build a Mongo query
+        // Gets the first context attribute in the list. But why only the first one?
+        // Got it. So, the argument list is a like a indexed parameter list. The parameters by index is as follows:
+        // 0 - attribute name, 1 - destination_lat, 2 - destination_long
         ContextAttribute ca = (ContextAttribute) fCall.getArgumentsList().get(0).getContextAttribute();
         String location_prefix = ca.getAttributeName();
 
@@ -205,15 +223,20 @@ public class ContextRequestHandler {
             throw new WrongOperatorException(result);
 
         }
+        // This is one of the places where the context of a query is placed in the hierachy affects the retriveal decision.
+        // This is a BSON function from mongo. Basically a filter function (to filter out entities that falls inside the sphere) defined in BSON.
+        // Why the radius is divided by 6371000.0?
         Bson eqDefault = Filters.geoWithinCenterSphere(attributePrefix + location_prefix, Double.valueOf(dest_lon), Double.valueOf(dest_lat), distance / 6371000.0);
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }
 
+    // This methods compiles a BSON object needed to run the geo fencing in sphere aggregation function
     private static void processGeoInsideToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType, String attributePrefix) throws WrongOperatorException {
 
         FunctionCall fCall = token.getFunctionCall();
 
         //build a Mongo query
+        //0 - attribute name, 1 - geo-type, 2 - coordinates
         ContextAttribute ca = (ContextAttribute) fCall.getArgumentsList().get(0).getContextAttribute();
         String location_prefix = ca.getAttributeName();
 
@@ -225,6 +248,7 @@ public class ContextRequestHandler {
         String coordinates = fCall.getArgumentsList().get(2).getStringValue().replaceAll("\"", "");
 
         String inside_str = RPNcondition.poll().getStringValue();
+        // I'm guessing the state makes the selection outer (entities not inside the sphere), or inner
         boolean  isNot = !Boolean.valueOf(inside_str);
 
         //get next comparison operator
@@ -246,17 +270,20 @@ public class ContextRequestHandler {
 
         Bson eqDefault = Filters.geoWithin(attributePrefix + location_prefix, geometry);
         if(isNot){
+            // In the above line, the filter applies to finding the entities within the sphere.
+            // Then by the following, the compliment of the filter result is taken.
             eqDefault = Filters.not(eqDefault);
         }
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }
 
-
+    // This methods compiles a BSON object needed to run the geo fencing in rectangle aggregation function
     private static void processGeoInsideBBoxToken(CdqlConditionToken token, Stack<ExtendedCdqlConditionToken> stack, Queue<CdqlConditionToken> RPNcondition, String entityType, String attributePrefix) throws WrongOperatorException {
 
         FunctionCall fCall = token.getFunctionCall();
 
         //build a Mongo query
+        //0 - attribute name, 1 - left_x, 2 - left_y, 3 - right_x, 4-right_y
         ContextAttribute ca = (ContextAttribute) fCall.getArgumentsList().get(0).getContextAttribute();
         String location_prefix = ca.getAttributeName();
 
@@ -291,7 +318,6 @@ public class ContextRequestHandler {
 
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }
-
 
     private static Bson generateComparisonFilter(String token1, Object token2, String op) throws WrongOperatorException {
 
@@ -376,7 +402,10 @@ public class ContextRequestHandler {
         return null;
     }
 
+    // This is the main method here.
+    // This handles 'context requests'. In my words, this an sub-query to fetch an entity.
     public static SQEMResponse handle(ContextRequest contextRequest) {
+        // Local variable definitions
         Set<String> conditionContextAttribiutes = new HashSet<>();
 
         String entityType = contextRequest.getEt().getType();
@@ -385,15 +414,28 @@ public class ContextRequestHandler {
 
         Stack<ExtendedCdqlConditionToken> stack = new Stack<>();
 
+        // What is meant by is historical query? Whether the query has been executed lately with in teh window? or previously executed at any time?
+        // The proto has this time window - start and end time. What is the use?
         Boolean isHistoricalQuery = contextRequest.hasMeta() && contextRequest.getMeta().hasTimeWindow();
 
+        // The prefix is custom set here
         String attributePrefix = isHistoricalQuery ? "coaas:samples.coaas:value." : "";
 
+        // Constructor to the BSON object to save the context query in MongoDB
         Bson finalQuery = new BasicDBObject();
+        // This condition is kind of redundant because
+        // RPNCondition contains all the Context Query Tokens - attributes, operators, constants etc.
+        // So, there won't be a situation where there is not tokens for a context request.
         if (!RPNcondition.isEmpty()) {
+            // What's in the head?
+            // What is the definition of an ExtendedCdqlConditionToken?
+            // This is a constructor to ExtendedCdqlConditionToken object in SQEM
             ExtendedCdqlConditionToken extendedToken = new ExtendedCdqlConditionToken(RPNcondition.poll());
+            // This value in 'token' is as same as the return value of RPNcondition.poll()
             CdqlConditionToken token = extendedToken.getCdqlConditionToken();
             try {
+                // Token seems to be rather a list of tokens
+                // Goes through each token and put them into individual list and queues defined locally above in the function
                 while (token != null) {
                     switch (token.getType()) {
                         case Attribute:
@@ -404,7 +446,6 @@ public class ContextRequestHandler {
                             stack.push(extendedToken);
                             break;
                         case Function:
-
                             for (Operand argument : token.getFunctionCall().getArgumentsList()) {
                                 if (argument.getType() == OperandType.CONTEXT_ATTRIBUTE) {
                                     ContextAttribute ca = argument.getContextAttribute();
@@ -415,6 +456,7 @@ public class ContextRequestHandler {
                                     conditionContextAttribiutes.add(location_prefix);
                                 }
                             }
+                            // It seems that CoaaS right now hard coded to support 3 aggregations functions related to location only.
                             switch (token.getFunctionCall().getFunctionName().toLowerCase()) {
                                 case "distance":
                                     processDistanceToken(token, stack, RPNcondition, entityType, attributePrefix);
@@ -441,9 +483,11 @@ public class ContextRequestHandler {
             finalQuery = stack.pop().getBson();
         }
 
+        // Each of the entity has it's own collection in MongoDB. This is limited ny number.
         String collectionName = CollectionDiscovery.discover(contextRequest.getEt());
 
-
+        // Mongo Block is a page. This way, the responses are retrieved in manageable sized blocks.
+        // What impact does this have on caching?
         MongoBlock printBlock = new MongoBlock();
 
         if (isHistoricalQuery) {
@@ -453,10 +497,13 @@ public class ContextRequestHandler {
             queryHistoricalData(collectionName, finalQuery, conditionContextAttribiutes, start, end,printBlock, contextRequest.getPage(), contextRequest.getLimit());
         } else {
             String monogQueryString = finalQuery.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson();
-            MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("mydb");
+            MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("coaas");
             MongoCollection<Document> entityCollection = db.getCollection(collectionName);
-            //ToDo add limit and sort function
-//            entityCollection.find(finalQuery).limit(10).forEach(printBlock);
+            // ToDo add limit and sort function
+            // entityCollection.find(finalQuery).limit(10).forEach(printBlock);
+            // The BSON document is used as the condition to retrieve from the mongo db. MongoDB collection is written, updated by the context streams.
+            // So, running the context query is very straight forward. It's basically a query run on mongo db.
+            // This is exactly the place where the first lookup of the cache memory or later the retrieval from the cache if item exist in lookup occur.
             entityCollection.find(finalQuery).forEach(printBlock);
         }
 

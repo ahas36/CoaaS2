@@ -21,8 +21,10 @@ public class ConnectionPool {
     private final static String Mongo_Connection_STRING = "mongodb://mongodb:27017";
 
     private static void ssh() throws JSchException {
+        // This is a remote server used by Ali
         String host = "10.133.130.85";
         String user = "alihassani";
+        // Is this password encypted?
         String password = "dob!7thDey1367!dob";
         int port = 22;
 

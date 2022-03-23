@@ -140,7 +140,6 @@ message CdqlConditionToken {
 
     CdqlConditionTokenType type = 2;
 
-
     CdqlConstantConditionTokenType constantTokenType = 6;
     ContextAttribute contextAttribute = 3;
     ContextEntity contextEntity = 4;

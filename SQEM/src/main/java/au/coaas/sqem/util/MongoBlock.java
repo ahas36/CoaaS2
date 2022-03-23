@@ -68,6 +68,7 @@ public class MongoBlock implements Block<Document> {
         finalResultJsonArr.put(resultJSON);
     }
 
+    // Returns is pagination details
     public String getMeta(){
         if(!isHistorical || this.page == null){
             return "{}";

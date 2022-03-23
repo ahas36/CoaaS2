@@ -1,23 +1,24 @@
 package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.*;
-import au.coaas.sqem.entity.ExtendedCdqlConditionToken;
-import au.coaas.sqem.exception.WrongOperatorException;
+
+import au.coaas.sqem.util.MongoBlock;
+import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextRequest;
-import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.util.CollectionDiscovery;
-import au.coaas.sqem.util.MongoBlock;
-import com.mongodb.BasicDBObject;
+import au.coaas.sqem.exception.WrongOperatorException;
+import au.coaas.sqem.entity.ExtendedCdqlConditionToken;
+
 import com.mongodb.MongoClient;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoCursor;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Aggregates;
+
 import org.bson.Document;
 import org.bson.conversions.Bson;
-import org.json.JSONArray;
 
 import java.util.*;
 import java.util.logging.Level;
@@ -319,6 +320,8 @@ public class ContextRequestHandler {
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }
 
+    // In SimpleTokenProcessing method
+    // Comparison operators (except equality)  (less than and similar types of operators)
     private static Bson generateComparisonFilter(String token1, Object token2, String op) throws WrongOperatorException {
 
         switch (op) {
@@ -367,7 +370,9 @@ public class ContextRequestHandler {
                 + operand1.getStringValue() + " " + operator + " " + operand2.getStringValue());
     }
 
+    // Used in equality and other comparison operators
     private static ExtendedCdqlConditionToken processConstantValues(ExtendedCdqlConditionToken operand1, ExtendedCdqlConditionToken operand2, String operator) throws WrongOperatorException {
+        // What is this? What is the field name?
         ExtendedCdqlConditionToken tokenTrue = new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), Filters.exists("VatanamVatanamVatanamVatanam", false));
         ExtendedCdqlConditionToken tokenFalse = new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), Filters.exists("VatanamVatanamVatanamVatanam", true));
         try {
@@ -497,21 +502,25 @@ public class ContextRequestHandler {
             queryHistoricalData(collectionName, finalQuery, conditionContextAttribiutes, start, end,printBlock, contextRequest.getPage(), contextRequest.getLimit());
         } else {
             String monogQueryString = finalQuery.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson();
+            // There are at least 2 mongo db databases here. 1 is 'coaas' which is used here. Let's say, this is the db that contains current values from the context providers.
             MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("coaas");
             MongoCollection<Document> entityCollection = db.getCollection(collectionName);
             // ToDo add limit and sort function
             // entityCollection.find(finalQuery).limit(10).forEach(printBlock);
             // The BSON document is used as the condition to retrieve from the mongo db. MongoDB collection is written, updated by the context streams.
-            // So, running the context query is very straight forward. It's basically a query run on mongo db.
+            // So, running the context request (sub-query) is very straight forward. It's basically a query run on mongo db.
             // This is exactly the place where the first lookup of the cache memory or later the retrieval from the cache if item exist in lookup occur.
             entityCollection.find(finalQuery).forEach(printBlock);
         }
 
+        // Generating a SQEM message as response
         return SQEMResponse.newBuilder().setStatus("200").setBody(printBlock.getResultString()).setMeta(printBlock.getMeta()).build();
     }
 
+    // Retrieves historical context from providers stored in mongo db
     private static void queryHistoricalData(String collectionName, Bson finalQuery, Set<String> conditionContextAttributes, Long startDate, Long endDate, MongoBlock printBlock, int page, int limit) {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        // The other mongo db database is the 'historical_db'. This lets say is the db that stores context from 'coaas' db, once they are expired.
         MongoDatabase db = mongoClient.getDatabase("historical_db");
         MongoCollection<Document> collection = db.getCollection(collectionName);
 
@@ -519,16 +528,13 @@ public class ContextRequestHandler {
 
         query.add(Aggregates.match(generateDateFilter(startDate, endDate, "coaas:day", false)));
 
-
         query.add(Aggregates.unwind("$coaas:samples"));
 
         query.add(Aggregates.match(generateDateFilter(startDate, endDate, "coaas:samples.coaas:time", true)));
 
         query.add(Aggregates.match(finalQuery));
 
-
-
-//        query.add(Aggregates.group("$coaas:key", Accumulators.push("samples","$coaas:samples")));
+        // query.add(Aggregates.group("$coaas:key", Accumulators.push("samples","$coaas:samples")));
 
         Document project = new Document();
 
@@ -547,7 +553,6 @@ public class ContextRequestHandler {
         Document sort = new Document();
         sort.put("time",-1);
         query.add(Aggregates.sort(sort));
-
 
         if(page>-1){
             query.add(Aggregates.skip(limit * page));
@@ -586,7 +591,7 @@ public class ContextRequestHandler {
         return dateFilterMatch;
     }
 
-
+    // Converts time epochs to DateTime format
     private static Object getDateFromLong(Long dateLong, boolean isExact) {
         if (isExact) {
             return dateLong;

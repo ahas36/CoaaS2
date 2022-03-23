@@ -5,7 +5,6 @@
  */
 package au.coaas.sqem.server;
 
-
 import au.coaas.sqem.handler.*;
 import au.coaas.sqem.proto.Chunk;
 import au.coaas.sqem.proto.SQEMResponse;
@@ -25,16 +24,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
 
     private static Logger log = Logger.getLogger(SQEMServiceImpl.class.getName());
 
-
     @Override
     public void handleContextRequest(au.coaas.sqem.proto.ContextRequest request,
                                      io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Chunk> responseObserver) {
         try {
+            // Executing context-request for an entity
             SQEMResponse response = ContextRequestHandler.handle(request);
             byte[] bytes = response.toByteArray();
 
             int size = bytes.length;
 
+            // Breaking the message into manageable chunks for sharing among services
+            // Maximum message size is 50MB
             int total = (int)Math.ceil((bytes.length * 1.0) / MAX_MESSAGE_SIZE);
 
             for (int i = 0 ; i< total; i++){

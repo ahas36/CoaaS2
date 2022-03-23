@@ -17,8 +17,10 @@ public class ConnectionPool {
         return mongoClient;
     }
 
-    //    private final static String Mongo_Connection_STRING =  "mongodb://localhost:3309";
-    private final static String Mongo_Connection_STRING = "mongodb://mongodb:27017";
+    // Local mongo db instance
+    private final static String Mongo_Connection_STRING =  "mongodb://localhost:27017";
+    // Containerized Mongo DB instance
+    //private final static String Mongo_Connection_STRING = "mongodb://mongodb:27017";
 
     private static void ssh() throws JSchException {
         // This is a remote server used by Ali

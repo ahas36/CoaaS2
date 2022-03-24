@@ -20,6 +20,8 @@ import java.util.regex.Pattern;
 /**
  * Created by ali on 13/02/2017.
  */
+
+// Extends AbstractParseTreeVisitor<T> from antlr.runtime.tree (which each of the visit functions overrides) and implements CdqlVisitor<T>
 public class CdqlVisitorImpl extends CdqlBaseVisitor<String> {
 
     private CDQLQuery.Builder query;
@@ -38,8 +40,6 @@ public class CdqlVisitorImpl extends CdqlBaseVisitor<String> {
         nameSpaces = new HashMap<>();
         errors = new HashMap<>();
     }
-
-
 
     private Long getTimestamp(Object t,String datePattern) throws Exception{
 
@@ -119,6 +119,8 @@ public class CdqlVisitorImpl extends CdqlBaseVisitor<String> {
     @Override
     public String visitRule_query(CdqlParser.Rule_queryContext ctx) {
         query = CDQLQuery.newBuilder();
+        // Why strictly PULL here? What about PUSH? - is it because situation monitoring isn't available?
+        // There is a methods below called 'visitRuel_Push' to handle that.
         query.setQueryType(QueryType.PULL_BASED);
         return super.visitRule_query(ctx);
     }
@@ -236,8 +238,11 @@ public class CdqlVisitorImpl extends CdqlBaseVisitor<String> {
     }
 
     @Override
+    // Visit rule when the query is PUSH and event based
     public String visitRule_Start(CdqlParser.Rule_StartContext ctx) {
-        if (ctx.getChild(0) instanceof CdqlParser.Rule_ConditionContext) //if the query is event-based
+        // If the query is event-based.
+        // That is, the query is executed reactively to a monitored situation.
+        if (ctx.getChild(0) instanceof CdqlParser.Rule_ConditionContext)
         {
             try {
                 CDQLWhen.Builder when = CDQLWhen.newBuilder().setCondition((ConditionBuilder.buildCondition(ctx, "when")));
@@ -251,7 +256,10 @@ public class CdqlVisitorImpl extends CdqlBaseVisitor<String> {
                     errors.put("Prefix", perfixError);
                 }
             }
-        } else if (ctx.getChild(0) instanceof CdqlParser.Rule_Date_TimeContext) //if the query is time-based - sub-type of event-based but it will be handled differently
+        }
+        // If the query is time-based - sub-type of event-based but it will be handled differently.
+        // That is, when the PUSh query is executes at a given datetime.
+        else if (ctx.getChild(0) instanceof CdqlParser.Rule_Date_TimeContext)
         {
             ParseTree dateTime = ctx.getChild(0);
             try {
@@ -287,6 +295,8 @@ public class CdqlVisitorImpl extends CdqlBaseVisitor<String> {
     }
 
     @Override
+    // Visit rule when the query is PUSH and periodic.
+    // That is, the query executes evey e.g., 1 hour.
     public String visitRule_repeat(CdqlParser.Rule_repeatContext ctx) {
         TimeUnit tu = null;
         switch (ctx.getChild(2).getText().toLowerCase()) {

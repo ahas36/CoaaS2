@@ -34,6 +34,7 @@ public class MainParser {
         SyntaxErrorListener syntaxErrorListener = new SyntaxErrorListener();
         parser.removeErrorListeners();
         parser.addErrorListener(syntaxErrorListener);
+        // This creates the parse tree
         ParseTree tree = parser.rule_Cdql(); // begin parsing at init rule  
 
         //if there is a syntax error
@@ -139,14 +140,18 @@ public class MainParser {
         int i = 1;
         executionPlan.put(0, ListOfString.newBuilder());
         for (ContextEntity entity : new ArrayList<>(entities)) {
+            // Where is the dependency map defined?
             if (entity.getCondition() == null || entity.getCondition().getDependencyMap() == null || entity.getCondition().getDependencyMap().isEmpty()) {
                 entities.remove(entity);
+                // The entity ID is added here to execution plan, which is an indication to say what entities should be accessed from SQEM.
+                // But where does this Execution plan gets executed?
                 executionPlan.get(0).addValue(entity.getEntityID());
                 visited.add(entity.getEntityID());
             }
         }
         boolean flag = true;
         while (flag && !entities.isEmpty()) {
+            // What does this loop do by reiterating through the entities list and setting a flag?
             executionPlan.put(i, ListOfString.newBuilder());
             flag = false;
             Set<String> tempVisited = new HashSet<>();

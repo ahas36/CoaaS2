@@ -18,6 +18,7 @@ public class CDQLExecutor {
     public static CdqlResponse execute(String cdql, int page, int limit) {
         //parse the incoming query
 
+        // First logs the entire query as it is
         logQuery(cdql);
 
         CQPServiceGrpc.CQPServiceBlockingStub stub

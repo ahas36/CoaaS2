@@ -69,17 +69,18 @@ public class PullBasedExecutor {
         return result;
     }
 
+    // This method executes the query plan for pull based queries
     public static CdqlResponse executePullBaseQuery(CDQLQuery query, int page, int limit) {
 
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         //initialize values
+        // How are the values assigned to 'ce'? I only see values assigned in the catch block.
         Map<String, JSONObject> ce = new HashMap<>();
         List<ContextEntity> sqemEntities = new ArrayList<>();
 
-
-        //iterates over execution plan and fetch results
+        // Iterates over execution plan
         for (ListOfString entityList : query.getExecutionPlanMap().values()) {
             for (String entityID : entityList.getValueList()) {
                 ContextEntity entity = query.getDefine().getDefinedEntitiesList().stream().filter(v -> v.getEntityID().equals(entityID)).findFirst().get();
@@ -156,19 +157,29 @@ public class PullBasedExecutor {
                 if (errorDetected) {
                     break;
                 }
+                // The context query executes as a collection of context-requests. That is why service discovery and executing happen per entity over a loop.
+                // Not the loop here isn't parallelized either. Now consider, multiple parallel context queries, trying to access the same context. Discovering and executing is not efficient at all.
+                // The Context-request is executed in 2 steps.
+                // Step (1) - Try to resolve context services relevant to execute the query.
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
+                // Step (2) - Then, the context-request run.
                 if (contextService == null) {
+                    // If context services can not be resolved, then fetch from the last fetched values if available.
+                    // So, this mongodb is kind of working like a cache memory. (But I don't see freshness is concerned).
                     ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
                     continue;
                 }
+                // If context services can be resolved, then fetch from item.
                 ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
                 //ToDo function call and discovery
             }
+            // End of iterating through the entity list and fetching for them.
         }
-
+        // End of iterating through the execution plan
 
         JSONObject result = new JSONObject();
 
+        // Filter out the neccesary attributes from the retrieved entity data
         for (Map.Entry<String, ListOfContextAttribute> entry : query.getSelect().getSelectAttrsMap().entrySet()) {
             String key = entry.getKey();
             result.put(key, ce.get(key));
@@ -198,7 +209,6 @@ public class PullBasedExecutor {
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
 
         CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200").setBody(result.toString()).build();
-
 
         return cdqlResponse;
     }
@@ -261,6 +271,7 @@ public class PullBasedExecutor {
         }
     }
 
+    // Executes the aggregation on the values retrieved for the entity
     private static JSONObject executeAggregationFunction(FunctionCall fCall) {
         List<Operand> arguments = fCall.getArgumentsList();
 
@@ -290,6 +301,7 @@ public class PullBasedExecutor {
         return System.currentTimeMillis() + offset;
     }
 
+    // H3 is already used here to group a set of locations. Basically, the location indexes exist.
     private static JSONObject groupByLocation(FunctionCall fCall) {
         JSONArray finalResult = new JSONArray();
         Map<String, List<JSONObject>> cluster = new HashMap<>();

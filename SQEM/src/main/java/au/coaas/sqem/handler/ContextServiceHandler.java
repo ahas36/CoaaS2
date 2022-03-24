@@ -78,10 +78,9 @@ public class ContextServiceHandler {
     public static SQEMResponse discoverMatchingServices(ContextServiceRequest serviceRequest) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("mydb");
+            MongoDatabase db = mongoClient.getDatabase("coaas");
 
             MongoCollection<Document> collection = db.getCollection("contextService");
-
 
             String vocabURI = "<" + serviceRequest.getEt().getVocabURI().trim();
 

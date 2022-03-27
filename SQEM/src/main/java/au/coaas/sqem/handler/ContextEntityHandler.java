@@ -1,48 +1,46 @@
 package au.coaas.sqem.handler;
 
-import au.coaas.cqp.proto.ContextEntity;
 import au.coaas.cqp.proto.ContextEntityType;
-import au.coaas.sqem.mongo.ConnectionPool;
-import au.coaas.sqem.proto.RegisterEntityRequest;
+
+import au.coaas.sqem.util.ResponseUtils;
 import au.coaas.sqem.proto.SQEMResponse;
-import au.coaas.sqem.proto.UpdateEntityRequest;
+import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.util.CollectionDiscovery;
-import com.mongodb.BasicDBObject;
+import au.coaas.sqem.proto.UpdateEntityRequest;
+import au.coaas.sqem.proto.RegisterEntityRequest;
+
 import com.mongodb.MongoClient;
-import com.mongodb.QueryBuilder;
-import com.mongodb.client.MongoCollection;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
-import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.model.Updates;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
+
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.bson.conversions.Bson;
 
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.Calendar;
+import java.util.ArrayList;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ContextEntityHandler {
-
-
-//    private static Document preprocess
 
     public final static int BUCKET_SIZE = 200;
 
     public static SQEMResponse createEntity(RegisterEntityRequest registerRequest) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("mydb");
+            MongoDatabase db = mongoClient.getDatabase("coaas");
 
             String collectionName = CollectionDiscovery.discover(registerRequest.getEt());
 
@@ -115,7 +113,6 @@ public class ContextEntityHandler {
         }
     }
 
-
     private static Object getValueByKey(String item, String key) {
         String[] keys = key.split("\\.");
         Object value = new JSONObject(item);
@@ -133,7 +130,7 @@ public class ContextEntityHandler {
     public static SQEMResponse updateEntity(UpdateEntityRequest updateRequest) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("mydb");
+            MongoDatabase db = mongoClient.getDatabase("coaas");
 
             //it finds the collection based on the entity type
             String collectionName = CollectionDiscovery.discover(updateRequest.getEt());
@@ -223,7 +220,7 @@ public class ContextEntityHandler {
             Document updateDocument = new Document();
             updateDocument.put("coaas:time",observedTime);
             updateDocument.put("coaas:arrivalTime",currentTime);
-            updateDocument.put("coaas:value", convertJSONObject2Document(attributes));
+            updateDocument.put("coaas:value", ResponseUtils.convertJSONObject2Document(attributes));
 
             List<Bson> updateStatement = new ArrayList<>();
 
@@ -251,44 +248,9 @@ public class ContextEntityHandler {
 
     }
 
-
-    private static List<Object> parseJsonArray(JSONArray ja) {
-        List<Object> result = new ArrayList<>();
-        for (int i = 0; i < ja.length(); i++) {
-            Object subItem = ja.get(i);
-            if (subItem instanceof JSONObject) {
-                result.add(convertJSONObject2Document(subItem));
-            } else if (subItem instanceof JSONArray) {
-                result.add(parseJsonArray((JSONArray) subItem));
-            } else {
-                result.add(subItem);
-            }
-        }
-        return result;
-    }
-
-    private static Document convertJSONObject2Document(Object item) {
-        Document document = new Document();
-        if (item instanceof JSONObject) {
-            JSONObject jo = (JSONObject) item;
-            for (String key : jo.keySet()) {
-                Object subItem = jo.get(key);
-                if (subItem instanceof JSONObject) {
-                    document.put(key, convertJSONObject2Document(subItem));
-                } else if (subItem instanceof JSONArray) {
-                    document.put(key,parseJsonArray((JSONArray) subItem));
-                } else {
-                    document.put(key, subItem);
-                }
-            }
-        }
-        return document;
-    }
-
-
     public static SQEMResponse remove(String name) {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-        MongoDatabase db = mongoClient.getDatabase("mydb");
+        MongoDatabase db = mongoClient.getDatabase("coaas");
         MongoCollection<Document> collection = db.getCollection(name);
         collection.drop();
         MongoDatabase historicalDb = mongoClient.getDatabase("historical_db");
@@ -299,7 +261,7 @@ public class ContextEntityHandler {
 
     public static SQEMResponse clear(String name) {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-        MongoDatabase db = mongoClient.getDatabase("mydb");
+        MongoDatabase db = mongoClient.getDatabase("coaas");
         MongoCollection<Document> collection = db.getCollection(name);
         DeleteResult deleteResult = collection.deleteMany(new BasicDBObject());
         JSONObject jo = new JSONObject();
@@ -314,7 +276,7 @@ public class ContextEntityHandler {
 
     public static SQEMResponse getAllTypes() {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-        MongoDatabase db = mongoClient.getDatabase("mydb");
+        MongoDatabase db = mongoClient.getDatabase("coaas");
         MongoIterable<String> collection = db.listCollectionNames();
         MongoCursor<String> cursor = collection.iterator();
         JSONArray ja = new JSONArray();

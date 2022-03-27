@@ -16,11 +16,11 @@ public class CDQLExecutor {
     private static Logger log = Logger.getLogger(CDQLExecutor.class.getName());
 
     public static CdqlResponse execute(String cdql, int page, int limit) {
-        //parse the incoming query
 
         // First logs the entire query as it is
         logQuery(cdql);
 
+        // Parse the incoming query
         CQPServiceGrpc.CQPServiceBlockingStub stub
                 = CQPServiceGrpc.newBlockingStub(CQPChannel.getInstance().getChannel());
         CDQLConstruct cdqlConstruct = stub.parse(ParseRequest.newBuilder().setCdql(cdql).build());
@@ -29,6 +29,7 @@ public class CDQLExecutor {
             case QUERY:
                 CDQLQuery query = cdqlConstruct.getQuery();
 
+                // Then execute based on whether the query is Push or Pull.
                 if(query.getQueryType().equals(QueryType.PULL_BASED))
                 {
                     return PullBasedExecutor.executePullBaseQuery(query,page,limit);

@@ -24,7 +24,7 @@ public class ContextServiceHandler {
     public static SQEMResponse register(RegisterContextServiceRequest registerRequest) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("mydb");
+            MongoDatabase db = mongoClient.getDatabase("coaas");
 
             MongoCollection<Document> collection = db.getCollection("contextService");
 
@@ -49,7 +49,7 @@ public class ContextServiceHandler {
     public static SQEMResponse changeStatus(String id,String status) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("mydb");
+            MongoDatabase db = mongoClient.getDatabase("coaas");
 
             MongoCollection<Document> collection = db.getCollection("contextService");
 
@@ -121,7 +121,7 @@ public class ContextServiceHandler {
     public static SQEMResponse getAllServices() {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("mydb");
+            MongoDatabase db = mongoClient.getDatabase("coaas");
 
             MongoCollection<Document> collection = db.getCollection("contextService");
 

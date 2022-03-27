@@ -8,7 +8,6 @@ package au.coaas.cqp.server;
 import au.coaas.cqp.exception.CDQLSyntaxtErrorException;
 import au.coaas.cqp.parser.MainParser;
 import au.coaas.cqp.proto.CDQLConstruct;
-import au.coaas.cqp.proto.CDQLQuery;
 import au.coaas.cqp.proto.CQPServiceGrpc;
 
 import java.util.logging.Logger;

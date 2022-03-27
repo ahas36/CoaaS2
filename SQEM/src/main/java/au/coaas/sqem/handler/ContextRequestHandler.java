@@ -4,6 +4,7 @@ import au.coaas.cqp.proto.*;
 
 import au.coaas.sqem.util.MongoBlock;
 import au.coaas.sqem.proto.SQEMResponse;
+import au.coaas.sqem.util.ResponseUtils;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextRequest;
 import au.coaas.sqem.util.CollectionDiscovery;
@@ -526,11 +527,11 @@ public class ContextRequestHandler {
 
         List<Bson> query = new ArrayList<>();
 
-        query.add(Aggregates.match(generateDateFilter(startDate, endDate, "coaas:day", false)));
+        query.add(Aggregates.match(ResponseUtils.generateDateFilter(startDate, endDate, "coaas:day", false)));
 
         query.add(Aggregates.unwind("$coaas:samples"));
 
-        query.add(Aggregates.match(generateDateFilter(startDate, endDate, "coaas:samples.coaas:time", true)));
+        query.add(Aggregates.match(ResponseUtils.generateDateFilter(startDate, endDate, "coaas:samples.coaas:time", true)));
 
         query.add(Aggregates.match(finalQuery));
 
@@ -565,46 +566,8 @@ public class ContextRequestHandler {
         printBlock.setTotalCount(total);
         collection.aggregate(query).allowDiskUse(true).forEach(printBlock);
 
-        System.out.println(queryToString(query));
+        System.out.println(ResponseUtils.queryToString(query));
     }
-
-    private static String queryToString(List<Bson> query) {
-        String result = "[\n";
-        for (Bson item : query) {
-            result += item.toBsonDocument(org.bson.BsonDocument.class, MongoClient.getDefaultCodecRegistry()).toJson() + ",\n";
-        }
-        result += "]";
-        return result;
-    }
-
-    private static Bson generateDateFilter(Long startDate, Long endDate, String attributeName, boolean isExact) {
-        Bson dateFilterMatch = null;
-        if (startDate != 0 && endDate != 0) {
-            dateFilterMatch = Filters.and(Filters.gte(attributeName, getDateFromLong(startDate, isExact)), Filters.lte(attributeName, getDateFromLong(endDate, isExact)));
-        } else {
-            if (startDate != 0) {
-                dateFilterMatch = Filters.gte(attributeName, getDateFromLong(startDate, isExact));
-            } else if (endDate != 0) {
-                dateFilterMatch = Filters.lte(attributeName, getDateFromLong(endDate, isExact));
-            }
-        }
-        return dateFilterMatch;
-    }
-
-    // Converts time epochs to DateTime format
-    private static Object getDateFromLong(Long dateLong, boolean isExact) {
-        if (isExact) {
-            return dateLong;
-        }
-        Calendar cal = new GregorianCalendar();
-        cal.setTime(new Date(dateLong));
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-        return cal.getTime();
-    }
-
 
     private static SQEMResponse createErrorResponse(String errorMessage) {
         return SQEMResponse.newBuilder().setBody(errorMessage).setStatus("500").build();

@@ -72,16 +72,15 @@ public class PullBasedExecutor {
     // This method executes the query plan for pull based queries
     public static CdqlResponse executePullBaseQuery(CDQLQuery query, int page, int limit) {
 
-        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-
-        //initialize values
+        // Initialize values
         // How are the values assigned to 'ce'? I only see values assigned in the catch block.
         Map<String, JSONObject> ce = new HashMap<>();
         List<ContextEntity> sqemEntities = new ArrayList<>();
 
         // Iterates over execution plan
+        // The first loop goes over dependent sets of entities
         for (ListOfString entityList : query.getExecutionPlanMap().values()) {
+            // Second loop iterates over the entities in the dependent set
             for (String entityID : entityList.getValueList()) {
                 ContextEntity entity = query.getDefine().getDefinedEntitiesList().stream().filter(v -> v.getEntityID().equals(entityID)).findFirst().get();
 
@@ -91,6 +90,9 @@ public class PullBasedExecutor {
                 Map<String, String> terms = new HashMap<>();
                 boolean errorDetected = false;
 
+                // Third loop iterates over the RPN Conditions of an entity
+                // This loop cleans the RPN Conditions to form that is in line with the rest of the logic.
+                // For example, {"unit":"km","value":2} is converted to 2000
                 while (rpnCondition.peek() != null) {
                     try {
                         CdqlConditionToken token = rpnCondition.poll();
@@ -189,6 +191,7 @@ public class PullBasedExecutor {
             if (fCall.getFunctionName().equals("avg") || fCall.getFunctionName().equals("cluster")) {
                 result.put(fCall.getFunctionName(), executeFunctionCall(fCall, ce, query));
             } else {
+                // All other context functions that are not either "avg" or "cluster".
                 Object execute = executeFunctionCall(fCall, ce, query);
 
                 result.put(fCall.getFunctionName(), execute);
@@ -207,7 +210,7 @@ public class PullBasedExecutor {
         }
 
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
-
+        // If this response need to be cached, this is where the caching action should happen.
         CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200").setBody(result.toString()).build();
 
         return cdqlResponse;

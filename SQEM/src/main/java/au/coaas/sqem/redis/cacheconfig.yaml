@@ -1,0 +1,12 @@
+clusterServerConfig:
+  username: "shakthi"
+  password: "contextcache_21"
+  slaveConnectionPoolSize: 400
+  masterConnectionPoolSize: 400
+  idleConnectionTimeout: 60000
+  nodeAddresses:
+    - "redis://localhost:6379"
+  pingConnectionInterval: 30000
+threads: 16
+nettyThreads: 32
+codec: !<org.redisson.codec.MarshallingCodec> {}

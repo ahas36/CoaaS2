@@ -18,8 +18,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ContextCacheHandler {
 
-    public final static int BUCKET_SIZE = 200;
-
     // Caches all context under an entity
     public static void cacheEntity(UpdateEntityRequest updateRequest) {
 

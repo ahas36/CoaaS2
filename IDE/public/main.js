@@ -36,7 +36,7 @@ function createWindow(args) {
     }
 
 
-    mainWindow = windowManager.createNew('home', 'CoaaS IDE', isDev ? 'http://localhost:3030?main' : `file://${path.join(__dirname, '../build/index.html?main')}`, false, {
+    mainWindow = windowManager.createNew('home', 'CoaaS IDE', isDev ? 'http://localhost:3000?main' : `file://${path.join(__dirname, '../build/index.html?main')}`, false, {
         'width': 1024,
         'height': 768,
         'minWidth': 1024,

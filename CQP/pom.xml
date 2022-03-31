@@ -18,14 +18,17 @@
             <artifactId>antlr4-runtime</artifactId>
             <version>4.9.1</version>
         </dependency>
-
+        <dependency>
+            <groupId>org.antlr</groupId>
+            <artifactId>antlr4</artifactId>
+            <version>4.8-1</version>
+        </dependency>
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20180813</version>
             <type>jar</type>
         </dependency>
-
         <dependency>
             <groupId>au.coaas</groupId>
             <artifactId>grpc</artifactId>

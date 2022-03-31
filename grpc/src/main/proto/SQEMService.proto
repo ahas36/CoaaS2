@@ -80,8 +80,8 @@ message SituationFunctionRequest
 message CDQLLog
 {
     string rawQuery = 1;
+    string queryId = 2;
 }
-
 
 message Empty {}
 
@@ -109,4 +109,5 @@ service SQEMService {
     rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
     rpc getAllQueryLogs (Empty) returns (SQEMResponse);
     rpc logQuery (CDQLLog) returns (SQEMResponse);
+    rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
 }

@@ -6,17 +6,33 @@
 package au.coaas.cqp.parser;
 
 import au.coaas.base.proto.ListOfString;
-import au.coaas.cqp.exception.CDQLSyntaxtErrorException;
-import au.coaas.cqp.proto.CDQLConstruct;
-import au.coaas.cqp.proto.CDQLQuery;
-import au.coaas.cqp.proto.CDQLType;
-import au.coaas.cqp.proto.ContextEntity;
+
 import au.coaas.cqp.util.AddError;
+import au.coaas.cqp.proto.CDQLType;
+import au.coaas.cqp.proto.CDQLQuery;
+import au.coaas.cqp.proto.CDQLConstruct;
+import au.coaas.cqp.proto.ContextEntity;
+import au.coaas.cqp.exception.CDQLSyntaxtErrorException;
+
+import au.coaas.grpc.client.SQEMChannel;
+
+import au.coaas.sqem.proto.CDQLLog;
+import au.coaas.sqem.proto.SQEMResponse;
+import au.coaas.sqem.proto.SQEMServiceGrpc;
+
+import org.antlr.v4.gui.TreeViewer;
+import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.*;
+import javax.swing.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.concurrent.Executors;
+
+import static au.coaas.cqp.util.ASTCoversion.toMap;
+import static au.coaas.cqp.util.ASTCoversion.gsonBuilder;
 
 /**
  *
@@ -24,7 +40,9 @@ import java.util.*;
  */
 public class MainParser {
 
-    public static CDQLConstruct parse(String stringQuery) throws CDQLSyntaxtErrorException {
+    private static Logger log = Logger.getLogger(MainParser.class.getName());
+
+    public static CDQLConstruct parse(String stringQuery, String queryId) throws CDQLSyntaxtErrorException {
         CDQLConstruct.Builder cdqlConstructBuilder = CDQLConstruct.newBuilder();
         StringBuilder res = new StringBuilder();
         ANTLRInputStream input = new ANTLRInputStream(stringQuery); // create a lexer that feeds off of input CharStream
@@ -34,6 +52,7 @@ public class MainParser {
         SyntaxErrorListener syntaxErrorListener = new SyntaxErrorListener();
         parser.removeErrorListeners();
         parser.addErrorListener(syntaxErrorListener);
+
         // This creates the parse tree
         ParseTree tree = parser.rule_Cdql(); // begin parsing at init rule  
 
@@ -45,13 +64,18 @@ public class MainParser {
             }
             throw new CDQLSyntaxtErrorException(error);
         }
+
+        // Logging the parsed query tree for collaborative filtering
+        Executors.newCachedThreadPool().execute(() -> logParsedQueryTree(tree,queryId));
+
         CdqlVisitorImpl stringCDQLBaseVisitor = new CdqlVisitorImpl();
         // Walk the tree created during the parse, trigger callbacks
         res.append(tree.toStringTree(parser));
         stringCDQLBaseVisitor.visit(tree);
+
         if (stringCDQLBaseVisitor.getQuery() != null) {
             CDQLQuery.Builder query = stringCDQLBaseVisitor.getQuery();
-            //if there is a undefined entity
+            // If there is an undefined entity
             MainParser.validate(query);
             String error = "";
             if (query.getErrorsCount() != 0) {
@@ -66,10 +90,14 @@ public class MainParser {
                 }
                 throw new CDQLSyntaxtErrorException(error);
             }
-            return cdqlConstructBuilder.setType(CDQLType.QUERY).setQuery(query.build()).build();
+            return cdqlConstructBuilder.setType(CDQLType.QUERY)
+                    .setQuery(query.build())
+                    .setQueryId(queryId).build();
         }
         else if (stringCDQLBaseVisitor.getContextFunction() != null) {
-            return cdqlConstructBuilder.setType(CDQLType.FUNCTION_DEF).setFunction(stringCDQLBaseVisitor.getContextFunction().build()).build();
+            return cdqlConstructBuilder.setType(CDQLType.FUNCTION_DEF)
+                    .setFunction(stringCDQLBaseVisitor.getContextFunction().build())
+                    .setQueryId(queryId).build();
         }
         return null;
     }
@@ -132,7 +160,6 @@ public class MainParser {
 //        }
 //    }
 
-
     private static void computeExecutionPlan(CDQLQuery.Builder query) {
         Map<Integer, ListOfString.Builder> executionPlan = new HashMap<>();
         List<ContextEntity> entities = new ArrayList<>(query.getDefine().getDefinedEntitiesList());
@@ -183,6 +210,32 @@ public class MainParser {
             cdqlExecutionPlan.put(key, value.build());
         }
         query.putAllExecutionPlan(cdqlExecutionPlan);
+    }
+
+    private static void logParsedQueryTree(ParseTree tree, String queryId){
+        // These lines are for debugging (and Learning) purposes. Uncomment when neccesary.
+        // Visualizes the Abstract Query Tree.
+        /**
+         *         JFrame frame = new JFrame("Context Query Abstract Query Tree");
+         *         JPanel panel = new JPanel();
+         *         TreeViewer viewer = new TreeViewer(ruleList,tree);
+         *         viewer.setScale(1.5);
+         *         panel.add(viewer);
+         *         frame.add(panel);
+         *         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+         *         frame.pack();
+         *         frame.setVisible(true);
+         */
+
+        SQEMServiceGrpc.SQEMServiceBlockingStub stub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+        SQEMResponse response = stub.logParsedQueryTree(CDQLLog.newBuilder().setRawQuery(gsonBuilder.toJson(toMap(tree)))
+                .setQueryId(queryId).build());
+
+        if(!response.getStatus().equals("200")){
+            log.log(Level.WARNING,response.getBody());
+        }
     }
 
 }

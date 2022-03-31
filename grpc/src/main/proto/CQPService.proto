@@ -7,7 +7,6 @@ package au.coaas.cqp.proto;
 
 import "CoaaSBase.proto";
 
-
 message ListOfContextEntities {
     repeated ContextEntity value = 1;
 }
@@ -238,7 +237,7 @@ message CDQLCallback {
 
 message ParseRequest {
     string cdql = 1;
-
+    string queryId = 2;
 }
 
 enum ContextFunctionType {
@@ -290,6 +289,7 @@ message CDQLConstruct {
     CDQLType type = 1;
     ContextFunction function = 2;
     CDQLQuery query = 3;
+    string queryId = 4;
 }
 
 

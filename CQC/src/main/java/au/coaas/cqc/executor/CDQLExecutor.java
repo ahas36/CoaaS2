@@ -15,15 +15,15 @@ public class CDQLExecutor {
 
     private static Logger log = Logger.getLogger(CDQLExecutor.class.getName());
 
-    public static CdqlResponse execute(String cdql, int page, int limit) {
+    public static CdqlResponse execute(String cdql, int page, int limit, String queryId) {
 
         // First logs the entire query as it is
-        logQuery(cdql);
+        logQuery(cdql,queryId);
 
         // Parse the incoming query
         CQPServiceGrpc.CQPServiceBlockingStub stub
                 = CQPServiceGrpc.newBlockingStub(CQPChannel.getInstance().getChannel());
-        CDQLConstruct cdqlConstruct = stub.parse(ParseRequest.newBuilder().setCdql(cdql).build());
+        CDQLConstruct cdqlConstruct = stub.parse(ParseRequest.newBuilder().setCdql(cdql).setQueryId(queryId).build());
 
         switch (cdqlConstruct.getType()) {
             case QUERY:
@@ -49,11 +49,11 @@ public class CDQLExecutor {
         return null;
     }
 
-    public static void logQuery(String query){
+    public static void logQuery(String query, String queryId){
         SQEMServiceGrpc.SQEMServiceBlockingStub stub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        SQEMResponse response = stub.logQuery(CDQLLog.newBuilder().setRawQuery(query).build());
+        SQEMResponse response = stub.logQuery(CDQLLog.newBuilder().setRawQuery(query).setQueryId(queryId).build());
         if(!response.getStatus().equals("200")){
             log.log(Level.WARNING,response.getBody());
         }

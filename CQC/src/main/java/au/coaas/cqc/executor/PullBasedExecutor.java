@@ -720,10 +720,10 @@ public class PullBasedExecutor {
     }
 
     private static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
+        ContextRequest cr = generateContextRequest(targetEntity, query, ce, page, limit);
+
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-
-        ContextRequest cr = generateContextRequest(targetEntity, query, ce, page, limit);
 
         Iterator<Chunk> data = sqemStub.handleContextRequest(cr);
 

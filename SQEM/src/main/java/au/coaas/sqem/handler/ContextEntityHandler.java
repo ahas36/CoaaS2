@@ -187,8 +187,6 @@ public class ContextEntityHandler {
 
             MongoCollection<Document> collection = db.getCollection(collectionName);
 
-
-
             Calendar cal = Calendar.getInstance();
             cal.setTime(new Date(observedTime));
             cal.set(Calendar.HOUR_OF_DAY, 0);

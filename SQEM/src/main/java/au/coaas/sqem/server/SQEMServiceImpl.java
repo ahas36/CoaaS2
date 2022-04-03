@@ -14,6 +14,7 @@ import com.google.protobuf.ByteString;
 import java.util.logging.Logger;
 
 import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+
 import static io.grpc.stub.ClientCalls.asyncUnaryCall;
 import static io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall;
 

@@ -45,16 +45,21 @@ public class MainParser {
     public static CDQLConstruct parse(String stringQuery, String queryId) throws CDQLSyntaxtErrorException {
         CDQLConstruct.Builder cdqlConstructBuilder = CDQLConstruct.newBuilder();
         StringBuilder res = new StringBuilder();
-        ANTLRInputStream input = new ANTLRInputStream(stringQuery); // create a lexer that feeds off of input CharStream
-        CdqlLexer lexer = new CdqlLexer(input); // create a buffer of tokens pulled from the lexer
-        CommonTokenStream tokens = new CommonTokenStream(lexer); // create a au.coaas.cqe.parser that feeds off the tokens buffer
+        // Creates a lexer that feeds off of input CharStream
+        ANTLRInputStream input = new ANTLRInputStream(stringQuery);
+        // Creates a buffer of tokens pulled from the lexer
+        CdqlLexer lexer = new CdqlLexer(input);
+        // Create a au.coaas.cqe.parser that feeds off the tokens buffer
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+
         CdqlParser parser = new CdqlParser(tokens);
         SyntaxErrorListener syntaxErrorListener = new SyntaxErrorListener();
         parser.removeErrorListeners();
         parser.addErrorListener(syntaxErrorListener);
 
         // This creates the parse tree
-        ParseTree tree = parser.rule_Cdql(); // begin parsing at init rule  
+        // Begins parsing at init rule
+        ParseTree tree = parser.rule_Cdql();
 
         //if there is a syntax error
         if (parser.getNumberOfSyntaxErrors() != 0) {

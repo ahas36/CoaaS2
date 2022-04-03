@@ -7,6 +7,7 @@ package au.coaas.sqem.server;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -23,7 +24,9 @@ public class SQEMServer {
     static public void main (String [] args) throws IOException, InterruptedException
     {
         log.info("Starting");
-        Server server = ServerBuilder.forPort(8686).maxInboundMessageSize(MAX_MESSAGE_SIZE).addService(new SQEMServiceImpl()).build();
+        Server server = ServerBuilder.forPort(8686).maxInboundMessageSize(MAX_MESSAGE_SIZE)
+                .addService(ServerInterceptors.intercept(new SQEMServiceImpl(), new SQEMInterceptor()))
+                .build();
         server.start();
         log.info("Server started on port 8686");
         server.awaitTermination();

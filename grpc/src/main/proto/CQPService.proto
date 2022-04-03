@@ -153,11 +153,8 @@ message ContextEntityType {
 
 message ContextEntity {
     ContextEntityType type = 1;
-
     string entityID = 2;
-
     Condition condition = 3;
-
     map<string, string> contextAttributes = 4;
 }
 
@@ -175,7 +172,6 @@ enum TimeUnit {
 
 message CDQLRepeat {
     double interval = 1;
-
     TimeUnit unit = 2;
 }
 

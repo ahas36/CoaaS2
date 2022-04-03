@@ -1,9 +1,11 @@
 package au.coaas.cqc.executor;
 
-import au.coaas.cqc.proto.CdqlResponse;
 import au.coaas.cqp.proto.*;
+import au.coaas.cqc.proto.CdqlResponse;
+
 import au.coaas.grpc.client.CQPChannel;
 import au.coaas.grpc.client.SQEMChannel;
+
 import au.coaas.sqem.proto.CDQLLog;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;

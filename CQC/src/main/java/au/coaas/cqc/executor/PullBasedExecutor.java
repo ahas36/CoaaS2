@@ -100,16 +100,22 @@ public class PullBasedExecutor {
                         if (attributeName.equals("and") || attributeName.equals("or")) {
                             continue;
                         }
+                        // Take only the identifier of the context attribute
+                        // e.g., e1.attr1 --> key = attr1
                         String key = attributeName.replace(entity.getEntityID() + ".", "");
+                        // Take the value on the right side of the operator
                         CdqlConditionToken valueToken = rpnCondition.poll();
                         String value = valueToken.getStringValue();
+                        // e.g., "\"value"\" --> "value"
                         if (value.contains("\"")) {
                             value = value.replaceAll("\"", "");
                             String pathEncode = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.toString());
+                            // e.g., term <att1,"value">
                             terms.put(key, pathEncode);
                             // serviceURI = serviceURI.replace("{" + key + "}", pathEncode);
-                        } else if (value.contains("{")) {
-                        } else if (valueToken.getType() != CdqlConditionTokenType.Constant && (ce.containsKey(value) || value.contains("."))) {
+                        }
+                        else if (value.contains("{")) { }
+                        else if (valueToken.getType() != CdqlConditionTokenType.Constant && (ce.containsKey(value) || value.contains("."))) {
                             String valueEntityID = value.split("\\.")[0];
                             String valueEntityBody = value.replace(valueEntityID + ".", "");
                             Object get = null;
@@ -143,6 +149,8 @@ public class PullBasedExecutor {
                             String pathEncode = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.toString());
                             terms.put(key, pathEncode);
                         }
+                        // This is the third part of the expression - Operator
+                        // e.g., "=". This is only to skip to the next operand. Operator is not used here.
                         String op = rpnCondition.poll().getStringValue();
 
                     } catch (Exception ex) {
@@ -161,18 +169,30 @@ public class PullBasedExecutor {
                 }
                 // The context query executes as a collection of context-requests. That is why service discovery and executing happen per entity over a loop.
                 // Not the loop here isn't parallelized either. Now consider, multiple parallel context queries, trying to access the same context. Discovering and executing is not efficient at all.
-                // The Context-request is executed in 2 steps.
-                // Step (1) - Try to resolve context services relevant to execute the query.
-                String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
-                // Step (2) - Then, the context-request run.
-                if (contextService == null) {
-                    // If context services can not be resolved, then fetch from the last fetched values if available.
-                    // So, this mongodb is kind of working like a cache memory. (But I don't see freshness is concerned).
-                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
-                    continue;
+                
+                // (1) First, lookup in the cache to see whether the entities, functions are available in cache
+                Boolean successLookUp = false;
+                if(successLookUp){
+                    // (2) Then fetch from the cache memory
                 }
-                // If context services can be resolved, then fetch from item.
-                ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
+                else{
+                    // (3) Else, need to retrieve from the context services. But, there are 2 types of context services.
+                    // (a) those which push to our databases via Kafka.
+                    // (b) those which need to be retrieved on demand.
+
+                    // Gets all the context services that are of a certain entity type, and provides the all of the required attributes.
+                    // Shouldn't this check and return a list by their subscription methods?
+                    String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
+                    // This should return an object with 2 parts: pulled, and pushed.
+                    if (contextService != null) {
+                        ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
+                    }
+                    else {
+                        ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
+                        continue;
+                    }
+                }
+
                 //ToDo function call and discovery
             }
             // End of iterating through the entity list and fetching for them.

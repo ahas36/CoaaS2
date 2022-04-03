@@ -68,7 +68,6 @@ public class ContextEntityHandler {
 
             ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
 
-
             AtomicInteger error = new AtomicInteger();
             AtomicInteger success = new AtomicInteger();
             for (int factor = 0; factor < numberOfIterations; factor++) {
@@ -82,7 +81,8 @@ public class ContextEntityHandler {
                         JSONObject entity = data.getJSONObject("Attributes");
                         JSONArray keys = data.getJSONArray("key");
                         Long timestamp = data.optLong("observedTime");
-                        UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder().setJson(entity.toString())
+                        UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder()
+                                .setJson(entity.toString())
                                 .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
                                 .setObservedTime(timestamp)
                                 .setKey(keys.toString());
@@ -164,7 +164,6 @@ public class ContextEntityHandler {
 
             //todo it might be better to create a separate thread and update the historical db there instead of blocking main thread
             ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query, updateRequest.getObservedTime());
-
 
             //if not row is updated, it means no matching. Create a new one.
             if (ur.getMatchedCount() == 0) {

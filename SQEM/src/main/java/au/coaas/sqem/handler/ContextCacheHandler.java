@@ -1,10 +1,7 @@
 package au.coaas.sqem.handler;
 
 import au.coaas.sqem.proto.SQEMResponse;
-import au.coaas.sqem.util.ResponseUtils;
 import au.coaas.sqem.redis.ConnectionPool;
-import au.coaas.cqp.proto.ContextEntityType;
-import au.coaas.sqem.proto.UpdateEntityRequest;
 
 import au.coaas.sqem.util.cacherequest.CacheEntityRequest;
 import au.coaas.sqem.util.cacherequest.RefreshEntityRequest;
@@ -14,13 +11,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import org.redisson.api.RBucket;
-import org.redisson.api.RFuture;
 import org.redisson.api.RedissonClient;
-
-import java.util.HashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import java.util.logging.Logger;
 
@@ -35,7 +26,7 @@ public class ContextCacheHandler {
 
             Document entityJson = Document.parse(registerRequest.getEntityRequest().getJson());
 
-            RBucket<Object> ent = cacheClient.getBucket(registerRequest.getEntityId());
+            RBucket<Document> ent = cacheClient.getBucket(registerRequest.getEntityId());
             // No expiration set at this point.
             // It is handled using the Eviction Manager.
             ent.setAsync(entityJson);
@@ -46,22 +37,46 @@ public class ContextCacheHandler {
         }
     }
 
-    // Fetches context by Hashkey
-    public static SQEMResponse getContextByKey(String hashKey) {
-        return null;
-    }
+    // Updating cached context for an entity
+    public static SQEMResponse refreshEntity(RefreshEntityRequest updateRequest) {
+        try {
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+            RBucket<Document> ent = cacheClient.getBucket(updateRequest.getEntityId());
+            if(ent.isExists()){
+                Document entityDoc = ent.get();
+                JSONObject attributes = new JSONObject(updateRequest.getRefreshRequest().getJson());
+                for (String attributeName : attributes.keySet()) {
+                    Object item = attributes.get(attributeName);
+                    if(entityDoc.containsKey(attributeName)){
+                        if (item instanceof JSONArray || item instanceof JSONObject) {
+                            entityDoc.replace(attributeName, Document.parse(item.toString()));
+                        } else {
+                            entityDoc.replace(attributeName, item);
+                        }
+                    }
+                    else {
+                        if (item instanceof JSONArray || item instanceof JSONObject) {
+                            entityDoc.put(attributeName, Document.parse(item.toString()));
+                        } else {
+                            entityDoc.put(attributeName, item);
+                        }
+                    }
+                }
 
-    private static Object getValueByKey(String item, String key) {
-        String[] keys = key.split("\\.");
-        Object value = new JSONObject(item);
-        for (String k : keys) {
-            if (k.matches("\\d+")) {
-                value = ((JSONArray) value).get(Integer.valueOf(k));
-            } else {
-                value = ((JSONObject) value).get(k);
+                ent.set(entityDoc);
             }
+            else {
+                Document entityJson = Document.parse(updateRequest.getRefreshRequest().getJson());
+                ent.set(entityJson);
+
+                return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached!").build();
+            }
+
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity updated!").build();
+
+        } catch (Exception e) {
+            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
-        return value;
     }
 
     // Evicts an entity by ID

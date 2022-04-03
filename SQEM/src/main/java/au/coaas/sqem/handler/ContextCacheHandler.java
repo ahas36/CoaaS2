@@ -88,13 +88,30 @@ public class ContextCacheHandler {
     // Evicts an entity by ID
     public static SQEMResponse evictEntity(CachedEntityLookUp entity) {
         RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-        RBucket<Object> ent = cacheClient.getBucket(entity.getEntityId());
-        ent.delete();
-        return SQEMResponse.newBuilder().setStatus("200").build();
+        RBucket<Document> ent = cacheClient.getBucket(entity.getEntityId());
+
+        String vocab = entity.getEt().getVocabURI();
+
+        if(ent.isExists()){
+            Document entDoc = ent.get();
+            if(entDoc.keySet().size() == 1){
+                // Completely evicts the entity from the cache
+                ent.delete();
+            }
+            else {
+                // Evicts part of the entity for a specific schema
+                entDoc.remove(vocab);
+                ent.set(entDoc);
+            }
+
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity-attribute found!").build();
+        }
+
+        return SQEMResponse.newBuilder().setStatus("404").setBody("Can not evict!").build();
     }
 
     // Lookup if an entity-attribute pair is available in cache
-    public static SQEMResponse isEntityAttributeCached(CachedEntityAttributesLookUp lookUp) {
+    public static SQEMResponse isEntityAttributeCached(CachedEntityAttributes lookUp) {
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
             RBucket<Document> ent = cacheClient.getBucket(lookUp.getEntityId());
@@ -102,7 +119,7 @@ public class ContextCacheHandler {
             String vocab = lookUp.getEt().getVocabURI();
 
             if(ent.isExists() && ent.get().containsKey(vocab)){
-                Document entityDoc = ent.get();
+                Document entityDoc = (Document) ent.get().get(vocab);
                 if(entityDoc.containsKey(lookUp.getAttributes())){
                     return SQEMResponse.newBuilder().setStatus("200").setBody("Entity-attribute found!").build();
                 }
@@ -116,7 +133,7 @@ public class ContextCacheHandler {
     }
 
     // Lookup whether the entity is cached with all the attributes
-    public static SQEMResponse isEntityCached(CachedEntityAttributesLookUp lookUp) {
+    public static SQEMResponse isEntityCached(CachedEntityAttributes lookUp) {
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
             RBucket<Document> ent = cacheClient.getBucket(lookUp.getEntityId());
@@ -124,7 +141,7 @@ public class ContextCacheHandler {
             String vocab = lookUp.getEt().getVocabURI();
 
             if(ent.isExists() && ent.get().containsKey(vocab)){
-                Document entityDoc = ent.get();
+                Document entityDoc = (Document) ent.get().get(vocab);
 
                 JSONArray attrs = new JSONArray(lookUp.getAttributes());
                 List<String> attList = new ArrayList<String>();
@@ -145,9 +162,11 @@ public class ContextCacheHandler {
     }
 
     // Clears the context cache
-    public static void clearCache() {
+    public static SQEMResponse clearCache() {
         RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
         cacheClient.getKeys().flushdb();
         log.info("Cleared the context Cache");
+
+        return SQEMResponse.newBuilder().setStatus("200").setBody("Cleared context cache!").build();
     }
 }

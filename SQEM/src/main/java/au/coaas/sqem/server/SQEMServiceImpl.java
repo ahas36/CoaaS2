@@ -50,6 +50,52 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    ///// Context Cache /////
+
+    @Override
+    public void cacheContextEntity(au.coaas.sqem.proto.CacheRequest request,
+                                      io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.cacheEntity(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void refreshContextEntity(au.coaas.sqem.proto.CacheRefreshRequest request,
+                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.refreshEntity(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void evictContextEntity(au.coaas.sqem.proto.CachedEntityLookUp request,
+                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.evictEntity(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void clearCache(au.coaas.sqem.proto.Empty request,
+                                  io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.clearCache());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
 
     ///// Context Entity /////
 

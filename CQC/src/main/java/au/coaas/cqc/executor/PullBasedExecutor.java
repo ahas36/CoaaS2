@@ -1,34 +1,41 @@
 package au.coaas.cqc.executor;
 
 import au.coaas.base.proto.ListOfString;
+
 import au.coaas.cre.proto.*;
+
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
+
 import au.coaas.grpc.client.CQPChannel;
 import au.coaas.grpc.client.CREChannel;
 import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
+
 import au.coaas.cqc.proto.*;
 import au.coaas.cqp.proto.*;
 import au.coaas.sqem.proto.*;
+
 import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.GeoCoord;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.net.URLEncoder;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
+import java.io.IOException;
+import java.net.URLEncoder;
 
+import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
 public class PullBasedExecutor {
 

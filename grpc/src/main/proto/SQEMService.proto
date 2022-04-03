@@ -43,7 +43,7 @@ message CachedEntityLookUp {
     au.coaas.cqp.proto.ContextEntityType et = 2;
 }
 
-message CachedEntityAttributesLookUp {
+message CachedEntityAttributes {
     string entityId = 1;
     string attributes = 2;
     au.coaas.cqp.proto.ContextEntityType et = 3;
@@ -115,6 +115,10 @@ message RegisterSituationRequest {
 
 
 service SQEMService {
+    rpc cacheContextEntity (CacheRequest) returns (SQEMResponse);
+    rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
+    rpc evictContextEntity (CachedEntityLookUp) returns (SQEMResponse);
+    rpc clearCache (Empty) returns (SQEMResponse);
     rpc handleContextRequest (ContextRequest) returns (stream Chunk);
     rpc RegisterContextEntity (RegisterEntityRequest) returns (SQEMResponse);
     rpc UpdateContextEntity (UpdateEntityRequest) returns (SQEMResponse);

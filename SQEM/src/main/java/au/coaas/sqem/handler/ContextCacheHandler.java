@@ -2,6 +2,7 @@ package au.coaas.sqem.handler;
 
 import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
+import au.coaas.cqp.proto.CdqlConditionToken;
 
 import org.bson.Document;
 import org.json.JSONArray;
@@ -10,8 +11,7 @@ import org.json.JSONObject;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class ContextCacheHandler {
@@ -32,7 +32,7 @@ public class ContextCacheHandler {
             // It is handled using the Eviction Manager.
             ent.setAsync(entityJson);
 
-            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached!").build();
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
@@ -70,15 +70,15 @@ public class ContextCacheHandler {
                 }
                 cacheBlock.replace(vocab,entityDoc);
                 ent.set(cacheBlock);
+
+                return SQEMResponse.newBuilder().setStatus("200").setBody("Entity refreshed").build();
             }
             else {
                 Document entityJson = Document.parse(updateRequest.getJson());
                 ent.set(entityJson);
 
-                return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached!").build();
+                return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached").build();
             }
-
-            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity updated!").build();
 
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
@@ -104,10 +104,10 @@ public class ContextCacheHandler {
                 ent.set(entDoc);
             }
 
-            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity-attribute found!").build();
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted").build();
         }
 
-        return SQEMResponse.newBuilder().setStatus("404").setBody("Can not evict!").build();
+        return SQEMResponse.newBuilder().setStatus("404").setBody("Can not evict").build();
     }
 
     // Lookup if an entity-attribute pair is available in cache
@@ -121,11 +121,11 @@ public class ContextCacheHandler {
             if(ent.isExists() && ent.get().containsKey(vocab)){
                 Document entityDoc = (Document) ent.get().get(vocab);
                 if(entityDoc.containsKey(lookUp.getAttributes())){
-                    return SQEMResponse.newBuilder().setStatus("200").setBody("Entity-attribute found!").build();
+                    return SQEMResponse.newBuilder().setStatus("200").setBody("Cached").build();
                 }
             }
 
-            return SQEMResponse.newBuilder().setStatus("404").setBody("Entity-attribute pair not found!").build();
+            return SQEMResponse.newBuilder().setStatus("404").setBody("Entity-attribute not found").build();
 
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
@@ -150,15 +150,49 @@ public class ContextCacheHandler {
                 }
 
                 if(entityDoc.keySet().containsAll(attList)){
-                    return SQEMResponse.newBuilder().setStatus("200").setBody("All entity-attributes are cached!").build();
+                    return SQEMResponse.newBuilder().setStatus("200").setBody("Cached").build();
                 }
             }
 
-            return SQEMResponse.newBuilder().setStatus("404").setBody("Entity-attribute pair not in cache!").build();
+            return SQEMResponse.newBuilder().setStatus("404").setBody("Entity-attribute not in cache").build();
 
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
+    }
+
+    private static Document lookUp(String entityId, List<String> attributes, String vocab){
+        RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+        RBucket<Document> ent = cacheClient.getBucket(entityId);
+
+        if(ent.isExists() && ent.get().containsKey(vocab)) {
+            Document entityDoc = (Document) ent.get().get(vocab);
+            if(entityDoc.keySet().containsAll(attributes)){
+                return entityDoc;
+            }
+        }
+        return null;
+    }
+
+    public static SQEMResponse handleCacheFetch(ContextRequest contextRequest) {
+        List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
+
+        List<String> attrs = new ArrayList<String>();
+        for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
+            switch (cdqlConditionToken.getType()) {
+                case Attribute:
+                    attrs.add(cdqlConditionToken.getContextAttribute().getAttributeName());
+                    break;
+                default:
+            }
+        }
+
+        Document result = lookUp(contextRequest.getEntityID(),attrs,contextRequest.getEt().getVocabURI());
+        if(result != null){
+            return SQEMResponse.newBuilder().setStatus("200").setBody(result.toJson()).build();
+        }
+
+        return SQEMResponse.newBuilder().setStatus("200").setBody("{}").build();
     }
 
     // Clears the context cache
@@ -167,6 +201,6 @@ public class ContextCacheHandler {
         cacheClient.getKeys().flushdb();
         log.info("Cleared the context Cache");
 
-        return SQEMResponse.newBuilder().setStatus("200").setBody("Cleared context cache!").build();
+        return SQEMResponse.newBuilder().setStatus("200").setBody("Cleared context cache").build();
     }
 }

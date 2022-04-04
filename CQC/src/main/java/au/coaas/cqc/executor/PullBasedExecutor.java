@@ -149,7 +149,6 @@ public class PullBasedExecutor {
                                 String temp = String.valueOf(get).replaceAll("\"", "");
                                 String pathEncode = URLEncoder.encode(temp, java.nio.charset.StandardCharsets.UTF_8.toString());
                                 terms.put(key, pathEncode);
-
                             }
 
                         } else {
@@ -176,28 +175,20 @@ public class PullBasedExecutor {
                 }
                 // The context query executes as a collection of context-requests. That is why service discovery and executing happen per entity over a loop.
                 // Not the loop here isn't parallelized either. Now consider, multiple parallel context queries, trying to access the same context. Discovering and executing is not efficient at all.
-                
-                // (1) First, lookup in the cache to see whether the entities, functions are available in cache
-                Boolean successLookUp = false;
-                if(successLookUp){
-                    // (2) Then fetch from the cache memory
-                }
-                else{
-                    // (3) Else, need to retrieve from the context services. But, there are 2 types of context services.
-                    // (a) those which push to our databases via Kafka.
-                    // (b) those which need to be retrieved on demand.
 
-                    // Gets all the context services that are of a certain entity type, and provides the all of the required attributes.
-                    // Shouldn't this check and return a list by their subscription methods?
-                    String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
-                    // This should return an object with 2 parts: pulled, and pushed.
-                    if (contextService != null) {
+                String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
+                if (contextService != null) {
+                    JSONObject cacheResult = retrieveFromCache(entity, query, ce);
+                    if(cacheResult != null){
+                        ce.put(entity.getEntityID(), cacheResult);
+                    }
+                    else{
                         ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
                     }
-                    else {
-                        ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
-                        continue;
-                    }
+                }
+                else {
+                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
+                    continue;
                 }
 
                 //ToDo function call and discovery
@@ -598,6 +589,22 @@ public class PullBasedExecutor {
         }
     }
 
+    private static JSONObject retrieveFromCache(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce) {
+        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+        ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce, 0, 0);
+
+        SQEMResponse data = sqemStub.handleContextRequestInCache(contextRequest);
+        JSONObject cachedEntity = new JSONObject(data.getBody());
+
+        if(cachedEntity.isEmpty()){
+            return null;
+        }
+
+        return cachedEntity;
+    }
+
     private static JSONObject executeFetch(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, String contextServicesText) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
@@ -608,7 +615,6 @@ public class PullBasedExecutor {
         ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce, 0, 0);
 
         List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
-
 
         String key = null;
         String value = null;
@@ -741,6 +747,7 @@ public class PullBasedExecutor {
                 .setMeta(query.getMeta())
                 .setPage(page)
                 .setLimit(limit)
+                .setEntityID(targetEntity.getEntityID())
                 .addAllReturnAttributes(returnAttributes).build();
 
         return cr;
@@ -805,8 +812,8 @@ public class PullBasedExecutor {
             } catch (NumberFormatException e) {
 
             }
-
         }
+
         return constantType;
     }
 

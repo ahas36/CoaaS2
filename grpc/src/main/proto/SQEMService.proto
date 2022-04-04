@@ -22,6 +22,7 @@ message ContextRequest
     au.coaas.cqp.proto.CDQLMeta meta = 4;
     int32 page = 5;
     int32 limit = 6;
+    string entityID = 7;
 }
 
 message CacheRequest
@@ -118,6 +119,7 @@ service SQEMService {
     rpc cacheContextEntity (CacheRequest) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
     rpc evictContextEntity (CachedEntityLookUp) returns (SQEMResponse);
+    rpc handleContextRequestInCache (ContextRequest) returns (SQEMResponse);
     rpc clearCache (Empty) returns (SQEMResponse);
     rpc handleContextRequest (ContextRequest) returns (stream Chunk);
     rpc RegisterContextEntity (RegisterEntityRequest) returns (SQEMResponse);

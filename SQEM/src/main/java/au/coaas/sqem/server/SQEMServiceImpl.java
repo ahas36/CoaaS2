@@ -85,6 +85,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    public void handleContextRequestInCache(au.coaas.sqem.proto.ContextRequest request,
+                                            io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            // Retrieving context for entity from cache
+            responseObserver.onNext(ContextCacheHandler.handleCacheFetch(request));
+
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
     @Override
     public void clearCache(au.coaas.sqem.proto.Empty request,
                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {

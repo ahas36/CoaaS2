@@ -90,6 +90,7 @@ public class PullBasedExecutor {
             // Second loop iterates over the entities in the dependent set
             for (String entityID : entityList.getValueList()) {
                 ContextEntity entity = query.getDefine().getDefinedEntitiesList().stream().filter(v -> v.getEntityID().equals(entityID)).findFirst().get();
+                // Here the entity ID is the aliase that is defined in the query. e.g., e1 in "define entity e1 is from swm:type1"
 
                 Queue<CdqlConditionToken> rpnCondition = new LinkedList<>(entity.getCondition().getRPNConditionList());
 
@@ -177,16 +178,45 @@ public class PullBasedExecutor {
                 // Not the loop here isn't parallelized either. Now consider, multiple parallel context queries, trying to access the same context. Discovering and executing is not efficient at all.
 
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
+
                 if (contextService != null) {
-                    JSONObject cacheResult = retrieveFromCache(entity, query, ce);
-                    if(cacheResult != null){
-                        ce.put(entity.getEntityID(), cacheResult);
+                    ContextRequest contextRequest = generateContextRequest(entity, query, ce, 0, 0);
+                    List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
+
+                    String key = null;
+                    String value = null;
+                    HashMap<String,String> params = new HashMap<String,String>();
+                    for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
+                        switch (cdqlConditionToken.getType()) {
+                            case Constant:
+                                value = cdqlConditionToken.getStringValue();
+                                if (key != null) {
+                                    params.put(key,value);
+                                    key = null;
+                                    value = null;
+                                }
+                                break;
+                            case Attribute:
+                                key = cdqlConditionToken.getContextAttribute().getAttributeName();
+                                if (value != null) {
+                                    params.put(key,value);
+                                    key = null;
+                                    value = null;
+                                }
+                                break;
+                            default:
+                        }
                     }
-                    else{
-                        ce.put(entity.getEntityID(), executeFetch(entity, query, ce, contextService));
-                    }
+
+                    JSONObject cacheResult = retrieveContext(entity, contextService, params);
+                    ce.put(entity.getEntityID(), cacheResult);
                 }
                 else {
+                    // Querying from registered entities. This does not guarantee "completeness" of context.
+                    // Registered entities updated. But not the most fresh. So, best when the entities are static, e.g., buildings.
+                    // In fact, querying from MongoDB is actually to query the "Context Service Descriptions".
+
+                    // This can also be if the context service is a data stream.
                     ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
                     continue;
                 }
@@ -589,65 +619,53 @@ public class PullBasedExecutor {
         }
     }
 
-    private static JSONObject retrieveFromCache(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce) {
+    private static JSONObject retrieveContext(ContextEntity targetEntity, String contextServicesText, HashMap<String,String> params) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce, 0, 0);
+        JSONArray contextServices = new JSONArray(contextServicesText);
 
-        SQEMResponse data = sqemStub.handleContextRequestInCache(contextRequest);
-        JSONObject cachedEntity = new JSONObject(data.getBody());
+        for (int i = 0; i < contextServices.length(); i++) {
+            final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
+                    .setEt(targetEntity.getType())
+                    .setServiceId(contextServices.getJSONObject(i).getJSONObject("_id").toString())
+                    .build();
 
-        if(cachedEntity.isEmpty()){
-            return null;
+            SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
+            JSONObject cachedEntity = new JSONObject(data.getBody());
+            if(cachedEntity.isEmpty()){
+                cachedEntity = executeFetch(contextServices.getJSONObject(i).toString(), params);
+                if(cachedEntity != null){
+                    // Trigger Selective Caching Evaluation
+                    // In Phase 1, "Cache All Policy is Used"
+                    sqemStub.cacheEntity(CacheRequest.newBuilder()
+                            .setJson(cachedEntity.toString())
+                            .setReference(lookup)
+                            .build());
+
+                    return cachedEntity;
+                }
+            }
         }
 
-        return cachedEntity;
+        return null;
     }
 
-    private static JSONObject executeFetch(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, String contextServicesText) {
+    private static JSONObject executeFetch(String contextService, HashMap<String,String> params) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
         final ContextServiceInvokerRequest.Builder fetchRequest = ContextServiceInvokerRequest.newBuilder();
-        JSONArray contextServices = new JSONArray(contextServicesText);
+        fetchRequest.putAllParams(params);
 
-        ContextRequest contextRequest = generateContextRequest(targetEntity, query, ce, 0, 0);
+        final ContextService cs = ContextService.newBuilder().setJson(contextService).build();
+        fetchRequest.setContextService(cs);
+        CSIResponse fetch = csiStub.fetch(fetchRequest.build());
 
-        List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
-
-        String key = null;
-        String value = null;
-        for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
-            switch (cdqlConditionToken.getType()) {
-                case Constant:
-                    value = cdqlConditionToken.getStringValue();
-                    if (key != null) {
-                        fetchRequest.putParams(key, value);
-                        key = null;
-                        value = null;
-                    }
-                    break;
-                case Attribute:
-                    key = cdqlConditionToken.getContextAttribute().getAttributeName();
-                    if (value != null) {
-                        fetchRequest.putParams(key, value);
-                        key = null;
-                        value = null;
-                    }
-                    break;
-                default:
-            }
+        if (fetch.getStatus().equals("200")) {
+            return new JSONObject(fetch.getBody());
         }
 
-        for (int i = 0; i < contextServices.length(); i++) {
-            final ContextService cs = ContextService.newBuilder().setJson(contextServices.getJSONObject(i).toString()).build();
-            fetchRequest.setContextService(cs);
-            CSIResponse fetch = csiStub.fetch(fetchRequest.build());
-            if (fetch.getStatus().equals("200")) {
-                return new JSONObject(fetch.getBody());
-            }
-        }
         return null;
     }
 

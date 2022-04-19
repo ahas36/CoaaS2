@@ -53,7 +53,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     ///// Context Cache /////
 
     @Override
-    public void cacheContextEntity(au.coaas.sqem.proto.CacheRequest request,
+    public void cacheEntity(au.coaas.sqem.proto.CacheRequest request,
                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
             responseObserver.onNext(ContextCacheHandler.cacheEntity(request));
@@ -75,7 +75,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
-    public void evictContextEntity(au.coaas.sqem.proto.CachedEntityLookUp request,
+    public void evictContextEntity(au.coaas.sqem.proto.CacheLookUp request,
                                      io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
             responseObserver.onNext(ContextCacheHandler.evictEntity(request));
@@ -85,11 +85,12 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
-    public void handleContextRequestInCache(au.coaas.sqem.proto.ContextRequest request,
+    @Override
+    public void handleContextRequestInCache(au.coaas.sqem.proto.CacheLookUp request,
                                             io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
             // Retrieving context for entity from cache
-            responseObserver.onNext(ContextCacheHandler.handleCacheFetch(request));
+            responseObserver.onNext(ContextCacheHandler.retrieveFromCache(request));
 
         } catch (Exception ex) {
             responseObserver.onError(ex);

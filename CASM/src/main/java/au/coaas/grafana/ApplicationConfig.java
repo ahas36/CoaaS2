@@ -34,5 +34,4 @@ public class ApplicationConfig extends Application {
         resources.add(GrafanaInterface.class);
         resources.add(LogInterface.class);
     }
-    
 }

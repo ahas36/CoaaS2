@@ -31,6 +31,7 @@ public class FetchManager {
 
         String serviceUrl = info.getString("serviceURL");
 
+        // How does this definition fit all?
         for (Map.Entry<String, String> entry : contextService.getParamsMap().entrySet()) {
             serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
         }
@@ -44,11 +45,16 @@ public class FetchManager {
 
         try {
             Response response = client.newCall(request).execute();
+            // This is what I should be caching at this point. Not the entity.
+            // When the context service is resolved, the cache should look if the context service response is available in cache.
             String res = response.body().string().trim();
+
             if(cs.has("attributes")){
                 Object result = semanticMapper(cs.getJSONArray("attributes"), res, info.optString("resultTag",null));
+                // This return value should be what should be cached.
                 return CSIResponse.newBuilder().setStatus("200").setBody(result.toString()).build();
             }
+
             JSONObject rawResult = null;
             if(res.startsWith("{")){
                 rawResult = new JSONObject(res);
@@ -60,8 +66,8 @@ public class FetchManager {
                 rawResult.put("result", res);
             }
 
-
             return CSIResponse.newBuilder().setStatus("200").setBody(rawResult.toString()).build();
+            // Or this raw result.
         } catch (IOException e) {
             e.printStackTrace();
             JSONObject error = new JSONObject();

@@ -3,6 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+
 package au.coaas.cqp.parser;
 
 import au.coaas.base.proto.ListOfString;
@@ -38,6 +39,7 @@ import static au.coaas.cqp.util.ASTCoversion.gsonBuilder;
  *
  * @author ali
  */
+
 public class MainParser {
 
     private static Logger log = Logger.getLogger(MainParser.class.getName());

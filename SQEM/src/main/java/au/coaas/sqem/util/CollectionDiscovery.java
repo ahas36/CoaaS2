@@ -17,7 +17,6 @@ public class CollectionDiscovery {
             return ("ParkingFacility");
 
         } else if ("SmartWasteContainer".equals(entityType)) {
-
             return ("WasteContainers");
         } else {
             return (entityType.toLowerCase());

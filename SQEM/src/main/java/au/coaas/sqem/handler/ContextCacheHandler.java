@@ -2,37 +2,34 @@ package au.coaas.sqem.handler;
 
 import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
-import au.coaas.cqp.proto.CdqlConditionToken;
 
+import au.coaas.sqem.util.CacheDataRegistry;
 import org.bson.Document;
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 
-import java.util.*;
 import java.util.logging.Logger;
 
 public class ContextCacheHandler {
 
     private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
+    private static CacheDataRegistry registry = CacheDataRegistry.getInstance();
 
     // Caches all context under an entity
     public static SQEMResponse cacheEntity(CacheRequest registerRequest) {
         try {
+            String hashKey = String.valueOf(registry.updateRegistry(registerRequest.getReference()));
+
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
-            String vocab = registerRequest.getEnt().getEt().getVocabURI();
-            Document entityJson = new Document();
-            entityJson.put(vocab, Document.parse(registerRequest.getEnt().getJson()));
+            Document entityJson =  Document.parse(registerRequest.getJson());
 
-            RBucket<Document> ent = cacheClient.getBucket(registerRequest.getEntityId());
-            // No expiration set at this point.
-            // It is handled using the Eviction Manager.
+            RBucket<Document> ent = cacheClient.getBucket(hashKey);
+
             ent.setAsync(entityJson);
 
-            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached").build();
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
@@ -41,158 +38,63 @@ public class ContextCacheHandler {
     // Updating cached context for an entity
     public static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
         try {
+            String hashKey = String.valueOf(registry.updateRegistry(updateRequest.getReference()));
+
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-            RBucket<Document> ent = cacheClient.getBucket(updateRequest.getEntityId());
 
-            String vocab = updateRequest.getEt().getVocabURI();
+            Document entityJson =  Document.parse(updateRequest.getJson());
 
-            if(ent.isExists() && ent.get().containsKey(vocab)){
-                Document cacheBlock = ent.get();
-                Document entityDoc = (Document) cacheBlock.get(vocab);
-                JSONObject attributes = new JSONObject(updateRequest.getJson());
+            RBucket<Document> ent = cacheClient.getBucket(hashKey);
 
-                for (String attributeName : attributes.keySet()) {
-                    Object item = attributes.get(attributeName);
-                    if(entityDoc.containsKey(attributeName)){
-                        if (item instanceof JSONArray || item instanceof JSONObject) {
-                            entityDoc.replace(attributeName, Document.parse(item.toString()));
-                        } else {
-                            entityDoc.replace(attributeName, item);
-                        }
-                    }
-                    else {
-                        if (item instanceof JSONArray || item instanceof JSONObject) {
-                            entityDoc.put(attributeName, Document.parse(item.toString()));
-                        } else {
-                            entityDoc.put(attributeName, item);
-                        }
-                    }
-                }
-                cacheBlock.replace(vocab,entityDoc);
-                ent.set(cacheBlock);
+            ent.getAndSet(entityJson);
 
-                return SQEMResponse.newBuilder().setStatus("200").setBody("Entity refreshed").build();
-            }
-            else {
-                Document entityJson = Document.parse(updateRequest.getJson());
-                ent.set(entityJson);
-
-                return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached").build();
-            }
-
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity refreshed.").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
     }
 
-    // Evicts an entity by ID
-    public static SQEMResponse evictEntity(CachedEntityLookUp entity) {
-        RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-        RBucket<Document> ent = cacheClient.getBucket(entity.getEntityId());
-
-        String vocab = entity.getEt().getVocabURI();
-
-        if(ent.isExists()){
-            Document entDoc = ent.get();
-            if(entDoc.keySet().size() == 1){
-                // Completely evicts the entity from the cache
-                ent.delete();
-            }
-            else {
-                // Evicts part of the entity for a specific schema
-                entDoc.remove(vocab);
-                ent.set(entDoc);
-            }
-
-            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted").build();
-        }
-
-        return SQEMResponse.newBuilder().setStatus("404").setBody("Can not evict").build();
-    }
-
-    // Lookup if an entity-attribute pair is available in cache
-    public static SQEMResponse isEntityAttributeCached(CachedEntityAttributes lookUp) {
-        try {
+    // Evicts an entity by hash key
+    public static SQEMResponse evictEntity(CacheLookUp request) {
+        // Ideally the initial evict should push the context into ghost cache
+        String hashKey = String.valueOf(registry.removeFromRegistry(request));
+        if(hashKey != null){
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-            RBucket<Document> ent = cacheClient.getBucket(lookUp.getEntityId());
-
-            String vocab = lookUp.getEt().getVocabURI();
-
-            if(ent.isExists() && ent.get().containsKey(vocab)){
-                Document entityDoc = (Document) ent.get().get(vocab);
-                if(entityDoc.containsKey(lookUp.getAttributes())){
-                    return SQEMResponse.newBuilder().setStatus("200").setBody("Cached").build();
-                }
-            }
-
-            return SQEMResponse.newBuilder().setStatus("404").setBody("Entity-attribute not found").build();
-
-        } catch (Exception e) {
-            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
+            cacheClient.getBucket(hashKey).delete();
+            cacheClient.getKeys().delete(hashKey);
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted.").build();
         }
+
+        return SQEMResponse.newBuilder().setStatus("404").setBody("Nothing to Evict.").build();
     }
 
-    // Lookup whether the entity is cached with all the attributes
-    public static SQEMResponse isEntityCached(CachedEntityAttributes lookUp) {
-        try {
-            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-            RBucket<Document> ent = cacheClient.getBucket(lookUp.getEntityId());
-
-            String vocab = lookUp.getEt().getVocabURI();
-
-            if(ent.isExists() && ent.get().containsKey(vocab)){
-                Document entityDoc = (Document) ent.get().get(vocab);
-
-                JSONArray attrs = new JSONArray(lookUp.getAttributes());
-                List<String> attList = new ArrayList<String>();
-                for (int i = 0; i < attrs.length(); i++) {
-                    attList.add(attrs.getString(i));
-                }
-
-                if(entityDoc.keySet().containsAll(attList)){
-                    return SQEMResponse.newBuilder().setStatus("200").setBody("Cached").build();
-                }
-            }
-
-            return SQEMResponse.newBuilder().setStatus("404").setBody("Entity-attribute not in cache").build();
-
-        } catch (Exception e) {
-            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
+    // Lookup in  context registry whether the entity is cached
+    private static SQEMResponse lookUp(CacheLookUp request){
+        String hashKey = registry.lookUpRegistry(request);
+        if(hashKey == null){
+            return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.").build();
         }
+        return SQEMResponse.newBuilder().setStatus("200").setBody("Cached.").build();
     }
 
-    private static Document lookUp(String entityId, List<String> attributes, String vocab){
-        RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-        RBucket<Document> ent = cacheClient.getBucket(entityId);
+    // Retrieve entity context from cache
+    public static SQEMResponse retrieveFromCache(CacheLookUp request) {
+        String hashKey = registry.lookUpRegistry(request);
 
-        if(ent.isExists() && ent.get().containsKey(vocab)) {
-            Document entityDoc = (Document) ent.get().get(vocab);
-            if(entityDoc.keySet().containsAll(attributes)){
-                return entityDoc;
+        if(hashKey != null){
+            try{
+                RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+                RBucket<Document> ent = cacheClient.getBucket(hashKey);
+                Document entityContext = ent.get();
+
+                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.toJson()).build();
             }
-        }
-        return null;
-    }
-
-    public static SQEMResponse handleCacheFetch(ContextRequest contextRequest) {
-        List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
-
-        List<String> attrs = new ArrayList<String>();
-        for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
-            switch (cdqlConditionToken.getType()) {
-                case Attribute:
-                    attrs.add(cdqlConditionToken.getContextAttribute().getAttributeName());
-                    break;
-                default:
+            catch(Exception ex){
+                SQEMResponse.newBuilder().setStatus("500").setBody("An error occurred.").build();
             }
         }
 
-        Document result = lookUp(contextRequest.getEntityID(),attrs,contextRequest.getEt().getVocabURI());
-        if(result != null){
-            return SQEMResponse.newBuilder().setStatus("200").setBody(result.toJson()).build();
-        }
-
-        return SQEMResponse.newBuilder().setStatus("200").setBody("{}").build();
+        return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.").build();
     }
 
     // Clears the context cache
@@ -203,4 +105,5 @@ public class ContextCacheHandler {
 
         return SQEMResponse.newBuilder().setStatus("200").setBody("Cleared context cache").build();
     }
+
 }

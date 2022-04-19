@@ -6,7 +6,9 @@ import au.coaas.sqem.redis.ConnectionPool;
 import au.coaas.sqem.util.CacheDataRegistry;
 import org.bson.Document;
 
+import org.json.JSONObject;
 import org.redisson.api.RBucket;
+import org.redisson.api.RMap;
 import org.redisson.api.RedissonClient;
 
 import java.util.logging.Logger;
@@ -70,7 +72,7 @@ public class ContextCacheHandler {
 
     // Lookup in  context registry whether the entity is cached
     private static SQEMResponse lookUp(CacheLookUp request){
-        String hashKey = registry.lookUpRegistry(request);
+        String hashKey = String.valueOf(registry.lookUpRegistry(request));
         if(hashKey == null){
             return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.").build();
         }
@@ -79,7 +81,7 @@ public class ContextCacheHandler {
 
     // Retrieve entity context from cache
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
-        String hashKey = registry.lookUpRegistry(request);
+        String hashKey = String.valueOf(registry.lookUpRegistry(request));
 
         if(hashKey != null){
             try{
@@ -87,14 +89,16 @@ public class ContextCacheHandler {
                 RBucket<Document> ent = cacheClient.getBucket(hashKey);
                 Document entityContext = ent.get();
 
-                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.toJson()).build();
+                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.toJson())
+                        .setHashKey(hashKey).build();
             }
             catch(Exception ex){
                 SQEMResponse.newBuilder().setStatus("500").setBody("An error occurred.").build();
             }
         }
 
-        return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.").build();
+        return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.")
+                .setHashKey(hashKey).build();
     }
 
     // Clears the context cache

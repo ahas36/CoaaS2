@@ -1,26 +1,28 @@
 package au.coaas.csi.fetch;
 
 import au.coaas.csi.proto.CSIResponse;
-import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
-import netscape.javascript.JSObject;
+
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
+import javax.script.ScriptEngineManager;
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 public class FetchManager {
 
@@ -194,7 +196,6 @@ public class FetchManager {
             int numberOfIterations = (int)(items.length()/numberOfItemsPerTask) + 1;
 
             ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
-
 
             for (int factor = 0; factor< numberOfIterations ; factor++)
             {

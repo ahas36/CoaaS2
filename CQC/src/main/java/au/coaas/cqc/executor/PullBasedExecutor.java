@@ -9,7 +9,6 @@ import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 
-import au.coaas.grpc.client.CQPChannel;
 import au.coaas.grpc.client.CREChannel;
 import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;

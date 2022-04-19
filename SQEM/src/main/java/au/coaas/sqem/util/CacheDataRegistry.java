@@ -5,6 +5,7 @@ import com.google.common.hash.Hashing;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.AbstractMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,8 +54,10 @@ public final class CacheDataRegistry{
 
     public static CacheDataRegistry getInstance()
     {
-        if (singleton == null)
+        if (singleton == null){
             singleton = new CacheDataRegistry();
+        }
+
 
         return singleton;
     }
@@ -70,20 +73,21 @@ public final class CacheDataRegistry{
 
     // Registry lookup. Returns hash key if available in cache.
 
-    public String lookUpRegistry(CacheLookUp lookup){
+    public AbstractMap.SimpleEntry<String, Boolean> lookUpRegistry(CacheLookUp lookup){
+        AtomicReference<String> hashKey = null;
         if(this.root.containsKey(lookup.getEt().getType())){
             Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).child;
             if(cs.containsKey(lookup.getServiceId())){
                 Map<String,ContextItem> entities = cs.get(lookup.getServiceId()).child;
 
-                String hash = getHashKey(lookup.getParamsMap());
-                if(entities.containsKey(hash)){
-                    return hash;
+                hashKey.set(getHashKey(lookup.getParamsMap()));
+                if(entities.containsKey(hashKey.get())){
+                    return new AbstractMap.SimpleEntry<>(hashKey.get(), true);
                 }
             }
         }
 
-        return null;
+        return new AbstractMap.SimpleEntry<>(hashKey.get(), true);
     }
 
     // Adds or updates the cached context repository

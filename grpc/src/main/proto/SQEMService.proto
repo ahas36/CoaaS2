@@ -12,6 +12,7 @@ message SQEMResponse {
     string status = 1;
     string body = 2;
     string meta = 3;
+    string hashKey = 4;
 }
 
 message ContextRequest

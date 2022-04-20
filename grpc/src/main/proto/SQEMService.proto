@@ -35,7 +35,8 @@ message CacheLookUp {
 message CacheRequest
 {
     string json = 1;
-    CacheLookUp reference = 2;
+    int64 cachelife = 2;
+    CacheLookUp reference = 3;
 }
 
 message CacheRefreshRequest

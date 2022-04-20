@@ -6,10 +6,7 @@ import au.coaas.sqem.redis.ConnectionPool;
 import au.coaas.sqem.util.CacheDataRegistry;
 import org.bson.Document;
 
-import org.json.JSONObject;
-import org.redisson.api.RBucket;
-import org.redisson.api.RMap;
-import org.redisson.api.RedissonClient;
+import org.redisson.api.*;
 
 import java.util.logging.Logger;
 
@@ -29,7 +26,7 @@ public class ContextCacheHandler {
 
             RBucket<Document> ent = cacheClient.getBucket(hashKey);
 
-            ent.setAsync(entityJson);
+            ent.set (entityJson);
 
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
         } catch (Exception e) {
@@ -46,9 +43,14 @@ public class ContextCacheHandler {
 
             Document entityJson =  Document.parse(updateRequest.getJson());
 
-            RBucket<Document> ent = cacheClient.getBucket(hashKey);
+            RLock lock = cacheClient.getFairLock("refreshLock");
 
-            ent.getAndSet(entityJson);
+            RBucket<Document> ent = cacheClient.getBucket(hashKey);
+            RFuture<Document> refreshStatus = ent.getAndSetAsync(entityJson);
+
+            refreshStatus.whenCompleteAsync((res, exception) -> {
+                lock.unlockAsync();
+            });
 
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity refreshed.").build();
         } catch (Exception e) {
@@ -62,8 +64,17 @@ public class ContextCacheHandler {
         String hashKey = String.valueOf(registry.removeFromRegistry(request));
         if(hashKey != null){
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-            cacheClient.getBucket(hashKey).delete();
-            cacheClient.getKeys().delete(hashKey);
+
+            RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
+            RLock lock = rwLock.writeLock();
+
+            cacheClient.getKeys().deleteAsync(hashKey);
+            RFuture<Boolean> evictStatus = cacheClient.getBucket(hashKey).deleteAsync();
+
+            evictStatus.whenCompleteAsync((res, exception) -> {
+                lock.unlockAsync();
+            });
+
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted.").build();
         }
 
@@ -86,10 +97,18 @@ public class ContextCacheHandler {
         if(hashKey != null){
             try{
                 RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-                RBucket<Document> ent = cacheClient.getBucket(hashKey);
-                Document entityContext = ent.get();
 
-                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.toJson())
+                RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
+                RLock lock = rwLock.readLock();
+
+                RBucket<Document> ent = cacheClient.getBucket(hashKey);
+                RFuture<Document> entityContext = ent.getAsync();
+
+                entityContext.whenCompleteAsync((res, exception) -> {
+                    lock.unlockAsync();
+                });
+
+                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.getNow().toJson())
                         .setHashKey(hashKey).build();
             }
             catch(Exception ex){

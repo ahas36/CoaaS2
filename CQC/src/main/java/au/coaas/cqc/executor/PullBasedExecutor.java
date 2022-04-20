@@ -625,20 +625,23 @@ public class PullBasedExecutor {
         JSONArray contextServices = new JSONArray(contextServicesText);
 
         for (int i = 0; i < contextServices.length(); i++) {
+            JSONObject conSer = contextServices.getJSONObject(i);
             final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                     .setEt(targetEntity.getType())
-                    .setServiceId(contextServices.getJSONObject(i).getJSONObject("_id").toString())
+                    .setServiceId(conSer.getJSONObject("_id").toString())
                     .build();
 
             SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
             JSONObject cachedEntity = new JSONObject(data.getBody());
             if(cachedEntity.isEmpty()){
                 cachedEntity = executeFetch(contextServices.getJSONObject(i).toString(), params);
-                if(cachedEntity != null){
+                if(cachedEntity != null && conSer.getJSONObject("sla").getBoolean("cache")){
                     // Trigger Selective Caching Evaluation
-                    // In Phase 1, "Cache All Policy is Used"
+                    // In Phase 1, "Cache All policy is used if allowed in the SLA"
+
                     sqemStub.cacheEntity(CacheRequest.newBuilder()
                             .setJson(cachedEntity.toString())
+                            .setCachelife(600)
                             .setReference(lookup)
                             .build());
 

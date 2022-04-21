@@ -17,6 +17,7 @@ public class AuthHandler {
         put("info.name", true);
         put("info.username", true);
         put("sla", true);
+        put("auth.scope", true);
     }};
 
     public static SQEMResponse getConsumer(AuthRequest registerRequest) {

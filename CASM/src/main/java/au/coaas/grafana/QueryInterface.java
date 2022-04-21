@@ -24,13 +24,7 @@ import javax.ws.rs.core.Response;
 @Path("query")
 public class QueryInterface {
 
-    /**
-     * Creates a new instance of QueryInterface
-     */
-    public QueryInterface() {
-    }
     private static Logger log = Logger.getLogger(QueryInterface.class.getName());
-
 
     @POST
     @Secured

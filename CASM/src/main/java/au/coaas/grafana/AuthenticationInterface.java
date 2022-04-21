@@ -17,6 +17,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import java.util.Map;
 import java.util.logging.Logger;
 
 /**
@@ -73,9 +74,13 @@ public class AuthenticationInterface {
     private String issueToken(String consumer) throws JWTCreationException{
         JSONObject conObj = new JSONObject(consumer);
         Algorithm algorithm = Algorithm.HMAC256(SECRET);
+
+        Map<String, Object> payload = conObj.getJSONObject("info").toMap();
+        payload.put("scope", conObj.getJSONObject("auth").getJSONArray("scope"));
+
         String token = JWT.create()
                 .withIssuer("auth0")
-                .withPayload(conObj.getJSONObject("info").toMap())
+                .withPayload(payload)
                 .sign(algorithm);
 
         return token;

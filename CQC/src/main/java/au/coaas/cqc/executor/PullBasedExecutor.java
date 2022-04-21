@@ -76,12 +76,11 @@ public class PullBasedExecutor {
     }
 
     // This method executes the query plan for pull based queries
-    public static CdqlResponse executePullBaseQuery(CDQLQuery query, int page, int limit) {
+    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit) {
 
         // Initialize values
         // How are the values assigned to 'ce'? I only see values assigned in the catch block.
         Map<String, JSONObject> ce = new HashMap<>();
-        List<ContextEntity> sqemEntities = new ArrayList<>();
 
         // Iterates over execution plan
         // The first loop goes over dependent sets of entities
@@ -207,7 +206,7 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    JSONObject cacheResult = retrieveContext(entity, contextService, params);
+                    JSONObject cacheResult = retrieveContext(entity, authToken, contextService, params);
                     ce.put(entity.getEntityID(), cacheResult);
                 }
                 else {
@@ -618,39 +617,83 @@ public class PullBasedExecutor {
         }
     }
 
-    private static JSONObject retrieveContext(ContextEntity targetEntity, String contextServicesText, HashMap<String,String> params) {
+    private static JSONObject retrieveContext(ContextEntity targetEntity, String authToken, String contextServicesText, HashMap<String,String> params) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         JSONArray contextServices = new JSONArray(contextServicesText);
 
+        // Fetching Consumer SLA
+        JSONObject sla = null;
+        SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setToken(authToken).build());
+        if(slaMessage.getStatus() == "200")
+            sla = new JSONObject(slaMessage.getBody());
+
         for (int i = 0; i < contextServices.length(); i++) {
+            // Mapping context service with SLA constraints
+            JSONObject qos = sla.getJSONObject("sla").getJSONObject("qos");
             JSONObject conSer = contextServices.getJSONObject(i);
-            final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
-                    .setEt(targetEntity.getType())
-                    .setServiceId(conSer.getJSONObject("_id").toString())
-                    .build();
 
-            SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
-            JSONObject cachedEntity = new JSONObject(data.getBody());
+            if(qos.getBoolean("staged")){
+                conSer = mapServiceWithSLA(contextServices.getJSONObject(i),qos);
+            }
 
-            if(cachedEntity.isEmpty()){
-                cachedEntity = executeFetch(contextServices.getJSONObject(i).toString(), params);
-                if(cachedEntity != null && conSer.getJSONObject("sla").getBoolean("cache")){
-                    // Trigger Selective Caching Evaluation
-                    // In Phase 1, "Cache All policy is used if allowed in the SLA"
+            if(conSer.getJSONObject("sla").getBoolean("cache")){
+                final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
+                        .setEt(targetEntity.getType())
+                        .setServiceId(conSer.getJSONObject("_id").toString())
+                        .setUniformFreshness(conSer.getJSONObject("sla")
+                                .getJSONObject("freshness")
+                                .put("fthresh", qos.getDouble("fthresh")).toString())
+                        .build();
 
-                    sqemStub.cacheEntity(CacheRequest.newBuilder()
-                            .setJson(cachedEntity.toString())
-                            .setCachelife(600)
-                            .setReference(lookup)
-                            .build());
+                SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
 
-                    return cachedEntity;
+                if(data.getBody() == null && data.getStatus() != "500"){
+                    JSONObject retEntity = executeFetch(conSer.toString(), params);
+
+                    switch(data.getStatus()){
+                        case "400": {
+                            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                            asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
+                                    .setReference(lookup)
+                                    .setJson(retEntity.toString()).build());
+                            break;
+                        }
+                        case "404": {
+                            // Trigger Selective Caching Evaluation (Implement to run in a separate thread)
+                            // In Phase 1, "Cache All policy is used if allowed in the SLA"
+                            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+
+                            asyncStub.cacheEntity(CacheRequest.newBuilder()
+                                    .setJson(retEntity.toString())
+                                    .setCachelife(600)
+                                    .setReference(lookup).build());
+                            break;
+                        }
+                    }
+
+                    return retEntity;
+                }
+                else {
+                    return new JSONObject(data.getBody());
                 }
             }
+
+            JSONObject retEntity = executeFetch(conSer.toString(), params);
+            if(retEntity != null)
+                return retEntity;
+
         }
 
+        return null;
+    }
+
+    private static JSONObject mapServiceWithSLA(JSONObject service, JSONObject qos){
+        // TODO:
+        // Map relevant context service attribute with the criticality based freshness requirement
         return null;
     }
 

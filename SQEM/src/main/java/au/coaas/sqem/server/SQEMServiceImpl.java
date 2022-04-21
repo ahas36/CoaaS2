@@ -7,6 +7,7 @@ package au.coaas.sqem.server;
 
 import au.coaas.sqem.handler.*;
 import au.coaas.sqem.proto.Chunk;
+import au.coaas.sqem.proto.Empty;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import com.google.protobuf.ByteString;
@@ -314,6 +315,28 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
             responseObserver.onNext(AuthHandler.getConsumer(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void saveOrUpdateToken(au.coaas.sqem.proto.AuthToken request,
+                                     io.grpc.stub.StreamObserver<Empty> responseObserver) {
+        try {
+            responseObserver.onNext(AuthHandler.saveOrUpdateToken(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getConsumerSLA(au.coaas.sqem.proto.AuthToken request,
+                                  io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextConsumerHandler.retrieveSLA(request.getToken()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

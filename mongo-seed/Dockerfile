@@ -7,6 +7,7 @@ COPY empty.json /empty.json
 COPY house.json /house.json
 COPY person.json /person.json
 COPY contextConsumer.json /contextConsumer.json
+COPY contextService.json /contextService.json
 
 CMD   mongoimport --host mongodb --db coaas --collection ParkingFacility --type json --file /mdpf.json --jsonArray --legacy && \
       mongoimport --host mongodb --db google_cal --collection auth --type json --file /googleCal.json --jsonArray --legacy && \
@@ -15,4 +16,5 @@ CMD   mongoimport --host mongodb --db coaas --collection ParkingFacility --type 
       mongoimport --host mongodb --db coaas --collection house --type json --file /house.json --jsonArray --legacy && \
       mongoimport --host mongodb --db coaas --collection person --type json --file /person.json --jsonArray --legacy && \
       mongoimport --host mongodb --db coaas --collection WasteContainers --type json --file /mdwc.json --jsonArray  --legacy && \
-      mongoimport --host mongodb --db coaas --collection contextConsumer --type json --file /contextConsumer.json --jsonArray  --legacy
+      mongoimport --host mongodb --db coaas --collection contextConsumer --type json --file /contextConsumer.json --jsonArray  --legacy && \
+      mongoimport --host mongodb --db coaas --collection contextService --type json --file /contextService.json --jsonArray  --legacy

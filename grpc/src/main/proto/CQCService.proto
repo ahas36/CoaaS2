@@ -19,6 +19,7 @@ message ExecutionRequest
     int32 page = 2;
     int32 limit = 3;
     string queryid = 4;
+    string token = 5;
 }
 
 service CQCService {

@@ -13,6 +13,8 @@ import au.coaas.grpc.client.CQCChannel;
 
 import javax.ws.rs.*;
 import java.util.logging.Logger;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
@@ -30,12 +32,18 @@ public class QueryInterface {
     @Secured
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response parseQuery(String query,@QueryParam("page") @DefaultValue("-1") int page,
-                               @QueryParam("limit") @DefaultValue("-1") int limit, @QueryParam("query-id") String queryId) {
+    public Response parseQuery(String query, @QueryParam("page") @DefaultValue("-1") int page,
+                               @QueryParam("limit") @DefaultValue("-1") int limit, @QueryParam("query-id") String queryId,
+                               @Context HttpHeaders headers) {
+
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
+
+        String authToken = headers.getHeaderString(HttpHeaders.AUTHORIZATION);
         CdqlResponse cdql =  stub.execute(ExecutionRequest.newBuilder()
-                .setCdql(query).setPage(page).setLimit(limit).setQueryid(queryId).build());
+                .setCdql(query).setPage(page).setLimit(limit)
+                .setQueryid(queryId)
+                .setToken(authToken).build());
 
         return Response.ok(cdql.getBody()).header("query-id", queryId).build();
     }

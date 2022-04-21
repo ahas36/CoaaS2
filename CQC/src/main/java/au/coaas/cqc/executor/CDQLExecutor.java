@@ -1,5 +1,6 @@
 package au.coaas.cqc.executor;
 
+import au.coaas.cqc.proto.ExecutionRequest;
 import au.coaas.cqp.proto.*;
 import au.coaas.cqc.proto.CdqlResponse;
 
@@ -17,15 +18,16 @@ public class CDQLExecutor {
 
     private static Logger log = Logger.getLogger(CDQLExecutor.class.getName());
 
-    public static CdqlResponse execute(String cdql, int page, int limit, String queryId) {
+    public static CdqlResponse execute(ExecutionRequest request) {
 
         // First logs the entire query as it is
-        logQuery(cdql,queryId);
+        logQuery(request.getCdql(),request.getQueryid());
 
         // Parse the incoming query
         CQPServiceGrpc.CQPServiceBlockingStub stub
                 = CQPServiceGrpc.newBlockingStub(CQPChannel.getInstance().getChannel());
-        CDQLConstruct cdqlConstruct = stub.parse(ParseRequest.newBuilder().setCdql(cdql).setQueryId(queryId).build());
+        CDQLConstruct cdqlConstruct = stub.parse(ParseRequest.newBuilder().setCdql(request.getCdql())
+                .setQueryId(request.getQueryid()).build());
 
         switch (cdqlConstruct.getType()) {
             case QUERY:
@@ -34,7 +36,8 @@ public class CDQLExecutor {
                 // Then execute based on whether the query is Push or Pull.
                 if(query.getQueryType().equals(QueryType.PULL_BASED))
                 {
-                    return PullBasedExecutor.executePullBaseQuery(query,page,limit);
+                    return PullBasedExecutor.executePullBaseQuery(query,request.getToken(),
+                            request.getPage(),request.getLimit());
                 }else {
                     return PushBasedExecutor.executePushBaseQuery(query);
                 }
@@ -42,7 +45,7 @@ public class CDQLExecutor {
                 ContextFunction cFunction = cdqlConstruct.getFunction();
                 if(cFunction.getType().equals(ContextFunctionType.SITUATION))
                 {
-                    return SituationRegistrationManager.register(cdql,cFunction);
+                    return SituationRegistrationManager.register(request.getCdql(),cFunction);
                 }else {
                     return null;
                 }

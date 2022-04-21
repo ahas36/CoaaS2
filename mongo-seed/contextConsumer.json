@@ -13,7 +13,7 @@
       },
       "qos": {
         "staged": true,
-        "fthresh": 0.7,
+        "fthresh": 0.5,
         "criticality":
         {
           "severe": {
@@ -27,21 +27,21 @@
               "penalty": {
                 "value": 0.5,
                 "unit": "aud"
-              },
-              "fthresh": [
-                {
-                  "@context": "https://mobivoc.org",
-                  "@type": "ParkingFacility",
-                  "attribute": [
-                    {
-                      "name": "availability",
-                      "type": "Number"
-                    }
-                  ],
-                  "value": 0.8
-                }
-              ]
-            }
+              }
+            },
+            "fthresh": [
+              {
+                "@context": "https://mobivoc.org",
+                "@type": "ParkingFacility",
+                "attribute": [
+                  {
+                    "name": "availability",
+                    "type": "Number"
+                  }
+                ],
+                "value": 0.8
+              }
+            ]
           },
           "moderate": {
             "rtmax": {

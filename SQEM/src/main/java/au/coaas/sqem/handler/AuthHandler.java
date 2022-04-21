@@ -1,6 +1,8 @@
 package au.coaas.sqem.handler;
 
 import au.coaas.sqem.proto.AuthRequest;
+import au.coaas.sqem.proto.AuthToken;
+import au.coaas.sqem.proto.Empty;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
 
@@ -10,9 +12,15 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
 
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.UpdateOptions;
 import org.bson.Document;
 
+import java.time.LocalDateTime;
+import java.util.logging.Logger;
+
 public class AuthHandler {
+
+    private static final Logger log = Logger.getLogger(AuthHandler.class.getName());
 
     private static final BasicDBObject project = new BasicDBObject(){{
         put("info.name", true);
@@ -36,5 +44,40 @@ public class AuthHandler {
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
+    }
+
+    public static Empty saveOrUpdateToken(AuthToken tokenRequest) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas");
+        MongoCollection<Document> collection = db.getCollection("consumerToken");
+
+        try{
+            BasicDBObject query = new BasicDBObject(){{
+                put("id", tokenRequest.getId());
+                put("status", true);
+            }};
+
+            BasicDBObject updateFields = new BasicDBObject(){{
+                put("status", false);
+                put("updatedDate", LocalDateTime.now());
+            }};
+
+            collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
+
+            Document consumer = new Document() {{
+                put("id", tokenRequest.getId());
+                put("token", tokenRequest.getToken());
+                put("status", true);
+                put("createdDate", LocalDateTime.now());
+                put("updatedDate", null);
+            }};
+
+            collection.insertOne(consumer);
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
+
+        return Empty.newBuilder().build();
     }
 }

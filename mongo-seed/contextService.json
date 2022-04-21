@@ -1,0 +1,78 @@
+{
+  "info": {
+    "serviceURL": "http://136.186.108.110:8080/thermostat/current/value/get?id={}",
+    "ontClass": "<http://schema.org/Thing>",
+    "graph": "<http://schema.org>",
+    "name": "Themostart",
+    "description": "Thermostat",
+    "resultTag": null,
+    "params": [
+      {
+        "name": "{}",
+        "g": "<http://schema.org>",
+        "class": "<http://schema.org/Thing>",
+        "term": [
+          {
+            "subject": "http://schema.org/identifier",
+            "range": [
+              "http://schema.org/Text",
+              "http://schema.org/PropertyValue",
+              "http://schema.org/URL"
+            ],
+            "label": "identifier"
+          }
+        ],
+        "value": "1",
+        "key": 0,
+        "termParent": "http://schema.org/Text"
+      }
+    ]
+  },
+  "sla": {
+    "cache": false,
+    "cost": {
+      "unit": "aud",
+      "value": 0
+    },
+    "updateFrequency": {
+      "unit": "s",
+      "value": 120
+    },
+    "autoFetch": true,
+    "freshness": {
+      "unit": "s",
+      "value": 120
+    },
+    "key": [
+      "identifier"
+    ]
+  },
+  "attributes": [
+    {
+      "key": {
+        "subject": "http://schema.org/identifier",
+        "range": [
+          "http://schema.org/Text",
+          "http://schema.org/PropertyValue",
+          "http://schema.org/URL"
+        ],
+        "label": "identifier"
+      },
+      "value": "$id",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 1
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/additionalType",
+        "range": "http://schema.org/URL",
+        "label": "additionalType"
+      },
+      "value": "$value",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 27
+    }
+  ]
+}

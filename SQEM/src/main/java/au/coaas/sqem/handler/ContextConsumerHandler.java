@@ -8,16 +8,22 @@ import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
 import java.util.logging.Logger;
 
 public class ContextConsumerHandler {
-    private static final Logger log = Logger.getLogger(ContextServiceHandler.class.getName());
+    private static final Logger log = Logger.getLogger(ContextConsumerHandler.class.getName());
+
+    private static final BasicDBObject project = new BasicDBObject(){{
+        put("sla", true);
+    }};
 
     public static SQEMResponse register(RegisterContextConsumerRequest registerRequest) {
         try {
@@ -52,7 +58,6 @@ public class ContextConsumerHandler {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas");
-
             MongoCollection<Document> collection = db.getCollection("contextConsumer");
 
             BasicDBObject query = new BasicDBObject();
@@ -72,6 +77,34 @@ public class ContextConsumerHandler {
 
             return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
         } catch (Exception e) {
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+
+            return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+        }
+    }
+
+    public static SQEMResponse retrieveSLA(String authToken){
+        try{
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas");
+
+            MongoCollection<Document> tokenCollection = db.getCollection("consumerToken");
+            Document value = tokenCollection.find(Filters.and(
+                    Filters.eq("status", true),
+                    Filters.eq("token", authToken)
+            )).projection(project).first();
+
+            MongoCollection<Document> consumerCollection = db.getCollection("contextConsumer");
+            Document sla = consumerCollection.find(Filters.and(
+                    Filters.eq("_id", new ObjectId(value.getString("id"))),
+                    Filters.eq("status", true)
+            )).projection(project).first();
+
+            return SQEMResponse.newBuilder().setStatus("200").setBody(sla.toJson()).build();
+        }
+        catch(Exception e){
             JSONObject body = new JSONObject();
             body.put("message",e.getMessage());
             body.put("cause",e.getCause().toString());

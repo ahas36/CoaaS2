@@ -61,15 +61,15 @@ public class ContextCacheHandler {
     // Evicts an entity by hash key
     public static SQEMResponse evictEntity(CacheLookUp request) {
         // Ideally the initial evict should push the context into ghost cache
-        String hashKey = String.valueOf(registry.removeFromRegistry(request));
-        if(hashKey != null){
+        CacheLookUpResponse result= registry.lookUpRegistry(request);
+        if(result.getHashkey() != null){
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
             RLock lock = rwLock.writeLock();
 
-            cacheClient.getKeys().deleteAsync(hashKey);
-            RFuture<Boolean> evictStatus = cacheClient.getBucket(hashKey).deleteAsync();
+            cacheClient.getKeys().deleteAsync(result.getHashkey());
+            RFuture<Boolean> evictStatus = cacheClient.getBucket(result.getHashkey()).deleteAsync();
 
             evictStatus.whenCompleteAsync((res, exception) -> {
                 lock.unlockAsync();
@@ -83,8 +83,9 @@ public class ContextCacheHandler {
 
     // Lookup in  context registry whether the entity is cached
     private static SQEMResponse lookUp(CacheLookUp request){
-        String hashKey = String.valueOf(registry.lookUpRegistry(request));
-        if(hashKey == null){
+        CacheLookUpResponse result= registry.lookUpRegistry(request);
+
+        if(result.getHashkey() == null){
             return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.").build();
         }
         return SQEMResponse.newBuilder().setStatus("200").setBody("Cached.").build();
@@ -92,16 +93,16 @@ public class ContextCacheHandler {
 
     // Retrieve entity context from cache
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
-        String hashKey = String.valueOf(registry.lookUpRegistry(request));
+        CacheLookUpResponse result= registry.lookUpRegistry(request);
 
-        if(hashKey != null){
+        if(result.getHashkey() != null && result.getIsCached() && result.getIsValid()){
             try{
                 RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
                 RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
                 RLock lock = rwLock.readLock();
 
-                RBucket<Document> ent = cacheClient.getBucket(hashKey);
+                RBucket<Document> ent = cacheClient.getBucket(result.getHashkey());
                 RFuture<Document> entityContext = ent.getAsync();
 
                 entityContext.whenCompleteAsync((res, exception) -> {
@@ -109,15 +110,19 @@ public class ContextCacheHandler {
                 });
 
                 return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.getNow().toJson())
-                        .setHashKey(hashKey).build();
+                        .setHashKey(result.getHashkey()).build();
             }
             catch(Exception ex){
-                SQEMResponse.newBuilder().setStatus("500").setBody("An error occurred.").build();
+                SQEMResponse.newBuilder().setStatus("500").build();
             }
         }
+        else if(result.getHashkey() != null && result.getIsCached() && !result.getIsValid()){
+            return SQEMResponse.newBuilder().setStatus("400")
+                    .setHashKey(result.getHashkey()).build();
+        }
 
-        return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.")
-                .setHashKey(hashKey).build();
+        return SQEMResponse.newBuilder().setStatus("404")
+                .setHashKey(result.getHashkey()).build();
     }
 
     // Clears the context cache

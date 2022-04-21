@@ -1,11 +1,13 @@
 package au.coaas.sqem.util;
 
 import au.coaas.sqem.proto.CacheLookUp;
+import au.coaas.sqem.proto.CacheLookUpResponse;
 import com.google.common.hash.Hashing;
+import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.util.AbstractMap;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -16,32 +18,39 @@ public final class CacheDataRegistry{
         private LocalDateTime updatedTime;
         ConcurrentHashMap<String, ContextItem> child;
 
+        /*
         ContextItem(CacheLookUp lookup){
             this.createdTime = LocalDateTime.now();
+            this.updatedTime = LocalDateTime.now();
             this.child = new ConcurrentHashMap<>();
             this.child.put(lookup.getServiceId(), new ContextItem(lookup.getParamsMap()));
         }
+        */
 
         ContextItem(CacheLookUp lookup, String hashKey){
             this.createdTime = LocalDateTime.now();
+            this.updatedTime = LocalDateTime.now();
             this.child = new ConcurrentHashMap<>();
             this.child.put(lookup.getServiceId(), new ContextItem(hashKey));
         }
 
         ContextItem(Map<String,String> params){
             this.createdTime = LocalDateTime.now();
+            this.updatedTime = LocalDateTime.now();
             this.child = new ConcurrentHashMap<>();
             this.child.put(getHashKey(params), new ContextItem());
         }
 
         ContextItem(String hashKey){
             this.createdTime = LocalDateTime.now();
+            this.updatedTime = LocalDateTime.now();
             this.child = new ConcurrentHashMap<>();
             this.child.put(hashKey, new ContextItem());
         }
 
         ContextItem(){
             this.createdTime = LocalDateTime.now();
+            this.updatedTime = LocalDateTime.now();
         }
     }
 
@@ -73,8 +82,10 @@ public final class CacheDataRegistry{
 
     // Registry lookup. Returns hash key if available in cache.
 
-    public AbstractMap.SimpleEntry<String, Boolean> lookUpRegistry(CacheLookUp lookup){
+    public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
         AtomicReference<String> hashKey = null;
+        CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
+
         if(this.root.containsKey(lookup.getEt().getType())){
             Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).child;
             if(cs.containsKey(lookup.getServiceId())){
@@ -82,12 +93,40 @@ public final class CacheDataRegistry{
 
                 hashKey.set(getHashKey(lookup.getParamsMap()));
                 if(entities.containsKey(hashKey.get())){
-                    return new AbstractMap.SimpleEntry<>(hashKey.get(), true);
+                    JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
+                    long expPrd = freshness.getLong("unit") * (1-freshness.getLong("fthresh"));
+
+                    LocalDateTime expiryTime;
+                    switch(freshness.getString("unit")){
+                        case "m": {
+                            expiryTime = entities.get(hashKey.get()).updatedTime.plusMinutes(expPrd);
+                            break;
+                        }
+                        case "s":
+                        default:
+                            expiryTime = entities.get(hashKey.get()).updatedTime.plusSeconds(expPrd);
+                            break;
+                    }
+
+                    if(LocalDateTime.now().isAfter(expiryTime)){
+                        return res.setHashkey(hashKey.get())
+                                .setIsValid(false)
+                                .setIsCached(true).build();
+                    }
+
+                    return res.setHashkey(hashKey.get())
+                            .setIsValid(true)
+                            .setIsCached(true).build();
                 }
             }
         }
 
-        return new AbstractMap.SimpleEntry<>(hashKey.get(), true);
+        // There can be 2 types of returns
+        // 1. (hashkey, false) - the specific entity (by parameter combination) is not cached.
+        // 2. (null, false) - either the entity type or the context service is not cached.
+        return res.setHashkey(hashKey.get())
+                .setIsCached(false)
+                .setIsValid(false).build();
     }
 
     // Adds or updates the cached context repository

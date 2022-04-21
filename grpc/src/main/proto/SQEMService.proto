@@ -30,6 +30,13 @@ message CacheLookUp {
     au.coaas.cqp.proto.ContextEntityType et = 1;
     string serviceId = 2;
     map<string, string> params = 3;
+    string uniformFreshness = 4;
+}
+
+message CacheLookUpResponse {
+    string hashkey = 1;
+    bool isCached = 2;
+    bool isValid = 3;
 }
 
 message CacheRequest
@@ -126,8 +133,16 @@ message AuthRequest {
     string password = 2;
 }
 
+message AuthToken {
+    string id = 1;
+    string username = 2;
+    string token = 3;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
+    rpc saveOrUpdateToken (AuthToken) returns (Empty);
+    rpc getConsumerSLA(AuthToken) returns (SQEMResponse);
     rpc registerContextConsumer (RegisterContextConsumerRequest) returns (SQEMResponse);
     rpc updateContextConsumerStatus (UpdateContextConsumerStatusRequest) returns (SQEMResponse);
 

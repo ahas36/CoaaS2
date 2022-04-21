@@ -5,6 +5,7 @@ import au.coaas.grafana.util.Credentials;
 import au.coaas.grafana.util.Encryptor;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.AuthRequest;
+import au.coaas.sqem.proto.AuthToken;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 
@@ -82,6 +83,12 @@ public class AuthenticationInterface {
                 .withIssuer("auth0")
                 .withPayload(payload)
                 .sign(algorithm);
+
+        SQEMServiceGrpc.SQEMServiceFutureStub stub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        stub.saveOrUpdateToken(AuthToken.newBuilder()
+                .setUsername(conObj.getJSONObject("info").getString("username"))
+                .setToken(token).build());
 
         return token;
     }

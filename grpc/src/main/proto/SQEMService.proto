@@ -66,6 +66,11 @@ message RegisterContextServiceRequest
     string json = 1;
 }
 
+message RegisterContextConsumerRequest
+{
+    string json = 1;
+}
+
 message Chunk
 {
     bytes data = 1;
@@ -77,6 +82,12 @@ message Chunk
 message UpdateContextServiceStatusRequest
 {
     string status = 1;
+    string id = 2;
+}
+
+message UpdateContextConsumerStatusRequest
+{
+    bool status = 1;
     string id = 2;
 }
 
@@ -117,26 +128,34 @@ message AuthRequest {
 
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
+    rpc registerContextConsumer (RegisterContextConsumerRequest) returns (SQEMResponse);
+    rpc updateContextConsumerStatus (UpdateContextConsumerStatusRequest) returns (SQEMResponse);
+
+    rpc clearCache (Empty) returns (SQEMResponse);
     rpc cacheEntity (CacheRequest) returns (SQEMResponse);
-    rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);
-    rpc clearCache (Empty) returns (SQEMResponse);
+    rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
+
     rpc handleContextRequest (ContextRequest) returns (stream Chunk);
-    rpc RegisterContextEntity (RegisterEntityRequest) returns (SQEMResponse);
-    rpc UpdateContextEntity (UpdateEntityRequest) returns (SQEMResponse);
+
     rpc getAllEntityTypes (Empty) returns (SQEMResponse);
     rpc clearEntityType (EntityTypeRequest) returns (SQEMResponse);
     rpc removeEntityType (EntityTypeRequest) returns (SQEMResponse);
+    rpc UpdateContextEntity (UpdateEntityRequest) returns (SQEMResponse);
+    rpc RegisterContextEntity (RegisterEntityRequest) returns (SQEMResponse);
+
     rpc RegisterContextService (RegisterContextServiceRequest) returns (SQEMResponse);
     rpc updateContextServiceStatus (UpdateContextServiceStatusRequest) returns (SQEMResponse);
     rpc discoverMatchingServices (ContextServiceRequest) returns (SQEMResponse);
     rpc getAllContextServices (Empty) returns (SQEMResponse);
+
     rpc getAllSituations (Empty) returns (SQEMResponse);
     rpc getAllSubscriptions (Empty) returns (SQEMResponse);
     rpc registerSituationFunction (RegisterSituationRequest) returns (SQEMResponse);
     rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
-    rpc getAllQueryLogs (Empty) returns (SQEMResponse);
+
     rpc logQuery (CDQLLog) returns (SQEMResponse);
+    rpc getAllQueryLogs (Empty) returns (SQEMResponse);
     rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
 }

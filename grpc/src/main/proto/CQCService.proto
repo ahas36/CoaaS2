@@ -23,7 +23,8 @@ message ExecutionRequest
 
 service CQCService {
     rpc execute (ExecutionRequest) returns (CdqlResponse);
+    rpc UpdateContextEntity (ExecutionRequest) returns (CdqlResponse);
     rpc RegisterContextEntity (ExecutionRequest) returns (CdqlResponse);
     rpc RegisterContextService (ExecutionRequest) returns (CdqlResponse);
-    rpc UpdateContextEntity (ExecutionRequest) returns (CdqlResponse);
+    rpc registerContextConsumer (ExecutionRequest) returns (CdqlResponse);
 }

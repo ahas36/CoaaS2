@@ -5,13 +5,9 @@
  */
 package au.coaas.cqc.server;
 
-import au.coaas.cqc.executor.CDQLExecutor;
-import au.coaas.cqc.executor.ContextEntityManager;
-import au.coaas.cqc.executor.ContextServiceManager;
-import au.coaas.cqc.executor.PullBasedExecutor;
+import au.coaas.cqc.executor.*;
 import au.coaas.cqc.proto.CQCServiceGrpc;
 import au.coaas.cqc.proto.CdqlResponse;
-
 
 import java.util.logging.Logger;
 
@@ -64,6 +60,17 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
                                     io.grpc.stub.StreamObserver<CdqlResponse> responseObserver) {
         try {
             responseObserver.onNext(ContextServiceManager.registerContextService(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void registerContextConsumer(au.coaas.cqc.proto.ExecutionRequest request,
+                                       io.grpc.stub.StreamObserver<CdqlResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextConsumerManager.registerContextConsumer(request));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

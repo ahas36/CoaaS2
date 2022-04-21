@@ -4,6 +4,7 @@ import au.coaas.sqem.proto.AuthRequest;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
 
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
@@ -13,10 +14,9 @@ import org.bson.Document;
 
 public class AuthHandler {
 
-    private static final Document project = new Document(){{
+    private static final BasicDBObject project = new BasicDBObject(){{
         put("info.name", true);
         put("info.username", true);
-        put("sla", true);
         put("auth.scope", true);
     }};
 
@@ -29,7 +29,7 @@ public class AuthHandler {
             Document value = collection.find(Filters.and(
                     Filters.eq("info.username",registerRequest.getUsername()),
                     Filters.eq("info.password",registerRequest.getPassword()),
-                    Filters.eq("info.active", true)
+                    Filters.eq("status", true)
             )).projection(project).first();
 
             return SQEMResponse.newBuilder().setStatus("200").setBody(value.toJson()).build();

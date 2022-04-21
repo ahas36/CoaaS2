@@ -308,7 +308,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
-    ////////// Authentication ///////////
+    ////////// Authentication & Context Consumers ///////////
     @Override
     public void authenticateConsumer(au.coaas.sqem.proto.AuthRequest request,
                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
@@ -318,7 +318,28 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
             responseObserver.onError(ex);
         }
         responseObserver.onCompleted();
+    }
 
+    @Override
+    public void registerContextConsumer(au.coaas.sqem.proto.RegisterContextConsumerRequest request,
+                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextConsumerHandler.register(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void updateContextConsumerStatus(au.coaas.sqem.proto.UpdateContextConsumerStatusRequest request,
+                                           io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextConsumerHandler.changeStatus(request.getId(), request.getStatus()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
     }
 
 }

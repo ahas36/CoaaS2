@@ -4,9 +4,7 @@
       "name" : "CarParkRecommender",
       "username": "parKing27x7",
       "password": "",
-      "active" : true,
-      "createdDate": "2022-04-18T10:49:29.387+00:00",
-      "updatedDate": "2022-04-18T10:49:29.387+00:00"
+      "description": "This is is car park recommendation system."
     },
     "sla": {
       "price": {
@@ -159,6 +157,9 @@
     },
     "auth": {
       "scope": ["*"]
-    }
+    },
+    "status" : true,
+    "createdDate": "2022-04-18T10:49:29.387+00:00",
+    "updatedDate": "2022-04-18T10:49:29.387+00:00"
   }
 ]

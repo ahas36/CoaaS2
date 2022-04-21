@@ -31,11 +31,11 @@ public class ServiceInterface {
     /**
      * Creates a new instance of QueryInterface
      */
+
     public ServiceInterface() {
     }
 
     private static Logger log = Logger.getLogger(ServiceInterface.class.getName());
-
 
     @POST
     @Path("register")

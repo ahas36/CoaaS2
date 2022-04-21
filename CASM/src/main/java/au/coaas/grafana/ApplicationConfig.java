@@ -24,6 +24,7 @@ public class ApplicationConfig extends Application {
     }
 
     private void addRestResourceClasses(Set<Class<?>> resources) {
+        resources.add(AuthenticationInterface.class);
         resources.add(QueryInterface.class);
         resources.add(EntityInterface.class);
         resources.add(GenericInterface.class);

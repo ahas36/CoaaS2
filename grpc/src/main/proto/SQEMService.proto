@@ -110,8 +110,13 @@ message RegisterSituationRequest {
     au.coaas.cqp.proto.SituationFunction sFunction = 3;
 }
 
+message AuthRequest {
+    string username = 1;
+    string password = 2;
+}
 
 service SQEMService {
+    rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc cacheEntity (CacheRequest) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);

@@ -1,0 +1,164 @@
+[
+  {
+    "info" : {
+      "name" : "CarParkRecommender",
+      "username": "parKing27x7",
+      "password": "",
+      "active" : true,
+      "createdDate": "2022-04-18T10:49:29.387+00:00",
+      "updatedDate": "2022-04-18T10:49:29.387+00:00"
+    },
+    "sla": {
+      "price": {
+        "value": 1,
+        "unit": "aud"
+      },
+      "qos": {
+        "staged": true,
+        "fthresh": 0.7,
+        "criticality":
+        {
+          "severe": {
+            "price": {
+              "value": 1.5,
+              "unit": "aud"
+            },
+            "rtmax": {
+              "value": 500,
+              "unit": "ms",
+              "penalty": {
+                "value": 0.5,
+                "unit": "aud"
+              },
+              "fthresh": [
+                {
+                  "@context": "https://mobivoc.org",
+                  "@type": "ParkingFacility",
+                  "attribute": [
+                    {
+                      "name": "availability",
+                      "type": "Number"
+                    }
+                  ],
+                  "value": 0.8
+                }
+              ]
+            }
+          },
+          "moderate": {
+            "rtmax": {
+              "value": 1000,
+              "unit": "ms",
+              "penalty": {
+                "value": 0.5,
+                "unit": "aud"
+              }
+            }
+          },
+          "low": {
+            "rtmax": {
+              "value": 1500,
+              "unit": "ms",
+              "penalty": {
+                "value": 0.2,
+                "unit": "aud"
+              }
+            }
+          }
+        }
+      },
+      "qoc": {
+        "attributes": [
+          {
+            "keys": [
+              {
+                "@context": "https://schema.org",
+                "@type": "Place",
+                "attribute": [
+                  {
+                    "name": "geo",
+                    "@type": "GeoCoordinates"
+                  },
+                  {
+                    "name": "latitude",
+                    "@type": "Point"
+                  },
+                  {
+                    "name": "longitude",
+                    "type": "Point"
+                  }
+                ],
+                "precision": {
+                  "condition": "lt",
+                  "type": "error",
+                  "value": 0.001
+                }
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "ParkingFacility",
+                "attribute": [
+                  {
+                    "name": "geo",
+                    "type": "GeoCoordinates"
+                  },
+                  {
+                    "name": "latitude",
+                    "type": "Point"
+                  },
+                  {
+                    "name": "longitude",
+                    "type": "Point"
+                  }
+                ],
+                "precision": {
+                  "condition": "lt",
+                  "type": "error",
+                  "value": 0.001
+                }
+              },
+              {
+                "@context": "https://mobivoc.org",
+                "@type": "GeoCoordinates",
+                "attribute": [
+                  {
+                    "name": "latitude",
+                    "type": "Point"
+                  },
+                  {
+                    "name": "longitude",
+                    "type": "Point"
+                  }
+                ],
+                "precision": {
+                  "condition": "lt",
+                  "type": "error",
+                  "value": 0.001
+                }
+              }
+            ],
+            "default": {
+              "precision": {
+                "condition": "lt",
+                "type": "error",
+                "value": 0.05,
+                "unit": "pct",
+                "mandatory": true
+              },
+              "accuracy": {
+                "condition": "lt",
+                "type": "error",
+                "value": 0.05,
+                "unit": "pct",
+                "mandatory": false
+              }
+            }
+          }
+        ]
+      }
+    },
+    "auth": {
+
+    }
+  }
+]

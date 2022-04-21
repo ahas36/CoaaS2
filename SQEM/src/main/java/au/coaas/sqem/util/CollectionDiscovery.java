@@ -15,7 +15,6 @@ public class CollectionDiscovery {
                 || "ParkingSpace".equals(entityType)
                 || "UndergroundParkingGarage".equals(entityType)) {
             return ("ParkingFacility");
-
         } else if ("SmartWasteContainer".equals(entityType)) {
             return ("WasteContainers");
         } else {

@@ -273,7 +273,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
 
-    /////// Logs functions
+    ////////// Log Functions ///////////
 
     @Override
     public void getAllQueryLogs(au.coaas.sqem.proto.Empty request,
@@ -306,6 +306,19 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
             responseObserver.onError(ex);
         }
         responseObserver.onCompleted();
+    }
+
+    ////////// Authentication ///////////
+    @Override
+    public void authenticateConsumer(au.coaas.sqem.proto.AuthRequest request,
+                                      io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(AuthHandler.getConsumer(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+
     }
 
 }

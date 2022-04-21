@@ -633,6 +633,7 @@ public class PullBasedExecutor {
 
             SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
             JSONObject cachedEntity = new JSONObject(data.getBody());
+
             if(cachedEntity.isEmpty()){
                 cachedEntity = executeFetch(contextServices.getJSONObject(i).toString(), params);
                 if(cachedEntity != null && conSer.getJSONObject("sla").getBoolean("cache")){

@@ -12,6 +12,8 @@ import io.grpc.ServerInterceptors;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import au.coaas.sqem.handler.PerformanceLogHandler;
+
 import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
 /**
@@ -30,6 +32,8 @@ public class SQEMServer {
                 .build();
         server.start();
         log.info("Server started on port 8686");
+
+        PerformanceLogHandler.seed_performance_db();
 
         server.awaitTermination();
     }

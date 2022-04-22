@@ -2,7 +2,6 @@ package au.coaas.cqc.server;
 
 import io.grpc.*;
 
-import java.util.EnumSet;
 import java.util.logging.Logger;
 
 public class CQCInterceptor implements ServerInterceptor {

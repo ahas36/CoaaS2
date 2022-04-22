@@ -48,6 +48,36 @@ public class PerformanceLogHandler {
         }
     }
 
+
+    public static void genericRecord(String method, long rTime) {
+
+        Connection connection = null;
+        String queryString = "INSERT INTO csms_performance VALUES(%s, %d, datetime('now'))";
+
+        try{
+            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            statement.executeUpdate(String.format(queryString, method, rTime));
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+        finally
+        {
+            try
+            {
+                if(connection != null)
+                    connection.close();
+            }
+            catch(SQLException e)
+            {
+                log.severe(e.getMessage());
+            }
+        }
+    }
+
     // Clears older records earlier than the current window from the in-memory database
     // These records are persisted in MongoDB logs
     public static void clearOldRecords(int duration){
@@ -148,5 +178,45 @@ public class PerformanceLogHandler {
 
         // Returns HR = 0 since there are no performance records
         return 0;
+    }
+
+    // Creating the tables at the start
+    public static void seed_performance_db(){
+        Connection connection = null;
+        try{
+            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            statement.executeUpdate("CREATE TABLE csms_performance(" +
+                    "id INT AUTOINCREMENT, method TEXT NOT NULL, " +
+                    "response_time BIGINT NOT NULL, " +
+                    "createdDatetime DATETIME NOT NULL, PRIMARY KEY (id))");
+
+            for(LogicalContextLevel level : LogicalContextLevel.values()){
+                statement.executeUpdate(String.format("CREATE TABLE %s (" +
+                        "id INT AUTOINCREMENT, itemId TEXT NOT NULL, " +
+                        "isHit BOOLEAN NOT NULL, " +
+                        "response_time BIGINT NOT NULL, " +
+                        "createdDatetime DATETIME NOT NULL, " +
+                        "PRIMARY KEY (id))", level.toString().toLowerCase()));
+            }
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+        finally
+        {
+            try
+            {
+                if(connection != null)
+                    connection.close();
+            }
+            catch(SQLException e)
+            {
+                log.severe(e.getMessage());
+            }
+        }
     }
 }

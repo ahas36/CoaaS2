@@ -24,7 +24,7 @@
             <artifactId>cst-o</artifactId>
             <version>0.0.1</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}\cst-o-0.0.1-SNAPSHOT-jar-with-dependencies.jar</systemPath>
+            <systemPath>${project.basedir}/cst-o-0.0.1-SNAPSHOT-jar-with-dependencies.jar</systemPath>
         </dependency>
 
         <dependency>

@@ -128,6 +128,10 @@ message RegisterSituationRequest {
     au.coaas.cqp.proto.SituationFunction sFunction = 3;
 }
 
+message PubSubMessage {
+    string data = 1;
+}
+
 message AuthRequest {
     string username = 1;
     string password = 2;

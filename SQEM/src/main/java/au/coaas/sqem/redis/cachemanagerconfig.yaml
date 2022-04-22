@@ -1,0 +1,9 @@
+EntityCache:
+  ttl: 1440000
+  maxIdleTime: 720000
+  localCacheOptions:
+    invalidationPolicy: "ON_CHANGE"
+    evictionPolicy: "LFU"
+    cacheSize: 1000
+    timeToLiveInMillis: 1440000
+    maxIdleInMillis: 720000

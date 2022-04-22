@@ -669,6 +669,7 @@ public class PullBasedExecutor {
 
                             asyncStub.cacheEntity(CacheRequest.newBuilder()
                                     .setJson(retEntity.toString())
+                                    // This cache life should be saved in the eviction registry
                                     .setCachelife(600)
                                     .setReference(lookup).build());
                             break;

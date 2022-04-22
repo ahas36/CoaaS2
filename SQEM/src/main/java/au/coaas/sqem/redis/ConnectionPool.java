@@ -6,6 +6,13 @@ import com.jcraft.jsch.JSchException;
 import org.redisson.Redisson;
 import org.redisson.config.Config;
 import org.redisson.api.RedissonClient;
+import org.redisson.spring.cache.RedissonSpringCacheManager;
+
+import javax.cache.Cache;
+import javax.cache.CacheManager;
+import javax.cache.Caching;
+import javax.cache.configuration.Configuration;
+import javax.cache.configuration.MutableConfiguration;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,6 +23,7 @@ import java.util.logging.Logger;
 public class ConnectionPool {
 
     private RedissonClient redisClient;
+    private RedissonSpringCacheManager redisManager;
 
     private static au.coaas.sqem.redis.ConnectionPool instance;
 
@@ -31,6 +39,15 @@ public class ConnectionPool {
         try{
             Config config = Config.fromYAML(new File("cacheconfig.yaml"));
             redisClient = Redisson.create(config);
+
+            // TODO:
+            // Cache Manager
+            // MutableConfiguration<String, String> jcacheConfig = new MutableConfiguration<>();
+            //
+            // Configuration<String, String> mgrconfig = RedissonConfiguration.fromInstance(redisClient, jcacheConfig);
+            //
+            // CacheManager manager = Caching.getCachingProvider().getCacheManager();
+            // Cache<String, String> cache = manager.createCache("namedCache", mgrconfig);
         }
         catch(IOException ex){
             log.severe(ex.getMessage());

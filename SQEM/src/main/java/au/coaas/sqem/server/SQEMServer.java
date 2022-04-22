@@ -24,11 +24,13 @@ public class SQEMServer {
     static public void main (String [] args) throws IOException, InterruptedException
     {
         log.info("Starting");
-        Server server = ServerBuilder.forPort(8686).maxInboundMessageSize(MAX_MESSAGE_SIZE)
+        Server server = ServerBuilder.forPort(8686)
                 .addService(ServerInterceptors.intercept(new SQEMServiceImpl(), new SQEMInterceptor()))
+                .maxInboundMessageSize(MAX_MESSAGE_SIZE)
                 .build();
         server.start();
         log.info("Server started on port 8686");
+
         server.awaitTermination();
     }
 }

@@ -7,6 +7,7 @@ package au.coaas.cqc.server;
 
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
+import io.grpc.ServerInterceptors;
 
 import java.io.IOException;
 import java.util.logging.Logger;
@@ -25,7 +26,7 @@ public class CQCServer {
 
         log.info("Starting");
         Server server = ServerBuilder.forPort(8484)
-                .addService(new CQCServiceImpl())
+                .addService(ServerInterceptors.intercept(new CQCServiceImpl(), new CQCInterceptor()))
                 .maxInboundMessageSize(MAX_MESSAGE_SIZE)
                 .build();
         server.start();

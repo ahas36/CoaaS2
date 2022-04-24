@@ -110,7 +110,6 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
-
     ///// Context Entity /////
 
     @Override
@@ -303,6 +302,29 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
                          io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
             responseObserver.onNext(LogHandler.logQueryTree(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void logPerformanceData(au.coaas.sqem.proto.Statistic request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
+        try {
+            PerformanceLogHandler.coassPerformanceRecord(request);
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getPerformanceData(au.coaas.sqem.proto.Empty request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getCurrentPerformanceSummary());
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

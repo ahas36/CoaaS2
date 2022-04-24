@@ -12,7 +12,7 @@ public class Subscriber {
     public void receivedMessage(String topic, PubSubMessage msg) {
         switch(topic) {
             case "evict": break;
-            case "refresg": break;
+            case "refresh": break;
             case "performance": break;
         }
     }

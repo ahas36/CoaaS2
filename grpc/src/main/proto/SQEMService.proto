@@ -6,6 +6,7 @@ option java_generic_services = true;
 package au.coaas.sqem.proto;
 
 import "CQPService.proto";
+import "CSIService.proto";
 
 message SQEMResponse {
     
@@ -122,6 +123,14 @@ message CDQLLog
 
 message Empty {}
 
+message StorageRoutine
+{
+    string json = 1;
+    int32 frequency = 2;
+    string freqUnit = 3;
+    string identifier = 4;
+}
+
 message RegisterSituationRequest {
     string raw = 1;
     string title = 2;
@@ -141,6 +150,14 @@ message AuthToken {
     string id = 1;
     string username = 2;
     string token = 3;
+}
+
+message Statistic {
+    string method = 1;
+    uint64 time = 2;
+    string status = 3;
+    string identifier = 4;
+    au.coaas.csi.proto.ContextServiceInvokerRequest cs = 5;
 }
 
 service SQEMService {
@@ -177,4 +194,6 @@ service SQEMService {
     rpc logQuery (CDQLLog) returns (SQEMResponse);
     rpc getAllQueryLogs (Empty) returns (SQEMResponse);
     rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
+    rpc logPerformanceData (Statistic) returns (Empty);
+    rpc getPerformanceData (Empty) returns (SQEMResponse);
 }

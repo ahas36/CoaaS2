@@ -37,15 +37,15 @@ public class CDQLExecutor {
                 if(query.getQueryType().equals(QueryType.PULL_BASED))
                 {
                     return PullBasedExecutor.executePullBaseQuery(query,request.getToken(),
-                            request.getPage(),request.getLimit());
+                            request.getPage(),request.getLimit(), request.getQueryid());
                 }else {
-                    return PushBasedExecutor.executePushBaseQuery(query);
+                    return PushBasedExecutor.executePushBaseQuery(query, request.getQueryid());
                 }
             case FUNCTION_DEF:
                 ContextFunction cFunction = cdqlConstruct.getFunction();
                 if(cFunction.getType().equals(ContextFunctionType.SITUATION))
                 {
-                    return SituationRegistrationManager.register(request.getCdql(),cFunction);
+                    return SituationRegistrationManager.register(request.getCdql(),cFunction, request.getQueryid());
                 }else {
                     return null;
                 }

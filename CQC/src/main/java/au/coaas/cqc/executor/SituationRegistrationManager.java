@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 public class SituationRegistrationManager {
     private static Logger log = Logger.getLogger(SituationRegistrationManager.class.getName());
 
-    public static CdqlResponse register(String raw, ContextFunction function) {
+    public static CdqlResponse register(String raw, ContextFunction function, String queryId) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -24,7 +24,10 @@ public class SituationRegistrationManager {
                 .setRaw(raw).setSFunction(function.getSFunction()).setTitle(title).build();
         SQEMResponse response = sqemStub.registerSituationFunction(request);
 
-        return CdqlResponse.newBuilder().setStatus(response.getStatus()).setBody(response.getBody()).build();
+        return CdqlResponse.newBuilder().setStatus(response.getStatus())
+                .setBody(response.getBody())
+                .setQueryId(queryId)
+                .build();
     }
 
 }

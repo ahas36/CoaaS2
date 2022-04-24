@@ -10,6 +10,7 @@ message CdqlResponse {
 
     string status = 1;
     string body = 2;
+    string queryId = 3;
 }
 
 

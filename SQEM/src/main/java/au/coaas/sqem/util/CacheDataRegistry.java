@@ -2,10 +2,8 @@ package au.coaas.sqem.util;
 
 import au.coaas.sqem.proto.CacheLookUp;
 import au.coaas.sqem.proto.CacheLookUpResponse;
-import com.google.common.hash.Hashing;
 import org.json.JSONObject;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
 import java.util.Map;
@@ -38,7 +36,7 @@ public final class CacheDataRegistry{
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
             this.child = new ConcurrentHashMap<>();
-            this.child.put(getHashKey(params), new ContextItem());
+            this.child.put(Utilty.getHashKey(params), new ContextItem());
         }
 
         ContextItem(String hashKey){
@@ -71,15 +69,6 @@ public final class CacheDataRegistry{
         return singleton;
     }
 
-    private static String getHashKey(Map<String,String> params){
-        String hashKey = "";
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            hashKey = hashKey + entry.getKey() + "@" + entry.getValue() + ";";
-        }
-
-        return Hashing.sha256().hashString(hashKey, StandardCharsets.UTF_8).toString();
-    }
-
     // Registry lookup. Returns hash key if available in cache.
 
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
@@ -91,7 +80,7 @@ public final class CacheDataRegistry{
             if(cs.containsKey(lookup.getServiceId())){
                 Map<String,ContextItem> entities = cs.get(lookup.getServiceId()).child;
 
-                hashKey.set(getHashKey(lookup.getParamsMap()));
+                hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                 if(entities.containsKey(hashKey.get())){
                     JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
                     long expPrd = freshness.getLong("unit") * (1-freshness.getLong("fthresh"));
@@ -148,7 +137,7 @@ public final class CacheDataRegistry{
                         // Updating the last update time of the entity by hash key
                         // Add a new entity by hash key if not available.
 
-                        hashKey.set(getHashKey(lookup.getParamsMap()));
+                        hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                         if(!stat.child.contains(hashKey.get())){
                             stat.child.compute(hashKey.get(), (k1,v1) -> {
                                 v1.updatedTime = LocalDateTime.now();
@@ -171,7 +160,7 @@ public final class CacheDataRegistry{
             });
         }
         else {
-            hashKey.set(getHashKey(lookup.getParamsMap()));
+            hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
             this.root.put(lookup.getEt().getType(), new ContextItem(lookup, hashKey.get()));
         }
         return hashKey;
@@ -186,7 +175,7 @@ public final class CacheDataRegistry{
                 if(v.child.containsKey(lookup.getServiceId())){
                     v.child.compute(lookup.getServiceId(), (id,stat) -> {
 
-                        hashKey.set(getHashKey(lookup.getParamsMap()));
+                        hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                         if(stat.child.contains(hashKey)){
                             stat.child.remove(hashKey);
                         }

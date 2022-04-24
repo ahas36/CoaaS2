@@ -76,7 +76,7 @@ public class PullBasedExecutor {
     }
 
     // This method executes the query plan for pull based queries
-    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit) {
+    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit, String queryId) {
 
         // Initialize values
         // How are the values assigned to 'ce'? I only see values assigned in the catch block.
@@ -257,7 +257,8 @@ public class PullBasedExecutor {
 
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
         // If this response need to be cached, this is where the caching action should happen.
-        CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200").setBody(result.toString()).build();
+        CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
+                .setBody(result.toString()).setQueryId(queryId).build();
 
         return cdqlResponse;
     }
@@ -699,6 +700,8 @@ public class PullBasedExecutor {
     }
 
     private static JSONObject executeFetch(String contextService, HashMap<String,String> params) {
+        long startTime = System.currentTimeMillis();
+
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
@@ -708,6 +711,13 @@ public class PullBasedExecutor {
         final ContextService cs = ContextService.newBuilder().setJson(contextService).build();
         fetchRequest.setContextService(cs);
         CSIResponse fetch = csiStub.fetch(fetchRequest.build());
+
+        long endTime = System.currentTimeMillis();
+        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        asyncStub.logPerformanceData(Statistic.newBuilder()
+                .setMethod("executeFetch").setStatus(fetch.getStatus())
+                .setTime(endTime-startTime).setCs(fetchRequest).build());
 
         if (fetch.getStatus().equals("200")) {
             return new JSONObject(fetch.getBody());

@@ -366,20 +366,46 @@ public class PerformanceLogHandler {
             for(LogicalContextLevel lvl : LogicalContextLevel.values()){
                 ResultSet rs_3 = statement.executeQuery(String.format(query, lvl.toString().toLowerCase()));
 
-                HashMap<String, BasicDBObject> res_3 = new HashMap<>();
+                long acc_hits = 0;
+                long acc_misses = 0;
+
+                double res_avg_hit = 0;
+                double res_avg_miss = 0;
+
+                HashMap<String, Object> res_3 = new HashMap<>();
                 while(rs_3.next()){
+                    Boolean isHit = rs_3.getBoolean("isHit");
+                    long curr_value = rs_3.getLong("cnt");
+
+                    if(isHit) {
+                        acc_hits += curr_value;
+                        res_avg_hit += rs_3.getLong("avg");
+                    } else {
+                        acc_misses += curr_value;
+                        res_avg_miss += rs_3.getLong("avg");
+                    }
+
                     if(res_3.containsKey(rs_3.getString("itemId"))){
-                        res_3.put(rs_3.getString("itemId"),
-                                (BasicDBObject) res_3.get(rs_1.getString("itemId"))
-                                        .put(rs_1.getString("isHit"), rs_3.getString("cnt")));
+                        BasicDBObject cur_Rec = (BasicDBObject) res_3.get(rs_1.getString("itemId"));
+                        long curr_saved_value = cur_Rec.getLong(isHit ? "hits" : "misses");
+
+                        double hitRate = (isHit ? curr_saved_value : curr_value)/(curr_saved_value + curr_value);
+
+                        cur_Rec.put(isHit?"hits":"misses",curr_value);
+                        cur_Rec.put("hitrate",hitRate);
+
+                        res_3.put(rs_3.getString("itemId"),cur_Rec);
                     }
                     else {
                         res_3.put(rs_3.getString("itemId"), new BasicDBObject(){{
-                            put(rs_3.getString("isHit"), rs_3.getString("cnt"));
+                            put(isHit?"hits":"misses", curr_value);
                         }});
                     }
                 }
 
+                res_3.put("hitrate", acc_hits/(acc_hits + acc_misses));
+                res_3.put("hit_response_time", res_avg_hit/acc_hits);
+                res_3.put("miss_response_time", res_avg_miss/acc_misses);
                 level_res.put(lvl.toString().toLowerCase(), new BasicDBObject(res_3));
             }
 

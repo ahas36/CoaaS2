@@ -1,6 +1,7 @@
 package au.coaas.csi.fetch;
 
 import au.coaas.csi.proto.CSIResponse;
+import au.coaas.csi.proto.CSSummary;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 
 import okhttp3.OkHttpClient;
@@ -30,6 +31,7 @@ public class FetchManager {
         JSONObject cs = new JSONObject(contextService.getContextService().getJson());
 
         JSONObject info = cs.getJSONObject("info");
+        JSONObject sla = cs.getJSONObject("sla");
 
         String serviceUrl = info.getString("serviceURL");
 
@@ -68,7 +70,13 @@ public class FetchManager {
                 rawResult.put("result", res);
             }
 
-            return CSIResponse.newBuilder().setStatus("200").setBody(rawResult.toString()).build();
+            return CSIResponse.newBuilder().setStatus("200")
+                    .setBody(rawResult.toString())
+                    .setSummary(CSSummary.newBuilder()
+                            .setId(cs.getString("_id"))
+                            .setFreshness(sla.getJSONObject("freshness").getLong("value"))
+                            .setPrice(sla.getJSONObject("cost").getDouble("value")).build())
+                    .build();
             // Or this raw result.
         } catch (IOException e) {
             e.printStackTrace();

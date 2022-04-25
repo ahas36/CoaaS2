@@ -14,10 +14,7 @@ import org.json.JSONObject;
 
 import java.sql.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -105,6 +102,7 @@ public class PerformanceLogHandler {
 
     private static void removeAndPersistRecord(String level, int duration) {
         Connection connection = null;
+        level = level.toLowerCase();
         try{
             connection = DriverManager.getConnection("jdbc:sqlite::memory:");
             String getString = "SELECT * FROM %s WHERE createdTime <= %s";
@@ -115,22 +113,36 @@ public class PerformanceLogHandler {
 
             LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
             ResultSet rs = statement.executeQuery(String.format(getString,
-                    level.toString().toLowerCase(), windowThresh));
+                    level, windowThresh));
 
             statement.executeUpdate(String.format(deleteString,
-                    level.toString().toLowerCase(), windowThresh));
+                    level, windowThresh));
 
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");
 
-            MongoCollection<Document> collection = db.getCollection("queryPerformance");
+            MongoCollection<Document> collection = db.getCollection("statistics_backup");
 
             ArrayList<Document> persRecords = new ArrayList();
             while(rs.next()){
                 Document records = new Document();
-                records.put("type", level.toString());
-                records.put("item_id", rs.getString("itemId"));
-                records.put("is_hit", rs.getBoolean("isHit"));
+                records.put("type", level);
+
+                if(level == "coass_performance" || level == "csms_performance"){
+                    records.put("method", rs.getString("method"));
+                    records.put("status", rs.getString("status"));
+                    records.put("latency", rs.getString("response_time"));
+                    if (level == "coass_performance"){
+                        records.put("identifier", rs.getString("identifier"));
+                        records.put("earning", rs.getString("earning"));
+                        records.put("cost", rs.getString("cost"));
+                    }
+                }
+                else {
+                    records.put("item_id", rs.getString("itemId"));
+                    records.put("is_hit", rs.getBoolean("isHit"));
+                }
+
                 records.put("datetime", rs.getString("createdTime"));
 
                 persRecords.add(records);
@@ -337,23 +349,53 @@ public class PerformanceLogHandler {
             persRecord.put("csms", res_1);
 
             // Overall COASS performance
-            ResultSet rs_2 = statement.executeQuery("SELECT method, status, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +
+            ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
+                    "COUNT(id) AS cnt, AVERAGE(response_time) AS avg, SUM(earning) AS tearn, SUM(cost) AS tcost" +
                     "FROM coass_performance " +
                     "GROUP BY (method, status)");
 
+            double totalEarning = 0;
+            double totalPenalties = 0;
+            double totalRetrievalCost = 0;
+
+            long totalQueries = 0;
+            long totalRetrievals = 0;
+
+            long queryOverhead = 0;
+            long totalNetworkOverhead = 0;
+
             HashMap<String, BasicDBObject> res_2 = new HashMap<>();
             while(rs_2.next()){
-                if(res_2.containsKey(rs_2.getString("method"))){
-                    res_2.put(rs_2.getString("method"),
-                            (BasicDBObject) res_2.get(rs_1.getString("method"))
-                                    .put(rs_1.getString("status"), new BasicDBObject(){{
+                String method = rs_2.getString("method");
+                String status = rs_2.getString("status");
+
+                if(method == "execute"){
+                    totalQueries += rs_2.getInt("cnt");
+                    if(status == "200"){
+                        totalEarning += rs_2.getInt("tearn");
+                        totalPenalties += rs_2.getInt("tcost");
+                    }
+                    queryOverhead += (rs_2.getInt("avg")*totalQueries);
+                }
+                else if(method == "executeFetch"){
+                    if(status == "200"){
+                        totalRetrievals += rs_2.getInt("cnt");
+                        totalRetrievalCost += rs_2.getDouble("tcost");
+                    }
+                    totalNetworkOverhead += (rs_2.getInt("avg")*rs_2.getInt("cnt"));
+                }
+
+                if(res_2.containsKey(method)){
+                    res_2.put(method,
+                            (BasicDBObject) res_2.get(method)
+                                    .put(status, new BasicDBObject(){{
                                         put("count", rs_2.getInt("cnt"));
                                         put("average", rs_2.getInt("avg"));
                                     }}));
                 }
                 else {
-                    res_2.put(rs_2.getString("method"), new BasicDBObject(){{
-                        put(rs_2.getString("status"), new BasicDBObject(){{
+                    res_2.put(method, new BasicDBObject(){{
+                        put(status, new BasicDBObject(){{
                             put("count", rs_2.getInt("cnt"));
                             put("average", rs_2.getInt("avg"));
                         }});
@@ -362,6 +404,15 @@ public class PerformanceLogHandler {
             }
 
             persRecord.put("coass", res_2);
+            persRecord.put("no_of_queries", totalQueries);
+            persRecord.put("no_of_retrievals", totalRetrievals);
+
+            persRecord.put("response_latency", queryOverhead);
+            persRecord.put("network_overhead", totalNetworkOverhead);
+            persRecord.put("processing_overhead", queryOverhead - totalNetworkOverhead);
+
+            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
+            persRecord.put("gainOrLoss", monetaryGain);
 
             // Individual context cache level performance
             String query = "SELECT itemId, isHit, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +

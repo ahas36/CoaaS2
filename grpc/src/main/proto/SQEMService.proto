@@ -157,7 +157,9 @@ message Statistic {
     uint64 time = 2;
     string status = 3;
     string identifier = 4;
-    au.coaas.csi.proto.ContextServiceInvokerRequest cs = 5;
+    double earning = 5;
+    double cost = 6;
+    au.coaas.csi.proto.ContextServiceInvokerRequest cs = 7;
 }
 
 service SQEMService {

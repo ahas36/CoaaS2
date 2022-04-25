@@ -63,6 +63,14 @@
               }
             }
           }
+        },
+        "rtmax": {
+          "value": 500,
+          "unit": "ms",
+          "penalty": {
+            "value": 0.5,
+            "unit": "aud"
+          }
         }
       },
       "qoc": {

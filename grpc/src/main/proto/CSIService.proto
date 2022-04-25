@@ -10,8 +10,14 @@ package au.coaas.csi.proto;
 message CSIResponse {
     string status = 1;
     string body = 2;
+    CSSummary summary = 3;
 }
 
+message CSSummary {
+    string id = 1;
+    double price = 2;
+    uint64 freshness = 3;
+}
 
 message ContextService
 {

@@ -81,6 +81,7 @@ public class PullBasedExecutor {
         // Initialize values
         // How are the values assigned to 'ce'? I only see values assigned in the catch block.
         Map<String, JSONObject> ce = new HashMap<>();
+        JSONObject consumerQoS = null;
 
         // Iterates over execution plan
         // The first loop goes over dependent sets of entities
@@ -206,8 +207,12 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    JSONObject cacheResult = retrieveContext(entity, authToken, contextService, params);
-                    ce.put(entity.getEntityID(), cacheResult);
+                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, authToken, contextService, params);
+                    if(cacheResult != null){
+                        ce.put(entity.getEntityID(), (JSONObject) cacheResult.getKey());
+                        if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
+                    }
+
                 }
                 else {
                     // Querying from registered entities. This does not guarantee "completeness" of context.
@@ -258,7 +263,14 @@ public class PullBasedExecutor {
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
         // If this response need to be cached, this is where the caching action should happen.
         CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
-                .setBody(result.toString()).setQueryId(queryId).build();
+                .setBody(result.toString()).setQueryId(queryId)
+                .setAdmin(CdqlAdmin.newBuilder()
+                        .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
+                        .setPrice(consumerQoS.getDouble("price"))
+                        .setRtpenalty(consumerQoS.getJSONObject("rtmax").getJSONObject("penalty")
+                                .getDouble("value"))
+                        .build())
+                .build();
 
         return cdqlResponse;
     }
@@ -618,7 +630,7 @@ public class PullBasedExecutor {
         }
     }
 
-    private static JSONObject retrieveContext(ContextEntity targetEntity, String authToken, String contextServicesText, HashMap<String,String> params) {
+    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String authToken, String contextServicesText, HashMap<String,String> params) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -677,16 +689,19 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    return retEntity;
+                    return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
+                            sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
                 else {
-                    return new JSONObject(data.getBody());
+                    return new AbstractMap.SimpleEntry(new JSONObject(data.getBody()),
+                            qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
             }
 
             JSONObject retEntity = executeFetch(conSer.toString(), params);
             if(retEntity != null)
-                return retEntity;
+                return new AbstractMap.SimpleEntry(retEntity,
+                        qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
 
         }
 
@@ -717,7 +732,9 @@ public class PullBasedExecutor {
                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
         asyncStub.logPerformanceData(Statistic.newBuilder()
                 .setMethod("executeFetch").setStatus(fetch.getStatus())
-                .setTime(endTime-startTime).setCs(fetchRequest).build());
+                .setTime(endTime-startTime).setCs(fetchRequest).setEarning(0)
+                .setCost(fetch.getStatus() == "200"? fetch.getSummary().getPrice() : 0).build());
+        // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
 
         if (fetch.getStatus().equals("200")) {
             return new JSONObject(fetch.getBody());

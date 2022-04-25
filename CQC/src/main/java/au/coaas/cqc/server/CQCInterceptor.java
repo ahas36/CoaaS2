@@ -45,11 +45,24 @@ public class CQCInterceptor implements ServerInterceptor {
                 case "execute": {
                     // Log response time
                     CdqlResponse res = (CdqlResponse) message;
+                    double penalty = 0;
+                    double earning = 0;
+
+                    if(res.getAdmin() != null){
+                        if(responseTime >= res.getAdmin().getRtmax())
+                            penalty = res.getAdmin().getRtpenalty();
+                        else
+                            earning = res.getAdmin().getPrice();
+                    }
+
                     SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
                             = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                     sqemStub.logPerformanceData (Statistic.newBuilder()
                             .setMethod(method).setTime(responseTime)
-                            .setStatus(res.getStatus()).setIdentifier(res.getQueryId()).build());
+                            .setStatus(res.getStatus()).setIdentifier(res.getQueryId())
+                            .setCost(penalty) // This is penalty
+                            .setEarning(earning) // This is earning
+                            .build());
                     break;
                 }
                 default:

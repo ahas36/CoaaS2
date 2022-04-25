@@ -11,8 +11,14 @@ message CdqlResponse {
     string status = 1;
     string body = 2;
     string queryId = 3;
+    CdqlAdmin admin = 4;
 }
 
+message CdqlAdmin {
+    uint64 rtmax = 1;
+    double price = 2;
+    double rtpenalty = 3;
+}
 
 message ExecutionRequest
 {

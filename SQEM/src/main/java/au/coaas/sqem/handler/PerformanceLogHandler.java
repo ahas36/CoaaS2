@@ -201,7 +201,7 @@ public class PerformanceLogHandler {
     public static void coassPerformanceRecord(Statistic request) {
 
         Connection connection = null;
-        String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %s, %s, datetime('now'))";
+        String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %f, %f, %s, %s, datetime('now'))";
 
         try{
             connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -213,7 +213,9 @@ public class PerformanceLogHandler {
             switch(method){
                 case "execute" :{
                     // Value at the Identifier column here is the Query ID
-                    statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(), request.getIdentifier(), "NULL"));
+                    statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(),
+                            request.getEarning(), request.getCost(),
+                            request.getIdentifier(), "NULL"));
                     break;
                 }
                 case "executeFetch": {
@@ -223,7 +225,8 @@ public class PerformanceLogHandler {
                     String cs_id = cs.getString("_id");
 
                     // Value at the Identifier column here is the Context Service ID
-                    statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(), cs_id, hashKey));
+                    statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(),
+                            request.getEarning(), request.getCost(), cs_id, hashKey));
                     break;
                 }
             }
@@ -266,6 +269,7 @@ public class PerformanceLogHandler {
                     "method TEXT NOT NULL, " +
                     "status TEXT NOT NULL, " +
                     "response_time BIGINT NOT NULL, " +
+                    "earning REAL NULL, cost REAL NULL, " +
                     "identifier TEXT NOT NULL, " +
                     "hashKey TEXT NULL, " +
                     "createdDatetime DATETIME NOT NULL, PRIMARY KEY (id))");

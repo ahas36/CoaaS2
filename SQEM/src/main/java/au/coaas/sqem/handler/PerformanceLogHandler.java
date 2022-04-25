@@ -1,23 +1,26 @@
 package au.coaas.sqem.handler;
 
-import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.monitor.LogicalContextLevel;
+import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.Statistic;
 import au.coaas.sqem.util.Utilty;
-import com.mongodb.BasicDBObject;
+
 import com.mongodb.MongoClient;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+
 import org.bson.Document;
 import org.json.JSONObject;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+
 import java.util.*;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 public class PerformanceLogHandler {
 
@@ -370,49 +373,56 @@ public class PerformanceLogHandler {
                 String status = rs_2.getString("status");
 
                 if(method == "execute"){
-                    totalQueries += rs_2.getInt("cnt");
+                    totalQueries += rs_2.getLong("cnt");
+                    queryOverhead += (rs_2.getLong("avg")*rs_2.getLong("cnt"));
                     if(status == "200"){
-                        totalEarning += rs_2.getInt("tearn");
-                        totalPenalties += rs_2.getInt("tcost");
+                        totalEarning += rs_2.getDouble("tearn");
+                        totalPenalties += rs_2.getDouble("tcost");
                     }
-                    queryOverhead += (rs_2.getInt("avg")*totalQueries);
                 }
                 else if(method == "executeFetch"){
                     if(status == "200"){
-                        totalRetrievals += rs_2.getInt("cnt");
+                        totalRetrievals += rs_2.getLong("cnt");
                         totalRetrievalCost += rs_2.getDouble("tcost");
                     }
-                    totalNetworkOverhead += (rs_2.getInt("avg")*rs_2.getInt("cnt"));
+                    totalNetworkOverhead += (rs_2.getLong("avg")*rs_2.getLong("cnt"));
                 }
 
                 if(res_2.containsKey(method)){
                     res_2.put(method,
                             (BasicDBObject) res_2.get(method)
                                     .put(status, new BasicDBObject(){{
-                                        put("count", rs_2.getInt("cnt"));
-                                        put("average", rs_2.getInt("avg"));
+                                        put("count", rs_2.getLong("cnt"));
+                                        put("average", rs_2.getLong("avg"));
                                     }}));
                 }
                 else {
                     res_2.put(method, new BasicDBObject(){{
                         put(status, new BasicDBObject(){{
-                            put("count", rs_2.getInt("cnt"));
-                            put("average", rs_2.getInt("avg"));
+                            put("count", rs_2.getLong("cnt"));
+                            put("average", rs_2.getLong("avg"));
                         }});
                     }});
                 }
             }
 
             persRecord.put("coass", res_2);
-            persRecord.put("no_of_queries", totalQueries);
-            persRecord.put("no_of_retrievals", totalRetrievals);
 
-            persRecord.put("response_latency", queryOverhead);
-            persRecord.put("network_overhead", totalNetworkOverhead);
-            persRecord.put("processing_overhead", queryOverhead - totalNetworkOverhead);
+            BasicDBObject dbo = new BasicDBObject();
+            dbo.put("no_of_queries", totalQueries);
+            dbo.put("no_of_retrievals", totalRetrievals);
+            dbo.put("avg_query_overhead", queryOverhead / totalQueries);
+            dbo.put("avg_network_overhead", totalNetworkOverhead / totalRetrievals);
+            dbo.put("avg_processing_overhead", (queryOverhead - totalNetworkOverhead) / totalQueries);
 
             double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
-            persRecord.put("gainOrLoss", monetaryGain);
+            dbo.put("gain", monetaryGain);
+            dbo.put("avg_gain", monetaryGain / totalQueries);
+
+            persRecord.put("summary", dbo);
+
+            // TODO:
+            // Utility from saving response time from caching.
 
             // Individual context cache level performance
             String query = "SELECT itemId, isHit, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +

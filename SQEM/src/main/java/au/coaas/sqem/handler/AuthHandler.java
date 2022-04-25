@@ -80,4 +80,25 @@ public class AuthHandler {
 
         return Empty.newBuilder().build();
     }
+
+    public static SQEMResponse validateConsumer(String username){
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas");
+            MongoCollection<Document> collection = db.getCollection("contextConsumer");
+
+            Document value = collection.find(Filters.and(
+                    Filters.eq("info.username",username),
+                    Filters.eq("status", true)
+            )).projection(project).first();
+
+            if(value == null || value.isEmpty())
+                return SQEMResponse.newBuilder().setStatus("400").build();
+
+            return SQEMResponse.newBuilder().setStatus("200").build();
+
+        } catch (Exception e) {
+            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
+        }
+    }
 }

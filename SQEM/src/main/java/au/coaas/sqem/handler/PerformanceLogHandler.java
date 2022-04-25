@@ -308,7 +308,7 @@ public class PerformanceLogHandler {
 
             // CSMS Method performances
             ResultSet rs_1 = statement.executeQuery("SELECT method, status, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +
-                    "FROM csms_perfromance " +
+                    "FROM csms_performance " +
                     "GROUP BY (method, status)");
             HashMap<String, BasicDBObject> res_1 = new HashMap<>();
             while(rs_1.next()){
@@ -334,7 +334,7 @@ public class PerformanceLogHandler {
 
             // Overall COASS performance
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +
-                    "FROM coass_perfromance " +
+                    "FROM coass_performance " +
                     "GROUP BY (method, status)");
 
             HashMap<String, BasicDBObject> res_2 = new HashMap<>();
@@ -422,4 +422,5 @@ public class PerformanceLogHandler {
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }
     }
+
 }

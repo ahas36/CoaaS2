@@ -29,8 +29,15 @@ public class ConsumerInterface {
     public Response registerContextConsumer(String consumerDescription) {
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
-        CdqlResponse consumer = stub.registerContextService(ExecutionRequest.newBuilder().setCdql(consumerDescription).build());
+        CdqlResponse consumer = stub.registerContextConsumer(ExecutionRequest.newBuilder().setCdql(consumerDescription).build());
 
-        return Response.ok(consumer.getBody()).build();
+        switch(consumer.getStatus()){
+            case "200":
+                return Response.ok(consumer.getBody()).build();
+            case "404":
+                return Response.status(404).entity(consumer.getBody()).build();
+            default:
+                return Response.status(500).entity(consumer.getBody()).build();
+        }
     }
 }

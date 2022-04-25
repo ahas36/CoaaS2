@@ -162,6 +162,7 @@ message Statistic {
 
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
+    rpc validateToken (AuthToken) returns (SQEMResponse);
     rpc saveOrUpdateToken (AuthToken) returns (Empty);
     rpc getConsumerSLA(AuthToken) returns (SQEMResponse);
     rpc registerContextConsumer (RegisterContextConsumerRequest) returns (SQEMResponse);

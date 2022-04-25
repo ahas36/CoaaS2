@@ -2,6 +2,7 @@ package au.coaas.grafana;
 
 import au.coaas.grafana.util.Secured;
 
+import javax.ws.rs.ForbiddenException;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.ext.Provider;
 import javax.annotation.Priority;
@@ -12,11 +13,17 @@ import javax.ws.rs.container.ContainerRequestContext;
 
 import java.io.IOException;
 
+import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.AuthRequest;
+import au.coaas.sqem.proto.AuthToken;
+import au.coaas.sqem.proto.SQEMResponse;
+import au.coaas.sqem.proto.SQEMServiceGrpc;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import org.json.JSONObject;
 
 @Secured
 @Provider
@@ -67,15 +74,24 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         .build());
     }
 
-    private void validateToken(String token) throws JWTVerificationException {
+    private void validateToken(String token) throws JWTVerificationException, ForbiddenException {
         // Check if the token was issued by the server
         // Throw an JWTVerificationException if the token is invalid
         Algorithm algorithm = Algorithm.HMAC256(SECRET);
         JWTVerifier verifier = JWT.require(algorithm)
                 .withIssuer("auth0")
                 .build();
+
         DecodedJWT jwt = verifier.verify(token);
-        // TODO:
-        // The decoded jwt can be used to further validate the token.
+        JSONObject payload = new JSONObject(jwt.getPayload());
+
+        SQEMServiceGrpc.SQEMServiceBlockingStub stub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        SQEMResponse response =  stub.validateToken(AuthToken.newBuilder()
+                .setUsername(payload.getString("username")).build());
+
+        if(response.getStatus() != "200"){
+            throw new ForbiddenException();
+        }
     }
 }

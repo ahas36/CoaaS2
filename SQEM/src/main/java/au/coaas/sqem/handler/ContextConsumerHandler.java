@@ -6,6 +6,7 @@ import au.coaas.sqem.proto.RegisterContextConsumerRequest;
 
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Filters;
@@ -32,19 +33,32 @@ public class ContextConsumerHandler {
 
             MongoCollection<Document> collection = db.getCollection("contextConsumer");
 
-            Document consumer = Document.parse(registerRequest.getJson());
-            consumer.put("status", true);
-            consumer.put("createdDate", LocalDateTime.now());
-            consumer.put("updatedDate", null);
+            JSONObject u_fetch = new JSONObject(registerRequest.getJson());
 
-            collection.insertOne(consumer);
+            Document active_consumers = collection.find(Filters.and(
+                    Filters.eq("info.username", u_fetch.getJSONObject("info").getString("username")),
+                    Filters.eq("status", true)
+            )).projection(project).first();
 
-            JSONObject body = new JSONObject(){{
-                put("id",consumer.get("_id").toString());
-                put("message","Context Consumer Registered.");
-            }};
+            if(active_consumers == null || active_consumers.isEmpty()){
+                Document consumer = Document.parse(registerRequest.getJson());
 
-            return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
+                consumer.put("status", true);
+                consumer.put("createdDate", LocalDateTime.now());
+                consumer.put("updatedDate", null);
+
+                collection.insertOne(consumer);
+
+                JSONObject body = new JSONObject(){{
+                    put("id",consumer.get("_id").toString());
+                    put("message","Context Consumer Registered.");
+                }};
+
+                return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
+            }
+
+            return SQEMResponse.newBuilder().setStatus("404").setBody("Username already taken.").build();
+
         } catch (Exception e) {
             JSONObject body = new JSONObject();
             body.put("message",e.getMessage());

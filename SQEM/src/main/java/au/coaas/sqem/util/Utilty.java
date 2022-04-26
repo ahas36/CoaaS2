@@ -29,4 +29,13 @@ public class Utilty {
 
         return Hashing.sha256().hashString(hashKey, StandardCharsets.UTF_8).toString();
     }
+
+    public static String getStatus(String status){
+        switch(status){
+            case "200": return "ok";
+            case "400": return "unauth";
+            case "404": return "notfound";
+            case "500": return "error";
+        }
+    }
 }

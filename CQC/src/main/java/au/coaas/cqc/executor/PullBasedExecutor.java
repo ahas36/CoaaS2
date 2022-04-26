@@ -38,6 +38,9 @@ import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
 public class PullBasedExecutor {
 
+    // This is the cache switch
+    private static boolean cacheEnabled = true;
+
     private static Logger log = Logger.getLogger(PullBasedExecutor.class.getName());
 
     private static Object getValueOfJsonObject(final JSONObject obj, String path) {
@@ -651,7 +654,7 @@ public class PullBasedExecutor {
                 conSer = mapServiceWithSLA(contextServices.getJSONObject(i),qos);
             }
 
-            if(conSer.getJSONObject("sla").getBoolean("cache")){
+            if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){
                 final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").toString())

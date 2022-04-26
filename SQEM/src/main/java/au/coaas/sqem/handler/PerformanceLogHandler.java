@@ -334,14 +334,14 @@ public class PerformanceLogHandler {
                 if(res_1.containsKey(rs_1.getString("method"))){
                     res_1.put(rs_1.getString("method"),
                             (BasicDBObject) res_1.get(rs_1.getString("method"))
-                                    .put(rs_1.getString("status"), new BasicDBObject(){{
+                                    .put(Utilty.getStatus(rs_1.getString("status")), new BasicDBObject(){{
                                         put("count", rs_1.getInt("cnt"));
                                         put("average", rs_1.getInt("avg"));
                                     }}));
                 }
                 else {
                     res_1.put(rs_1.getString("method"), new BasicDBObject(){{
-                        put(rs_1.getString("status"), new BasicDBObject(){{
+                        put(Utilty.getStatus(rs_1.getString("status")), new BasicDBObject(){{
                             put("count", rs_1.getInt("cnt"));
                             put("average", rs_1.getInt("avg"));
                         }});
@@ -391,14 +391,14 @@ public class PerformanceLogHandler {
                 if(res_2.containsKey(method)){
                     res_2.put(method,
                             (BasicDBObject) res_2.get(method)
-                                    .put(status, new BasicDBObject(){{
+                                    .put(Utilty.getStatus(status), new BasicDBObject(){{
                                         put("count", rs_2.getLong("cnt"));
                                         put("average", rs_2.getLong("avg"));
                                     }}));
                 }
                 else {
                     res_2.put(method, new BasicDBObject(){{
-                        put(status, new BasicDBObject(){{
+                        put(Utilty.getStatus(status), new BasicDBObject(){{
                             put("count", rs_2.getLong("cnt"));
                             put("average", rs_2.getLong("avg"));
                         }});

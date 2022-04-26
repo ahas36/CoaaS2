@@ -23,8 +23,10 @@ import java.util.logging.Logger;
 
 public class PushBasedExecutor {
 
-    private static Logger log = Logger.getLogger(PushBasedExecutor.class.getName());
+    // This is the cache switch
+    private static boolean cacheEnabled = true;
 
+    private static Logger log = Logger.getLogger(PushBasedExecutor.class.getName());
 
     public static CdqlResponse executePushBaseQuery(CDQLQuery query, String queryId) {
 

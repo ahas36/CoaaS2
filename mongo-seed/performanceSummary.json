@@ -1,0 +1,136 @@
+[
+  {
+    "csms": {
+      "handleContextRequest": {
+        "ok": {
+          "count": 20,
+          "average": 450
+        },
+        "error": {
+          "count": 4,
+          "average": 100
+        }
+      },
+      "discoverMatchingService": {
+        "ok": {
+          "count": 18,
+          "average": 100
+        }
+      },
+      "refreshContextEntity": {
+        "ok": {
+          "count": 10,
+          "average": 850
+        },
+        "error": {
+          "count": 1,
+          "average": 350
+        }
+      }
+    },
+    "coass": {
+      "execute": {
+        "ok": {
+          "count": 10,
+          "average": 850
+        }
+      },
+      "executeFetch": {
+        "ok": {
+          "count": 10,
+          "average": 850
+        },
+        "unauth": {
+          "count": 10,
+          "average": 850
+        }
+      }
+    },
+    "levels": {
+      "entity": {
+        "uhf93f36gbd392fg8bf209": {
+          "hits": 234,
+          "misses": 57,
+          "hitrate": 0.76982
+        },
+        "uhf93f36gbd3976g7f2499": {
+          "hits": 200,
+          "misses": 50,
+          "hitrate": 0.8000
+        },
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "situfunction": {
+        "uhf93f36gbd392fg8bf209": {
+          "hits": 234,
+          "misses": 57,
+          "hitrate": 0.76982
+        },
+        "uhf93f36gbd3976g7f2499": {
+          "hits": 200,
+          "misses": 50,
+          "hitrate": 0.8000
+        },
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "aggfunction": {
+        "uhf93f36gbd392fg8bf209": {
+          "hits": 234,
+          "misses": 57,
+          "hitrate": 0.76982
+        },
+        "uhf93f36gbd3976g7f2499": {
+          "hits": 200,
+          "misses": 50,
+          "hitrate": 0.8000
+        },
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "contextrequest": {
+        "uhf93f36gbd392fg8bf209": {
+          "hits": 234,
+          "misses": 57,
+          "hitrate": 0.76982
+        },
+        "uhf93f36gbd3976g7f2499": {
+          "hits": 200,
+          "misses": 50,
+          "hitrate": 0.8000
+        },
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "query": {
+        "uhf93f36gbd392fg8bf209": {
+          "hits": 234,
+          "misses": 57,
+          "hitrate": 0.76982
+        },
+        "uhf93f36gbd3976g7f2499": {
+          "hits": 200,
+          "misses": 50,
+          "hitrate": 0.8000
+        },
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      }
+    },
+    "summary": {
+      "gain": 220.0,
+      "avg_gain": 0.21,
+      "no_of_queries": 200,
+      "no_of_retrievals": 60,
+      "avg_query_overhead": 12424,
+      "avg_network_overhead": 463643,
+      "avg_processing_overhead": 745372
+    }
+  }
+]

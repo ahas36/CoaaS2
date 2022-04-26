@@ -48,76 +48,96 @@
     },
     "levels": {
       "entity": {
-        "uhf93f36gbd392fg8bf209": {
-          "hits": 234,
-          "misses": 57,
-          "hitrate": 0.76982
-        },
-        "uhf93f36gbd3976g7f2499": {
-          "hits": 200,
-          "misses": 50,
-          "hitrate": 0.8000
-        },
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
         "hitrate": 0.642,
         "hit_response_time": 345,
         "miss_response_time": 280
       },
       "situfunction": {
-        "uhf93f36gbd392fg8bf209": {
-          "hits": 234,
-          "misses": 57,
-          "hitrate": 0.76982
-        },
-        "uhf93f36gbd3976g7f2499": {
-          "hits": 200,
-          "misses": 50,
-          "hitrate": 0.8000
-        },
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
         "hitrate": 0.642,
         "hit_response_time": 345,
         "miss_response_time": 280
       },
       "aggfunction": {
-        "uhf93f36gbd392fg8bf209": {
-          "hits": 234,
-          "misses": 57,
-          "hitrate": 0.76982
-        },
-        "uhf93f36gbd3976g7f2499": {
-          "hits": 200,
-          "misses": 50,
-          "hitrate": 0.8000
-        },
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
         "hitrate": 0.642,
         "hit_response_time": 345,
         "miss_response_time": 280
       },
       "contextrequest": {
-        "uhf93f36gbd392fg8bf209": {
-          "hits": 234,
-          "misses": 57,
-          "hitrate": 0.76982
-        },
-        "uhf93f36gbd3976g7f2499": {
-          "hits": 200,
-          "misses": 50,
-          "hitrate": 0.8000
-        },
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
         "hitrate": 0.642,
         "hit_response_time": 345,
         "miss_response_time": 280
       },
       "query": {
-        "uhf93f36gbd392fg8bf209": {
-          "hits": 234,
-          "misses": 57,
-          "hitrate": 0.76982
-        },
-        "uhf93f36gbd3976g7f2499": {
-          "hits": 200,
-          "misses": 50,
-          "hitrate": 0.8000
-        },
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
         "hitrate": 0.642,
         "hit_response_time": 345,
         "miss_response_time": 280

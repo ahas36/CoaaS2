@@ -35,7 +35,7 @@ public class Utilty {
             case "200": return "ok";
             case "400": return "unauth";
             case "404": return "notfound";
-            case "500": return "error";
+            default: return "error";
         }
     }
 }

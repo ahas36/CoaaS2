@@ -464,14 +464,18 @@ public class PerformanceLogHandler {
                     else {
                         res_3.put(rs_3.getString("itemId"), new BasicDBObject(){{
                             put(isHit?"hits":"misses", curr_value);
+                            put("id", rs_3.getString("itemId"));
                         }});
                     }
                 }
 
-                res_3.put("hitrate", acc_hits/(acc_hits + acc_misses));
-                res_3.put("hit_response_time", res_avg_hit/acc_hits);
-                res_3.put("miss_response_time", res_avg_miss/acc_misses);
-                level_res.put(lvl.toString().toLowerCase(), new BasicDBObject(res_3));
+                HashMap<String, Object> res_lvl = new HashMap<>();
+
+                res_lvl.put("items", res_3.values());
+                res_lvl.put("hitrate", acc_hits/(acc_hits + acc_misses));
+                res_lvl.put("hit_response_time", res_avg_hit/acc_hits);
+                res_lvl.put("miss_response_time", res_avg_miss/acc_misses);
+                level_res.put(lvl.toString().toLowerCase(), new BasicDBObject(res_lvl));
             }
 
             persRecord.put("levels", level_res);

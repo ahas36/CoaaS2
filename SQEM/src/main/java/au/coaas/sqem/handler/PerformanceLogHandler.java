@@ -418,6 +418,9 @@ public class PerformanceLogHandler {
             double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
             dbo.put("gain", monetaryGain);
             dbo.put("avg_gain", monetaryGain / totalQueries);
+            dbo.put("earning", totalEarning);
+            dbo.put("penalty_cost", totalPenalties);
+            dbo.put("retrieval_cost", totalRetrievalCost);
 
             persRecord.put("summary", dbo);
 

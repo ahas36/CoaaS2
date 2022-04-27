@@ -1,0 +1,17 @@
+<div class="toolbar" role="banner">
+    <nav class="nav nav-pills nav-fill">
+        <h1>CoaaS Cache Performance</h1><br/>
+        <button class="btn" (click)=getOverallPerformance()>OVERALL</button>
+        <button class="btn" (click)=getCacheLevelBasedPerfromance()>CACHE LEVELS</button>
+        <button class="btn" (click)=getCSMSPerformance()>CSMS</button>
+    </nav>
+</div>
+
+<div class="content" role="main">
+    <div class="col-md-12">
+        <app-overall *ngIf="overall"></app-overall>
+        <app-cachelevels *ngIf="cache_level"></app-cachelevels>
+        <app-csms *ngIf="csms"></app-csms>
+    </div>
+</div>
+

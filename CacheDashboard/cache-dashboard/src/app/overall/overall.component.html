@@ -1,0 +1,62 @@
+<div class="content">
+    <div class="first-card">
+        <h1>Last Observation Period <sup><i class="fa fa-info-circle tooltip">
+            <span class="tooltiptext">Last observation period is a rolling window of 60 seconds (1 minute), during which the statictics of the query performance are gathered.</span>
+        </i></sup></h1>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{gain[gain.length-1]}}</h1>
+                    <h3> AUD</h3>
+                    <p>Total Gain or Loss <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Gain or loss in monetary value from responding to context queries during the last window.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{avg_gain[avg_gain.length-1]}}</h1>
+                    <h3> AUD</h3>
+                    <p>Gain or Loss Per Query <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Average Gain or loss in monetary value from responding to context queries during the last window.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{no_of_queries[no_of_queries.length-1]}}</h1>
+                    <h3> nos</h3>
+                    <p>Context Queries Responded <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Total number of context queries responded during the last window.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{no_of_retrievals[no_of_retrievals.length-1]}}</h1>
+                    <h3> nos</h3>
+                    <p>Number of Retrievals <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Total number of context retrievals occured during the last window.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{avg_query_overhead[avg_query_overhead.length-1]}}</h1>
+                    <h3> ms</h3>
+                    <p>Query Latency <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Average response time to a context query.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div> 
+</div>

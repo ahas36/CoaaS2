@@ -1,0 +1,14 @@
+.left_side{
+    background-color: black;
+    padding: 0px;
+}
+#header_h{
+    color: red;
+    margin-left: 30px;
+    text-align: left;
+}
+#header_s{
+    color: red;
+    margin-right: 20px;
+    text-align: right;
+}

@@ -150,7 +150,10 @@
       "no_of_retrievals": 60,
       "avg_query_overhead": 12424,
       "avg_network_overhead": 463643,
-      "avg_processing_overhead": 745372
+      "avg_processing_overhead": 745372,
+      "earning":  3435.0,
+      "penalty_cost": 3256.25,
+      "retrieval_cost": 8735.15
     }
   }
 ]

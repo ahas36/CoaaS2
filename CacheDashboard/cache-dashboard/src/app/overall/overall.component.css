@@ -1,0 +1,71 @@
+.content {
+    width: 80%;
+    margin-left: 30px;
+    margin-top: 150px;
+    text-align: center;
+}
+
+.first-card{
+    width: 1400px;
+    color: rgb(104, 104, 104);
+    text-align: left;
+}
+
+.first-card h1 {
+    margin-left: 10px;
+    font-family: 'Arial Narrow Bold', sans-serif;
+}
+
+.first-card .stat-card{
+    display: inline-block;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.stat-card {
+    width: 200px;
+    height: 75px;
+    align-content: center;
+}
+
+.metric{
+    margin-top: 10pt;
+}
+
+.metric h1 {
+    display: inline;  
+    font-size: 32pt;
+}
+
+.metric h3 {
+    display: inline;  
+    margin-top: -20pt;
+}
+
+.metric p {
+    margin-top: 0pt;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 200px;
+    background-color: rgba(113, 112, 112, 0.70);
+    font-size: small;
+    color: #fff;
+    text-align: left;
+    padding: 10px;
+    margin: 5px;
+    border-radius: 6px;
+    position: absolute;
+    font-family:'Courier New', Courier, monospace;
+    z-index: 1;
+  }
+  
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+  }

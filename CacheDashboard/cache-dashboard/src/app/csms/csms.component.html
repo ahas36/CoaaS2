@@ -1,0 +1,40 @@
+<div class="row">
+    <div class="col-md-3"></div>
+    <div class="col-md-6">
+        <div class="card" id="content1">
+            <i class='fas fa-viruses' style="font-size: 80px;"></i>
+            <h4>Total PCR Test : {{pcrcount | number:'2.'}}</h4>
+        </div>
+    </div>
+    <div class="col-md-3"></div>
+</div>
+
+<div class="row">
+    <div class="col-md-2"></div>
+    <div class="col-md-8">
+        <h5 class="text-center" style="margin-top: 20px;margin-bottom: 20px;">Evaluation of PCR Testings</h5>
+        <div class="span3 card">
+
+            <table class="table" style="width: 100%;">
+
+                <thead class="thead-dark">
+                    <tr>
+                        <th class="col1">Date</th>
+                        <th class="col2">No of PCR testings</th>
+                    </tr>
+                </thead>
+
+                <tbody class="thead-light">
+                    <tr *ngFor="let pcr of pcrList">
+                        <td class="col1">{{pcr.date}}</td>
+                        <td class="col2">{{pcr.count | number:'2.'}}</td>
+                    </tr>
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-2"></div>
+</div>
+
+

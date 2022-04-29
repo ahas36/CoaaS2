@@ -228,11 +228,16 @@ a:hover {
   box-shadow: 0px 3px 15px rgba(0, 0, 0, 0.2);
 }
 
-footer {
-  margin-top: 8px;
+.footer {
+  height: 100px;
   display: flex;
   align-items: center;
-  line-height: 20px;
+  background-color: #1976d2;
+  color: white;
+  font-weight: 600;
+  display: flex;
+  justify-content: center;
+  align-content: center;
 }
 
 footer a {

@@ -13,7 +13,8 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatCardModule } from '@angular/material/card';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatExpansionModule } from '@angular/material/expansion';
-import { ChartsModule } from 'ng2-charts';
+import { ChartsModule, ThemeService } from 'ng2-charts';
+import { ApiServiceService } from './services/api-service.service';
 
 @NgModule({
   declarations: [
@@ -32,9 +33,9 @@ import { ChartsModule } from 'ng2-charts';
     MatExpansionModule,
     MatCardModule,
     MatTabsModule,
-    ChartsModule,
+    ChartsModule 
   ],
-  providers: [],
+  providers: [ThemeService, ApiServiceService],
   bootstrap: [AppComponent]
 })
 

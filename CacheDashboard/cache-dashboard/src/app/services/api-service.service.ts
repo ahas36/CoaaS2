@@ -10,22 +10,27 @@ import { Observable, of } from 'rxjs';
 
 export class ApiServiceService {
 
+  apiData;
   csmsData;
   levelsData;
-  summaryData = new SummaryModel();
+  summaryData;
+  isReady = false;
 
   counter = 0;
   timeTicks:Queue<number> = new Queue<number>();
 
-  constructor(private http:HttpClient) { }
+  constructor(private http:HttpClient) {
+    this.summaryData = new SummaryModel();
+   }
 
   retrievePerformanceData(){
     this.counter += 1;
     this.timeTicks.push(this.counter);
+    this.apiData = this.http.get<PerfData>('https://cd1b7670-26ce-4766-88d4-867610c302e3.mock.pstmn.io/log/performance');
+  }
 
-    let apiData = this.http.get<PerfData>('https://5ca94f11-0239-495f-a486-ac28ef7f0d42.mock.pstmn.io/log/performance')
-
-    apiData.subscribe((res) => {
+  getPerformanceSummary() {
+    this.apiData.subscribe(res => {
       // Overall perfromance summary
       this.summaryData.avg_gain.push(res.summary.avg_gain);
       this.summaryData.gain.push(res.summary.gain);
@@ -55,12 +60,9 @@ export class ApiServiceService {
 
       // Cache level-wise statistics
       this.levelsData = res.levels;
-
     });
-  }
 
-  getPerformanceSummary(): Observable<SummaryModel>{
-    return of(this.summaryData);
+    return this.summaryData;
   }
 
   getCSMSPerformanceData() {

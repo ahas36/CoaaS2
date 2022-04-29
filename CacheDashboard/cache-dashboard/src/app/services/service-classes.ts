@@ -68,7 +68,7 @@ export class Status{
 
 export class Queue<T> {
     private size = 10;
-    private _store: T[] = [];
+    _store: T[] = [];
     
     public push(val: T) {
         if(this._store.length >= 10){

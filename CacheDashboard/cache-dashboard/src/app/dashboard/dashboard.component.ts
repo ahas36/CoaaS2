@@ -12,7 +12,7 @@ export class DashboardComponent implements OnInit {
   cache_level = false;
   csms = false;
 
-  constructor(private api_service:ApiServiceService) { 
+  constructor(private api_service:ApiServiceService) {
     this.api_service.retrievePerformanceData();
   }
   

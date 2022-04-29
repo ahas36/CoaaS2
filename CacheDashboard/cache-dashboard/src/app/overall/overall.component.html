@@ -65,15 +65,19 @@
             <mat-card-content class="description">
                 <div>
                     <h2>Cost Breakdown</h2>
-                    <canvas baseChart 
-                        width = 360px
-                        height = 500px
+                    <div style="margin-left:30px">
+                        <canvas baseChart 
+                        width = 230px
+                        height = 230px
                         [data]="pieChartData"
-                        [colors]="pieChartColors"
                         [labels]="pieChartLabels" 
-                        [legend]="pieChartLegend"
+                        [colors]="pieChartColors"
+                        [legend]="false"
+                        [options]="pieChartOptions"
+                        [plugins]="pieChartPlugins"
                         [chartType]="pieChartType">
                     </canvas>
+                    </div>
                 </div>
             </mat-card-content>
         </mat-card>
@@ -83,7 +87,7 @@
                     <div class="metric">
                         <h1>{{earning[earning.length-1]}}</h1>
                         <h3> AUD</h3>
-                        <p>Earning</p>
+                        <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Earning </p>
                     </div>
                 </mat-card-content>
             </mat-card>
@@ -92,7 +96,7 @@
                     <div class="metric">
                         <h1>{{retrieval_cost[retrieval_cost.length-1]}}</h1>
                         <h3> AUD</h3>
-                        <p>Retrieval Cost</p>
+                        <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Retrieval Cost </p>
                     </div>
                 </mat-card-content>
             </mat-card>
@@ -101,7 +105,7 @@
                     <div class="metric">
                         <h1>{{penalty_cost[penalty_cost.length-1]}}</h1>
                         <h3> AUD</h3>
-                        <p>Penalty Cost</p>
+                        <p><i class="fa fa-circle" style="color:rgb(234, 196, 1, 0.6)"></i>   Penalty Cost </p>
                     </div>
                 </mat-card-content>
             </mat-card>

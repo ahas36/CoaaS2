@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
-import { ChartDataSets, ChartOptions, ChartType } from 'chart.js';
-import { Color, Label } from 'ng2-charts';
+import { ChartData, ChartDataSets, ChartOptions, ChartType } from 'chart.js';
+import { Color, Label, monkeyPatchChartJsLegend, monkeyPatchChartJsTooltip, SingleDataSet } from 'ng2-charts';
 import { ApiServiceService } from '../services/api-service.service';
-import { SummaryModel } from '../services/service-view-models';
 
 @Component({
   selector: 'app-overall',
@@ -41,10 +40,14 @@ export class OverallComponent implements OnInit {
   public line3ChartData: ChartDataSets[] = [];
   public line4ChartData: ChartDataSets[] = [];
 
-  public pieChartData: ChartDataSets[] = [];
-  public pieChartLabels: Label[] = ['Gain', 'Earning', 'Retrieval Cost', 'Penalty Cost'];
-  public pieChartType: ChartType = 'pie';
-  public pieChartLegend = false;
+  public pieChartData: SingleDataSet; 
+  public pieChartType: ChartType = 'doughnut';
+  public pieChartLegend = true;
+  public pieChartLabels: Label[] = ['Earning', 'Retrieval Cost', 'Penalty Cost'];
+  public pieChartOptions: ChartOptions = {
+    responsive: true,
+  };
+  public pieChartPlugins = [];
 
   public doughnutChartType: ChartType = 'doughnut';
   
@@ -65,14 +68,8 @@ export class OverallComponent implements OnInit {
 
   public pieChartColors: Color[] = [
     {
-      backgroundColor: 'rgb(0, 194, 255, 0.6)',
-    },
-    {
-      backgroundColor: 'rgb(17, 192, 45, 0.6)',
-    },
-    {
-      backgroundColor: 'rgb(234, 196, 1, 0.6)',
-    },
+      backgroundColor: ['rgb(0, 194, 255, 0.6)', 'rgb(17, 192, 45, 0.6)', 'rgb(234, 196, 1, 0.6)']
+    }
   ];
 
   public lineChartLabels: Label[];
@@ -135,7 +132,10 @@ export class OverallComponent implements OnInit {
   public lineChartType = 'line';
   public lineChartPlugins = [];
 
-  constructor(private serviceAPI: ApiServiceService) {}
+  constructor(private serviceAPI: ApiServiceService) {
+    monkeyPatchChartJsTooltip();
+    monkeyPatchChartJsLegend();
+  }
 
   ngOnInit() {  
     let data = this.serviceAPI.getPerformanceSummary(); 
@@ -164,6 +164,9 @@ export class OverallComponent implements OnInit {
       // + current earning
       // + current penalty
       // + current retriveal cost 
+
+      this.pieChartData = data.currentCosts;
+
       this.costearningratio = data.costearningratio.get();
       this.line4ChartData.push({ data: this.costearningratio, label: 'Cost to Earning Ration' }); 
 
@@ -185,21 +188,11 @@ export class OverallComponent implements OnInit {
 
       // General
       this.timeTicks = data.timeTicks.get();
-      this.assignData();
+
     }
     catch(ex){
       // Code here
       console.log('An error occured!'+ ex);
     }
   }
-
-  assignData(){
-    this.pieChartData.push(this.earning[this.earning-1]);
-    this.pieChartData.push(this.retrieval_cost[this.retrieval_cost-1]);
-    this.pieChartData.push(this.penalty_cost[this.penalty_cost-1]);
-    
-    console.log('NO:'+this.network_overhead_ratio);
-
-  }
-
 }

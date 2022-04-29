@@ -2,7 +2,6 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { PerfData, Queue } from './service-classes';
 import { SummaryModel } from './service-view-models';
-import { Observable, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -15,6 +14,7 @@ export class ApiServiceService {
   levelsData;
   summaryData;
   isReady = false;
+  currentCosts;
 
   counter = 0;
   timeTicks:Queue<number> = new Queue<number>();
@@ -54,6 +54,10 @@ export class ApiServiceService {
       this.summaryData.network_overhead_ratio.push(oh_2_ratio);
 
       this.summaryData.timeTicks.push(this.counter);
+
+      this.summaryData.currentCosts.push(res.summary.earning);
+      this.summaryData.currentCosts.push(res.summary.retrieval_cost);
+      this.summaryData.currentCosts.push(res.summary.penalty_cost);
 
       // CSMS Statistics
       this.csmsData = res.csms;

@@ -20,6 +20,7 @@ export class SummaryModel{
   public network_overhead_ratio: Queue<number>;
 
   public timeTicks:Queue<number>;
+  public currentCosts;
     
     constructor(){
       this.gain = new Queue<number>();
@@ -39,6 +40,7 @@ export class SummaryModel{
       this.network_overhead_ratio = new Queue<number>();
 
       this.timeTicks = new Queue<number>();
+      this.currentCosts = [];
     }
     
   }

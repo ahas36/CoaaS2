@@ -62,6 +62,7 @@ public class CQCInterceptor implements ServerInterceptor {
                             .setStatus(res.getStatus()).setIdentifier(res.getQueryId())
                             .setCost(penalty) // This is penalty
                             .setEarning(earning) // This is earning
+                            .setIsDelayed(penalty>0 ? true: false)
                             .build());
                     break;
                 }

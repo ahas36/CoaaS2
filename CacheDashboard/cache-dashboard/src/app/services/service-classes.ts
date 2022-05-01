@@ -45,6 +45,7 @@ export class Summary{
   public gain: number;
   public avg_gain: number;
   public no_of_queries: number;
+  public delayed_queries: number;
   public no_of_retrievals: number;
   public avg_query_overhead: number;
   public avg_network_overhead: number;

@@ -139,6 +139,7 @@ public class PerformanceLogHandler {
                         records.put("identifier", rs.getString("identifier"));
                         records.put("earning", rs.getString("earning"));
                         records.put("cost", rs.getString("cost"));
+                        records.put("isdelayed", rs.getBoolean("isDelayed"));
                     }
                 }
                 else {
@@ -216,7 +217,7 @@ public class PerformanceLogHandler {
     public static void coassPerformanceRecord(Statistic request) {
 
         Connection connection = null;
-        String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %f, %f, %s, %s, datetime('now'))";
+        String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %f, %f, %s, %s, datetime('now'), %d)";
 
         try{
             connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -230,7 +231,7 @@ public class PerformanceLogHandler {
                     // Value at the Identifier column here is the Query ID
                     statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(),
                             request.getEarning(), request.getCost(),
-                            request.getIdentifier(), "NULL"));
+                            request.getIdentifier(), "NULL", request.getIsDelayed()));
                     break;
                 }
                 case "executeFetch": {
@@ -241,7 +242,7 @@ public class PerformanceLogHandler {
 
                     // Value at the Identifier column here is the Context Service ID
                     statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(),
-                            request.getEarning(), request.getCost(), cs_id, hashKey));
+                            request.getEarning(), request.getCost(), cs_id, hashKey, 0));
                     break;
                 }
             }
@@ -287,7 +288,8 @@ public class PerformanceLogHandler {
                     "earning REAL NULL, cost REAL NULL, " +
                     "identifier TEXT NOT NULL, " +
                     "hashKey TEXT NULL, " +
-                    "createdDatetime DATETIME NOT NULL, PRIMARY KEY (id))");
+                    "createdDatetime DATETIME NOT NULL, " +
+                    "isDelayed BOOLEAN NOT NULL, PRIMARY KEY (id))");
 
             for(LogicalContextLevel level : LogicalContextLevel.values()){
                 statement.executeUpdate(String.format("CREATE TABLE %s (" +
@@ -353,7 +355,7 @@ public class PerformanceLogHandler {
 
             // Overall COASS performance
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
-                    "COUNT(id) AS cnt, AVERAGE(response_time) AS avg, SUM(earning) AS tearn, SUM(cost) AS tcost" +
+                    "COUNT(id) AS cnt, AVERAGE(response_time) AS avg, SUM(earning) AS tearn, SUM(cost) AS tcost, SUM(isDelayed) AS tdelay" +
                     "FROM coass_performance " +
                     "GROUP BY (method, status)");
 
@@ -367,6 +369,8 @@ public class PerformanceLogHandler {
             long queryOverhead = 0;
             long totalNetworkOverhead = 0;
 
+            long delayedResponses = 0;
+
             HashMap<String, BasicDBObject> res_2 = new HashMap<>();
             while(rs_2.next()){
                 String method = rs_2.getString("method");
@@ -375,6 +379,8 @@ public class PerformanceLogHandler {
                 if(method == "execute"){
                     totalQueries += rs_2.getLong("cnt");
                     queryOverhead += (rs_2.getLong("avg")*rs_2.getLong("cnt"));
+                    delayedResponses += rs_2.getLong("tdelay");
+
                     if(status == "200"){
                         totalEarning += rs_2.getDouble("tearn");
                         totalPenalties += rs_2.getDouble("tcost");
@@ -410,6 +416,7 @@ public class PerformanceLogHandler {
 
             BasicDBObject dbo = new BasicDBObject();
             dbo.put("no_of_queries", totalQueries);
+            dbo.put("delayed_queries", delayedResponses);
             dbo.put("no_of_retrievals", totalRetrievals);
             dbo.put("avg_query_overhead", queryOverhead / totalQueries);
             dbo.put("avg_network_overhead", totalNetworkOverhead / totalRetrievals);

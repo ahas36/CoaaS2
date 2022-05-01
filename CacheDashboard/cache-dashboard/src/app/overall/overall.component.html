@@ -110,7 +110,6 @@
                 </mat-card-content>
             </mat-card>
         </div>
-
         <mat-card class="chart-card-2" style="width:550px;">
             <mat-card-content>
                 <div class="chart-line" style="width:520px; height:100px !important;">
@@ -209,5 +208,55 @@
         </mat-card>
     </div>
     <br/>
+    <div class="grid-container">
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Response Latency - Delay Rate</h2>
+                    <canvas baseChart
+                        width = 350px
+                        height = 330px
+                        [legend]="false"
+                        [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                        [datasets]="scatter1ChartData"
+                        [chartType]="scatterChartType"
+                        [options]="scatter1ChartOptions">
+                    </canvas>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Network Overhead - Delay Rate</h2>
+                    <canvas baseChart
+                        width = 350px
+                        height = 330px
+                        [legend]="false"
+                        [colors]="ChartColors"
+                        [datasets]="scatter2ChartData"
+                        [chartType]="scatterChartType"
+                        [options]="scatter2ChartOptions">
+                    </canvas>        
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Processing Overhead - Delay Rate</h2>
+                    <canvas baseChart
+                        width = 350px
+                        height = 330px
+                        [legend]="false"
+                        [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                        [datasets]="scatter3ChartData"
+                        [chartType]="scatterChartType"
+                        [options]="scatter3ChartOptions">
+                    </canvas>      
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div>
     
 </div>

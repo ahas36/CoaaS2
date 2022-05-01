@@ -147,6 +147,7 @@
       "gain": 220.0,
       "avg_gain": 0.21,
       "no_of_queries": 200,
+      "delayed_queries": 20,
       "no_of_retrievals": 60,
       "avg_query_overhead": 12424,
       "avg_network_overhead": 463643,

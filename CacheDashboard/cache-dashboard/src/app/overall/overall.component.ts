@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ChartData, ChartDataSets, ChartOptions, ChartType } from 'chart.js';
 import { Color, Label, monkeyPatchChartJsLegend, monkeyPatchChartJsTooltip, SingleDataSet } from 'ng2-charts';
 import { ApiServiceService } from '../services/api-service.service';
@@ -9,8 +9,6 @@ import { ApiServiceService } from '../services/api-service.service';
   styleUrls: ['./overall.component.css']
 })
 export class OverallComponent implements OnInit {
-
-  private apiService;
 
   gain;
   avg_gain
@@ -35,13 +33,38 @@ export class OverallComponent implements OnInit {
 
   isGreater = false;
 
+  public lineChartType = 'line';
+  public pieChartType: ChartType = 'pie';
+  public scatterChartType: ChartType = 'scatter';
+  public doughnutChartType: ChartType = 'doughnut';
+
   public lineChartData: ChartDataSets[] = [];
   public line2ChartData: ChartDataSets[] = [];
   public line3ChartData: ChartDataSets[] = [];
   public line4ChartData: ChartDataSets[] = [];
 
   public pieChartData: SingleDataSet; 
-  public pieChartType: ChartType = 'doughnut';
+
+  public scatter1Data = {
+    'data': [],
+    'label': 'Query Latency - Delay Rate',
+    'pointRadius': 5 
+  };
+  public scatter2Data = {
+    'data': [],
+    'label': 'Network Overhead - Delay Rate',
+    'pointRadius': 5 
+  };;
+  public scatter3Data = {
+    'data': [],
+    'label': 'Processing Overhead - Delay Rate',
+    'pointRadius': 5 
+  };;
+
+  public scatter1ChartData: ChartDataSets[] = [];
+  public scatter2ChartData: ChartDataSets[] = [];
+  public scatter3ChartData: ChartDataSets[] = [];
+  
   public pieChartLegend = true;
   public pieChartLabels: Label[] = ['Earning', 'Retrieval Cost', 'Penalty Cost'];
   public pieChartOptions: ChartOptions = {
@@ -49,8 +72,6 @@ export class OverallComponent implements OnInit {
   };
   public pieChartPlugins = [];
 
-  public doughnutChartType: ChartType = 'doughnut';
-  
   public ChartColors: Color[] = [
     {
       backgroundColor: 'rgba(255,0,0,0.6)',
@@ -128,16 +149,74 @@ export class OverallComponent implements OnInit {
     }
   };
 
+  public scatter1ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Delay Rate'
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Query Latency (ms)'
+        }
+      }]
+    }
+  };
+
+  public scatter2ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Delay Rate'
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Network Overhard (ms)'
+        }
+      }]
+    }
+  };
+
+  public scatter3ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Delay Rate'
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Processing Overhead (ms)'
+        }
+      }]
+    }
+  };
+
   public lineChartLegend = true;
-  public lineChartType = 'line';
   public lineChartPlugins = [];
 
-  constructor(private serviceAPI: ApiServiceService) {
+  constructor(private serviceAPI: ApiServiceService, private ref: ChangeDetectorRef) {
     monkeyPatchChartJsTooltip();
     monkeyPatchChartJsLegend();
   }
 
-  ngOnInit() {  
+
+  ngOnInit() { 
+    this.updateData();
+  }
+
+  updateData(){
     let data = this.serviceAPI.getPerformanceSummary(); 
 
     try{
@@ -175,16 +254,26 @@ export class OverallComponent implements OnInit {
       this.line2ChartData.push({ data: this.avg_query_overhead, label: 'Query Latency' }); 
 
       this.avg_network_overhead = data.avg_network_overhead.get();
-      this.line2ChartData.push({ data: this.avg_network_overhead, label: 'Network Latency' }); 
+      this.line2ChartData.push({ data: this.avg_network_overhead, label: 'Network Overhead' }); 
 
       this.avg_processing_overhead = data.avg_processing_overhead.get();
-      this.line2ChartData.push({ data: this.avg_processing_overhead, label: 'Processing Latency' }); 
+      this.line2ChartData.push({ data: this.avg_processing_overhead, label: 'Processing Overhead' }); 
 
       this.processing_overhead_ratio = data.processing_overhead_ratio.get();
       this.line3ChartData.push({ data: this.earning, label: 'Processing Overhead Ratio' }); 
 
       this.network_overhead_ratio = data.network_overhead_ratio.get();
       this.line3ChartData.push({ data: this.earning, label: 'Network Overhead Ratio' }); 
+
+      // 5th
+      this.scatter1Data.data = data.rt_pod;
+      this.scatter1ChartData.push(this.scatter1Data);
+
+      this.scatter2Data.data = data.noh_pod;
+      this.scatter2ChartData.push(this.scatter2Data);
+
+      this.scatter3Data.data = data.poh_pod;
+      this.scatter3ChartData.push(this.scatter3Data);
 
       // General
       this.timeTicks = data.timeTicks.get();
@@ -195,4 +284,5 @@ export class OverallComponent implements OnInit {
       console.log('An error occured!'+ ex);
     }
   }
+
 }

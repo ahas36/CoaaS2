@@ -19,6 +19,10 @@ export class SummaryModel{
   public processing_overhead_ratio: Queue<number>;
   public network_overhead_ratio: Queue<number>;
 
+  public rt_pod;
+  public noh_pod;
+  public poh_pod;
+
   public timeTicks:Queue<number>;
   public currentCosts;
     
@@ -38,6 +42,10 @@ export class SummaryModel{
       this.avg_processing_overhead = new Queue<number>();
       this.processing_overhead_ratio = new Queue<number>();
       this.network_overhead_ratio = new Queue<number>();
+
+      this.rt_pod = [];
+      this.noh_pod = [];
+      this.poh_pod = [];
 
       this.timeTicks = new Queue<number>();
       this.currentCosts = [];

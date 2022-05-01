@@ -1,42 +1,182 @@
-<div class="row">
-    <div class="col-md-6">
-        <div class="card" id="content1">
-            <i class='fas fa-heartbeat' style="font-size: 80px;"></i>
-            <h4>Total recorded cases : {{localtotalcases | number:'2.'}}</h4>
+<div class="content">
+    <div class="grid-container">
+        <h1><i class="fa fa-circle tooltip" style="color:rgba(255,0,0,0.6)"></i>  Context Query Level <sup><i class="fa fa-info-circle tooltip">
+            <span class="tooltiptext">Cachability of Context Query Responses.</span>
+        </i></sup></h1>
+        <div style="display:inline-block">
+            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                        <h3> </h3>
+                        <p>Hit Rate </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                        <h3> ms</h3>
+                        <p>Cache Seek Time </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
         </div>
+        <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+            <mat-card-content>
+                <div class="chart-line" style="width:890px; height:80px !important;">
+                    <h2>HR Variation</h2>
+                    <canvas baseChart
+                        height = 57px
+                        [datasets]="entityHRChartData"
+                        [labels]="timeTicks"
+                        [colors]="ChartColors"
+                        [legend]="false"
+                        [options]="hrVariationChart"
+                        [chartType]="lineChartType"
+                        [plugins]="chartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
     </div>
-    <div class="col-md-6">
-        <div class="card" id="content1">
-            <i class='fas fa-notes-medical' style="font-size: 80px;"></i>
-            <h4>Total recorded deaths : {{localdeaths | number:'2.'}} </h4>
+    <br/>
+    <div class="grid-container">
+        <div style="display:inline-block">
+            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                        <h3> ms</h3>
+                        <p>Cache Miss Response Time </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                        <h3> nos</h3>
+                        <p>Number of Entities Cached </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
         </div>
+        <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+            <mat-card-content>
+                <div class="chart-line" style="width:890px; height:80px !important;">
+                    <h2>Cache Seek Time Variation</h2>
+                    <canvas baseChart
+                        height = 57px
+                        [datasets]="entitySeekChartData"
+                        [labels]="timeTicks"
+                        [colors]="ChartColors"
+                        [legend]="false"
+                        [options]="rtVariationChart"
+                        [chartType]="lineChartType"
+                        [plugins]="chartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
     </div>
-</div>
-<div class="row">
-    <div class="col-md-6">
-        <div class="card" id="content1">
-            <i class='fas fa-file-medical' style="font-size: 80px;"></i>
-            <h4>Total recovered cases : {{localrecovered | number:'2.'}}</h4>
-        </div>
+    <br/>
+    <div class="grid-container">
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Hit rate - Hits</h2>
+                    <canvas baseChart
+                        width = 350px
+                        height = 330px
+                        [legend]="false"
+                        [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                        [datasets]="entityhitshrChartData"
+                        [chartType]="scatterChartType"
+                        [options]="scatterChartOptions">
+                    </canvas>      
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card-2" style="width:790px; height: 400px;">
+            <mat-card-content>
+                <div class="chart-line" style="width:770px; height:80px !important;">
+                    <h2>Variation of Number of Cached Entities</h2>
+                    <canvas baseChart
+                        height = 125px
+                        [datasets]="entitynosChartData"
+                        [labels]="timeTicks"
+                        [colors]="ChartColors"
+                        [legend]="false"
+                        [options]="itemsChart"
+                        [chartType]="lineChartType"
+                        [plugins]="chartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
     </div>
-    <div class="col-md-6">
-        <div class="card" id="content1">
-            <i class='fas fa-viruses' style="font-size: 80px;"></i>
-            <h4>Total active cases : {{localactive | number:'2.'}}</h4>
-        </div>
+    <br/>
+    <div class="grid-container">
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Hits Distribution</h2>
+                    <canvas baseChart 
+                        width = 350px
+                        height = 330px
+                        [datasets]="entityhitsChartData"
+                        [labels]="barChartLabels"
+                        [options]="itemHitsChart"
+                        [plugins]="chartPlugins"
+                        [legend]="false"
+                        [chartType]="barChartType">
+                    </canvas>     
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Misses Distribution</h2>
+                    <canvas baseChart 
+                        width = 350px
+                        height = 330px
+                        [datasets]="entitymissesChartData"
+                        [labels]="barChartLabels"
+                        [options]="itemMissChart"
+                        [plugins]="chartPlugins"
+                        [legend]="false"
+                        [chartType]="barChartType">
+                    </canvas>     
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Hit Rate Distribution</h2>
+                    <canvas baseChart 
+                        width = 350px
+                        height = 330px
+                        [datasets]="entityhrChartData"
+                        [labels]="barChartLabels"
+                        [options]="itemHRChart"
+                        [plugins]="chartPlugins"
+                        [legend]="false"
+                        [chartType]="barChartType">
+                    </canvas>     
+                </div>
+            </mat-card-content>
+        </mat-card>
+
     </div>
-</div>
-<div class="row">
-    <div class="col-md-6">
-        <div class="card" id="content1">
-            <i class='fas fa-plus' style="font-size: 80px;"></i>
-            <h4>Total newly recorded cases today: {{localnewcases | number:'2.'}}</h4>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="card" id="content1">
-            <i class='far fa-heart' style="font-size: 80px;"></i>
-            <h4>Total newly recorded deaths today : {{localnewdeaths | number:'2.'}}</h4>
-        </div>
-    </div>
+
+    <br/><br/>
+
+
+
+
+
 </div>

@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { PerfData, Queue } from './service-classes';
-import { CSMSModel, SummaryModel } from './service-view-models';
+import { CSMSModel, LevelsModel, SummaryModel } from './service-view-models';
 
 @Injectable({
   providedIn: 'root'
@@ -26,11 +26,12 @@ export class ApiServiceService {
   constructor(private http:HttpClient) {
     this.summaryData = new SummaryModel();
     this.csmsData = new CSMSModel();
+    this.levelsData = new LevelsModel();
 
     this.summaryInit = true;
+    this.levelsInit = true;
     this.csmsInit = true;
 
-    // levelsInit = false;
     // this.triggerRefreshing();
   }
 
@@ -149,6 +150,8 @@ export class ApiServiceService {
         this.csmsData.cur_rce_break.push(res.csms.handleContextRequest.ok.count);
         this.csmsData.cur_rce_break.push(rcetotal-res.csms.handleContextRequest.ok.count);
 
+        this.csmsData.timeTicks.push(this.counter);
+
       });
     }
     
@@ -158,20 +161,97 @@ export class ApiServiceService {
   }
 
   getCacheLevelPerformanceData(){
-    if(this.newDataReady || this.levelsData == undefined){
+    if(this.newDataReady || this.levelsInit){
       this.apiData.subscribe(res => {
         // Cache level-wise statistics
-        this.levelsData = res.levels;
+        this.levelsData.entity_hr.push(res.levels.entity.hitrate);
+        this.levelsData.entity_hit_rt.push(res.levels.entity.hit_response_time);
+        this.levelsData.entity_miss_rt.push(res.levels.entity.miss_response_time);
+        this.levelsData.entity_cached.push(res.levels.entity.items.length);
+        this.levelsData.entity_items = res.levels.entity.items;
+        this.levelsData.entity_hits_hr = [];
+        this.levelsData.entity_items_hits = [];
+        this.levelsData.entity_items_miss = [];
+        this.levelsData.entity_items_hr = [];
+        for(const element of res.levels.entity.items){
+          console.log('iterated');
+          this.levelsData.entity_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+          this.levelsData.entity_items_hits.push(element.hits);
+          this.levelsData.entity_items_miss.push(element.misses);
+          this.levelsData.entity_items_hr.push(element.hitrate);
+        }
+
+        this.levelsData.situfunc_hr.push(res.levels.situfunction.hitrate);
+        this.levelsData.situfunc_hit_rt.push(res.levels.situfunction.hit_response_time);
+        this.levelsData.situfunc_miss_rt.push(res.levels.situfunction.miss_response_time);
+        this.levelsData.situfunc_cached.push(res.levels.situfunction.items.length);
+        this.levelsData.situfunc_items = res.levels.situfunction.items;
+        this.levelsData.situfunc_hits_hr = [];
+        this.levelsData.situfunc_items_hits = [];
+        this.levelsData.situfunc_items_miss = [];
+        this.levelsData.situfunc_items_hr = [];
+        for(const element of this.levelsData.situfunc_items){
+          this.levelsData.situfunc_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+          this.levelsData.situfunc_items_hits.push(element.hits);
+          this.levelsData.situfunc_items_miss.push(element.misses);
+          this.levelsData.situfunc_items_hr.push(element.hitrate);
+        }
+
+        this.levelsData.aggfunc_hr.push(res.levels.aggfunction.hitrate);
+        this.levelsData.aggfunc_hit_rt.push(res.levels.aggfunction.hit_response_time);
+        this.levelsData.aggfunc_miss_rt.push(res.levels.aggfunction.miss_response_time);
+        this.levelsData.aggfunc_cached.push(res.levels.aggfunction.items.length);
+        this.levelsData.aggfunc_items = res.levels.aggfunction.items;
+        this.levelsData.aggfunc_hits_hr = [];
+          this.levelsData.aggfunc_items_hits = [];
+          this.levelsData.aggfunc_items_miss = [];
+          this.levelsData.aggfunc_items_hr = [];
+        for(const element of this.levelsData.aggfunc_items){
+          this.levelsData.aggfunc_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+          this.levelsData.aggfunc_items_hits.push(element.hits);
+          this.levelsData.aggfunc_items_miss.push(element.misses);
+          this.levelsData.aggfunc_items_hr.push(element.hitrate);
+        }
+
+        this.levelsData.cr_hr.push(res.levels.contextrequest.hitrate);
+        this.levelsData.cr_hit_rt.push(res.levels.contextrequest.hit_response_time);
+        this.levelsData.cr_miss_rt.push(res.levels.contextrequest.miss_response_time);
+        this.levelsData.cr_cached.push(res.levels.contextrequest.items.length);
+        this.levelsData.cr_items = res.levels.contextrequest.items;
+        this.levelsData.cr_hits_hr = [];
+        this.levelsData.cr_items_hits = [];
+        this.levelsData.cr_items_miss = [];
+        this.levelsData.cr_items_hr = [];
+        for(const element of this.levelsData.cr_items){
+          this.levelsData.cr_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+          this.levelsData.cr_items_hits.push(element.hits);
+          this.levelsData.cr_items_miss.push(element.misses);
+          this.levelsData.cr_items_hr.push(element.hitrate);
+        }
+
+        this.levelsData.q_hr.push(res.levels.query.hitrate);
+        this.levelsData.q_hit_rt.push(res.levels.query.hit_response_time);
+        this.levelsData.q_miss_rt.push(res.levels.query.miss_response_time);
+        this.levelsData.q_cached.push(res.levels.query.items.length);
+        this.levelsData.q_items = res.levels.query.items;
+        this.levelsData.q_hits_hr = [];
+        this.levelsData.q_items_hits = [];
+        this.levelsData.q_items_miss = [];
+        this.levelsData.q_items_hr = [];
+        for(const element of this.levelsData.q_items){
+          this.levelsData.q_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+          this.levelsData.q_items_hits.push(element.hits);
+          this.levelsData.q_items_miss.push(element.misses);
+          this.levelsData.q_items_hr.push(element.hitrate);
+        }
+
+        this.levelsData.timeTicks.push(this.counter);
       });
     }
     
     this.newDataReady = false;
     this.levelsInit = false;
     return this.levelsData;
-  }
-
-  round(num, decimalPlaces = 2) {
-    return Number(num + "e" + -decimalPlaces);
   }
 
 }

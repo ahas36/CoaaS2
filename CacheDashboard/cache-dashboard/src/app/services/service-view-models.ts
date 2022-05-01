@@ -97,3 +97,88 @@ export class CSMSModel{
     this.timeTicks = new Queue<number>();
   }   
 }
+
+@Injectable()
+export class LevelsModel{
+  public entity_hr: Queue<number>;
+  public entity_hit_rt: Queue<number>;
+  public entity_miss_rt: Queue<number>;
+  public entity_cached: Queue<number>;
+  public entity_items;
+  public entity_hits_hr;
+  public entity_items_hits;
+  public entity_items_miss;
+  public entity_items_hr;
+
+
+  public situfunc_hr: Queue<number>;
+  public situfunc_hit_rt: Queue<number>;
+  public situfunc_miss_rt: Queue<number>;
+  public situfunc_cached: Queue<number>;
+  public situfunc_items;
+  public situfunc_hits_hr;
+  public situfunc_items_hits;
+  public situfunc_items_miss;
+  public situfunc_items_hr;
+
+  public aggfunc_hr: Queue<number>;
+  public aggfunc_hit_rt: Queue<number>;
+  public aggfunc_miss_rt: Queue<number>;
+  public aggfunc_cached: Queue<number>;
+  public aggfunc_items;
+  public aggfunc_hits_hr;
+  public aggfunc_items_hits;
+  public aggfunc_items_miss;
+  public aggfunc_items_hr;
+
+  public cr_hr: Queue<number>;
+  public cr_hit_rt: Queue<number>;
+  public cr_miss_rt: Queue<number>;
+  public cr_cached: Queue<number>;
+  public cr_items;
+  public cr_hits_hr;
+  public cr_items_hits;
+  public cr_items_miss;
+  public cr_items_hr;
+
+  public q_hr: Queue<number>;
+  public q_hit_rt: Queue<number>;
+  public q_miss_rt: Queue<number>;
+  public q_cached: Queue<number>;
+  public q_items;
+  public q_hits_hr;
+  public q_items_hits;
+  public q_items_miss;
+  public q_items_hr;
+
+  public timeTicks: Queue<number>;
+    
+  constructor(){
+    this.entity_hr = new Queue<number>();
+    this.entity_hit_rt = new Queue<number>();
+    this.entity_miss_rt = new Queue<number>();
+    this.entity_cached = new Queue<number>();
+
+    this.situfunc_hr = new Queue<number>();
+    this.situfunc_hit_rt = new Queue<number>();
+    this.situfunc_miss_rt = new Queue<number>();
+    this.situfunc_cached = new Queue<number>();
+
+    this.aggfunc_hr = new Queue<number>();
+    this.aggfunc_hit_rt = new Queue<number>();
+    this.aggfunc_miss_rt = new Queue<number>();
+    this.aggfunc_cached = new Queue<number>();
+
+    this.cr_hr = new Queue<number>();
+    this.cr_hit_rt = new Queue<number>();
+    this.cr_miss_rt = new Queue<number>();
+    this.cr_cached = new Queue<number>();
+
+    this.q_hr = new Queue<number>();
+    this.q_hit_rt = new Queue<number>();
+    this.q_miss_rt = new Queue<number>();
+    this.q_cached = new Queue<number>();
+
+    this.timeTicks = new Queue<number>();
+  }   
+}

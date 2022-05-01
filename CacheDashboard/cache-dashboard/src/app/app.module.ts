@@ -15,6 +15,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { ChartsModule, ThemeService } from 'ng2-charts';
 import { ApiServiceService } from './services/api-service.service';
+import { RefreshService } from './refreshservice/refresh.service';
 
 @NgModule({
   declarations: [
@@ -35,7 +36,7 @@ import { ApiServiceService } from './services/api-service.service';
     MatTabsModule,
     ChartsModule 
   ],
-  providers: [ThemeService, ApiServiceService],
+  providers: [ThemeService, ApiServiceService, RefreshService],
   bootstrap: [AppComponent]
 })
 

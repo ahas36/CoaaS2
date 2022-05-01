@@ -1,40 +1,269 @@
-<div class="row">
-    <div class="col-md-3"></div>
-    <div class="col-md-6">
-        <div class="card" id="content1">
-            <i class='fas fa-viruses' style="font-size: 80px;"></i>
-            <h4>Total PCR Test : {{pcrcount | number:'2.'}}</h4>
+<div class="content">
+    <div class="grid-container">
+        <h1>Handle Context Requests <sup><i class="fa fa-info-circle tooltip">
+            <span class="tooltiptext">Process that handle retrieving and processing context requests for an entity.</span>
+        </i></sup></h1> 
+        
+        <mat-card class="chart-card-2" style="width:305px;">
+            <mat-card-content class="description">
+                <div>
+                    <h2>Response Breakdown</h2>
+                    <div style="margin-left:30px">
+                        <canvas baseChart 
+                        width = 230px
+                        height = 230px
+                        [data]="hcrChartData"
+                        [labels]="pieChartLabels" 
+                        [colors]="pieChartColors"
+                        [legend]="false"
+                        [options]="pieChartOptions"
+                        [plugins]="pieChartPlugins"
+                        [chartType]="doughnutChartType">
+                    </canvas>
+                    </div>
+                </div>
+            </mat-card-content>
+        </mat-card>  
+
+        <mat-card class="chart-card-2" style="width:880px; margin-left:10px">
+            <mat-card-content>
+                <div class="chart-line" style="width:865px; height:100px !important;">
+                    <h2 style="text-align:left; margin-left:20px">Variation of Number of Exectutions</h2>
+                    <canvas baseChart
+                        height = 310px
+                        width = 1100px
+                        [datasets]="hcrlineChartData"
+                        [labels]="timeTicks"
+                        [colors]="ChartColors"
+                        [legend]="lineChartLegend"
+                        [options]="lineChartOptions"
+                        [chartType]="lineChartType"
+                        [plugins]="lineChartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
+
+        <br/>
+        
+        <div>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{hcr_ok[hcr_ok.length-1]}}</h1>
+                        <h3> nos</h3>
+                        <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Successful </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; margin-top: 10px; display: inline-block;">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{hcr_sucess[hcr_sucess.length-1]}}</h1>
+                        <h3> %</h3>
+                        <p>Rate of Success </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{hcr_all[hcr_all.length-1]}}</h1>
+                        <h3> nos</h3>
+                        <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Total Executions </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{hcr_avg[hcr_avg.length-1]}}</h1>
+                        <h3> ms</h3>
+                        <p>Average Latency </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+        </div>
+            
+    </div>
+    
+    <br/>
+    
+    <div class="grid-container">
+        <h1>Discover Matching Services <sup><i class="fa fa-info-circle tooltip">
+            <span class="tooltiptext">Process that match and return the relevant context services to respond to a context query.</span>
+        </i></sup></h1> 
+
+        <mat-card class="chart-card-2" style="width:305px;">
+            <mat-card-content class="description">
+                <div>
+                    <h2>Response Breakdown</h2>
+                    <div style="margin-left:30px">
+                        <canvas baseChart 
+                        width = 230px
+                        height = 230px
+                        [data]="dmsChartData"
+                        [labels]="pieChartLabels" 
+                        [colors]="pieChartColors"
+                        [legend]="false"
+                        [options]="pieChartOptions"
+                        [plugins]="pieChartPlugins"
+                        [chartType]="doughnutChartType">
+                    </canvas>
+                    </div>
+                </div>
+            </mat-card-content>
+        </mat-card>  
+
+        <mat-card class="chart-card-2" style="width:880px; margin-left:10px">
+            <mat-card-content>
+                <div class="chart-line" style="width:865px; height:100px !important;">
+                    <h2 style="text-align:left; margin-left:20px">Variation of Number of Exectutions</h2>
+                    <canvas baseChart
+                        height = 310px
+                        width = 1100px
+                        [datasets]="dmslineChartData"
+                        [labels]="timeTicks"
+                        [colors]="ChartColors"
+                        [legend]="lineChartLegend"
+                        [options]="lineChartOptions"
+                        [chartType]="lineChartType"
+                        [plugins]="lineChartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <br/>
+        
+        <div>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{dms_ok[hcr_ok.length-1]}}</h1>
+                        <h3> nos</h3>
+                        <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Successful </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; margin-top: 10px; display: inline-block;">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{dms_sucess[hcr_sucess.length-1]}}</h1>
+                        <h3> %</h3>
+                        <p>Rate of Success </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{dms_all[hcr_all.length-1]}}</h1>
+                        <h3> nos</h3>
+                        <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Total Executions </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{dms_avg[hcr_avg.length-1]}}</h1>
+                        <h3> ms</h3>
+                        <p>Average Latency </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
         </div>
     </div>
-    <div class="col-md-3"></div>
-</div>
 
-<div class="row">
-    <div class="col-md-2"></div>
-    <div class="col-md-8">
-        <h5 class="text-center" style="margin-top: 20px;margin-bottom: 20px;">Evaluation of PCR Testings</h5>
-        <div class="span3 card">
+    <br/>
 
-            <table class="table" style="width: 100%;">
+    <div class="grid-container">
+        <h1>Refresh Context Entities <sup><i class="fa fa-info-circle tooltip">
+            <span class="tooltiptext">Process that refreshes cached entities.</span>
+        </i></sup></h1>   
 
-                <thead class="thead-dark">
-                    <tr>
-                        <th class="col1">Date</th>
-                        <th class="col2">No of PCR testings</th>
-                    </tr>
-                </thead>
+        <mat-card class="chart-card-2" style="width:305px;">
+            <mat-card-content class="description">
+                <div>
+                    <h2>Response Breakdown</h2>
+                    <div style="margin-left:30px">
+                        <canvas baseChart 
+                        width = 230px
+                        height = 230px
+                        [data]="rceChartData"
+                        [labels]="pieChartLabels" 
+                        [colors]="pieChartColors"
+                        [legend]="false"
+                        [options]="pieChartOptions"
+                        [plugins]="pieChartPlugins"
+                        [chartType]="doughnutChartType">
+                    </canvas>
+                    </div>
+                </div>
+            </mat-card-content>
+        </mat-card>  
 
-                <tbody class="thead-light">
-                    <tr *ngFor="let pcr of pcrList">
-                        <td class="col1">{{pcr.date}}</td>
-                        <td class="col2">{{pcr.count | number:'2.'}}</td>
-                    </tr>
-
-                </tbody>
-            </table>
+        <mat-card class="chart-card-2" style="width:880px; margin-left:10px">
+            <mat-card-content>
+                <div class="chart-line" style="width:865px; height:100px !important;">
+                    <h2 style="text-align:left; margin-left:20px">Variation of Number of Exectutions</h2>
+                    <canvas baseChart
+                        height = 310px
+                        width = 1100px
+                        [datasets]="rcelineChartData"
+                        [labels]="timeTicks"
+                        [colors]="ChartColors"
+                        [legend]="lineChartLegend"
+                        [options]="lineChartOptions"
+                        [chartType]="lineChartType"
+                        [plugins]="lineChartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <br/>
+        
+        <div>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{rce_ok[hcr_ok.length-1]}}</h1>
+                        <h3> nos</h3>
+                        <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Successful </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; margin-top: 10px; display: inline-block;">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{rce_sucess[hcr_sucess.length-1]}}</h1>
+                        <h3> %</h3>
+                        <p>Rate of Success </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{rce_all[hcr_all.length-1]}}</h1>
+                        <h3> nos</h3>
+                        <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Total Executions </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{rce_avg[hcr_avg.length-1]}}</h1>
+                        <h3> ms</h3>
+                        <p>Average Latency </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
         </div>
     </div>
-    <div class="col-md-2"></div>
+    <br/>
 </div>
+
 
 

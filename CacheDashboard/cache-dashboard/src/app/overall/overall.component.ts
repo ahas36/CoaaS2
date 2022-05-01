@@ -211,7 +211,6 @@ export class OverallComponent implements OnInit {
     monkeyPatchChartJsLegend();
   }
 
-
   ngOnInit() { 
     this.updateData();
   }

@@ -1,26 +1,130 @@
-#content1{
-    width: 80%;
-    margin-left: 30px;
-    margin-top: 20px;
-    text-align: center;
-    background-color: cornsilk;
+.content {
+  width: 80%;
+  margin-left: 30px;
+  margin-top: 150px;
+  text-align: center;
 }
-i{
-    margin-top:5px;
-    margin-bottom: 10px;
+
+.first-card{
+  width: 1400px;
+  color: rgb(104, 104, 104);
+  text-align: left;
 }
-.span3 {
-    height: 390px !important;
-    overflow: scroll;
+
+.first-card h1 {
+  font-family: 'Arial Narrow Bold', sans-serif;
 }
-table{
-    width: 80%;
+
+.first-card .stat-card{
+  display: inline-block;
+  margin-left: 10px;
+  margin-right: 10px;
 }
-.col1{
-    width:60%;
-    text-align: center;
+
+.stat-card {
+  width: 200px;
+  height: 75px;
+  align-content: center;
 }
-.col2{
-    width: 40%;
-    text-align: center;
+
+.metric{
+  margin-top: 10pt;
 }
+
+.metric h1 {
+  display: inline;  
+  font-size: 32pt;
+}
+
+.metric h3 {
+  display: inline;  
+  margin-top: -20pt;
+  color: rgb(104, 104, 104);
+}
+
+.metric p {
+  margin-top: 0pt;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+visibility: hidden;
+width: 200px;
+background-color: rgba(113, 112, 112, 0.70);
+font-size: small;
+color: #fff;
+text-align: left;
+padding: 10px;
+margin: 5px;
+border-radius: 6px;
+position: absolute;
+font-family:'Courier New', Courier, monospace;
+z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+}
+
+.grid-container{
+  width: 1400px;
+  color: rgb(104, 104, 104);
+  text-align: left;
+}
+
+.grid-container h1 {
+  font-family: 'Arial Narrow Bold', sans-serif;
+}
+
+.grid-container .chart-card {
+  display: inline-block;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.grid-container .description{
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.chart-card {
+  width: 850px;
+  height: 400px;
+  align-content: center;
+  vertical-align:top;
+}
+
+.grid-container .chart-card-2 {
+  display: inline-block;
+  margin-left: 10px;
+  margin-right: 10px;
+}
+
+.chart-card-2 {
+  width: 850px;
+  height: 315px;
+  align-content: center;
+  vertical-align:top;
+}
+
+.chart-line {
+  width: 820px;
+  height: 100px;
+}
+
+.description {
+  display: inline-flex;
+}
+
+.description h3 {
+  color: rgb(154, 155, 155);
+}
+
+
+
+
+

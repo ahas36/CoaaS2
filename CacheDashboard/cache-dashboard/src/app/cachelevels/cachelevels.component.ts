@@ -42,13 +42,6 @@ export class CacheLevelsComponent implements OnInit {
   public lineChartType: ChartType = 'line';
 
   public chartPlugins = [];
-
-  private scatterData = {
-    'data': [],
-    'label': 'Hits - Hit Rate',
-    'pointRadius': 5 
-  };
-
   public barChartLabels: Label[] = [];
 
   public entityHRChartData: ChartDataSets[] = [];
@@ -61,16 +54,16 @@ export class CacheLevelsComponent implements OnInit {
 
   public ChartColors: Color[] = [
     {
-      backgroundColor: 'rgba(255,0,0,0.6)',
+      backgroundColor: 'rgba(255,0,0,0.6)', // Red
     },
     {
-      backgroundColor: 'rgb(0, 194, 255, 0.6)',
+      backgroundColor: 'rgb(0, 194, 255, 0.6)', // Bliw
     },
     {
-      backgroundColor: 'rgb(17, 192, 45, 0.6)',
+      backgroundColor: 'rgb(17, 192, 45, 0.6)', // Green
     },
     {
-      backgroundColor: 'rgb(234, 196, 1, 0.6)',
+      backgroundColor: 'rgb(234, 196, 1, 0.6)', // Yellow
     },
   ];
 
@@ -232,10 +225,7 @@ export class CacheLevelsComponent implements OnInit {
 
     try{
       this.barChartLabels = [];
-      for(let i=0; i<data.entity_hits_hr.length; i++){
-        this.barChartLabels.push(i.toString());
-      }
-
+      
       // Top bar
       this.entity_hr = data.entity_hr.get();
       this.entity_hit_rt = data.entity_hit_rt.get();
@@ -246,8 +236,11 @@ export class CacheLevelsComponent implements OnInit {
       this.entitySeekChartData.push({ data: this.entity_hit_rt, label: 'Cache Seek Time' });
       this.entitynosChartData.push({ data: this.entity_cached, label: 'Number of items Cached' });
 
-      let entityScatter = this.scatterData;
-      entityScatter.data = data.entity_hits_hr;
+      let entityScatter = {
+        'data': data.entity_hits_hr,
+        'label': 'Hits - Hit Rate',
+        'pointRadius': 5 
+      };
       this.entityhitshrChartData.push(entityScatter);
 
       this.entityhitsChartData.push(
@@ -261,6 +254,11 @@ export class CacheLevelsComponent implements OnInit {
       );
 
       // General
+      let sizeofArray = entityScatter == undefined ? 1000 : entityScatter.data.length;
+      for(let i=0; i<sizeofArray; i++){
+        this.barChartLabels.push(i.toString());
+      }
+
       this.timeTicks = data.timeTicks.get();
 
     }

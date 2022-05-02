@@ -1,182 +1,907 @@
-<div class="content">
-    <div class="grid-container">
-        <h1><i class="fa fa-circle tooltip" style="color:rgba(255,0,0,0.6)"></i>  Context Query Level <sup><i class="fa fa-info-circle tooltip">
-            <span class="tooltiptext">Cachability of Context Query Responses.</span>
-        </i></sup></h1>
-        <div style="display:inline-block">
-            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
-                <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{entity_hr[entity_hr.length-1]}}</h1>
-                        <h3> </h3>
-                        <p>Hit Rate </p>
-                    </div>
-                </mat-card-content>
-            </mat-card>
-            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
-                <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
-                        <h3> ms</h3>
-                        <p>Cache Seek Time </p>
-                    </div>
-                </mat-card-content>
-            </mat-card>
-        </div>
-        <mat-card class="chart-card-2" style="width:910px; height: 230px;">
-            <mat-card-content>
-                <div class="chart-line" style="width:890px; height:80px !important;">
-                    <h2>HR Variation</h2>
-                    <canvas baseChart
-                        height = 57px
-                        [datasets]="entityHRChartData"
-                        [labels]="timeTicks"
-                        [colors]="ChartColors"
-                        [legend]="false"
-                        [options]="hrVariationChart"
-                        [chartType]="lineChartType"
-                        [plugins]="chartPlugins">
-                    </canvas>         
-                </div>
-            </mat-card-content>
-        </mat-card>
-    </div>
-    <br/>
-    <div class="grid-container">
-        <div style="display:inline-block">
-            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
-                <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
-                        <h3> ms</h3>
-                        <p>Cache Miss Response Time </p>
-                    </div>
-                </mat-card-content>
-            </mat-card>
-            <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
-                <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{entity_cached[entity_cached.length-1]}}</h1>
-                        <h3> nos</h3>
-                        <p>Number of Entities Cached </p>
-                    </div>
-                </mat-card-content>
-            </mat-card>
-        </div>
-        <mat-card class="chart-card-2" style="width:910px; height: 230px;">
-            <mat-card-content>
-                <div class="chart-line" style="width:890px; height:80px !important;">
-                    <h2>Cache Seek Time Variation</h2>
-                    <canvas baseChart
-                        height = 57px
-                        [datasets]="entitySeekChartData"
-                        [labels]="timeTicks"
-                        [colors]="ChartColors"
-                        [legend]="false"
-                        [options]="rtVariationChart"
-                        [chartType]="lineChartType"
-                        [plugins]="chartPlugins">
-                    </canvas>         
-                </div>
-            </mat-card-content>
-        </mat-card>
-    </div>
-    <br/>
-    <div class="grid-container">
-        <mat-card class="chart-card" style="width:370px">
-            <mat-card-content>
-                <div class="chart-line" style="width:350px; height:100px !important;">
-                    <h2>Hit rate - Hits</h2>
-                    <canvas baseChart
-                        width = 350px
-                        height = 330px
-                        [legend]="false"
-                        [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
-                        [datasets]="entityhitshrChartData"
-                        [chartType]="scatterChartType"
-                        [options]="scatterChartOptions">
-                    </canvas>      
-                </div>
-            </mat-card-content>
-        </mat-card>
-        <mat-card class="chart-card-2" style="width:790px; height: 400px;">
-            <mat-card-content>
-                <div class="chart-line" style="width:770px; height:80px !important;">
-                    <h2>Variation of Number of Cached Entities</h2>
-                    <canvas baseChart
-                        height = 125px
-                        [datasets]="entitynosChartData"
-                        [labels]="timeTicks"
-                        [colors]="ChartColors"
-                        [legend]="false"
-                        [options]="itemsChart"
-                        [chartType]="lineChartType"
-                        [plugins]="chartPlugins">
-                    </canvas>         
-                </div>
-            </mat-card-content>
-        </mat-card>
-    </div>
-    <br/>
-    <div class="grid-container">
-        <mat-card class="chart-card" style="width:370px">
-            <mat-card-content>
-                <div class="chart-line" style="width:350px; height:100px !important;">
-                    <h2>Hits Distribution</h2>
-                    <canvas baseChart 
-                        width = 350px
-                        height = 330px
-                        [datasets]="entityhitsChartData"
-                        [labels]="barChartLabels"
-                        [options]="itemHitsChart"
-                        [plugins]="chartPlugins"
-                        [legend]="false"
-                        [chartType]="barChartType">
-                    </canvas>     
-                </div>
-            </mat-card-content>
-        </mat-card>
-        <mat-card class="chart-card" style="width:370px">
-            <mat-card-content>
-                <div class="chart-line" style="width:350px; height:100px !important;">
-                    <h2>Misses Distribution</h2>
-                    <canvas baseChart 
-                        width = 350px
-                        height = 330px
-                        [datasets]="entitymissesChartData"
-                        [labels]="barChartLabels"
-                        [options]="itemMissChart"
-                        [plugins]="chartPlugins"
-                        [legend]="false"
-                        [chartType]="barChartType">
-                    </canvas>     
-                </div>
-            </mat-card-content>
-        </mat-card>
-        <mat-card class="chart-card" style="width:370px">
-            <mat-card-content>
-                <div class="chart-line" style="width:350px; height:100px !important;">
-                    <h2>Hit Rate Distribution</h2>
-                    <canvas baseChart 
-                        width = 350px
-                        height = 330px
-                        [datasets]="entityhrChartData"
-                        [labels]="barChartLabels"
-                        [options]="itemHRChart"
-                        [plugins]="chartPlugins"
-                        [legend]="false"
-                        [chartType]="barChartType">
-                    </canvas>     
-                </div>
-            </mat-card-content>
-        </mat-card>
+<div class="content" role="main">
 
-    </div>
+    <!-- Context Entities-->
+    <mat-tab-group animationDuration="500ms" style="width:1300px">
+        <!-- Context Attribute-->
+        <mat-tab label="Entities" >
+            <div class="grid-container">
+                <h1><i class="fa fa-circle tooltip" style="color:rgb(17, 192, 45, 0.6)"></i>  Context Entities <sup><i class="fa fa-info-circle tooltip">
+                    <span class="tooltiptext">Cachability of context entities.</span>
+                </i></sup></h1>
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h3> </h3>
+                                <p>Hit Rate </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Seek Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>HR Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entityHRChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                                [legend]="false"
+                                [options]="hrVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Miss Response Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h3> nos</h3>
+                                <p>Number of Entities Cached </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>Cache Seek Time Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entitySeekChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                                [legend]="false"
+                                [options]="rtVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit rate - Hits</h2>
+                            <canvas baseChart
+                                width = 350px
+                                height = 330px
+                                [legend]="false"
+                                [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                                [datasets]="entityhitshrChartData"
+                                [chartType]="scatterChartType"
+                                [options]="scatterChartOptions">
+                            </canvas>      
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card-2" style="width:790px; height: 400px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:770px; height:80px !important;">
+                            <h2>Variation of Number of Cached Entities</h2>
+                            <canvas baseChart
+                                height = 125px
+                                [datasets]="entitynosChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                                [legend]="false"
+                                [options]="itemsChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hits Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhitsChartData"
+                                [labels]="barChartLabels"
+                                [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                                [options]="itemHitsChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Misses Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entitymissesChartData"
+                                [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemMissChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit Rate Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhrChartData"
+                                [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHRChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/><br/><br/><br/>
+        </mat-tab>
 
-    <br/><br/>
+        <!-- Situation Function-->
+        <mat-tab label="Situation Function">
+            <div class="grid-container">
+                <h1><i class="fa fa-circle tooltip" style="color:rgb(234, 196, 1, 0.6)"></i>  Situation Function Level <sup><i class="fa fa-info-circle tooltip">
+                    <span class="tooltiptext">Cachability of situation function results.</span>
+                </i></sup></h1>
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h3> </h3>
+                                <p>Hit Rate </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Seek Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>HR Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entityHRChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
+                                [legend]="false"
+                                [options]="hrVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Miss Response Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h3> nos</h3>
+                                <p>Number of Entities Cached </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>Cache Seek Time Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entitySeekChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
+                                [legend]="false"
+                                [options]="rtVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit rate - Hits</h2>
+                            <canvas baseChart
+                                width = 350px
+                                height = 330px
+                                [legend]="false"
+                                [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
+                                [datasets]="entityhitshrChartData"
+                                [chartType]="scatterChartType"
+                                [options]="scatterChartOptions">
+                            </canvas>      
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card-2" style="width:790px; height: 400px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:770px; height:80px !important;">
+                            <h2>Variation of Number of Cached Entities</h2>
+                            <canvas baseChart
+                                height = 125px
+                                [datasets]="entitynosChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
+                                [legend]="false"
+                                [options]="itemsChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hits Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhitsChartData"
+                                [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHitsChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Misses Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entitymissesChartData"
+                                [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemMissChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit Rate Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhrChartData"
+                                [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHRChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/><br/><br/><br/>
+        </mat-tab>
 
+        <!-- Aggregate Functions-->
+        <mat-tab label="Aggregate Function">
+            <div class="grid-container">
+                <h1><i class="fa fa-circle tooltip" style="color:rgba(255, 149, 0, 0.6)"></i>  Aggregate Function Level <sup><i class="fa fa-info-circle tooltip">
+                    <span class="tooltiptext">Cachability of aggregate function results.</span>
+                </i></sup></h1>
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h3> </h3>
+                                <p>Hit Rate </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Seek Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>HR Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entityHRChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
+                                [legend]="false"
+                                [options]="hrVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Miss Response Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h3> nos</h3>
+                                <p>Number of Entities Cached </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>Cache Seek Time Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entitySeekChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
+                                [legend]="false"
+                                [options]="rtVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit rate - Hits</h2>
+                            <canvas baseChart
+                                width = 350px
+                                height = 330px
+                                [legend]="false"
+                                [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
+                                [datasets]="entityhitshrChartData"
+                                [chartType]="scatterChartType"
+                                [options]="scatterChartOptions">
+                            </canvas>      
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card-2" style="width:790px; height: 400px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:770px; height:80px !important;">
+                            <h2>Variation of Number of Cached Entities</h2>
+                            <canvas baseChart
+                                height = 125px
+                                [datasets]="entitynosChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
+                                [legend]="false"
+                                [options]="itemsChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hits Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhitsChartData"
+                                [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHitsChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Misses Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entitymissesChartData"
+                                [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemMissChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit Rate Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhrChartData"
+                                [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHRChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/><br/><br/><br/>
+        </mat-tab>
 
+        <!-- Context Entities-->
+        <mat-tab label="Context Request">
+            <div class="grid-container">
+                <h1><i class="fa fa-circle tooltip" style="color:rgba(170, 0, 255, 0.6)"></i>  Context Request Level <sup><i class="fa fa-info-circle tooltip">
+                    <span class="tooltiptext">Cachability of context request results.</span>
+                </i></sup></h1>
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h3> </h3>
+                                <p>Hit Rate </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Seek Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>HR Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entityHRChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
+                                [legend]="false"
+                                [options]="hrVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Miss Response Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h3> nos</h3>
+                                <p>Number of Entities Cached </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>Cache Seek Time Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entitySeekChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
+                                [legend]="false"
+                                [options]="rtVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit rate - Hits</h2>
+                            <canvas baseChart
+                                width = 350px
+                                height = 330px
+                                [legend]="false"
+                                [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
+                                [datasets]="entityhitshrChartData"
+                                [chartType]="scatterChartType"
+                                [options]="scatterChartOptions">
+                            </canvas>      
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card-2" style="width:790px; height: 400px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:770px; height:80px !important;">
+                            <h2>Variation of Number of Cached Entities</h2>
+                            <canvas baseChart
+                                height = 125px
+                                [datasets]="entitynosChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
+                                [legend]="false"
+                                [options]="itemsChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hits Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhitsChartData"
+                                [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHitsChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Misses Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entitymissesChartData"
+                                [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemMissChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit Rate Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhrChartData"
+                                [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHRChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/><br/><br/><br/>
+        </mat-tab>
+            
+        <!-- Context Queries-->
+        <mat-tab label="Context Query">
+            <div class="grid-container">
+                <h1><i class="fa fa-circle tooltip" style="color:rgba(0, 194, 255, 0.6)"></i>  Context Query Level <sup><i class="fa fa-info-circle tooltip">
+                    <span class="tooltiptext">Cachability of context query results.</span>
+                </i></sup></h1>
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h3> </h3>
+                                <p>Hit Rate </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Seek Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>HR Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entityHRChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                                [legend]="false"
+                                [options]="hrVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <div style="display:inline-block">
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h3> ms</h3>
+                                <p>Cache Miss Response Time </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                    <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
+                        <mat-card-content class="description">
+                            <div class="metric">
+                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h3> nos</h3>
+                                <p>Number of Entities Cached </p>
+                            </div>
+                        </mat-card-content>
+                    </mat-card>
+                </div>
+                <mat-card class="chart-card-2" style="width:910px; height: 230px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:890px; height:80px !important;">
+                            <h2>Cache Seek Time Variation</h2>
+                            <canvas baseChart
+                                height = 57px
+                                [datasets]="entitySeekChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                                [legend]="false"
+                                [options]="rtVariationChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit rate - Hits</h2>
+                            <canvas baseChart
+                                width = 350px
+                                height = 330px
+                                [legend]="false"
+                                [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                                [datasets]="entityhitshrChartData"
+                                [chartType]="scatterChartType"
+                                [options]="scatterChartOptions">
+                            </canvas>      
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card-2" style="width:790px; height: 400px;">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:770px; height:80px !important;">
+                            <h2>Variation of Number of Cached Entities</h2>
+                            <canvas baseChart
+                                height = 125px
+                                [datasets]="entitynosChartData"
+                                [labels]="timeTicks"
+                                [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                                [legend]="false"
+                                [options]="itemsChart"
+                                [chartType]="lineChartType"
+                                [plugins]="chartPlugins">
+                            </canvas>         
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/>
+            <div class="grid-container">
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hits Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhitsChartData"
+                                [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHitsChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Misses Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entitymissesChartData"
+                                [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemMissChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+                <mat-card class="chart-card" style="width:370px">
+                    <mat-card-content>
+                        <div class="chart-line" style="width:350px; height:100px !important;">
+                            <h2>Hit Rate Distribution</h2>
+                            <canvas baseChart 
+                                width = 350px
+                                height = 330px
+                                [datasets]="entityhrChartData"
+                                [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                                [labels]="barChartLabels"
+                                [options]="itemHRChart"
+                                [plugins]="chartPlugins"
+                                [legend]="false"
+                                [chartType]="barChartType">
+                            </canvas>     
+                        </div>
+                    </mat-card-content>
+                </mat-card>
+            </div>
+            <br/><br/><br/><br/>      
+        </mat-tab>  
 
-
+    </mat-tab-group>
 
 </div>

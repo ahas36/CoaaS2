@@ -44,7 +44,7 @@ export class ApiServiceService {
   retrievePerformanceData(){
     this.counter += 1;
     this.timeTicks.push(this.counter);
-    this.apiData = this.http.get<PerfData>('https://8d262b69-786f-4961-96d8-a7419d5dfe4b.mock.pstmn.io/log/performance');
+    this.apiData = this.http.get<PerfData>('https://demo7443800.mockable.io/log/performance');
     this.newDataReady = true;
   }
 
@@ -173,9 +173,9 @@ export class ApiServiceService {
         this.levelsData.entity_items_hits = [];
         this.levelsData.entity_items_miss = [];
         this.levelsData.entity_items_hr = [];
-        for(const element of res.levels.entity.items){
-          console.log('iterated');
-          this.levelsData.entity_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+        
+        for(let element of res.levels.entity.items){
+          this.levelsData.entity_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.entity_items_hits.push(element.hits);
           this.levelsData.entity_items_miss.push(element.misses);
           this.levelsData.entity_items_hr.push(element.hitrate);
@@ -190,8 +190,9 @@ export class ApiServiceService {
         this.levelsData.situfunc_items_hits = [];
         this.levelsData.situfunc_items_miss = [];
         this.levelsData.situfunc_items_hr = [];
-        for(const element of this.levelsData.situfunc_items){
-          this.levelsData.situfunc_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+
+        for(let element of this.levelsData.situfunc_items){
+          this.levelsData.situfunc_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.situfunc_items_hits.push(element.hits);
           this.levelsData.situfunc_items_miss.push(element.misses);
           this.levelsData.situfunc_items_hr.push(element.hitrate);
@@ -203,11 +204,12 @@ export class ApiServiceService {
         this.levelsData.aggfunc_cached.push(res.levels.aggfunction.items.length);
         this.levelsData.aggfunc_items = res.levels.aggfunction.items;
         this.levelsData.aggfunc_hits_hr = [];
-          this.levelsData.aggfunc_items_hits = [];
-          this.levelsData.aggfunc_items_miss = [];
-          this.levelsData.aggfunc_items_hr = [];
-        for(const element of this.levelsData.aggfunc_items){
-          this.levelsData.aggfunc_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+        this.levelsData.aggfunc_items_hits = [];
+        this.levelsData.aggfunc_items_miss = [];
+        this.levelsData.aggfunc_items_hr = [];
+
+        for(let element of this.levelsData.aggfunc_items){
+          this.levelsData.aggfunc_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.aggfunc_items_hits.push(element.hits);
           this.levelsData.aggfunc_items_miss.push(element.misses);
           this.levelsData.aggfunc_items_hr.push(element.hitrate);
@@ -222,8 +224,9 @@ export class ApiServiceService {
         this.levelsData.cr_items_hits = [];
         this.levelsData.cr_items_miss = [];
         this.levelsData.cr_items_hr = [];
-        for(const element of this.levelsData.cr_items){
-          this.levelsData.cr_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+
+        for(let element of this.levelsData.cr_items){
+          this.levelsData.cr_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.cr_items_hits.push(element.hits);
           this.levelsData.cr_items_miss.push(element.misses);
           this.levelsData.cr_items_hr.push(element.hitrate);
@@ -238,8 +241,9 @@ export class ApiServiceService {
         this.levelsData.q_items_hits = [];
         this.levelsData.q_items_miss = [];
         this.levelsData.q_items_hr = [];
-        for(const element of this.levelsData.q_items){
-          this.levelsData.q_hits_hr.push({'x': element.hitrate, 'y': this.levelsData.entity_items.hits});
+        
+        for(let element of this.levelsData.q_items){
+          this.levelsData.q_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.q_items_hits.push(element.hits);
           this.levelsData.q_items_miss.push(element.misses);
           this.levelsData.q_items_hr.push(element.hitrate);

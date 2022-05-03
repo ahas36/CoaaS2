@@ -5,3 +5,4 @@ Docker push coaas/sqem:latest
 Docker push coaas/svm:latest
 Docker push coaas/cre:latest
 Docker push coaas/csi:latest
+Docker push coaas/acoca:latest

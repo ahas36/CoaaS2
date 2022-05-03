@@ -1,4 +1,4 @@
-version: "3.1"
+version: "3.1.1"
 services:
     casm:
         image: coaas/casm:latest
@@ -56,7 +56,6 @@ services:
             - postgres
             - sqem
 
-
     cqp:
         image: coaas/cqp:latest
         container_name: "cqp"
@@ -93,6 +92,14 @@ services:
           - mongodb
         links:
           - mongodb
+
+    acoca:
+      image: coaas/acoca:latest
+      container_name: "acoca"
+      ports:
+        - "4200"
+        - "4200:80"
+      restart: always
 
 #    grafana:
 #        image: grafana/grafana:5.1.0

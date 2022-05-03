@@ -68,11 +68,11 @@ export class Status{
 }
 
 export class Queue<T> {
-    private size = 10;
+    private size = 60; // Queing hour worth of statistics
     _store: T[] = [];
     
     public push(val: T) {
-        if(this._store.length >= 10){
+        if(this._store.length >= this.size){
             this.pop();
         }
 

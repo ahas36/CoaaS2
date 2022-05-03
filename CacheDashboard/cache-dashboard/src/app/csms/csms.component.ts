@@ -53,7 +53,7 @@ export class CSMSComponent implements OnInit {
   public ChartColors: Color[] = [
     {
       borderColor: 'rgb(0, 194, 255, 0.8)', // Blue
-      backgroundColor: 'rgb(0, 194, 255, 0.1)', // Bliw
+      backgroundColor: 'rgb(0, 194, 255, 0.1)', // Blue
     },
     {
       borderColor: 'rgb(17, 192, 45, 0.8)', // Green
@@ -97,7 +97,6 @@ export class CSMSComponent implements OnInit {
     this.initializeData();
     this.interval = setInterval(() => { 
         this.updateData(); 
-        console.log("executed");
     }, config.refresh_rate);
   }
 

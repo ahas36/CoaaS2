@@ -115,6 +115,9 @@ export class CacheLevelsComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Hit Rate'
+        },
+        ticks: {
+          beginAtZero: true 
         }
       }],
       xAxes: [{
@@ -223,6 +226,9 @@ export class CacheLevelsComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Hit Rate'
+        },
+        ticks: {
+          beginAtZero: true 
         }
       }],
       xAxes: [{

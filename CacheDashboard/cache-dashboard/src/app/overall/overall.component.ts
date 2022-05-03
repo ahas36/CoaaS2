@@ -143,6 +143,9 @@ export class OverallComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Ratio'
+        },
+        ticks: {
+          beginAtZero: true 
         }
       }],
       xAxes: [{
@@ -161,6 +164,9 @@ export class OverallComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Delay Rate'
+        },
+        ticks: {
+          beginAtZero: true 
         }
       }],
       xAxes: [{
@@ -179,6 +185,9 @@ export class OverallComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Delay Rate'
+        },
+        ticks: {
+          beginAtZero: true 
         }
       }],
       xAxes: [{
@@ -197,6 +206,9 @@ export class OverallComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Delay Rate'
+        },
+        ticks: {
+          beginAtZero: true 
         }
       }],
       xAxes: [{

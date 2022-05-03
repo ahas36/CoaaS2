@@ -109,6 +109,7 @@ export class LevelsModel{
   public entity_items_hits;
   public entity_items_miss;
   public entity_items_hr;
+  public entity_nos;
 
 
   public situfunc_hr: Queue<number>;
@@ -120,6 +121,7 @@ export class LevelsModel{
   public situfunc_items_hits;
   public situfunc_items_miss;
   public situfunc_items_hr;
+  public situfunc_nos;
 
   public aggfunc_hr: Queue<number>;
   public aggfunc_hit_rt: Queue<number>;
@@ -130,6 +132,7 @@ export class LevelsModel{
   public aggfunc_items_hits;
   public aggfunc_items_miss;
   public aggfunc_items_hr;
+  public aggfunc_nos;
 
   public cr_hr: Queue<number>;
   public cr_hit_rt: Queue<number>;
@@ -140,6 +143,7 @@ export class LevelsModel{
   public cr_items_hits;
   public cr_items_miss;
   public cr_items_hr;
+  public cr_nos;
 
   public q_hr: Queue<number>;
   public q_hit_rt: Queue<number>;
@@ -150,6 +154,7 @@ export class LevelsModel{
   public q_items_hits;
   public q_items_miss;
   public q_items_hr;
+  public q_nos;
 
   public timeTicks: Queue<number>;
     

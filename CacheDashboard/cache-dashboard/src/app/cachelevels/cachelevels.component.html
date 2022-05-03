@@ -132,7 +132,7 @@
                                 width = 350px
                                 height = 330px
                                 [datasets]="entityhitsChartData"
-                                [labels]="barChartLabels"
+                                [labels]="entitybarChartLabels"
                                 [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
                                 [options]="itemHitsChart"
                                 [plugins]="chartPlugins"
@@ -151,7 +151,7 @@
                                 height = 330px
                                 [datasets]="entitymissesChartData"
                                 [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="entitybarChartLabels"
                                 [options]="itemMissChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -169,7 +169,7 @@
                                 height = 330px
                                 [datasets]="entityhrChartData"
                                 [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="entitybarChartLabels"
                                 [options]="itemHRChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -192,7 +192,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h1>{{situfunc_hr[situfunc_hr.length-1]}}</h1>
                                 <h3> </h3>
                                 <p>Hit Rate </p>
                             </div>
@@ -201,7 +201,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h1>{{situfunc_hit_rt[situfunc_hit_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Seek Time </p>
                             </div>
@@ -214,7 +214,7 @@
                             <h2>HR Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entityHRChartData"
+                                [datasets]="situfuncHRChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
                                 [legend]="false"
@@ -232,7 +232,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h1>{{situfunc_miss_rt[situfunc_miss_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Miss Response Time </p>
                             </div>
@@ -241,9 +241,9 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h1>{{situfunc_cached[situfunc_cached.length-1]}}</h1>
                                 <h3> nos</h3>
-                                <p>Number of Entities Cached </p>
+                                <p>Number of Situation Function Results Cached </p>
                             </div>
                         </mat-card-content>
                     </mat-card>
@@ -254,7 +254,7 @@
                             <h2>Cache Seek Time Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entitySeekChartData"
+                                [datasets]="situfuncSeekChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
                                 [legend]="false"
@@ -277,7 +277,7 @@
                                 height = 330px
                                 [legend]="false"
                                 [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
-                                [datasets]="entityhitshrChartData"
+                                [datasets]="situfunchitshrChartData"
                                 [chartType]="scatterChartType"
                                 [options]="scatterChartOptions">
                             </canvas>      
@@ -287,10 +287,10 @@
                 <mat-card class="chart-card-2" style="width:790px; height: 400px;">
                     <mat-card-content>
                         <div class="chart-line" style="width:770px; height:80px !important;">
-                            <h2>Variation of Number of Cached Entities</h2>
+                            <h2>Variation of Number of Situation Functions</h2>
                             <canvas baseChart
                                 height = 125px
-                                [datasets]="entitynosChartData"
+                                [datasets]="situfuncnosChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
                                 [legend]="false"
@@ -311,9 +311,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhitsChartData"
+                                [datasets]="situfunchitsChartData"
                                 [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="situfuncbarChartLabels"
                                 [options]="itemHitsChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -329,9 +329,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entitymissesChartData"
+                                [datasets]="situfuncmissesChartData"
                                 [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="situfuncbarChartLabels"
                                 [options]="itemMissChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -347,9 +347,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhrChartData"
+                                [datasets]="situfunchrChartData"
                                 [colors]="[{backgroundColor: 'rgb(234, 196, 1, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="situfuncbarChartLabels"
                                 [options]="itemHRChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -372,7 +372,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h1>{{aggfunc_hr[aggfunc_hr.length-1]}}</h1>
                                 <h3> </h3>
                                 <p>Hit Rate </p>
                             </div>
@@ -381,7 +381,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h1>{{aggfunc_hit_rt[aggfunc_hit_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Seek Time </p>
                             </div>
@@ -394,7 +394,7 @@
                             <h2>HR Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entityHRChartData"
+                                [datasets]="aggfuncHRChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
                                 [legend]="false"
@@ -412,7 +412,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h1>{{aggfunc_miss_rt[aggfunc_miss_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Miss Response Time </p>
                             </div>
@@ -421,9 +421,9 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h1>{{aggfunc_cached[aggfunc_cached.length-1]}}</h1>
                                 <h3> nos</h3>
-                                <p>Number of Entities Cached </p>
+                                <p>Number of Aggregate Function Results Cached </p>
                             </div>
                         </mat-card-content>
                     </mat-card>
@@ -434,7 +434,7 @@
                             <h2>Cache Seek Time Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entitySeekChartData"
+                                [datasets]="aggfuncSeekChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
                                 [legend]="false"
@@ -457,7 +457,7 @@
                                 height = 330px
                                 [legend]="false"
                                 [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
-                                [datasets]="entityhitshrChartData"
+                                [datasets]="aggfunchitshrChartData"
                                 [chartType]="scatterChartType"
                                 [options]="scatterChartOptions">
                             </canvas>      
@@ -467,10 +467,10 @@
                 <mat-card class="chart-card-2" style="width:790px; height: 400px;">
                     <mat-card-content>
                         <div class="chart-line" style="width:770px; height:80px !important;">
-                            <h2>Variation of Number of Cached Entities</h2>
+                            <h2>Variation of Number of Aggregate Functions</h2>
                             <canvas baseChart
                                 height = 125px
-                                [datasets]="entitynosChartData"
+                                [datasets]="aggfuncnosChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
                                 [legend]="false"
@@ -491,9 +491,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhitsChartData"
+                                [datasets]="aggfunchitsChartData"
                                 [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="aggfuncbarChartLabels"
                                 [options]="itemHitsChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -509,9 +509,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entitymissesChartData"
+                                [datasets]="aggfuncmissesChartData"
                                 [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="aggfuncbarChartLabels"
                                 [options]="itemMissChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -527,9 +527,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhrChartData"
+                                [datasets]="aggfunchrChartData"
                                 [colors]="[{backgroundColor: 'rgba(255, 149, 0, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="aggfuncbarChartLabels"
                                 [options]="itemHRChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -552,7 +552,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h1>{{cr_hr[cr_hr.length-1]}}</h1>
                                 <h3> </h3>
                                 <p>Hit Rate </p>
                             </div>
@@ -561,7 +561,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h1>{{cr_hit_rt[cr_hit_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Seek Time </p>
                             </div>
@@ -574,7 +574,7 @@
                             <h2>HR Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entityHRChartData"
+                                [datasets]="crHRChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
                                 [legend]="false"
@@ -592,7 +592,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h1>{{cr_miss_rt[cr_miss_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Miss Response Time </p>
                             </div>
@@ -601,9 +601,9 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h1>{{cr_cached[cr_cached.length-1]}}</h1>
                                 <h3> nos</h3>
-                                <p>Number of Entities Cached </p>
+                                <p>Number of Context Requests Cached </p>
                             </div>
                         </mat-card-content>
                     </mat-card>
@@ -614,7 +614,7 @@
                             <h2>Cache Seek Time Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entitySeekChartData"
+                                [datasets]="crSeekChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
                                 [legend]="false"
@@ -637,7 +637,7 @@
                                 height = 330px
                                 [legend]="false"
                                 [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
-                                [datasets]="entityhitshrChartData"
+                                [datasets]="crhitshrChartData"
                                 [chartType]="scatterChartType"
                                 [options]="scatterChartOptions">
                             </canvas>      
@@ -647,10 +647,10 @@
                 <mat-card class="chart-card-2" style="width:790px; height: 400px;">
                     <mat-card-content>
                         <div class="chart-line" style="width:770px; height:80px !important;">
-                            <h2>Variation of Number of Cached Entities</h2>
+                            <h2>Variation of Number of Cached Context Requetss</h2>
                             <canvas baseChart
                                 height = 125px
-                                [datasets]="entitynosChartData"
+                                [datasets]="crnosChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
                                 [legend]="false"
@@ -671,9 +671,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhitsChartData"
+                                [datasets]="crhitsChartData"
                                 [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="crbarChartLabels"
                                 [options]="itemHitsChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -689,9 +689,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entitymissesChartData"
+                                [datasets]="crmissesChartData"
                                 [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="crbarChartLabels"
                                 [options]="itemMissChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -707,9 +707,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhrChartData"
+                                [datasets]="crhrChartData"
                                 [colors]="[{backgroundColor: 'rgb(170, 0, 255, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="crbarChartLabels"
                                 [options]="itemHRChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -721,7 +721,7 @@
             </div>
             <br/><br/><br/><br/>
         </mat-tab>
-            
+
         <!-- Context Queries-->
         <mat-tab label="Context Query">
             <div class="grid-container">
@@ -732,7 +732,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hr[entity_hr.length-1]}}</h1>
+                                <h1>{{q_hr[q_hr.length-1]}}</h1>
                                 <h3> </h3>
                                 <p>Hit Rate </p>
                             </div>
@@ -741,7 +741,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_hit_rt[entity_hit_rt.length-1]}}</h1>
+                                <h1>{{q_hit_rt[q_hit_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Seek Time </p>
                             </div>
@@ -754,7 +754,7 @@
                             <h2>HR Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entityHRChartData"
+                                [datasets]="qHRChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
                                 [legend]="false"
@@ -772,7 +772,7 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block;">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_miss_rt[entity_miss_rt.length-1]}}</h1>
+                                <h1>{{q_miss_rt[q_miss_rt.length-1]}}</h1>
                                 <h3> ms</h3>
                                 <p>Cache Miss Response Time </p>
                             </div>
@@ -781,9 +781,9 @@
                     <mat-card class="chart-card-2" style="width:250px; height:90px; display: block; margin-top:20px">
                         <mat-card-content class="description">
                             <div class="metric">
-                                <h1>{{entity_cached[entity_cached.length-1]}}</h1>
+                                <h1>{{q_cached[q_cached.length-1]}}</h1>
                                 <h3> nos</h3>
-                                <p>Number of Entities Cached </p>
+                                <p>Number of Context Query Results Cached </p>
                             </div>
                         </mat-card-content>
                     </mat-card>
@@ -794,7 +794,7 @@
                             <h2>Cache Seek Time Variation</h2>
                             <canvas baseChart
                                 height = 57px
-                                [datasets]="entitySeekChartData"
+                                [datasets]="qSeekChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
                                 [legend]="false"
@@ -817,7 +817,7 @@
                                 height = 330px
                                 [legend]="false"
                                 [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
-                                [datasets]="entityhitshrChartData"
+                                [datasets]="qhitshrChartData"
                                 [chartType]="scatterChartType"
                                 [options]="scatterChartOptions">
                             </canvas>      
@@ -827,10 +827,10 @@
                 <mat-card class="chart-card-2" style="width:790px; height: 400px;">
                     <mat-card-content>
                         <div class="chart-line" style="width:770px; height:80px !important;">
-                            <h2>Variation of Number of Cached Entities</h2>
+                            <h2>Variation of Number of Cached Context Queries</h2>
                             <canvas baseChart
                                 height = 125px
-                                [datasets]="entitynosChartData"
+                                [datasets]="qnosChartData"
                                 [labels]="timeTicks"
                                 [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
                                 [legend]="false"
@@ -851,9 +851,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhitsChartData"
+                                [datasets]="qhitsChartData"
                                 [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="qbarChartLabels"
                                 [options]="itemHitsChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -869,9 +869,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entitymissesChartData"
+                                [datasets]="qmissesChartData"
                                 [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="qbarChartLabels"
                                 [options]="itemMissChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -887,9 +887,9 @@
                             <canvas baseChart 
                                 width = 350px
                                 height = 330px
-                                [datasets]="entityhrChartData"
+                                [datasets]="qhrChartData"
                                 [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
-                                [labels]="barChartLabels"
+                                [labels]="qbarChartLabels"
                                 [options]="itemHRChart"
                                 [plugins]="chartPlugins"
                                 [legend]="false"
@@ -900,7 +900,9 @@
                 </mat-card>
             </div>
             <br/><br/><br/><br/>      
-        </mat-tab>  
+        </mat-tab> 
+
+         
 
     </mat-tab-group>
 

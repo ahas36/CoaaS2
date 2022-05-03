@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { PerfData, Queue } from './service-classes';
 import { CSMSModel, LevelsModel, SummaryModel } from './service-view-models';
+import { config } from '../config';
 
 @Injectable({
   providedIn: 'root'
@@ -15,11 +16,14 @@ export class ApiServiceService {
   summaryData;
   currentCosts;
 
-  newDataReady = false;
   summaryInit = false;
   levelsInit = false;
   csmsInit = false;
 
+  summaryV;
+  levelsV;
+  csmsV;
+  
   counter = 0;
   timeTicks:Queue<number> = new Queue<number>();
 
@@ -31,25 +35,16 @@ export class ApiServiceService {
     this.summaryInit = true;
     this.levelsInit = true;
     this.csmsInit = true;
-
-    // this.triggerRefreshing();
-  }
-
-  triggerRefreshing(){
-    while(true){
-      setTimeout(() => this.retrievePerformanceData(), 60*1000);
-    }
   }
 
   retrievePerformanceData(){
+    this.apiData = this.http.get<PerfData>(config.uri);
     this.counter += 1;
     this.timeTicks.push(this.counter);
-    this.apiData = this.http.get<PerfData>('https://demo7443800.mockable.io/log/performance');
-    this.newDataReady = true;
   }
 
   getPerformanceSummary() {
-    if(this.newDataReady || this.summaryInit){
+    if(this.counter != this.summaryV || this.summaryInit){
       this.apiData.subscribe(res => {
         // Overall perfromance summary
         this.summaryData.avg_gain.push(res.summary.avg_gain);
@@ -74,7 +69,8 @@ export class ApiServiceService {
         this.summaryData.network_overhead_ratio.push(oh_2_ratio);
   
         this.summaryData.timeTicks.push(this.counter);
-  
+
+        this.summaryData.currentCosts.splice(0, this.summaryData.currentCosts.length);
         this.summaryData.currentCosts.push(res.summary.earning);
         this.summaryData.currentCosts.push(res.summary.retrieval_cost);
         this.summaryData.currentCosts.push(res.summary.penalty_cost);
@@ -87,13 +83,13 @@ export class ApiServiceService {
       });
     }
 
-    this.newDataReady = false;
+    this.summaryV = this.counter;
     this.summaryInit = false;
     return this.summaryData;
   }
 
   getCSMSPerformanceData() {
-    if(this.newDataReady || this.csmsInit){
+    if(this.counter != this.csmsV || this.csmsInit){
       this.apiData.subscribe(res => {
         // HCR
         this.csmsData.hcr_ok.push(res.csms.handleContextRequest.ok.count);
@@ -108,9 +104,10 @@ export class ApiServiceService {
           total += res.csms.handleContextRequest.notfound.count;
         }
         this.csmsData.hcr_all.push(total);
-        console.log(total);
         this.csmsData.hcr_avg.push((res.csms.handleContextRequest.ok.average).toFixed(2));
         this.csmsData.hcr_sucess.push((res.csms.handleContextRequest.ok.count*100/total).toFixed(2));
+
+        this.csmsData.cur_hcr_break.splice(0, this.csmsData.cur_hcr_break.length);
         this.csmsData.cur_hcr_break.push(res.csms.handleContextRequest.ok.count);
         this.csmsData.cur_hcr_break.push(total-res.csms.handleContextRequest.ok.count);
 
@@ -129,6 +126,8 @@ export class ApiServiceService {
         this.csmsData.dms_all.push(dmstotal);
         this.csmsData.dms_avg.push((res.csms.discoverMatchingService.ok.average).toFixed(2));
         this.csmsData.dms_sucess.push((res.csms.discoverMatchingService.ok.count*100/dmstotal).toFixed(2));
+
+        this.csmsData.cur_dms_break.splice(0, this.csmsData.cur_dms_break.length);
         this.csmsData.cur_dms_break.push(res.csms.discoverMatchingService.ok.count);
         this.csmsData.cur_dms_break.push(dmstotal-res.csms.discoverMatchingService.ok.count);
 
@@ -147,6 +146,8 @@ export class ApiServiceService {
         this.csmsData.rce_all.push(rcetotal);
         this.csmsData.rce_avg.push((res.csms.refreshContextEntity.ok.average).toFixed(2));
         this.csmsData.rce_sucess.push((res.csms.handleContextRequest.ok.count*100/rcetotal).toFixed(2));
+
+        this.csmsData.cur_rce_break.splice(0, this.csmsData.cur_rce_break.length);
         this.csmsData.cur_rce_break.push(res.csms.handleContextRequest.ok.count);
         this.csmsData.cur_rce_break.push(rcetotal-res.csms.handleContextRequest.ok.count);
 
@@ -155,13 +156,13 @@ export class ApiServiceService {
       });
     }
     
-    this.newDataReady = false;
+    this.csmsV = this.counter;
     this.csmsInit = false;
     return this.csmsData;
   }
 
   getCacheLevelPerformanceData(){
-    if(this.newDataReady || this.levelsInit){
+    if(this.counter != this.levelsV || this.levelsInit){
       this.apiData.subscribe(res => {
         // Cache level-wise statistics
         this.levelsData.entity_hr.push(res.levels.entity.hitrate);
@@ -173,7 +174,8 @@ export class ApiServiceService {
         this.levelsData.entity_items_hits = [];
         this.levelsData.entity_items_miss = [];
         this.levelsData.entity_items_hr = [];
-        
+        this.levelsData.entity_nos = res.levels.entity.items.length;
+
         for(let element of res.levels.entity.items){
           this.levelsData.entity_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.entity_items_hits.push(element.hits);
@@ -190,8 +192,9 @@ export class ApiServiceService {
         this.levelsData.situfunc_items_hits = [];
         this.levelsData.situfunc_items_miss = [];
         this.levelsData.situfunc_items_hr = [];
+        this.levelsData.situfunc_nos = res.levels.situfunction.items.length;
 
-        for(let element of this.levelsData.situfunc_items){
+        for(let element of res.levels.situfunction.items){
           this.levelsData.situfunc_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.situfunc_items_hits.push(element.hits);
           this.levelsData.situfunc_items_miss.push(element.misses);
@@ -207,8 +210,9 @@ export class ApiServiceService {
         this.levelsData.aggfunc_items_hits = [];
         this.levelsData.aggfunc_items_miss = [];
         this.levelsData.aggfunc_items_hr = [];
+        this.levelsData.aggfunc_nos = res.levels.aggfunction.items.length;
 
-        for(let element of this.levelsData.aggfunc_items){
+        for(let element of res.levels.aggfunction.items){
           this.levelsData.aggfunc_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.aggfunc_items_hits.push(element.hits);
           this.levelsData.aggfunc_items_miss.push(element.misses);
@@ -224,8 +228,9 @@ export class ApiServiceService {
         this.levelsData.cr_items_hits = [];
         this.levelsData.cr_items_miss = [];
         this.levelsData.cr_items_hr = [];
+        this.levelsData.cr_nos = res.levels.contextrequest.items.length;
 
-        for(let element of this.levelsData.cr_items){
+        for(let element of res.levels.contextrequest.items){
           this.levelsData.cr_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.cr_items_hits.push(element.hits);
           this.levelsData.cr_items_miss.push(element.misses);
@@ -241,8 +246,9 @@ export class ApiServiceService {
         this.levelsData.q_items_hits = [];
         this.levelsData.q_items_miss = [];
         this.levelsData.q_items_hr = [];
-        
-        for(let element of this.levelsData.q_items){
+        this.levelsData.q_nos = res.levels.query.items.length;
+
+        for(let element of res.levels.query.items){
           this.levelsData.q_hits_hr.push({'x': element.hitrate, 'y': element.hits});
           this.levelsData.q_items_hits.push(element.hits);
           this.levelsData.q_items_miss.push(element.misses);
@@ -253,7 +259,7 @@ export class ApiServiceService {
       });
     }
     
-    this.newDataReady = false;
+    this.levelsV = this.counter;
     this.levelsInit = false;
     return this.levelsData;
   }

@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { ChartData, ChartDataSets, ChartOptions, ChartType } from 'chart.js';
 import { Color, Label, monkeyPatchChartJsLegend, monkeyPatchChartJsTooltip, SingleDataSet } from 'ng2-charts';
+import { config } from '../config';
 import { ApiServiceService } from '../services/api-service.service';
 
 @Component({
@@ -74,16 +75,20 @@ export class OverallComponent implements OnInit {
 
   public ChartColors: Color[] = [
     {
-      backgroundColor: 'rgba(255,0,0,0.6)',
+      borderColor: 'rgba(255,0,0,0.8)', // Red
+      backgroundColor: 'rgba(255,0,0,0.1)',
     },
     {
-      backgroundColor: 'rgb(0, 194, 255, 0.6)',
+      borderColor: 'rgb(0, 194, 255, 0.8)', // Blue
+      backgroundColor: 'rgb(0, 194, 255, 0.1)', // Blue
     },
     {
-      backgroundColor: 'rgb(17, 192, 45, 0.6)',
+      borderColor: 'rgb(17, 192, 45, 0.8)', // Green
+      backgroundColor: 'rgb(17, 192, 45, 0.1)', // Green
     },
     {
-      backgroundColor: 'rgb(234, 196, 1, 0.6)',
+      borderColor: 'rgb(234, 196, 1, 0.8)', // Yellow
+      backgroundColor: 'rgb(234, 196, 1, 0.1)', // Yellow
     },
   ];
 
@@ -206,16 +211,21 @@ export class OverallComponent implements OnInit {
   public lineChartLegend = true;
   public lineChartPlugins = [];
 
+  interval:any;
+
   constructor(private serviceAPI: ApiServiceService, private ref: ChangeDetectorRef) {
     monkeyPatchChartJsTooltip();
     monkeyPatchChartJsLegend();
   }
 
   ngOnInit() { 
-    this.updateData();
+    this.initializeData();
+    this.interval = setInterval(() => { 
+        this.updateData(); 
+    }, config.refresh_rate);
   }
 
-  updateData(){
+  initializeData(){
     let data = this.serviceAPI.getPerformanceSummary(); 
 
     try{
@@ -276,6 +286,70 @@ export class OverallComponent implements OnInit {
 
       // General
       this.timeTicks = data.timeTicks.get();
+
+    }
+    catch(ex){
+      // Code here
+      console.log('An error occured!'+ ex);
+    }
+  }
+
+  updateData() {
+    try{
+      let data = this.serviceAPI.getPerformanceSummary(); 
+
+      // Top bar
+      this.gain = data.gain.get();
+      this.avg_gain = data.avg_gain.get()
+      this.no_of_queries = data.no_of_queries.get();
+      this.no_of_retrievals = data.no_of_retrievals.get();
+
+      // 2nd
+      this.lineChartData[0].data = this.gain;
+
+      // 3rd - Left
+      this.earning = data.earning.get();
+      this.lineChartData[0].data = this.earning;   
+
+      this.retrieval_cost = data.retrieval_cost.get();
+      this.lineChartData[0].data = this.retrieval_cost;
+      this.penalty_cost = data.penalty_cost.get();
+      this.lineChartData[0].data = this.penalty_cost;
+
+      this.costearningratio = data.costearningratio.get();
+      this.line4ChartData[0].data = this.costearningratio; 
+
+      // 4th 
+      this.avg_query_overhead = data.avg_query_overhead.get();
+      this.line2ChartData[0].data = this.avg_query_overhead; 
+
+      this.avg_network_overhead = data.avg_network_overhead.get();
+      this.line2ChartData[0].data = this.avg_network_overhead; 
+
+      this.avg_processing_overhead = data.avg_processing_overhead.get();
+      this.line2ChartData[0].data = this.avg_processing_overhead; 
+
+      this.processing_overhead_ratio = data.processing_overhead_ratio.get();
+      this.line3ChartData[0].data = this.earning; 
+
+      this.network_overhead_ratio = data.network_overhead_ratio.get();
+      this.line3ChartData[0].data = this.earning; 
+
+      // General
+      this.timeTicks = data.timeTicks.get();
+
+      // 3rd - Right
+      this.pieChartData = data.currentCosts;
+
+      // 5th
+      this.scatter1Data.data = data.rt_pod;
+      this.scatter1ChartData.push(this.scatter1Data);
+
+      this.scatter2Data.data = data.noh_pod;
+      this.scatter2ChartData.push(this.scatter2Data);
+
+      this.scatter3Data.data = data.poh_pod;
+      this.scatter3ChartData.push(this.scatter3Data);
 
     }
     catch(ex){

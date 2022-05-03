@@ -1,4 +1,5 @@
 import { Component, OnInit, Injectable } from '@angular/core';
+import { config } from '../config';
 import { RefreshService } from '../refreshservice/refresh.service';
 import { ApiServiceService } from '../services/api-service.service';
 
@@ -13,11 +14,17 @@ export class DashboardComponent implements OnInit {
   cache_level = false;
   csms = false;
 
+  interval;
+
   constructor(private api_service:ApiServiceService, private refresh_service: RefreshService) {
     this.api_service.retrievePerformanceData();
   }
   
-  ngOnInit() {}
+  ngOnInit() {
+    this.interval = setInterval(() => { 
+      this.api_service.retrievePerformanceData();
+  }, config.refresh_rate);
+  }
 
   getOverallPerformance(){
     this.reset()

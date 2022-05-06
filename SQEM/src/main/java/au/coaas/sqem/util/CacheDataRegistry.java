@@ -1,5 +1,7 @@
 package au.coaas.sqem.util;
 
+import au.coaas.sqem.handler.ContextCacheHandler;
+import au.coaas.sqem.handler.PerformanceLogHandler;
 import au.coaas.sqem.proto.CacheLookUp;
 import au.coaas.sqem.proto.CacheLookUpResponse;
 import org.json.JSONObject;
@@ -70,7 +72,6 @@ public final class CacheDataRegistry{
     }
 
     // Registry lookup. Returns hash key if available in cache.
-
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
         AtomicReference<String> hashKey = null;
         CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
@@ -83,17 +84,19 @@ public final class CacheDataRegistry{
                 hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                 if(entities.containsKey(hashKey.get())){
                     JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
-                    long expPrd = freshness.getLong("unit") * (1-freshness.getLong("fthresh"));
+
+                    double residual_life = freshness.getLong("value") - PerformanceLogHandler.getLastRetrievalTime(lookup.getServiceId());
+                    Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
 
                     LocalDateTime expiryTime;
                     switch(freshness.getString("unit")){
                         case "m": {
-                            expiryTime = entities.get(hashKey.get()).updatedTime.plusMinutes(expPrd);
+                            expiryTime = entities.get(hashKey.get()).updatedTime.plusMinutes(expPrd.longValue());
                             break;
                         }
                         case "s":
                         default:
-                            expiryTime = entities.get(hashKey.get()).updatedTime.plusSeconds(expPrd);
+                            expiryTime = entities.get(hashKey.get()).updatedTime.plusSeconds(expPrd.longValue());
                             break;
                     }
 
@@ -198,6 +201,5 @@ public final class CacheDataRegistry{
 
         return hashKey;
     }
-
 }
 

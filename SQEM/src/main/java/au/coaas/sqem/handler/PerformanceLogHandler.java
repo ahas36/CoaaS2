@@ -264,6 +264,53 @@ public class PerformanceLogHandler {
         }
     }
 
+    // Context Service Performance for retrievals
+
+    public static double getLastRetrievalTime(String csId){
+        Connection connection = null;
+        String queryString = "SELECT response_time" +
+                "FROM coass_performance WHERE status = \"200\" AND identifier = %s ORDER BY id DESC LIMIT 1";
+
+        try{
+            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            ResultSet rs = statement.executeQuery(String.format(queryString,csId));
+
+            if(!rs.next()) {
+                SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead");
+                if(avg_latency.getStatus() == "200")
+                    return Double.valueOf(avg_latency.getBody());
+
+                return 0;
+            }
+
+            return rs.getDouble("response_time");
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+        finally
+        {
+            try
+            {
+                if(connection != null)
+                    connection.close();
+            }
+            catch(SQLException e)
+            {
+                // Failed to close connection.
+                log.severe(e.getMessage());
+            }
+        }
+
+        // We can ignore the retrieval latency of context services which has retrievals earlier than a window size.
+        // That is because, as the lifetime grows larger in value, network latency can be ignored.
+        return 0;
+    }
+
     // Creating the tables at the start
     public static void seed_performance_db(){
         Connection connection = null;
@@ -430,6 +477,8 @@ public class PerformanceLogHandler {
             dbo.put("retrieval_cost", totalRetrievalCost);
 
             persRecord.put("summary", dbo);
+
+            ContextCacheHandler.updatePerformanceStats(dbo.toMap());
 
             // TODO:
             // Utility from saving response time from caching.

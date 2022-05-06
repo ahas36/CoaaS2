@@ -23,7 +23,6 @@ public class CQCServer {
 
     static public void main (String [] args) throws IOException, InterruptedException
     {
-
         log.info("Starting");
         Server server = ServerBuilder.forPort(8484)
                 .addService(ServerInterceptors.intercept(new CQCServiceImpl(), new CQCInterceptor()))

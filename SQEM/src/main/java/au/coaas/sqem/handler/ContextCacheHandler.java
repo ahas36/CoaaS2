@@ -8,6 +8,9 @@ import org.bson.Document;
 
 import org.redisson.api.*;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 public class ContextCacheHandler {
@@ -123,6 +126,45 @@ public class ContextCacheHandler {
 
         return SQEMResponse.newBuilder().setStatus("404")
                 .setHashKey(result.getHashkey()).build();
+    }
+
+    public static void updatePerformanceStats(Map perfMetrics) {
+        try {
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+
+            RLock lock = cacheClient.getFairLock("refreshLock");
+            RMap<String, Object> map = cacheClient.getMap("perf_stats");
+
+            perfMetrics.forEach((k,v) -> map.fastPut((String)k,v));
+
+            lock.unlockAsync();
+        } catch (Exception e) {
+            log.info(e.getMessage());
+        }
+    }
+
+    public static SQEMResponse getPerformanceStats(String statKey){
+        try {
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+
+            RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
+            RLock lock = rwLock.readLock();
+
+            RMap<String, Object> map = cacheClient.getMap("perf_stats");
+            RFuture<Object> stat = map.getAsync(statKey);
+
+            stat.whenCompleteAsync((res, exception) -> {
+                lock.unlockAsync();
+            });
+
+            return SQEMResponse.newBuilder()
+                    .setStatus("200").setBody(stat.getNow().toString())
+                    .build();
+        } catch (Exception e) {
+            return SQEMResponse.newBuilder()
+                    .setStatus("500").setBody(e.getMessage())
+                    .build();
+        }
     }
 
     // Clears the context cache

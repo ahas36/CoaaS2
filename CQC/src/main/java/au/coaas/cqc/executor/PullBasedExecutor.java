@@ -187,7 +187,7 @@ public class PullBasedExecutor {
 
                     String key = null;
                     String value = null;
-                    HashMap<String,String> params = new HashMap<String,String>();
+                    HashMap<String,String> params = new HashMap();
                     for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
                         switch (cdqlConditionToken.getType()) {
                             case Constant:
@@ -633,7 +633,8 @@ public class PullBasedExecutor {
         }
     }
 
-    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String authToken, String contextServicesText, HashMap<String,String> params) {
+    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String authToken,
+                                                           String contextServicesText, HashMap<String,String> params) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 

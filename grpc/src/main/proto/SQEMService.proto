@@ -39,6 +39,12 @@ message CacheLookUpResponse {
     string hashkey = 1;
     bool isCached = 2;
     bool isValid = 3;
+    int64 remainingLife = 4;
+}
+
+message ScheduleTask {
+    CacheLookUp lookup = 1;
+    string hashkey = 2;
 }
 
 message CacheRequest

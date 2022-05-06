@@ -1,9 +1,13 @@
 package au.coaas.sqem.util;
 
+import au.coaas.sqem.handler.ContextCacheHandler;
+import au.coaas.sqem.proto.ScheduleTask;
 import com.google.common.hash.Hashing;
 
 import java.util.Map;
 import java.nio.charset.StandardCharsets;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Utilty {
     public static long convertTime2MilliSecond(String unit, int value) {
@@ -36,6 +40,21 @@ public class Utilty {
             case "400": return "unauth";
             case "404": return "notfound";
             default: return "error";
+        }
+    }
+
+    public static void schedulTask(ScheduleTasks task, ScheduleTask reference, long delay){
+        switch(task){
+            case EVICT: {
+                TimerTask timetask = new TimerTask() {
+                    public void run() {
+                        ContextCacheHandler.fullyEvict(reference);
+                    }
+                };
+                Timer timer = new Timer("Timer");
+                timer.schedule(timetask, delay);
+                break;
+            }
         }
     }
 }

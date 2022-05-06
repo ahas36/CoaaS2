@@ -4,13 +4,19 @@ import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
 
 import au.coaas.sqem.util.CacheDataRegistry;
+import au.coaas.sqem.util.ScheduleTasks;
+import au.coaas.sqem.util.Utilty;
 import org.bson.Document;
 
 import org.redisson.api.*;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.TemporalUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class ContextCacheHandler {
@@ -61,6 +67,14 @@ public class ContextCacheHandler {
         }
     }
 
+    public static void fullyEvict(ScheduleTask request){
+        // Remove from registry
+        registry.removeFromRegistry(request.getLookup());
+        // Remove key
+        RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+        cacheClient.getKeys().deleteAsync(request.getHashkey());
+    }
+
     // Evicts an entity by hash key
     public static SQEMResponse evictEntity(CacheLookUp request) {
         // Ideally the initial evict should push the context into ghost cache
@@ -70,9 +84,25 @@ public class ContextCacheHandler {
 
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
             RLock lock = rwLock.writeLock();
+            RFuture<Boolean> evictStatus;
 
-            cacheClient.getKeys().deleteAsync(result.getHashkey());
-            RFuture<Boolean> evictStatus = cacheClient.getBucket(result.getHashkey()).deleteAsync();
+            if(result.getRemainingLife() > 0){
+                // Todo:
+                // Check whether there are queries remaining in queue to access this context
+                Instant future = Instant.now().plusSeconds(result.getRemainingLife());
+                evictStatus = cacheClient.getBucket(result.getHashkey())
+                        .expireAsync(future);
+                Utilty.schedulTask(ScheduleTasks.EVICT,
+                        ScheduleTask.newBuilder()
+                                .setLookup(request)
+                                .setHashkey(result.getHashkey()).build(),
+                        result.getRemainingLife());
+            }
+            else {
+                registry.removeFromRegistry(request);
+                cacheClient.getKeys().deleteAsync(result.getHashkey());
+                evictStatus = cacheClient.getBucket(result.getHashkey()).deleteAsync();
+            }
 
             evictStatus.whenCompleteAsync((res, exception) -> {
                 lock.unlockAsync();

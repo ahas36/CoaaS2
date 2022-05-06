@@ -8,6 +8,7 @@ import org.json.JSONObject;
 
 import java.time.LocalDateTime;
 
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -73,6 +74,8 @@ public final class CacheDataRegistry{
 
     // Registry lookup. Returns hash key if available in cache.
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
+        long remainingLife = 0;
+        LocalDateTime staleTime;
         AtomicReference<String> hashKey = null;
         CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
 
@@ -90,33 +93,43 @@ public final class CacheDataRegistry{
                         LocalDateTime expiryTime;
                         switch(freshness.getString("unit")){
                             case "m": {
-                                double residual_life = freshness.getLong("value")
+                                Double residual_life = freshness.getLong("value")
                                         - ageLoss > 1 ? ageLoss/60 : 0;
                                 Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
 
-                                expiryTime = entities.get(hashKey.get()).updatedTime.plusMinutes(expPrd.longValue());
+                                LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+
+                                staleTime = updateTime.plusSeconds(residual_life.longValue());
+                                expiryTime = updateTime.plusMinutes(expPrd.longValue());
                                 break;
                             }
                             case "s":
                             default:
-                                double residual_life = freshness.getLong("value")
+                                Double residual_life = freshness.getLong("value")
                                         - ageLoss;
                                 Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
 
-                                expiryTime = entities.get(hashKey.get()).updatedTime.plusSeconds(expPrd.longValue());
+                                LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+
+                                staleTime = updateTime.plusSeconds(residual_life.longValue());
+                                expiryTime = updateTime.plusSeconds(expPrd.longValue());
                                 break;
                         }
 
                         if(LocalDateTime.now().isAfter(expiryTime)){
                             return res.setHashkey(hashKey.get())
                                     .setIsValid(false)
-                                    .setIsCached(true).build();
+                                    .setIsCached(true)
+                                    .setRemainingLife(remainingLife).build();
                         }
+
+                        remainingLife = ChronoUnit.SECONDS.between(LocalDateTime.now(), staleTime);
                     }
 
                     return res.setHashkey(hashKey.get())
                             .setIsValid(true)
-                            .setIsCached(true).build();
+                            .setIsCached(true)
+                            .setRemainingLife(remainingLife).build();
                 }
             }
         }
@@ -126,7 +139,8 @@ public final class CacheDataRegistry{
         // 2. (null, false) - either the entity type or the context service is not cached.
         return res.setHashkey(hashKey.get())
                 .setIsCached(false)
-                .setIsValid(false).build();
+                .setIsValid(false)
+                .setRemainingLife(remainingLife).build();
     }
 
     // Adds or updates the cached context repository

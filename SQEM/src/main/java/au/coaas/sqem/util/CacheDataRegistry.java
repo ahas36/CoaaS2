@@ -83,27 +83,35 @@ public final class CacheDataRegistry{
 
                 hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                 if(entities.containsKey(hashKey.get())){
-                    JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
+                    if(lookup.getCheckFresh()){
+                        JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
+                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(lookup.getServiceId())/1000;
 
-                    double residual_life = freshness.getLong("value") - PerformanceLogHandler.getLastRetrievalTime(lookup.getServiceId());
-                    Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
+                        LocalDateTime expiryTime;
+                        switch(freshness.getString("unit")){
+                            case "m": {
+                                double residual_life = freshness.getLong("value")
+                                        - ageLoss > 1 ? ageLoss/60 : 0;
+                                Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
 
-                    LocalDateTime expiryTime;
-                    switch(freshness.getString("unit")){
-                        case "m": {
-                            expiryTime = entities.get(hashKey.get()).updatedTime.plusMinutes(expPrd.longValue());
-                            break;
+                                expiryTime = entities.get(hashKey.get()).updatedTime.plusMinutes(expPrd.longValue());
+                                break;
+                            }
+                            case "s":
+                            default:
+                                double residual_life = freshness.getLong("value")
+                                        - ageLoss;
+                                Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
+
+                                expiryTime = entities.get(hashKey.get()).updatedTime.plusSeconds(expPrd.longValue());
+                                break;
                         }
-                        case "s":
-                        default:
-                            expiryTime = entities.get(hashKey.get()).updatedTime.plusSeconds(expPrd.longValue());
-                            break;
-                    }
 
-                    if(LocalDateTime.now().isAfter(expiryTime)){
-                        return res.setHashkey(hashKey.get())
-                                .setIsValid(false)
-                                .setIsCached(true).build();
+                        if(LocalDateTime.now().isAfter(expiryTime)){
+                            return res.setHashkey(hashKey.get())
+                                    .setIsValid(false)
+                                    .setIsCached(true).build();
+                        }
                     }
 
                     return res.setHashkey(hashKey.get())

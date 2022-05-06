@@ -659,6 +659,7 @@ public class PullBasedExecutor {
                 final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").toString())
+                        .setCheckFresh(true)
                         .setUniformFreshness(conSer.getJSONObject("sla")
                                 .getJSONObject("freshness")
                                 .put("fthresh", qos.getDouble("fthresh")).toString())

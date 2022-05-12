@@ -10,6 +10,9 @@ import { config } from '../config';
 
 export class ApiServiceService {
 
+  private carparks_uri = 'static-data/carparks.json';
+  private places_uri = 'static-data/places.json';
+
   apiData;
   csmsData;
   levelsData;
@@ -23,6 +26,9 @@ export class ApiServiceService {
   summaryV;
   levelsV;
   csmsV;
+
+  carParkData;
+  placesData;
   
   counter = 0;
   timeTicks:Queue<number> = new Queue<number>();
@@ -262,6 +268,20 @@ export class ApiServiceService {
     this.levelsV = this.counter;
     this.levelsInit = false;
     return this.levelsData;
+  }
+
+  getCarParks(){
+    if(this.carParkData == undefined){
+      this.carParkData = this.http.get(this.carparks_uri);
+    }
+    return this.carParkData;
+  }
+
+  getPlaces(){
+    if(this.placesData == undefined){
+      this.placesData = this.http.get(this.places_uri);
+    }
+    return this.placesData;
   }
 
 }

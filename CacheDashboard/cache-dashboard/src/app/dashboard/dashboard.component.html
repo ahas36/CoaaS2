@@ -4,6 +4,7 @@
         <button class="btn" (click)=getOverallPerformance()>OVERALL</button>
         <button class="btn" (click)=getCacheLevelBasedPerfromance()>CACHE LEVELS</button>
         <button class="btn" (click)=getCSMSPerformance()>CSMS</button>
+        <button class="btn" (click)=getMap()>MAP</button>
     </nav>
 </div>
 
@@ -12,6 +13,7 @@
         <app-overall *ngIf="overall"></app-overall>
         <app-cachelevels *ngIf="cache_level"></app-cachelevels>
         <app-csms *ngIf="csms"></app-csms>
+        <app-map *ngIf="map"></app-map>
     </div>
 </div>
 

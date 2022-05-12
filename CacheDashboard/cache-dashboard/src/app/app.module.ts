@@ -16,6 +16,8 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { ChartsModule, ThemeService } from 'ng2-charts';
 import { ApiServiceService } from './services/api-service.service';
 import { RefreshService } from './refreshservice/refresh.service';
+import { MapComponent } from './map/map.component';
+import { AgmCoreModule } from '@agm/core';
 
 @NgModule({
   declarations: [
@@ -23,7 +25,8 @@ import { RefreshService } from './refreshservice/refresh.service';
     DashboardComponent,
     CacheLevelsComponent,
     OverallComponent,
-    CSMSComponent
+    CSMSComponent,
+    MapComponent
   ],
   imports: [
     BrowserModule,
@@ -34,7 +37,10 @@ import { RefreshService } from './refreshservice/refresh.service';
     MatExpansionModule,
     MatCardModule,
     MatTabsModule,
-    ChartsModule 
+    ChartsModule,
+    AgmCoreModule.forRoot({
+      apiKey: 'AIzaSyDbQyw3NVus6k_21insLPHI5Uoq0LUdmqw'
+    }) 
   ],
   providers: [ThemeService, ApiServiceService, RefreshService],
   bootstrap: [AppComponent]

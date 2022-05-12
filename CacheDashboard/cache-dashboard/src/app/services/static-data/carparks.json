@@ -1,0 +1,5293 @@
+[
+    {
+        "name": "Melbourne Central Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "300 Lonsdale Street, Melbourne 3000",
+        "location": {
+            "lat": -37.811745224874464, 
+            "long": 144.96352654661146
+        },
+        "gates": [
+            {
+                "address": "300 Lonsdale St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "211 La Trobe St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 16
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 32
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 48
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 64
+                },
+                {
+                    "min": 4,
+                    "amount": 70
+                }
+            ]
+        }
+    },
+    {
+        "name": "Galleria Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "08:00:00.000Z",
+                "close": "18:30:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "08:00:00.000Z",
+                "close": "18:30:00.000Z"
+            }
+        ],
+        "address": "131 Elizabeth St, Melbourne 3000",
+        "location": {
+            "lat": -37.81524065823088, 
+            "long": 144.96313236958716
+        },
+        "gates": [
+            {
+                "address": "Elizabeth St, Melbourne 3000",
+                "type": "entry",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "Lt Collins St, Melbourne 3000",
+                "type": "exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 24
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 48
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 71
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 76
+                },
+                {
+                    "min": 4,
+                    "amount": 80
+                }
+            ],
+            "weekend": 18
+        }
+    },
+    {
+        "name": "350 Collins Street Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "07:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "07:00:00.000Z",
+                "close": "21:00:00.000Z"
+            }
+        ],
+        "address": "350 Collins St, Melbourne 3000",
+        "location": {
+            "lat": -37.816328044684106, 
+            "long": 144.96235845610153
+        },
+        "gates": [
+            {
+                "address": "369 Little Collins St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 14
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 24
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 48
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 72
+                },
+                {
+                    "min": 3,
+                    "amount": 80
+                }
+            ],
+            "weekend": 14
+        }
+    },
+    {
+        "name": "Scots Church Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "181 Little Collins St, Melbourne 3000",
+        "location": {
+            "lat": -37.814172012429694, 
+            "long": 144.96822182911026
+        },
+        "gates": [
+            {
+                "address": "181 Little Collins St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 5
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 26
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 58
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 75
+                },
+                {
+                    "min": 3,
+                    "amount": 78
+                }
+            ],
+            "weekend": 24
+        }
+    },
+    {
+        "name": "333 Collins St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "07:00:00.000Z",
+                "close": "21:00:00.000Z"
+            }
+        ],
+        "address": "333 Collins St, Melbourne 3000",
+        "location": {
+            "lat": -37.81731675027144, 
+            "long": 144.96370787344563
+        },
+        "gates": [
+            {
+                "address": "310 Flinders Lane, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 43
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 62
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 65
+                },
+                {
+                    "min": 4,
+                    "amount": 69
+                }
+            ],
+            "weekend": 24
+        }
+    },
+    {
+        "name": "180 Russell St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "180 Russell St, Melbourne 3000",
+        "location": {
+            "lat": -37.81200800509822, 
+            "long": 144.9681174315577
+        },
+        "gates": [
+            {
+                "address": "180 Russell St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 5
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 20
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 40
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 60
+                },
+                {
+                    "min": 3,
+                    "amount": 70
+                }
+            ],
+            "weekend": 17
+        }
+    },
+    {
+        "name": "189 Queen Street Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "189 Queen Street, Melbourne 3000",
+        "location": {
+            "lat": -37.81426543383172, 
+            "long": 144.95973139228863
+        },
+        "gates": [
+            {
+                "address": "189 Queen Street, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.95,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 46
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 64
+                },
+                {
+                    "min": 3,
+                    "amount": 75
+                }
+            ],
+            "weekend": [
+                {
+                    "day":"Saturday",
+                    "amount":19
+                },
+                {
+                    "day":"Sunday",
+                    "amount":15
+                }
+            ]
+        }
+    },
+    {
+        "name": "T&G Building - 161 Collins St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "02:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "02:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "161 Collins Street, Melbourne 3000",
+        "location": {
+            "lat": -37.81537295272349, 
+            "long": 144.96895492787078
+        },
+        "gates": [
+            {
+                "address": "Russell St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 52
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 75
+                },
+                {
+                    "min": 3,
+                    "amount": 82
+                }
+            ],
+            "weekend": 12
+        }
+    },
+    {
+        "name": "222 Russell St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "222 Russell St, Melbourne 3000",
+        "location": {
+            "lat": -37.81130655294302, 
+            "long": 144.96802631007972
+        },
+        "gates": [
+            {
+                "address": "222 Russell St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 24
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 44
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 66
+                },
+                {
+                    "min": 3,
+                    "amount": 69
+                }
+            ],
+            "weekend": 18
+        }
+    },
+    {
+        "name": "QV - 180 Lonsdale Street",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "180 Lonsdale Street, Melbourne 3000",
+        "location": {
+            "lat": -37.81090457143392, 
+            "long": 144.9663302134621
+        },
+        "gates": [
+            {
+                "address": "180 Lonsdale Street, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "180 Russell St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "180 Little Lonsdale St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 35
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 45
+                },
+                {
+                    "min": 3,
+                    "amount": 60
+                }
+            ],
+            "weekend": 12
+        }
+    },
+    {
+        "name": "Flinders Gate Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "172-192 Flinders Street, Melbourne 3000",
+        "location": {
+            "lat": -37.81682125732327, 
+            "long": 144.9686096695872
+        },
+        "gates": [
+            {
+                "address": "172-192 Flinders Street, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "172-192 Flinders Lane, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 52
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 79
+                },
+                {
+                    "min": 3,
+                    "amount": 85
+                }
+            ],
+            "weekend": 18
+        }
+    },
+    {
+        "name": "425 Collins St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "425 Collins Street, Melbourne 3000",
+        "location": {
+            "lat": -37.81750236318638, 
+            "long": 144.96064945731857
+        },
+        "gates": [
+            {
+                "address": "425 Collins Street, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 10
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 45
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 65
+                },
+                {
+                    "min": 3,
+                    "amount": 70
+                }
+            ],
+            "weekend": 12
+        }
+    },
+    {
+        "name": "300 La Trobe St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:30:00.000Z",
+                "close": "00:30:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:30:00.000Z",
+                "close": "00:30:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:30:00.000Z",
+                "close": "00:30:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:30:00.000Z",
+                "close": "00:30:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:30:00.000Z",
+                "close": "00:30:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:30:00.000Z",
+                "close": "00:30:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:30:00.000Z",
+                "close": "00:30:00.000Z"
+            }
+        ],
+        "address": "300 La Trobe St, Melbourne 3000",
+        "location": {
+            "lat": -37.81038068476522, 
+            "long": 144.96049589842275
+        },
+        "gates": [
+            {
+                "address": "300 La Trobe St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "300 A'Beckett Street , Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 9
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 46
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 57
+                },
+                {
+                    "min": 3,
+                    "amount": 66
+                }
+            ],
+            "weekend": 14
+        }
+    },
+    {
+        "name": "11 Exhibition St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "02:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "02:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "11 Exhibition St, Melbourne 3000",
+        "location": {
+            "lat": -37.81546768242825, 
+            "long": 144.9716817695871
+        },
+        "gates": [
+            {
+                "address": "11 Exhibition St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.05,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 52
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 79
+                },
+                {
+                    "min": 3,
+                    "amount": 85
+                }
+            ],
+            "weekend": 20
+        }
+    },
+    {
+        "name": "62 La Trobe St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "62 La Trobe St, Melbourne 3000",
+        "location": {
+            "lat": -37.808422085664745, 
+            "long": 144.96697794075104
+        },
+        "gates": [
+            {
+                "address": "62 La Trobe St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 3.2,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 15
+                },
+                {
+                    "min": 1,
+                    "max": 1.5,
+                    "amount": 22
+                },
+                {
+                    "min": 1.5,
+                    "max": 2,
+                    "amount": 29
+                },
+                {
+                    "min": 2,
+                    "max": 2.5,
+                    "amount": 36
+                },
+                {
+                    "min": 2.5,
+                    "max": 3,
+                    "amount": 43
+                },
+                {
+                    "min": 3,
+                    "amount": 50
+                }
+            ],
+            "weekend": 9
+        }
+    },
+    {
+        "name": "542 Little Bourke St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "02:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "02:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "542 Little Bourke St, Melbourne 3000",
+        "location": {
+            "lat": -37.814988582648525, 
+            "long": 144.9564033407512
+        },
+        "gates": [
+            {
+                "address": "542 Little Bourke St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 23
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 49
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 68
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 75
+                },
+                {
+                    "min": 4,
+                    "amount": 79
+                }
+            ],
+            "weekend": 12
+        }
+    },
+    {
+        "name": "Southgate Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "Southgate Car Park, Southgate Ave, Southbank VIC 3006",
+        "location": {
+            "lat": -37.82054405518555, 
+            "long": 144.9654240695873
+        },
+        "gates": [
+            {
+                "address": "Southgate Car Park, Southgate Ave, Southbank VIC 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "Southgate Car Park, City Road, Southbank VIC 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 47
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 70
+                },
+                {
+                    "min": 3,
+                    "amount": 75
+                }
+            ],
+            "weekend": 17
+        }
+    },
+    {
+        "name": "Federation Square Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "Federation Square Car Park, Russell St, Melbourne 3000",
+        "location": {
+            "lat": -37.81773512893531, 
+            "long": 144.9712252330796
+        },
+        "gates": [
+            {
+                "address": "Federation Square Car Park, Russell St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "Federation Square Car Park, Batman Avenue, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 16
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 32
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 48
+                },
+                {
+                    "min": 3,
+                    "amount": 64
+                }
+            ],
+            "weekend": 16
+        }
+    },
+    {
+        "name": "380 La Trobe St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "07:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "07:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "07:00:00.000Z",
+                "close": "22:00:00.000Z"
+            }
+        ],
+        "address": "380 La Trobe St, Melbourne 3000",
+        "location": {
+            "lat": -37.81095997857317, 
+            "long": 144.95809652871458
+        },
+        "gates": [
+            {
+                "address": "191 A'Beckett Street, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 40
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 48
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 58
+                },
+                {
+                    "min": 4,
+                    "amount": 60
+                }
+            ],
+            "weekend": 14
+        }
+    },
+    {
+        "name": "452 Flinders St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            }
+        ],
+        "address": "452 Flinders St, Melbourne 3000",
+        "location": {
+            "lat": -37.81927313115166, 
+            "long": 144.9583065695871
+        },
+        "gates": [
+            {
+                "address": "452 Flinders St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 52
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 77
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 80
+                },
+                {
+                    "min": 4,
+                    "amount": 85
+                }
+            ]
+        }
+    },
+    {
+        "name": "Collins Place Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "28 Flinders Lane, Melbourne 3000",
+        "location": {
+            "lat": -37.81453204725756, 
+            "long": 144.97334887572137
+        },
+        "gates": [
+            {
+                "address": "28 Flinders Lane, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 26
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 54
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 80
+                },
+                {
+                    "min": 3,
+                    "amount": 88
+                }
+            ],
+            "weekend": 17
+        }
+    },
+    {
+        "name": "530 Collins St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:30:00.000Z",
+                "close": "18:30:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:30:00.000Z",
+                "close": "18:30:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:30:00.000Z",
+                "close": "18:30:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:30:00.000Z",
+                "close": "18:30:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:30:00.000Z",
+                "close": "18:30:00.000Z"
+            }
+        ],
+        "address": "530 Collins St, Melbourne 3000",
+        "location": {
+            "lat": -37.81797896726857, 
+            "long": 144.9569187569725
+        },
+        "gates": [
+            {
+                "address": "530 Collins St Car Park, Little Collins St, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 40
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 55
+                },
+                {
+                    "min": 3,
+                    "amount": 62
+                }
+            ]
+        }
+    },
+    {
+        "name": "Riverside Quay Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "2 Riverside Quay, Southbank 3006",
+        "location": {
+            "lat": -37.82132392974074,
+            "long": 144.96334274075136
+        },
+        "gates": [
+            {
+                "address": "2 Riverside Quay, Southbank 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 52
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 79
+                },
+                {
+                    "min": 3,
+                    "amount": 85
+                }
+            ],
+            "weekend": 17
+        }
+    },
+    {
+        "name": "Eureka Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "70 City Road, Southbank, Southbank 3006",
+        "location": {
+            "lat": -37.82166587958049, 
+            "long": 144.96532344075135
+        },
+        "gates": [
+            {
+                "address": "70 City Road, Southbank, Southbank 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 24
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 48
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 72
+                },
+                {
+                    "min": 3,
+                    "amount": 76
+                }
+            ],
+            "weekend": 16
+        }
+    },
+    {
+        "name": "485 La Trobe St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "07:00:00.000Z",
+                "close": "19:00:00.000Z"
+            }
+        ],
+        "address": "485 La Trobe St, Melbourne 3000",
+        "location": {
+            "lat": -37.81276538406054, 
+            "long": 144.9548071421926
+        },
+        "gates": [
+            {
+                "address": "22 Eagle Alley, Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 52
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 65
+                },
+                {
+                    "min": 3,
+                    "amount": 70
+                }
+            ]
+        }
+    },
+    {
+        "name": "Freshwater Place Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "05:30:00.000Z",
+                "close": "02:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "09:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "09:00:00.000Z",
+                "close": "23:00:00.000Z"
+            }
+        ],
+        "address": "2 Freshwater Place, Southbank, Southbank 3006",
+        "location": {
+            "lat": -37.82215957935367, 
+            "long": 144.96306744075133
+        },
+        "gates": [
+            {
+                "address": "2 Freshwater Place, Southbank, Southbank 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 20
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 45
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 65
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 70
+                },
+                {
+                    "min": 4,
+                    "amount": 75
+                }
+            ],
+            "weekend": 10
+        }
+    },
+    {
+        "name": "158 City Rd Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "158 City Rd, Southbank, Southbank 3006",
+        "location": {
+            "lat": -37.823441813986584, 
+            "long": 144.96251375697364
+        },
+        "gates": [
+            {
+                "address": "158 City Rd Car Park, Power St, Southbank, Southbank 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 12
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 15
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 19
+                },
+                {
+                    "min": 3,
+                    "amount": 25
+                }
+            ]
+        }
+    },
+    {
+        "name": "Southern Cross Station Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "163-235 Spencer Street, Docklands 3000",
+        "location": {
+            "lat": -37.81521706734024, 
+            "long": 144.95208596170522
+        },
+        "gates": [
+            {
+                "address": "163-235 Cnr Spencer St, Docklands 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "163-235 Lonsdale St, Docklands 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 9
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 24
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 37
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 45
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 49
+                },
+                {
+                    "min": 4,
+                    "amount": 57
+                }
+            ]
+        }
+    },
+    {
+        "name": "Park Hyatt Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "Park Hyatt Car Park, St Andrews Pl, East Melbourne VIC 3000",
+        "location": {
+            "lat": -37.81194098273126, 
+            "long": 144.97620735190608
+        },
+        "gates": [
+            {
+                "address": "Park Hyatt Car Park, St Andrews Pl, East Melbourne VIC 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 20
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 42
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 64
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 72
+                },
+                {
+                    "min": 4,
+                    "amount": 77
+                }
+            ],
+            "weekend": 16
+        }
+    },
+    {
+        "name": "90 Victoria Parade Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "07:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "07:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "07:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "07:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "07:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "07:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "07:00:00.000Z",
+                "close": "01:00:00.000Z"
+            }
+        ],
+        "address": "90 Victoria Parade, East Melbourne VIC 3000",
+        "location": {
+            "lat": -37.80858836789804, 
+            "long": 144.97441295697067
+        },
+        "gates": [
+            {
+                "address": "90 Victoria Parade, East Melbourne VIC 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 20
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 41
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 60
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 69
+                },
+                {
+                    "min": 4,
+                    "amount": 73
+                }
+            ],
+            "weekend": 12
+        }
+    },
+    {
+        "name": "500 La Trobe St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "500 La Trobe St, West Melbourne VIC 3003",
+        "location": {
+            "lat": -37.81282193559668, 
+            "long": 144.9520313695871
+        },
+        "gates": [
+            {
+                "address": "500 La Trobe St, West Melbourne VIC 3003",
+                "type": "entry/exit"
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 0
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 16
+                },
+                {
+                    "min": 1,
+                    "amount": 26
+                }
+            ],
+            "weekend": 14
+        }
+    },
+    {
+        "name": "Lansdowne Street Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "07:00:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "07:00:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "07:00:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "07:00:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "07:00:00.000Z",
+                "close": "18:00:00.000Z"
+            }
+        ],
+        "address": "2 St Andrews Pl, East Melbourne VIC 3002",
+        "location": {
+            "lat": -37.81194856103847, 
+            "long": 144.97731921274317
+        },
+        "gates": [
+            {
+                "address": "2 St Andrews Pl, East Melbourne VIC 3002",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 6
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 11
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 15
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 19
+                },
+                {
+                    "min": 4,
+                    "max": 5,
+                    "amount": 22
+                },
+                {
+                    "min": 5,
+                    "amount": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "410 Albert St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:30:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:30:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:30:00.000Z",
+                "close": "22:00:00.000Z"
+            }
+        ],
+        "address": "410 Albert St Car Park, East Melbourne 3000",
+        "location": {
+            "lat": -37.80949902566175, 
+            "long": 144.97697991467248
+        },
+        "gates": [
+            {
+                "address": "410 Albert St Car Park, East Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "410 Albert St Car Park, East Melbourne 3000",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 0
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 18
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 39
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 56
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 63
+                },
+                {
+                    "min": 4,
+                    "amount": 72
+                }
+            ],
+            "weekend": 16
+        }
+    },
+    {
+        "name": "Melbourne Square Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "Melbourne Square Car Park, Hoff Boulevard, Southbank, Southbank 3006",
+        "location": {
+            "lat": -37.826469915305324, 
+            "long": 144.96339999895582
+        },
+        "gates": [
+            {
+                "address": "Melbourne Square Car Park, Hoff Boulevard, Southbank, Southbank 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 5
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 10
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 15
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 30
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 40
+                },
+                {
+                    "min": 4,
+                    "amount": 40
+                }
+            ]
+        }
+    },
+    {
+        "name": "Melbourne Exhibition Centre Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "16 Normanby Road, Southbank, Southbank 3006",
+        "location": {
+            "lat": -37.82595827760808, 
+            "long": 144.95524916958735
+        },
+        "gates": [
+            {
+                "address": "16 Normanby Road, Southbank, Southbank 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.20,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 14
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 28
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 42
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 49
+                },
+                {
+                    "min": 4,
+                    "amount": 56
+                }
+            ],
+            "weekend": 20
+        }
+    },
+    {
+        "name": "Digital Harbour Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "208-240 Harbour Esplanade, Docklands 3000",
+        "location": {
+            "lat": -37.813099215182184, 
+            "long": 144.94489893400498
+        },
+        "gates": [
+            {
+                "address": "208-240 Harbour Esplanade, Docklands 3000",
+                "type": "entry/exit"
+            }
+        ],
+        "price": {
+            "flat": 15
+        }
+    },
+    {
+        "name": "The Gateway Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            }
+        ],
+        "address": "312 St Kilda Rd, Southbank VIC 3006",
+        "location": {
+            "lat": -37.8291719078429, 
+            "long": 144.9707203827816
+        },
+        "gates": [
+            {
+                "address": "312 St Kilda Rd, Southbank VIC 3006",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.8,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "flat": 25
+        }
+    },
+    {
+        "name": "South Wharf Retail Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "20 Convention Centre Place, South Wharf, Southbank 3006",
+        "location": {
+            "lat": -37.82518993797625, 
+            "long": 144.94858939525307
+        },
+        "gates": [
+            {
+                "address": "20 Convention Centre Place, South Wharf, Southbank 300",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 12
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 24
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 36
+                },
+                {
+                    "min": 3,
+                    "amount": 48
+                }
+            ]
+        }
+    },
+    {
+        "name": "800 Bourke St Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "04:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "04:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "08:00:00.000Z",
+                "close": "21:00:00.000Z"
+            }
+        ],
+        "address": "800 Bourke St, Docklands VIC 3008",
+        "location": {
+            "lat": -37.81913998074112, 
+            "long": 144.94448404075123
+        },
+        "gates": [
+            {
+                "address": "800 Bourke St, Docklands VIC 3008",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 6
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 52
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 79
+                },
+                {
+                    "min": 3,
+                    "amount": 85
+                }
+            ],
+            "weekend": 10
+        }
+    },
+    {
+        "name": "Royal Womens Hospital Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "21:00:00.000Z"
+            }
+        ],
+        "address": "20 Flemington Rd, Parkville VIC 3052",
+        "location": {
+            "lat": -37.798439567091975, 
+            "long": 144.95454663334527
+        },
+        "gates": [
+            {
+                "address": "20 Flemington Rd, Parkville VIC 3052",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 10
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 16
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 22
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 28
+                },
+                {
+                    "min": 4,
+                    "max": 5,
+                    "amount": 30
+                },
+                {
+                    "min": 5,
+                    "amount": 35
+                }
+            ],
+            "weekend": 10
+        }
+    },
+    {
+        "name": "Freeway Car Park",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "Wilson Parking, Normanby Rd, Southbank VIC 3006",
+        "location": {
+            "lat": -37.82779450919764, 
+            "long": 144.95140594365532
+        },
+        "gates": [
+            {
+                "address": "Wilson Parking, Munro St, Southbank VIC 3006",
+                "type": "entry/exit"
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 12
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 24
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 36
+                },
+                {
+                    "min": 3,
+                    "amount": 48
+                }
+            ]
+        }
+    },
+    {
+        "name": "THE STRAND CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            }
+        ],
+        "address": "323 Lonsdale Street, Melbourne",
+        "location": {
+            "lat": -37.81269553172377, 
+            "long": 144.96272176958712
+        },
+        "gates": [
+            {
+                "address": "323 Lonsdale Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 37
+                },
+                {
+                    "min": 2,
+                    "amount": 41
+                }
+            ],
+            "weekend": 18
+        }
+    },
+    {
+        "name": "200 QUEEN STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "200 Queen Street, Melbourne",
+        "location": {
+            "lat": -37.81345167718646, 
+            "long": 144.96036619842297
+        },
+        "gates": [
+            {
+                "address": "200 Queen Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 49
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 55
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 59
+                },
+                {
+                    "min": 2,
+                    "amount": 63
+                }
+            ],
+            "weekend": 21
+        }
+    },
+    {
+        "name": "123 QUEEN STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "123 Queen Street, Melbourne",
+        "location": {
+            "lat": -37.81575807702062, 
+            "long": 144.96071298063205
+        },
+        "gates": [
+            {
+                "address": "412 Little Collins St, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.6,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "flat": 30,
+            "weekend": 25
+        }
+    },
+    {
+        "name": "367 COLLINS ST CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "07:30:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "07:30:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "07:30:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "07:30:00.000Z",
+                "close": "18:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "07:30:00.000Z",
+                "close": "18:00:00.000Z"
+            }
+        ],
+        "address": "367 Collins St, Melbourne",
+        "location": {
+            "lat": -37.81714348800086, 
+            "long": 144.96243084504994
+        },
+        "gates": [
+            {
+                "address": "357 Flinders Lane, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 22
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 48
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 68
+                },
+                {
+                    "min": 3,
+                    "amount": 79
+                }
+            ]
+        }
+    },
+    {
+        "name": "460 LONSDALE STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "460 Lonsdale Street, Melbourne",
+        "location": {
+            "lat": -37.81308226898847, 
+            "long": 144.95821107510963
+        },
+        "gates": [
+            {
+                "address": "460 Lonsdale Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 49
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 55
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 59
+                },
+                {
+                    "min": 4,
+                    "amount": 63
+                }
+            ],
+            "weekend": 16
+        }
+    },
+    {
+        "name": "THE MINT CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "383 La Trobe Street, Melbourne",
+        "location": {
+            "lat": -37.81149679620473, 
+            "long": 144.95816676836344
+        },
+        "gates": [
+            {
+                "address": "383 La Trobe Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 49
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 55
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 59
+                },
+                {
+                    "min": 4,
+                    "amount": 63
+                }
+            ],
+            "weekend": 16
+        }
+    },
+    {
+        "name": "300 FLINDERS STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "300 Flinders Street, Melbourne",
+        "location": {
+            "lat": -37.81828161547582, 
+            "long": 144.96391369840748
+        },
+        "gates": [
+            {
+                "address": "300 Flinders Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 5
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 18
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 42
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 49
+                },
+                {
+                    "min": 3,
+                    "amount": 55
+                }
+            ],
+            "weekend": 18
+        }
+    },
+    {
+        "name": "SOUTHERN CROSS CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "23:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "23:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "23:00:00.000Z"
+            }
+        ],
+        "address": "121 Exhibition Street, Melbourne",
+        "location": {
+            "lat": -37.81275901487461, 
+            "long": 144.97066133339356
+        },
+        "gates": [
+            {
+                "address": "129 Bourke Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "flat": 25,
+            "weekend": 20
+        }
+    },
+    {
+        "name": "ST JAMES CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            }
+        ],
+        "address": "555 Bourke Street, Melbourne",
+        "location": {
+            "lat": -37.816443203763335, 
+            "long": 144.9575647487527
+        },
+        "gates": [
+            {
+                "address": "Church Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 44
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 49
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 62
+                },
+                {
+                    "min": 4,
+                    "amount": 72
+                }
+            ]
+        }
+    },
+    {
+        "name": "570 BOURKE STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "05:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "05:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "05:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "05:30:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "05:30:00.000Z",
+                "close": "20:00:00.000Z"
+            }
+        ],
+        "address": "570 Bourke Street, Melbourne",
+        "location": {
+            "lat": -37.81531694186672, 
+            "long": 144.95646200636125
+        },
+        "gates": [
+            {
+                "address": "Gresham Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 23
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 50
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 65
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 73
+                },
+                {
+                    "min": 4,
+                    "amount": 74
+                }
+            ]
+        }
+    },
+    {
+        "name": "376 FLINDERS STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "376 Flinders Street, Melbourne",
+        "location": {
+            "lat": -37.81901475113686, 
+            "long": 144.96157916163313
+        },
+        "gates": [
+            {
+                "address": "376 Flinders Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 10
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 23
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 50
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 65
+                },
+                {
+                    "min": 3,
+                    "amount": 72
+                }
+            ],
+            "weekend": 17
+        }
+    },
+    {
+        "name": "MERRITTS PLACE CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "05:30:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "558 Little Bourke Street, Melbourne",
+        "location": {
+            "lat": -37.81489956354892, 
+            "long": 144.95593509842297
+        },
+        "gates": [
+            {
+                "address": "Crombie Lane, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 47
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 55
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 59
+                },
+                {
+                    "min": 4,
+                    "amount": 63
+                }
+            ],
+            "weekend": 15
+        }
+    },
+    {
+        "name": "450 FLINDERS LANE CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            }
+        ],
+        "address": "450 Flinders Lane, Melbourne",
+        "location": {
+            "lat": -37.818621563428096, 
+            "long": 144.95865769842302
+        },
+        "gates": [
+            {
+                "address": "450 Flinders Lane, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 25
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 54
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 75
+                },
+                {
+                    "min": 3,
+                    "amount": 79
+                }
+            ]
+        }
+    },
+    {
+        "name": "15 WILLIAM STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "09:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "09:00:00.000Z",
+                "close": "19:00:00.000Z"
+            }
+        ],
+        "address": "15 William Street, Melbourne",
+        "location": {
+            "lat": -37.8190731257864, 
+            "long": 144.9592079922887
+        },
+        "gates": [
+            {
+                "address": "450 Flinders Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 23
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 50
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 55
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 59
+                },
+                {
+                    "min": 4,
+                    "amount": 63
+                }
+            ],
+            "weekend": 13
+        }
+    },
+    {
+        "name": "28 LA TROBE STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "28 La Trobe Street, Melbourne",
+        "location": {
+            "lat": -37.80819543490433, 
+            "long": 144.9680296800201
+        },
+        "gates": [
+            {
+                "address": "28 La Trobe Street, Melbourne, Melbourne",
+                "type": "entry",
+                "height": {
+                    "value": 2.20,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "MacKenzie Street, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.20,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "Grant Lane, Melbourne",
+                "type": "exit",
+                "height": {
+                    "value": 2.20,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "flat": 16
+        }
+    },
+    {
+        "name": "59 LONSDALE STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "03:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "09:00:00.000Z",
+                "close": "03:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "09:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "59 Lonsdale Street, Melbourne",
+        "location": {
+            "lat": -37.810177125564664, 
+            "long": 144.97051098124388
+        },
+        "gates": [
+            {
+                "address": "59 Lonsdale Street, Melbourne",
+                "type": "entry",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "222 Exhibition Street",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "flat": 18,
+            "weekend": 30
+        }
+    },
+    {
+        "name": "50 LONSDALE STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "19:00:00.000Z"
+            }
+        ],
+        "address": "50 Lonsdale Street, Melbourne",
+        "location": {
+            "lat": -37.80928583088211, 
+            "long": 144.970678387378
+        },
+        "gates": [
+            {
+                "address": "Little Lonsdale Street, Melbourne",
+                "type": "entry",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "50 Lonsdale Street, Melbourne",
+                "type": "exit",
+                "height": {
+                    "value": 2.10,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 9
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 28
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 54
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 68
+                },
+                {
+                    "min": 3,
+                    "amount": 73
+                }
+            ],
+            "weekend": 30
+        }
+    },
+    {
+        "name": "522 FLINDERS LANE CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "05:30:00.000Z",
+                "close": "22:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "22:00:00.000Z"
+            }
+        ],
+        "address": "522 Flinders Lane, Melbourne",
+        "location": {
+            "lat": -37.81973087650833, 
+            "long": 144.95576273524475
+        },
+        "gates": [
+            {
+                "address": "522 Flinders Lane, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 8
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 21
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 45
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 56
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 59
+                },
+                {
+                    "min": 4,
+                    "amount": 63
+                }
+            ],
+            "weekend": 18
+        }
+    },
+    {
+        "name": "12-20 FLINDERS LANE CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "05:30:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "05:30:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "05:30:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "05:30:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "01:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "01:00:00.000Z"
+            }
+        ],
+        "address": "12-20 Flinders Lane, Melbourne",
+        "location": {
+            "lat": -37.81436185540616, 
+            "long": 144.97357565793024
+        },
+        "gates": [
+            {
+                "address": "12-20 Flinders Lane, Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 5
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 30
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 56
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 85
+                },
+                {
+                    "min": 3,
+                    "amount": 89
+                }
+            ],
+            "weekend": 15
+        }
+    },
+    {
+        "name": "700 COLLINS STREET",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "700 Collins Street, Melbourne",
+        "location": {
+            "lat": -37.81956522895331, 
+            "long": 144.950542166417
+        },
+        "gates": [
+            {
+                "address": "Aurora Lane, through Bourke St, Melbourne",
+                "type": "entry",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            },
+            {
+                "address": "700 Collins Street, Melbourne",
+                "type": "exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 10
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 29
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 47
+                },
+                {
+                    "min": 2,
+                    "amount": 60
+                }
+            ],
+            "weekend": 19
+        }
+    },
+    {
+        "name": "33 BEDFORD STREET CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "00:00:00.000Z",
+                "close": "23:59:59.000Z"
+            }
+        ],
+        "address": "33 Bedford Street, North Melbourne",
+        "location": {
+            "lat": -37.80200498426292, 
+            "long": 144.95603635181232
+        },
+        "gates": [
+            {
+                "address": "33 Bedford Street, North Melbourne",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.0,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 4
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 7
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 12
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 15
+                },
+                {
+                    "min": 3,
+                    "amount": 25
+                }
+            ],
+            "weekend": 5
+        }
+    },
+    {
+        "name": "ACU CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:30:00.000Z",
+                "close": "22:30:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:30:00.000Z",
+                "close": "22:30:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:30:00.000Z",
+                "close": "22:30:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:30:00.000Z",
+                "close": "22:30:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:30:00.000Z",
+                "close": "22:30:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:30:00.000Z",
+                "close": "22:30:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:30:00.000Z",
+                "close": "22:30:00.000Z"
+            }
+        ],
+        "address": "115 Victoria Parade, Fitzroy",
+        "location": {
+            "lat": -37.80795654794242, 
+            "long": 144.97878151320222
+        },
+        "gates": [
+            {
+                "address": "Young Street, Fitzroy",
+                "type": "entry/exit",
+                "height": {
+                    "value": 1.9,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 10.5
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 15.5
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 18.5
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 20.5
+                },
+                {
+                    "min": 4,
+                    "amount": 28.5
+                }
+            ],
+            "weekend": [
+                {
+                    "min": 0,
+                    "max": 1,
+                    "amount": 5.5
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 8.5
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 10.5
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 12.5
+                },
+                {
+                    "min": 4,
+                    "amount": 15.5
+                }
+            ]
+        }
+    },
+    {
+        "name": "VICTORIAN COMPREHENSIVE CANCER CENTRE CAR PARK",
+        "open_hours": [
+            {
+                "day": "Monday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Tuesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Wednesday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Thursday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Friday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Saturday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            },
+            {
+                "day": "Sunday",
+                "open": "06:00:00.000Z",
+                "close": "20:00:00.000Z"
+            }
+        ],
+        "address": "305 Grattan Street, Melbourne",
+        "location": {
+            "lat": -37.8004537495275, 
+            "long": 144.95661095920104
+        },
+        "gates": [
+            {
+                "address": "305 Grattan Street, Melbourne ",
+                "type": "entry/exit",
+                "height": {
+                    "value": 2.1,
+                    "unit": "m"
+                }
+            }
+        ],
+        "price": {
+            "hourly": [
+                {
+                    "min": 0,
+                    "max": 0.5,
+                    "amount": 0
+                },
+                {
+                    "min": 0.5,
+                    "max": 1,
+                    "amount": 10
+                },
+                {
+                    "min": 1,
+                    "max": 2,
+                    "amount": 15
+                },
+                {
+                    "min": 2,
+                    "max": 3,
+                    "amount": 20
+                },
+                {
+                    "min": 3,
+                    "max": 4,
+                    "amount": 25
+                },
+                {
+                    "min": 4,
+                    "max": 5,
+                    "amount": 27
+                },
+                {
+                    "min": 5,
+                    "max": 6,
+                    "amount": 30
+                },
+                {
+                    "min": 6,
+                    "amount": 35
+                }
+            ],
+            "weekend": 12
+        }
+    }
+]

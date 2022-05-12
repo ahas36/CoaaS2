@@ -13,6 +13,7 @@ export class DashboardComponent implements OnInit {
   overall = true;
   cache_level = false;
   csms = false;
+  map = false;
 
   interval;
 
@@ -41,10 +42,16 @@ export class DashboardComponent implements OnInit {
     this.csms=true
   }
 
+  getMap(){
+    this.reset()
+    this.map=true
+  }
+
   reset(){
     this.overall=false
     this.cache_level=false
     this.csms=false
+    this.map=false
   }
 
 }

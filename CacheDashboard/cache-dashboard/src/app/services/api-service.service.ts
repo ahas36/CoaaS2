@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { PerfData, Queue } from './service-classes';
-import { CSMSModel, LevelsModel, SummaryModel } from './service-view-models';
+import { CSMSModel, LevelsModel, SummaryModel, SimpleModel } from './service-view-models';
 import { config } from '../config';
 
 @Injectable({
@@ -15,14 +15,17 @@ export class ApiServiceService {
   levelsData;
   summaryData;
   currentCosts;
+  queryData;
 
   summaryInit = false;
   levelsInit = false;
   csmsInit = false;
+  queryInit = false;
 
   summaryV;
   levelsV;
   csmsV;
+  queryV;
 
   carParkData;
   placesData;
@@ -34,16 +37,32 @@ export class ApiServiceService {
     this.summaryData = new SummaryModel();
     this.csmsData = new CSMSModel();
     this.levelsData = new LevelsModel();
+    this.queryData = new SimpleModel();
 
     this.summaryInit = true;
     this.levelsInit = true;
     this.csmsInit = true;
+    this.queryInit = true;
   }
 
   retrievePerformanceData(){
     this.apiData = this.http.get<PerfData>(config.uri);
     this.counter += 1;
     this.timeTicks.push(this.counter);
+  }
+
+  getQueryLoadVariation (){
+    if(this.counter != this.queryV || this.queryInit){
+      this.apiData.subscribe(res => {
+        this.queryData.query_load.push(res.summary.no_of_queries);
+        this.queryData.timeTicks.push(this.counter);
+      });
+    }
+
+    this.queryV = this.counter;
+    this.queryInit = false;
+    return this.queryData;
+
   }
 
   getPerformanceSummary() {

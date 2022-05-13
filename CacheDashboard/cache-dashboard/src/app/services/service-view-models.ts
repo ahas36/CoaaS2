@@ -187,3 +187,14 @@ export class LevelsModel{
     this.timeTicks = new Queue<number>();
   }   
 }
+
+@Injectable()
+export class SimpleModel{
+  public query_load: Queue<number>;
+  public timeTicks: Queue<number>;
+
+  constructor(){
+    this.query_load = new Queue<number>();
+    this.timeTicks = new Queue<number>();
+  }
+}

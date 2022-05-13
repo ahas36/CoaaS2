@@ -38,6 +38,25 @@ agm-map {
   font-size: 11pt;
 }
 
+agm-info-window {
+  width: 200px;
+  height: 50x;
+  text-align: left;
+}
+
+.info-window {
+  text-align: left;
+}
+
+.info-window .h4 {
+  margin-bottom: -30px;
+}
+
+.info-window .p {
+  margin-top: -30px;
+}
+
+
 
 
 

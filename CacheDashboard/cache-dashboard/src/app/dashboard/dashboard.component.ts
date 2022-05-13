@@ -10,10 +10,10 @@ import { ApiServiceService } from '../services/api-service.service';
 })
 export class DashboardComponent implements OnInit {
 
-  overall = true;
+  overall = false;
   cache_level = false;
   csms = false;
-  map = false;
+  map = true;
 
   interval;
 

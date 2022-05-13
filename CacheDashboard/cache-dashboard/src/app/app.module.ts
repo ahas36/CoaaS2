@@ -40,7 +40,7 @@ import { AgmCoreModule } from '@agm/core';
     ChartsModule,
     AgmCoreModule.forRoot({
       apiKey: 'AIzaSyDbQyw3NVus6k_21insLPHI5Uoq0LUdmqw'
-    }) 
+    })
   ],
   providers: [ThemeService, ApiServiceService, RefreshService],
   bootstrap: [AppComponent]

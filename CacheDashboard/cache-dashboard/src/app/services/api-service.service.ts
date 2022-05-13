@@ -10,9 +10,6 @@ import { config } from '../config';
 
 export class ApiServiceService {
 
-  private carparks_uri = 'static-data/carparks.json';
-  private places_uri = 'static-data/places.json';
-
   apiData;
   csmsData;
   levelsData;
@@ -272,14 +269,15 @@ export class ApiServiceService {
 
   getCarParks(){
     if(this.carParkData == undefined){
-      this.carParkData = this.http.get(this.carparks_uri);
+      this.carParkData = this.http.get(config.carparks);
     }
+    console.log(this.carParkData);
     return this.carParkData;
   }
 
   getPlaces(){
     if(this.placesData == undefined){
-      this.placesData = this.http.get(this.places_uri);
+      this.placesData = this.http.get(config.places);
     }
     return this.placesData;
   }

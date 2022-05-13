@@ -1,23 +1,54 @@
 <div class="content">
+    <h1>Places of Interest and Car Parks in Melbourne CBD</h1>
+
     <agm-map 
         [latitude]="lat"
         [longitude]="lng"
         [zoom]="zoom"
         [disableDefaultUI]="true"
-        [zoomControl]="false"
-        (mapClick)="mapClicked($event)">
+        [zoomControl]="true">
 
         <agm-marker 
-            *ngFor="let m of markers; let i = index"
+            *ngFor="let m of parkmarkers; let i = index"
             (markerClick)="clickedMarker(m.label, i)"
             [latitude]="m.lat"
             [longitude]="m.lng"
-            [label]="m.label">        
+            [iconUrl] ="m.icon"
+            >        
+        </agm-marker>
+
+        <agm-marker 
+            *ngFor="let m of placemarkers; let i = index"
+            (markerClick)="clickedMarker(m.label, i)"
+            [latitude]="m.lat"
+            [longitude]="m.lng"
+            [iconUrl] ="m.icon"
+            >        
         </agm-marker>
 
     </agm-map>
-    
+
     <br/>
+
+    <div class="first-card">
+        <mat-card class="stat-card" style="width:1170px;">
+            <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
+                <div class="ledgend">
+                    <img src='./assets/parking.png' alt="Parking" width="20" height="20" style="display:inline">
+                    <p>Car Park</p>
+                </div>
+            </mat-card-content>
+            <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
+                <div class="ledgend">
+                    <img src='./assets/building.png' alt="Place of Interest" width="23" height="23" style="display:inline">
+                    <p>Place of Interest</p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div> 
+
+    <br/>
+
 </div>
 
 

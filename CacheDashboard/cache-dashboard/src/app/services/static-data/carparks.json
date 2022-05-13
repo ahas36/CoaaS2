@@ -1,6 +1,7 @@
 [
     {
         "name": "Melbourne Central Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -92,6 +93,7 @@
     },
     {
         "name": "Galleria Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -184,6 +186,7 @@
     },
     {
         "name": "350 Collins Street Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -268,6 +271,7 @@
     },
     {
         "name": "Scots Church Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -352,6 +356,7 @@
     },
     {
         "name": "333 Collins St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -426,6 +431,7 @@
     },
     {
         "name": "180 Russell St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -510,6 +516,7 @@
     },
     {
         "name": "189 Queen Street Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -603,6 +610,7 @@
     },
     {
         "name": "T&G Building - 161 Collins St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -687,6 +695,7 @@
     },
     {
         "name": "222 Russell St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -771,6 +780,7 @@
     },
     {
         "name": "QV - 180 Lonsdale Street",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -871,6 +881,7 @@
     },
     {
         "name": "Flinders Gate Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -963,6 +974,7 @@
     },
     {
         "name": "425 Collins St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1047,6 +1059,7 @@
     },
     {
         "name": "300 La Trobe St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1139,6 +1152,7 @@
     },
     {
         "name": "11 Exhibition St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1223,6 +1237,7 @@
     },
     {
         "name": "62 La Trobe St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1317,6 +1332,7 @@
     },
     {
         "name": "542 Little Bourke St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1406,6 +1422,7 @@
     },
     {
         "name": "Southgate Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1493,6 +1510,7 @@
     },
     {
         "name": "Federation Square Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1585,6 +1603,7 @@
     },
     {
         "name": "380 La Trobe St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1674,6 +1693,7 @@
     },
     {
         "name": "452 Flinders St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1752,6 +1772,7 @@
     },
     {
         "name": "Collins Place Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1836,6 +1857,7 @@
     },
     {
         "name": "530 Collins St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1904,6 +1926,7 @@
     },
     {
         "name": "Riverside Quay Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -1988,6 +2011,7 @@
     },
     {
         "name": "Eureka Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2072,6 +2096,7 @@
     },
     {
         "name": "485 La Trobe St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2145,6 +2170,7 @@
     },
     {
         "name": "Freshwater Place Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2229,6 +2255,7 @@
     },
     {
         "name": "158 City Rd Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2307,6 +2334,7 @@
     },
     {
         "name": "Southern Cross Station Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2403,6 +2431,7 @@
     },
     {
         "name": "Park Hyatt Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2492,6 +2521,7 @@
     },
     {
         "name": "90 Victoria Parade Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2576,6 +2606,7 @@
     },
     {
         "name": "500 La Trobe St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2646,6 +2677,7 @@
     },
     {
         "name": "Lansdowne Street Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2724,6 +2756,7 @@
     },
     {
         "name": "410 Albert St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2821,6 +2854,7 @@
     },
     {
         "name": "Melbourne Square Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2909,6 +2943,7 @@
     },
     {
         "name": "Melbourne Exhibition Centre Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -2993,6 +3028,7 @@
     },
     {
         "name": "Digital Harbour Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3047,6 +3083,7 @@
     },
     {
         "name": "The Gateway Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3095,6 +3132,7 @@
     },
     {
         "name": "South Wharf Retail Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3173,6 +3211,7 @@
     },
     {
         "name": "800 Bourke St Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3256,96 +3295,8 @@
         }
     },
     {
-        "name": "Royal Womens Hospital Car Park",
-        "open_hours": [
-            {
-                "day": "Monday",
-                "open": "06:00:00.000Z",
-                "close": "21:00:00.000Z"
-            },
-            {
-                "day": "Tuesday",
-                "open": "06:00:00.000Z",
-                "close": "21:00:00.000Z"
-            },
-            {
-                "day": "Wednesday",
-                "open": "06:00:00.000Z",
-                "close": "21:00:00.000Z"
-            },
-            {
-                "day": "Thursday",
-                "open": "06:00:00.000Z",
-                "close": "21:00:00.000Z"
-            },
-            {
-                "day": "Friday",
-                "open": "06:00:00.000Z",
-                "close": "21:00:00.000Z"
-            },
-            {
-                "day": "Saturday",
-                "open": "06:00:00.000Z",
-                "close": "21:00:00.000Z"
-            },
-            {
-                "day": "Sunday",
-                "open": "06:00:00.000Z",
-                "close": "21:00:00.000Z"
-            }
-        ],
-        "address": "20 Flemington Rd, Parkville VIC 3052",
-        "location": {
-            "lat": -37.798439567091975, 
-            "long": 144.95454663334527
-        },
-        "gates": [
-            {
-                "address": "20 Flemington Rd, Parkville VIC 3052",
-                "type": "entry/exit",
-                "height": {
-                    "value": 2.10,
-                    "unit": "m"
-                }
-            }
-        ],
-        "price": {
-            "hourly": [
-                {
-                    "min": 0,
-                    "max": 1,
-                    "amount": 10
-                },
-                {
-                    "min": 1,
-                    "max": 2,
-                    "amount": 16
-                },
-                {
-                    "min": 2,
-                    "max": 3,
-                    "amount": 22
-                },
-                {
-                    "min": 3,
-                    "max": 4,
-                    "amount": 28
-                },
-                {
-                    "min": 4,
-                    "max": 5,
-                    "amount": 30
-                },
-                {
-                    "min": 5,
-                    "amount": 35
-                }
-            ],
-            "weekend": 10
-        }
-    },
-    {
         "name": "Freeway Car Park",
+        "owner": "Wilson",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3420,6 +3371,7 @@
     },
     {
         "name": "THE STRAND CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3499,6 +3451,7 @@
     },
     {
         "name": "200 QUEEN STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3588,6 +3541,7 @@
     },
     {
         "name": "123 QUEEN STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3647,6 +3601,7 @@
     },
     {
         "name": "367 COLLINS ST CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3715,6 +3670,7 @@
     },
     {
         "name": "460 LONSDALE STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3804,6 +3760,7 @@
     },
     {
         "name": "THE MINT CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3893,6 +3850,7 @@
     },
     {
         "name": "300 FLINDERS STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -3977,6 +3935,7 @@
     },
     {
         "name": "SOUTHERN CROSS CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4036,6 +3995,7 @@
     },
     {
         "name": "ST JAMES CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4114,6 +4074,7 @@
     },
     {
         "name": "570 BOURKE STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4192,6 +4153,7 @@
     },
     {
         "name": "376 FLINDERS STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4276,6 +4238,7 @@
     },
     {
         "name": "MERRITTS PLACE CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4365,6 +4328,7 @@
     },
     {
         "name": "450 FLINDERS LANE CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4438,6 +4402,7 @@
     },
     {
         "name": "15 WILLIAM STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4527,6 +4492,7 @@
     },
     {
         "name": "28 LA TROBE STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4591,6 +4557,7 @@
     },
     {
         "name": "59 LONSDALE STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4658,6 +4625,7 @@
     },
     {
         "name": "50 LONSDALE STREET CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4740,6 +4708,7 @@
     },
     {
         "name": "522 FLINDERS LANE CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4829,6 +4798,7 @@
     },
     {
         "name": "12-20 FLINDERS LANE CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4913,6 +4883,7 @@
     },
     {
         "name": "700 COLLINS STREET",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -4999,91 +4970,8 @@
         }
     },
     {
-        "name": "33 BEDFORD STREET CAR PARK",
-        "open_hours": [
-            {
-                "day": "Monday",
-                "open": "00:00:00.000Z",
-                "close": "23:59:59.000Z"
-            },
-            {
-                "day": "Tuesday",
-                "open": "00:00:00.000Z",
-                "close": "23:59:59.000Z"
-            },
-            {
-                "day": "Wednesday",
-                "open": "00:00:00.000Z",
-                "close": "23:59:59.000Z"
-            },
-            {
-                "day": "Thursday",
-                "open": "00:00:00.000Z",
-                "close": "23:59:59.000Z"
-            },
-            {
-                "day": "Friday",
-                "open": "00:00:00.000Z",
-                "close": "23:59:59.000Z"
-            },
-            {
-                "day": "Saturday",
-                "open": "00:00:00.000Z",
-                "close": "23:59:59.000Z"
-            },
-            {
-                "day": "Sunday",
-                "open": "00:00:00.000Z",
-                "close": "23:59:59.000Z"
-            }
-        ],
-        "address": "33 Bedford Street, North Melbourne",
-        "location": {
-            "lat": -37.80200498426292, 
-            "long": 144.95603635181232
-        },
-        "gates": [
-            {
-                "address": "33 Bedford Street, North Melbourne",
-                "type": "entry/exit",
-                "height": {
-                    "value": 2.0,
-                    "unit": "m"
-                }
-            }
-        ],
-        "price": {
-            "hourly": [
-                {
-                    "min": 0,
-                    "max": 0.5,
-                    "amount": 4
-                },
-                {
-                    "min": 0.5,
-                    "max": 1,
-                    "amount": 7
-                },
-                {
-                    "min": 1,
-                    "max": 2,
-                    "amount": 12
-                },
-                {
-                    "min": 2,
-                    "max": 3,
-                    "amount": 15
-                },
-                {
-                    "min": 3,
-                    "amount": 25
-                }
-            ],
-            "weekend": 5
-        }
-    },
-    {
         "name": "ACU CAR PARK",
+        "owner": "Secure",
         "open_hours": [
             {
                 "day": "Monday",
@@ -5189,105 +5077,6 @@
                     "amount": 15.5
                 }
             ]
-        }
-    },
-    {
-        "name": "VICTORIAN COMPREHENSIVE CANCER CENTRE CAR PARK",
-        "open_hours": [
-            {
-                "day": "Monday",
-                "open": "06:00:00.000Z",
-                "close": "20:00:00.000Z"
-            },
-            {
-                "day": "Tuesday",
-                "open": "06:00:00.000Z",
-                "close": "20:00:00.000Z"
-            },
-            {
-                "day": "Wednesday",
-                "open": "06:00:00.000Z",
-                "close": "20:00:00.000Z"
-            },
-            {
-                "day": "Thursday",
-                "open": "06:00:00.000Z",
-                "close": "20:00:00.000Z"
-            },
-            {
-                "day": "Friday",
-                "open": "06:00:00.000Z",
-                "close": "20:00:00.000Z"
-            },
-            {
-                "day": "Saturday",
-                "open": "06:00:00.000Z",
-                "close": "20:00:00.000Z"
-            },
-            {
-                "day": "Sunday",
-                "open": "06:00:00.000Z",
-                "close": "20:00:00.000Z"
-            }
-        ],
-        "address": "305 Grattan Street, Melbourne",
-        "location": {
-            "lat": -37.8004537495275, 
-            "long": 144.95661095920104
-        },
-        "gates": [
-            {
-                "address": "305 Grattan Street, Melbourne ",
-                "type": "entry/exit",
-                "height": {
-                    "value": 2.1,
-                    "unit": "m"
-                }
-            }
-        ],
-        "price": {
-            "hourly": [
-                {
-                    "min": 0,
-                    "max": 0.5,
-                    "amount": 0
-                },
-                {
-                    "min": 0.5,
-                    "max": 1,
-                    "amount": 10
-                },
-                {
-                    "min": 1,
-                    "max": 2,
-                    "amount": 15
-                },
-                {
-                    "min": 2,
-                    "max": 3,
-                    "amount": 20
-                },
-                {
-                    "min": 3,
-                    "max": 4,
-                    "amount": 25
-                },
-                {
-                    "min": 4,
-                    "max": 5,
-                    "amount": 27
-                },
-                {
-                    "min": 5,
-                    "max": 6,
-                    "amount": 30
-                },
-                {
-                    "min": 6,
-                    "amount": 35
-                }
-            ],
-            "weekend": 12
         }
     }
 ]

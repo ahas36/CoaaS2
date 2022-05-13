@@ -3,6 +3,39 @@
   margin-left: 30px;
   margin-top: 150px;
   text-align: center;
+  align-items: center;
+  align-content: center;
+}
+
+h1 {
+  text-align: left;
+  color: rgb(104, 104, 104);
+  margin-bottom: 20px;
+  font-family: 'Arial Narrow Bold', sans-serif;
+}
+
+agm-map {
+  height: 600px;
+  width:1200px;
+  align-self: center;
+}
+
+.ledgend {
+  height: 20px;
+  display: inline-block;
+  line-height: 20px;
+}
+
+.ledgent img {
+  padding-top: 15px;
+}
+
+.ledgend p{
+  vertical-align: middle;
+  display: inline-block;
+  margin-top: 0px;
+  margin-left: 10px;
+  font-size: 11pt;
 }
 
 

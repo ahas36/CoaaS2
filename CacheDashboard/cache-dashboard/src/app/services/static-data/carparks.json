@@ -89,7 +89,21 @@
                     "amount": 70
                 }
             ]
-        }
+        },
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJpwUL88pC1moRu7VYy5AmoTM",
+        "plus_code": {
+            "compound_code": "5XQ7+8C Melbourne, Victoria",
+            "global_code": "4RJ65XQ7+8C"
+        },
+        "rating": 3,
+        "reference": "ChIJpwUL88pC1moRu7VYy5AmoTM",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 48
     },
     {
         "name": "Galleria Car Park",
@@ -182,7 +196,23 @@
                 }
             ],
             "weekend": 18
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJCyuEArVC1moRvbPosYBiaBM",
+        "plus_code": {
+            "compound_code": "5XM7+X8 Melbourne, Victoria",
+            "global_code": "4RJ65XM7+X8"
+        },
+        "rating": 2.9,
+        "reference": "ChIJCyuEArVC1moRvbPosYBiaBM",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 37
     },
     {
         "name": "350 Collins Street Car Park",
@@ -267,7 +297,23 @@
                 }
             ],
             "weekend": 14
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJeVy96rRC1moR3jU01PHOB_I",
+        "plus_code": {
+            "compound_code": "5XM7+M2 Melbourne, Victoria",
+            "global_code": "4RJ65XM7+M2"
+        },
+        "rating": 1.9,
+        "reference": "ChIJeVy96rRC1moR3jU01PHOB_I",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 11
     },
     {
         "name": "Scots Church Car Park",
@@ -352,7 +398,23 @@
                 }
             ],
             "weekend": 24
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJl0pFHLZC1moRtnEcV7nngaY",
+        "plus_code": {
+            "compound_code": "5XP9+72 Melbourne, Victoria",
+            "global_code": "4RJ65XP9+72"
+        },
+        "rating": 3,
+        "reference": "ChIJl0pFHLZC1moRtnEcV7nngaY",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 2
     },
     {
         "name": "333 Collins St Car Park",
@@ -427,7 +489,23 @@
                 }
             ],
             "weekend": 24
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJGwIDg7RC1moRTOJO85bBN5Q",
+        "plus_code": {
+            "compound_code": "5XM7+37 Melbourne, Victoria",
+            "global_code": "4RJ65XM7+37"
+        },
+        "rating": 4,
+        "reference": "ChIJGwIDg7RC1moRTOJO85bBN5Q",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 6
     },
     {
         "name": "180 Russell St Car Park",
@@ -512,7 +590,23 @@
                 }
             ],
             "weekend": 17
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJneH7FVJD1moR6GJ5i4N3AKI",
+        "plus_code": {
+            "compound_code": "5XQ9+57 Melbourne, Victoria",
+            "global_code": "4RJ65XQ9+57"
+        },
+        "rating": 3.1,
+        "reference": "ChIJneH7FVJD1moR6GJ5i4N3AKI",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 17
     },
     {
         "name": "189 Queen Street Car Park",
@@ -606,7 +700,23 @@
                     "amount":15
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJubZZz4hd1moRudEhOz-Hv20",
+        "plus_code": {
+            "compound_code": "5XP5+7V Melbourne, Victoria",
+            "global_code": "4RJ65XP5+7V"
+        },
+        "rating": 1.3,
+        "reference": "ChIJubZZz4hd1moRudEhOz-Hv20",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 44
     },
     {
         "name": "T&G Building - 161 Collins St Car Park",
@@ -691,7 +801,23 @@
                 }
             ],
             "weekend": 12
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJgQI1SLZC1moR2QJTa3J-U0s",
+        "plus_code": {
+            "compound_code": "5XM9+VH Melbourne, Victoria",
+            "global_code": "4RJ65XM9+VH"
+        },
+        "rating": 2.4,
+        "reference": "ChIJgQI1SLZC1moR2QJTa3J-U0s",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 16
     },
     {
         "name": "222 Russell St Car Park",
@@ -776,7 +902,23 @@
                 }
             ],
             "weekend": 18
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJg6iyo7RC1moRmKeUIoCED8s",
+        "plus_code": {
+            "compound_code": "5XQ9+F6 Melbourne, Victoria",
+            "global_code": "4RJ65XQ9+F6"
+        },
+        "rating": 2.5,
+        "reference": "ChIJg6iyo7RC1moRmKeUIoCED8s",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 71
     },
     {
         "name": "QV - 180 Lonsdale Street",
@@ -877,7 +1019,23 @@
                 }
             ],
             "weekend": 12
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJmxJyTHhD1moRWpVMdI3odd8",
+        "plus_code": {
+            "compound_code": "5XQ8+JG Melbourne, Victoria",
+            "global_code": "4RJ65XQ8+JG"
+        },
+        "rating": 3.8,
+        "reference": "ChIJmxJyTHhD1moRWpVMdI3odd8",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 37
     },
     {
         "name": "Flinders Gate Car Park",
@@ -970,7 +1128,23 @@
                 }
             ],
             "weekend": 18
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJt2-gWLZC1moRFOuCiI3rw90",
+        "plus_code": {
+            "compound_code": "5XM9+7C Melbourne, Victoria",
+            "global_code": "4RJ65XM9+7C"
+        },
+        "rating": 3.3,
+        "reference": "ChIJt2-gWLZC1moRFOuCiI3rw90",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 175
     },
     {
         "name": "425 Collins St Car Park",
@@ -1055,7 +1229,26 @@
                 }
             ],
             "weekend": 12
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "opening_hours": {
+            "open_now": true
+        },
+        "place_id": "ChIJwTiyt0xd1moR1JblSfjHZtw",
+        "plus_code": {
+            "compound_code": "5XM6+27 Melbourne, Victoria",
+            "global_code": "4RJ65XM6+27"
+        },
+        "rating": 1.7,
+        "reference": "ChIJwTiyt0xd1moR1JblSfjHZtw",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 24
     },
     {
         "name": "300 La Trobe St Car Park",
@@ -1148,7 +1341,23 @@
                 }
             ],
             "weekend": 14
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJg6iyo7RC1moR60UmvVd4Bvw",
+        "plus_code": {
+            "compound_code": "5XQ6+V5 Melbourne, Victoria",
+            "global_code": "4RJ65XQ6+V5"
+        },
+        "rating": 3.1,
+        "reference": "ChIJg6iyo7RC1moR60UmvVd4Bvw",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 112
     },
     {
         "name": "11 Exhibition St Car Park",
@@ -1233,7 +1442,23 @@
                 }
             ],
             "weekend": 20
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ9U9tAshC1moRe7OKU2mKpfw",
+        "plus_code": {
+            "compound_code": "5XMC+RM Melbourne, Victoria",
+            "global_code": "4RJ65XMC+RM"
+        },
+        "rating": 3.3,
+        "reference": "ChIJ9U9tAshC1moRe7OKU2mKpfw",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 41
     },
     {
         "name": "62 La Trobe St Car Park",
@@ -1328,7 +1553,23 @@
                 }
             ],
             "weekend": 9
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJd3B9AsxC1moRbBaP32dqRUY",
+        "plus_code": {
+            "compound_code": "5XR8+JQ Melbourne, Victoria",
+            "global_code": "4RJ65XR8+JQ"
+        },
+        "rating": 3.2,
+        "reference": "ChIJd3B9AsxC1moRbBaP32dqRUY",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 36
     },
     {
         "name": "542 Little Bourke St Car Park",
@@ -1418,7 +1659,23 @@
                 }
             ],
             "weekend": 12
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ-T8x-Etd1moRkMoDR1L8I6g",
+        "plus_code": {
+            "compound_code": "5XP4+2H Melbourne, Victoria",
+            "global_code": "4RJ65XP4+2H"
+        },
+        "rating": 3.4,
+        "reference": "ChIJ-T8x-Etd1moRkMoDR1L8I6g",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 51
     },
     {
         "name": "Southgate Car Park",
@@ -1506,7 +1763,23 @@
                 }
             ],
             "weekend": 17
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJqxMCNrJC1moRuiDEVftxvM0",
+        "plus_code": {
+            "compound_code": "5XH8+Q5 Southbank, Victoria",
+            "global_code": "4RJ65XH8+Q5"
+        },
+        "rating": 3.6,
+        "reference": "ChIJqxMCNrJC1moRuiDEVftxvM0",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 34
     },
     {
         "name": "Federation Square Car Park",
@@ -1599,7 +1872,23 @@
                 }
             ],
             "weekend": 16
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJAfxdDLdC1moR1T8Trh5X36k",
+        "plus_code": {
+            "compound_code": "5XJC+WF Melbourne, Victoria",
+            "global_code": "4RJ65XJC+WF"
+        },
+        "rating": 3.7,
+        "reference": "ChIJAfxdDLdC1moR1T8Trh5X36k",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 87
     },
     {
         "name": "380 La Trobe St Car Park",
@@ -1689,7 +1978,23 @@
                 }
             ],
             "weekend": 14
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJEXQEhzVd1moRInKF-NfrXys",
+        "plus_code": {
+            "compound_code": "5XQ5+Q5 Melbourne, Victoria",
+            "global_code": "4RJ65XQ5+Q5"
+        },
+        "rating": 2.7,
+        "reference": "ChIJEXQEhzVd1moRInKF-NfrXys",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 23
     },
     {
         "name": "452 Flinders St Car Park",
@@ -1768,7 +2073,23 @@
                     "amount": 85
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJrUrIdU1d1moR3K2spHT5xN0",
+        "plus_code": {
+            "compound_code": "5XJ5+88 Melbourne, Victoria",
+            "global_code": "4RJ65XJ5+88"
+        },
+        "rating": 2.9,
+        "reference": "ChIJrUrIdU1d1moR3K2spHT5xN0",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 20
     },
     {
         "name": "Collins Place Car Park",
@@ -1853,7 +2174,23 @@
                 }
             ],
             "weekend": 17
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ21olCMhC1moRGmCJLOLhnOE",
+        "plus_code": {
+            "compound_code": "5XPF+58 Melbourne, Victoria",
+            "global_code": "4RJ65XPF+58"
+        },
+        "rating": 3.8,
+        "reference": "ChIJ21olCMhC1moRGmCJLOLhnOE",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 43
     },
     {
         "name": "530 Collins St Car Park",
@@ -1922,7 +2259,23 @@
                     "amount": 62
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ8Uu-x01d1moRo58rRD-DOv8",
+        "plus_code": {
+            "compound_code": "5XJ4+RQ Melbourne, Victoria",
+            "global_code": "4RJ65XJ4+RQ"
+        },
+        "rating": 2.6,
+        "reference": "ChIJ8Uu-x01d1moRo58rRD-DOv8",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 13
     },
     {
         "name": "Riverside Quay Car Park",
@@ -2007,7 +2360,23 @@
                 }
             ],
             "weekend": 17
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJg6iyo7RC1moRKHjXeihtJ_U",
+        "plus_code": {
+            "compound_code": "5XH7+F8 Southbank, Victoria",
+            "global_code": "4RJ65XH7+F8"
+        },
+        "rating": 3.6,
+        "reference": "ChIJg6iyo7RC1moRKHjXeihtJ_U",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 71
     },
     {
         "name": "Eureka Car Park",
@@ -2092,7 +2461,23 @@
                 }
             ],
             "weekend": 16
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJibxAd7JC1moRzx8gEsTHiAM",
+        "plus_code": {
+            "compound_code": "5XH8+84 Southbank, Victoria",
+            "global_code": "4RJ65XH8+84"
+        },
+        "rating": 3.8,
+        "reference": "ChIJibxAd7JC1moRzx8gEsTHiAM",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 155
     },
     {
         "name": "485 La Trobe St Car Park",
@@ -2166,7 +2551,23 @@
                     "amount": 70
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJXXeqb0ld1moRzVbvb0CWLt4",
+        "plus_code": {
+            "compound_code": "5XP3+VW Melbourne, Victoria",
+            "global_code": "4RJ65XP3+VW"
+        },
+        "rating": 1.9,
+        "reference": "ChIJXXeqb0ld1moRzVbvb0CWLt4",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 15
     },
     {
         "name": "Freshwater Place Car Park",
@@ -2251,7 +2652,23 @@
                 }
             ],
             "weekend": 10
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJM5IxYq1C1moRXWUgMevpFW4",
+        "plus_code": {
+            "compound_code": "5XH7+46 Southbank, Victoria",
+            "global_code": "4RJ65XH7+46"
+        },
+        "rating": 4.4,
+        "reference": "ChIJM5IxYq1C1moRXWUgMevpFW4",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 8
     },
     {
         "name": "158 City Rd Car Park",
@@ -2330,7 +2747,23 @@
                     "amount": 25
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJqVGpq3JD1moR8Pq2Nq9xwOw",
+        "plus_code": {
+            "compound_code": "5XG7+H2 Southbank, Victoria",
+            "global_code": "4RJ65XG7+H2"
+        },
+        "rating": 2.5,
+        "reference": "ChIJqVGpq3JD1moR8Pq2Nq9xwOw",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 4
     },
     {
         "name": "Southern Cross Station Car Park",
@@ -2427,7 +2860,23 @@
                     "amount": 57
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJPaNTC09d1moROXy5wRoXZhY",
+        "plus_code": {
+            "compound_code": "5XM2+WR Docklands, Victoria",
+            "global_code": "4RJ65XM2+WR"
+        },
+        "rating": 3,
+        "reference": "ChIJPaNTC09d1moROXy5wRoXZhY",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 114
     },
     {
         "name": "Park Hyatt Car Park",
@@ -2517,7 +2966,23 @@
                 }
             ],
             "weekend": 16
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJgTAHIcRC1moRGsSGIALyoaE",
+        "plus_code": {
+            "compound_code": "5XQG+6F East Melbourne, Victoria",
+            "global_code": "4RJ65XQG+6F"
+        },
+        "rating": 3.4,
+        "reference": "ChIJgTAHIcRC1moRGsSGIALyoaE",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 44
     },
     {
         "name": "90 Victoria Parade Car Park",
@@ -2602,7 +3067,23 @@
                 }
             ],
             "weekend": 12
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ1QAFGsVC1moRpJhCCVYM6X0",
+        "plus_code": {
+            "compound_code": "5XRF+HQ East Melbourne, Victoria",
+            "global_code": "4RJ65XRF+HQ"
+        },
+        "rating": 2.6,
+        "reference": "ChIJ1QAFGsVC1moRpJhCCVYM6X0",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 52
     },
     {
         "name": "500 La Trobe St Car Park",
@@ -2673,7 +3154,23 @@
                 }
             ],
             "weekend": 14
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ90bBZ3hd1moRgOfICcR-VKw",
+        "plus_code": {
+            "compound_code": "5XP2+VR West Melbourne, Victoria",
+            "global_code": "4RJ65XP2+VR"
+        },
+        "rating": 2.3,
+        "reference": "ChIJ90bBZ3hd1moRgOfICcR-VKw",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 3
     },
     {
         "name": "Lansdowne Street Car Park",
@@ -2752,7 +3249,24 @@
                     "amount": 24
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/hospital-71.png",
+        "icon_background_color": "#F88181",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/hospital-H_pinlet",
+        "place_id": "ChIJuQic9cNC1moR6X4vozlRNc0",
+        "plus_code": {
+            "compound_code": "5XQH+64 East Melbourne, Victoria",
+            "global_code": "4RJ65XQH+64"
+        },
+        "rating": 0,
+        "reference": "ChIJuQic9cNC1moR6X4vozlRNc0",
+        "types": [
+            "hospital",
+            "health",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 0
     },
     {
         "name": "410 Albert St Car Park",
@@ -2850,7 +3364,23 @@
                 }
             ],
             "weekend": 16
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJk0Kjo8RC1moR2_HjTHrBADg",
+        "plus_code": {
+            "compound_code": "5XRG+5Q East Melbourne, Victoria",
+            "global_code": "4RJ65XRG+5Q"
+        },
+        "rating": 2.7,
+        "reference": "ChIJk0Kjo8RC1moR2_HjTHrBADg",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 45
     },
     {
         "name": "Melbourne Square Car Park",
@@ -2939,7 +3469,14 @@
                     "amount": 40
                 }
             ]
-        }
+        },
+        "rating": 0,
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 0
     },
     {
         "name": "Melbourne Exhibition Centre Car Park",
@@ -3024,7 +3561,23 @@
                 }
             ],
             "weekend": 20
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJyyZQeJdd1moR3e08Upplg1Q",
+        "plus_code": {
+            "compound_code": "5XF4+J4 Southbank, Victoria",
+            "global_code": "4RJ65XF4+J4"
+        },
+        "rating": 4.1,
+        "reference": "ChIJyyZQeJdd1moR3e08Upplg1Q",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 167
     },
     {
         "name": "Digital Harbour Car Park",
@@ -3079,7 +3632,23 @@
         ],
         "price": {
             "flat": 15
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+            "icon_background_color": "#7B9EB0",
+            "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+            "place_id": "ChIJYdSkZERd1moRm6IKIMLbPoU",
+            "plus_code": {
+                "compound_code": "5WPV+QX Docklands, Victoria",
+                "global_code": "4RJ65WPV+QX"
+            },
+            "rating": 3.4,
+            "reference": "ChIJYdSkZERd1moRm6IKIMLbPoU",
+            "types": [
+                "parking",
+                "point_of_interest",
+                "establishment"
+            ],
+            "user_ratings_total": 42
     },
     {
         "name": "The Gateway Car Park",
@@ -3128,7 +3697,24 @@
         ],
         "price": {
             "flat": 25
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "permanently_closed": true,
+        "place_id": "ChIJAUJJAUNo1moRjb7hKETYGhQ",
+        "plus_code": {
+            "compound_code": "5XCC+87 Southbank, Victoria",
+            "global_code": "4RJ65XCC+87"
+        },
+        "rating": 3.1,
+        "reference": "ChIJAUJJAUNo1moRjb7hKETYGhQ",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 22
     },
     {
         "name": "South Wharf Retail Car Park",
@@ -3207,7 +3793,23 @@
                     "amount": 48
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+            "icon_background_color": "#7B9EB0",
+            "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+            "place_id": "ChIJEQOOkLRC1moRbaLRbIpGO74",
+            "plus_code": {
+                "compound_code": "5WFX+WC South Wharf, Victoria",
+                "global_code": "4RJ65WFX+WC"
+            },
+            "rating": 3.3,
+            "reference": "ChIJEQOOkLRC1moRbaLRbIpGO74",
+            "types": [
+                "parking",
+                "point_of_interest",
+                "establishment"
+            ],
+            "user_ratings_total": 289
     },
     {
         "name": "800 Bourke St Car Park",
@@ -3292,7 +3894,23 @@
                 }
             ],
             "weekend": 10
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJF5pVCVxd1moRaUjXYD0Iidg",
+        "plus_code": {
+            "compound_code": "5WJV+9R Docklands, Victoria",
+            "global_code": "4RJ65WJV+9R"
+        },
+        "rating": 3.4,
+        "reference": "ChIJF5pVCVxd1moRaUjXYD0Iidg",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 28
     },
     {
         "name": "Freeway Car Park",
@@ -3367,7 +3985,23 @@
                     "amount": 48
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ35gWHfhn1moReMB4FfCNXso",
+        "plus_code": {
+            "compound_code": "5XC2+VH Southbank, Victoria",
+            "global_code": "4RJ65XC2+VH"
+        },
+        "rating": 3.5,
+        "reference": "ChIJ35gWHfhn1moReMB4FfCNXso",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 13
     },
     {
         "name": "THE STRAND CAR PARK",
@@ -3447,7 +4081,23 @@
                 }
             ],
             "weekend": 18
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJATeJYbVC1moRNu36S4-etno",
+        "plus_code": {
+            "compound_code": "5XQ7+34 Melbourne, Victoria",
+            "global_code": "4RJ65XQ7+34"
+        },
+        "rating": 2.5,
+        "reference": "ChIJATeJYbVC1moRNu36S4-etno",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 62
     },
     {
         "name": "200 QUEEN STREET CAR PARK",
@@ -3537,7 +4187,23 @@
                 }
             ],
             "weekend": 21
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ142FpMpd1moRsLCxpwK5M-g",
+        "plus_code": {
+            "compound_code": "5XP6+J4 Melbourne, Victoria",
+            "global_code": "4RJ65XP6+J4"
+        },
+        "rating": 3.2,
+        "reference": "ChIJ142FpMpd1moRsLCxpwK5M-g",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 115
     },
     {
         "name": "123 QUEEN STREET CAR PARK",
@@ -3597,7 +4263,23 @@
         "price": {
             "flat": 30,
             "weekend": 25
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ90c0GE1d1moRhGtS5P1mqjs",
+        "plus_code": {
+            "compound_code": "5XM6+J8 Melbourne, Victoria",
+            "global_code": "4RJ65XM6+J8"
+        },
+        "rating": 2.2,
+        "reference": "ChIJ90c0GE1d1moRhGtS5P1mqjs",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 41
     },
     {
         "name": "367 COLLINS ST CAR PARK",
@@ -3666,7 +4348,23 @@
                     "amount": 79
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJw4hWXrNC1moR1K3VvDsCqCo",
+        "plus_code": {
+            "compound_code": "5XM6+4X Melbourne, Victoria",
+            "global_code": "4RJ65XM6+4X"
+        },
+        "rating": 3,
+        "reference": "ChIJw4hWXrNC1moR1K3VvDsCqCo",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 3
     },
     {
         "name": "460 LONSDALE STREET CAR PARK",
@@ -3756,7 +4454,23 @@
                 }
             ],
             "weekend": 16
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJh9q4qktd1moRoni-VnKUw9I",
+        "plus_code": {
+            "compound_code": "5XP5+Q8 Melbourne, Victoria",
+            "global_code": "4RJ65XP5+Q8"
+        },
+        "rating": 3.6,
+        "reference": "ChIJh9q4qktd1moRoni-VnKUw9I",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 65
     },
     {
         "name": "THE MINT CAR PARK",
@@ -3846,7 +4560,23 @@
                 }
             ],
             "weekend": 16
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJu5affEpd1moRZB31ceUGNuQ",
+        "plus_code": {
+            "compound_code": "5XQ5+C7 Melbourne, Victoria",
+            "global_code": "4RJ65XQ5+C7"
+        },
+        "rating": 3.2,
+        "reference": "ChIJu5affEpd1moRZB31ceUGNuQ",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 102
     },
     {
         "name": "300 FLINDERS STREET CAR PARK",
@@ -3931,7 +4661,23 @@
                 }
             ],
             "weekend": 18
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJea5LwbRC1moRK7ofW2v7foQ",
+        "plus_code": {
+            "compound_code": "5XJ7+MH Melbourne, Victoria",
+            "global_code": "4RJ65XJ7+MH"
+        },
+        "rating": 3.6,
+        "reference": "ChIJea5LwbRC1moRK7ofW2v7foQ",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 161
     },
     {
         "name": "SOUTHERN CROSS CAR PARK",
@@ -3991,7 +4737,23 @@
         "price": {
             "flat": 25,
             "weekend": 20
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJDRm8Jktd1moRJTQmO94v5P0",
+        "plus_code": {
+            "compound_code": "5XP9+VW Melbourne, Victoria",
+            "global_code": "4RJ65XP9+VW"
+        },
+        "rating": 3.1,
+        "reference": "ChIJDRm8Jktd1moRJTQmO94v5P0",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 41
     },
     {
         "name": "ST JAMES CAR PARK",
@@ -4070,7 +4832,23 @@
                     "amount": 72
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJgUI8ZUxd1moRCp01e9uH7ms",
+        "plus_code": {
+            "compound_code": "5XM5+C2 Melbourne, Victoria",
+            "global_code": "4RJ65XM5+C2"
+        },
+        "rating": 3.1,
+        "reference": "ChIJgUI8ZUxd1moRCp01e9uH7ms",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 7
     },
     {
         "name": "570 BOURKE STREET CAR PARK",
@@ -4149,7 +4927,23 @@
                     "amount": 74
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJOQbX1stC1moR9sjaPaCY4O0",
+        "plus_code": {
+            "compound_code": "5XM4+VH Melbourne, Victoria",
+            "global_code": "4RJ65XM4+VH"
+        },
+        "rating": 2.5,
+        "reference": "ChIJOQbX1stC1moR9sjaPaCY4O0",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 26
     },
     {
         "name": "376 FLINDERS STREET CAR PARK",
@@ -4234,7 +5028,23 @@
                 }
             ],
             "weekend": 17
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJwfUBKbNC1moRq0LfNzHqFPk",
+        "plus_code": {
+            "compound_code": "5XJ6+9J Melbourne, Victoria",
+            "global_code": "4RJ65XJ6+9J"
+        },
+        "rating": 2.9,
+        "reference": "ChIJwfUBKbNC1moRq0LfNzHqFPk",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 70
     },
     {
         "name": "MERRITTS PLACE CAR PARK",
@@ -4324,7 +5134,23 @@
                 }
             ],
             "weekend": 15
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJfU68A0xd1moRJ2StE23m91c",
+        "plus_code": {
+            "compound_code": "5XP4+29 Melbourne, Victoria",
+            "global_code": "4RJ65XP4+29"
+        },
+        "rating": 2.9,
+        "reference": "ChIJfU68A0xd1moRJ2StE23m91c",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 54
     },
     {
         "name": "450 FLINDERS LANE CAR PARK",
@@ -4398,7 +5224,23 @@
                     "amount": 79
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJcR_Tgadd1moRbBqZy4i1hvM",
+        "plus_code": {
+            "compound_code": "5XJ5+FG Melbourne, Victoria",
+            "global_code": "4RJ65XJ5+FG"
+        },
+        "rating": 5,
+        "reference": "ChIJcR_Tgadd1moRbBqZy4i1hvM",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 1
     },
     {
         "name": "15 WILLIAM STREET CAR PARK",
@@ -4488,7 +5330,23 @@
                 }
             ],
             "weekend": 13
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJO1NHbE1d1moR9acEGMm_bc0",
+        "plus_code": {
+            "compound_code": "5XJ5+5R Melbourne, Victoria",
+            "global_code": "4RJ65XJ5+5R"
+        },
+        "rating": 2.2,
+        "reference": "ChIJO1NHbE1d1moR9acEGMm_bc0",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 56
     },
     {
         "name": "28 LA TROBE STREET CAR PARK",
@@ -4553,7 +5411,23 @@
         ],
         "price": {
             "flat": 16
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJNz38ks5C1moRuBvTI_fJe4o",
+        "plus_code": {
+            "compound_code": "5XR9+R5 Melbourne, Victoria",
+            "global_code": "4RJ65XR9+R5"
+        },
+        "rating": 5,
+        "reference": "ChIJNz38ks5C1moRuBvTI_fJe4o",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 1
     },
     {
         "name": "59 LONSDALE STREET CAR PARK",
@@ -4621,7 +5495,23 @@
         "price": {
             "flat": 18,
             "weekend": 30
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJscVTP89C1moR-WyxQzqFoeU",
+        "plus_code": {
+            "compound_code": "5XQC+W6 Melbourne, Victoria",
+            "global_code": "4RJ65XQC+W6"
+        },
+        "rating": 3,
+        "reference": "ChIJscVTP89C1moR-WyxQzqFoeU",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 100
     },
     {
         "name": "50 LONSDALE STREET CAR PARK",
@@ -4704,7 +5594,23 @@
                 }
             ],
             "weekend": 30
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ1QvpPs9C1moRv666HpsDGLE",
+        "plus_code": {
+            "compound_code": "5XRC+F5 Melbourne, Victoria",
+            "global_code": "4RJ65XRC+F5"
+        },
+        "rating": 3.2,
+        "reference": "ChIJ1QvpPs9C1moRv666HpsDGLE",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 17
     },
     {
         "name": "522 FLINDERS LANE CAR PARK",
@@ -4794,7 +5700,23 @@
                 }
             ],
             "weekend": 18
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJ9WDf-U1d1moRdCs2h0qFpE4",
+        "plus_code": {
+            "compound_code": "5XJ4+47 Melbourne, Victoria",
+            "global_code": "4RJ65XJ4+47"
+        },
+        "rating": 3.4,
+        "reference": "ChIJ9WDf-U1d1moRdCs2h0qFpE4",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 181
     },
     {
         "name": "12-20 FLINDERS LANE CAR PARK",
@@ -4879,7 +5801,23 @@
                 }
             ],
             "weekend": 15
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJs2_Vt8dC1moRTLvFP_eRKPs",
+        "plus_code": {
+            "compound_code": "5XPF+7C Melbourne, Victoria",
+            "global_code": "4RJ65XPF+7C"
+        },
+        "rating": 3,
+        "reference": "ChIJs2_Vt8dC1moRTLvFP_eRKPs",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 59
     },
     {
         "name": "700 COLLINS STREET",
@@ -4967,7 +5905,26 @@
                 }
             ],
             "weekend": 19
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "opening_hours": {
+            "open_now": true
+        },
+        "place_id": "ChIJs2_Vt8dC1moR23kKnnK7ucw",
+        "plus_code": {
+            "compound_code": "5XJ2+56 Melbourne, Victoria",
+            "global_code": "4RJ65XJ2+56"
+        },
+        "rating": 3.7,
+        "reference": "ChIJs2_Vt8dC1moR23kKnnK7ucw",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 51
     },
     {
         "name": "ACU CAR PARK",
@@ -5009,7 +5966,7 @@
                 "close": "22:30:00.000Z"
             }
         ],
-        "address": "115 Victoria Parade, Fitzroy",
+        "address": "115 Victoria Parade, Young St, Fitzroy VIC 3065",
         "location": {
             "lat": -37.80795654794242, 
             "long": 144.97878151320222
@@ -5077,6 +6034,22 @@
                     "amount": 15.5
                 }
             ]
-        }
+        },
+        "icon": "https://maps.gstatic.com/mapfiles/place_api/icons/v1/png_71/parking-71.png",
+        "icon_background_color": "#7B9EB0",
+        "icon_mask_base_uri": "https://maps.gstatic.com/mapfiles/place_api/icons/v2/parking_pinlet",
+        "place_id": "ChIJG-eIrdxC1moRcquwh68tafI",
+        "plus_code": {
+            "compound_code": "5XVH+38 Fitzroy, Victoria",
+            "global_code": "4RJ65XVH+38"
+        },
+        "rating": 3.2,
+        "reference": "ChIJG-eIrdxC1moRcquwh68tafI",
+        "types": [
+            "parking",
+            "point_of_interest",
+            "establishment"
+        ],
+        "user_ratings_total": 20
     }
 ]

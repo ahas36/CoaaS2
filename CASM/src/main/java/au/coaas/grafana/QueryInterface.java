@@ -33,13 +33,15 @@ public class QueryInterface {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.TEXT_PLAIN)
     public Response parseQuery(String query, @QueryParam("page") @DefaultValue("-1") int page,
-                               @QueryParam("limit") @DefaultValue("-1") int limit, @QueryParam("query-id") String queryId,
+                               @QueryParam("limit") @DefaultValue("-1") int limit,
                                @Context HttpHeaders headers) {
 
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
 
         String authToken = headers.getHeaderString(HttpHeaders.AUTHORIZATION);
+        String queryId = headers.getHeaderString("query-id");
+
         CdqlResponse cdql =  stub.execute(ExecutionRequest.newBuilder()
                 .setCdql(query).setPage(page).setLimit(limit)
                 .setQueryid(queryId)

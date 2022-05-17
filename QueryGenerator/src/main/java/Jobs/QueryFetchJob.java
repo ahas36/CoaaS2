@@ -1,5 +1,7 @@
 package Jobs;
 
+import Utils.Event;
+import Utils.Message;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClientURI;
@@ -27,7 +29,7 @@ public class QueryFetchJob implements Job {
 
     private static Logger log = Logger.getLogger(QueryFetchJob.class.getName());
 
-    public void execute(JobExecutionContext arg0) {
+    public void execute(JobExecutionContext arg) {
         if(mongoClient == null){
             MongoClientOptions.Builder options = MongoClientOptions.builder()
                     .connectionsPerHost(400)
@@ -49,14 +51,18 @@ public class QueryFetchJob implements Job {
             ));
 
             for(Document doc: queries){
-                new ContextQuery(doc.getString("day"), doc.getInteger("hour"),
+                ContextQuery cq = new ContextQuery(doc.getString("day"), doc.getInteger("hour"),
                         doc.getInteger("minute"), doc.getInteger("second"),
                         buildQuery(doc), doc.getString("_id"),
                         token
                         );
 
-                // TODO: Push to the queries to a queue that the scheduler is listening to
+                Message message = new Message(cq);
+                Event.operation.publish("cq-sim", message);
             }
+
+            log.info("Context queries batch for " + time.getDayOfWeek() + " during the "
+                    + String.valueOf(time.getHour()) + " hour is scheduled.");
 
         } catch (Exception e) {
             log.severe(e.getMessage());

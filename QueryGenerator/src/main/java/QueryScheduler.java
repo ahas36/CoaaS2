@@ -1,6 +1,8 @@
 import Jobs.ContextQuery;
 import Jobs.QueryFetchJob;
 import Jobs.QueryJob;
+import Utils.Event;
+import Utils.Subscriber;
 import org.quartz.*;
 
 import java.time.LocalDateTime;
@@ -17,6 +19,8 @@ public class QueryScheduler {
     private static SchedulerFactory scheFactory;
     private static Scheduler scheduler;
 
+    Subscriber subscriber = new Subscriber("query-scheduler");
+
     private static Logger log = Logger.getLogger(QueryScheduler.class.getName());
 
     private QueryScheduler() throws SchedulerException {
@@ -24,6 +28,7 @@ public class QueryScheduler {
             scheFactory = new org.quartz.impl.StdSchedulerFactory();
             scheduler = scheFactory.getScheduler();
         }
+        Event.operation.subscribe("cq-sim", subscriber);
         scheduler.start();
     }
 

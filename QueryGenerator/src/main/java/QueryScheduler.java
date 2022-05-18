@@ -1,8 +1,8 @@
 import Jobs.ContextQuery;
 import Jobs.QueryFetchJob;
 import Jobs.QueryJob;
-import Utils.Event;
-import Utils.Subscriber;
+import Utils.PubSub.Event;
+import Utils.PubSub.Subscriber;
 import org.quartz.*;
 
 import java.time.LocalDateTime;

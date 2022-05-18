@@ -1,35 +1,25 @@
-package Jobs;
+package Handlers;
 
-import Utils.PubSub.Event;
-import Utils.PubSub.Message;
+import com.google.gson.Gson;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClientURI;
-import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
-
 import org.bson.Document;
 
-import org.quartz.Job;
-import org.quartz.JobExecutionContext;
-
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
-public class QueryFetchJob implements Job {
-
+public class QueryStatHandler {
     private final static String conn_string =  "mongodb://localhost:27017";
     private static MongoClient mongoClient;
 
-    // The following key is temporary to test with a single context consumer.
-    // Ideally, the token should be saved in the query repository relevant to the consumer.
-    private final String token = "";
+    private static Logger log = Logger.getLogger(QueryStatHandler.class.getName());
 
-    private static Logger log = Logger.getLogger(QueryFetchJob.class.getName());
-
-    public void execute(JobExecutionContext arg) {
+    public static String getrecentQueryStats(){
         if(mongoClient == null){
             MongoClientOptions.Builder options = MongoClientOptions.builder()
                     .connectionsPerHost(400)
@@ -45,33 +35,35 @@ public class QueryFetchJob implements Job {
 
             LocalDateTime time = LocalDateTime.now();
 
-            FindIterable<Document> queries = collection.find(Filters.and(
-                    Filters.eq("hour", time.getHour()),
-                    Filters.eq("day", getDayOfWeek(time.getDayOfWeek().getValue()))
-            ));
+            int hour = time.getHour();
+            int minute = time.getMinute();
+            String day = getDayOfWeek(time.getDayOfWeek().getValue());
 
-            for(Document doc: queries){
-                ContextQuery cq = new ContextQuery(doc.getString("day"), doc.getInteger("hour"),
-                        doc.getInteger("minute"), doc.getInteger("second"),
-                        buildQuery(doc), doc.getString("_id"),
-                        token
-                        );
-
-                Message message = new Message(cq);
-                Event.operation.publish("cq-sim", message);
+            if(minute == 0){
+                if(hour == 0){
+                    hour = 23;
+                    if(day == "Monday"){
+                        day = "Sunday";
+                    }
+                }
+                hour = hour - 1;
+                minute = 59;
             }
 
-            log.info("Context queries batch for " + time.getDayOfWeek() + " during the "
-                    + String.valueOf(time.getHour()) + " hour is scheduled.");
+            ArrayList<String> queries = collection.find(Filters.and(
+                    Filters.eq("hour", hour),
+                    Filters.eq("minute", minute),
+                    Filters.eq("day", day)
+            )).map(Document::toJson).into(new ArrayList<>());
+
+            Gson gson = new Gson();
+            return gson.toJson(queries);
 
         } catch (Exception e) {
             log.severe(e.getMessage());
         }
-    }
 
-    private static String buildQuery(Document query){
-        //TODO: Query String Generation
-        return "query";
+        return null;
     }
 
     private static String getDayOfWeek(int val){

@@ -1,4 +1,4 @@
-package Utils;
+package Utils.PubSub;
 
 public class Subscriber {
     String name;

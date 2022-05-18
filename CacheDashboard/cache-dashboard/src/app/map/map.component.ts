@@ -11,9 +11,11 @@ import { ChartDataSets, ChartOptions } from 'chart.js';
 })
 
 export class MapComponent implements OnInit {
-  
+
   queries;
   timeTicks;
+  queryLocations;
+
   zoom: number = 15;
   lat: number = -37.818807405859864
   lng: number = 144.96796979164372;
@@ -54,8 +56,8 @@ export class MapComponent implements OnInit {
 
   ngOnInit() {
     this.initializeData();
-    this.interval = setInterval(() => { 
-      this.updateData(); 
+    this.interval = setInterval(() => {
+      this.updateData();
   }, config.refresh_rate);
   }
 
@@ -66,9 +68,10 @@ export class MapComponent implements OnInit {
 
       let data = this.serviceAPI.getQueryLoadVariation();
 
-      this.queries = data.query_load.get();
+      this.queries = data.perf.query_load.get();
       this.queryLoadVariation.push({ data: this.queries, label: 'Context Queries' });
-      this.timeTicks = data.timeTicks.get();
+      this.timeTicks = data.perf.timeTicks.get();
+      this.queryLocations = data.query;
 
       carparks.subscribe(parks => {
         for(let i=0; i < parks.length; i++){
@@ -110,17 +113,21 @@ export class MapComponent implements OnInit {
         }
       });
 
-      this.querymarkers.push({
-        lat: -37.811745224874454, 
-        lng: 144.96352654661136,
-        icon: {
-          url: './assets/query.gif',
-          scaledSize: {
-              width: 50,
-              height: 50
+      queryLocations.subscribe(locs => {
+        for(let i=0; i < locs.length; i++){
+          this.querymarkers.push({
+              lat: locs[i].location.lat,
+              lng: locs[i].location.lng,
+              dest: locs[i].address,
+              icon: {
+                url: './assets/query.gif',
+                scaledSize: {
+                    width: 50,
+                    height: 50
+                }
+            }});
           }
-      }});
-
+      });
     }
     catch(ex){
       console.log('An error occured!'+ ex);
@@ -130,9 +137,10 @@ export class MapComponent implements OnInit {
   updateData() {
     try{
       let data = this.serviceAPI.getQueryLoadVariation();
-      this.queries = data.query_load.get();
+      this.queries = data.perf.query_load.get();
       this.queryLoadVariation[0].data = this.queries;
-      this.timeTicks = data.timeTicks.get();
+      this.timeTicks = data.perf.timeTicks.get();
+      this.queryLocations = data.query;
     }
     catch(ex){
       console.log('An error occured!'+ ex);

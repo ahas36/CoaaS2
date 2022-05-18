@@ -11,6 +11,8 @@ import { config } from '../config';
 export class ApiServiceService {
 
   apiData;
+  queryLocs;
+
   csmsData;
   levelsData;
   summaryData;
@@ -29,7 +31,7 @@ export class ApiServiceService {
 
   carParkData;
   placesData;
-  
+
   counter = 0;
   timeTicks:Queue<number> = new Queue<number>();
 
@@ -47,6 +49,7 @@ export class ApiServiceService {
 
   retrievePerformanceData(){
     this.apiData = this.http.get<PerfData>(config.uri);
+    this.queryLocs = this.http.get<[QueryStats]>(config.querystaturi);
     this.counter += 1;
     this.timeTicks.push(this.counter);
   }
@@ -61,7 +64,11 @@ export class ApiServiceService {
 
     this.queryV = this.counter;
     this.queryInit = false;
-    return this.queryData;
+
+    return {
+      "perf": this.queryData,
+      "query": this.queryLocs
+    }
 
   }
 
@@ -74,31 +81,31 @@ export class ApiServiceService {
         this.summaryData.earning.push(res.summary.earning);
         this.summaryData.penalty_cost.push(res.summary.penalty_cost);
         this.summaryData.retrieval_cost.push(res.summary.retrieval_cost);
-  
+
         let ratio = (res.summary.earning/(res.summary.penalty_cost + res.summary.retrieval_cost)).toFixed(2);
         this.summaryData.costearningratio.push(ratio);
-  
+
         this.summaryData.no_of_queries.push(res.summary.no_of_queries);
         this.summaryData.no_of_retrievals.push(res.summary.no_of_retrievals);
         this.summaryData.avg_query_overhead.push(res.summary.avg_query_overhead);
         this.summaryData.avg_network_overhead.push(res.summary.avg_network_overhead);
         this.summaryData.avg_processing_overhead.push(res.summary.avg_processing_overhead);
-        
+
         let oh_1_ratio = (res.summary.avg_processing_overhead/res.summary.avg_query_overhead).toFixed(2);
         this.summaryData.processing_overhead_ratio.push(oh_1_ratio) ;
-  
+
         let oh_2_ratio = (res.summary.avg_network_overhead/res.summary.avg_query_overhead).toFixed(2);
         this.summaryData.network_overhead_ratio.push(oh_2_ratio);
-  
+
         this.summaryData.timeTicks.push(this.counter);
 
         this.summaryData.currentCosts.splice(0, this.summaryData.currentCosts.length);
         this.summaryData.currentCosts.push(res.summary.earning);
         this.summaryData.currentCosts.push(res.summary.retrieval_cost);
         this.summaryData.currentCosts.push(res.summary.penalty_cost);
-  
+
         let pod = res.summary.delayed_queries/res.summary.no_of_queries;
-  
+
         this.summaryData.rt_pod.push({'x': res.summary.avg_query_overhead, 'y': pod});
         this.summaryData.noh_pod.push({'x': res.summary.avg_network_overhead, 'y': pod});
         this.summaryData.poh_pod.push({'x': res.summary.avg_processing_overhead, 'y': pod});
@@ -177,7 +184,7 @@ export class ApiServiceService {
 
       });
     }
-    
+
     this.csmsV = this.counter;
     this.csmsInit = false;
     return this.csmsData;
@@ -280,7 +287,7 @@ export class ApiServiceService {
         this.levelsData.timeTicks.push(this.counter);
       });
     }
-    
+
     this.levelsV = this.counter;
     this.levelsInit = false;
     return this.levelsData;

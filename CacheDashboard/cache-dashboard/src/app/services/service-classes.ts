@@ -70,7 +70,7 @@ export class Status{
 export class Queue<T> {
     private size = 60; // Queing hour worth of statistics
     _store: T[] = [];
-    
+
     public push(val: T) {
         if(this._store.length >= this.size){
             this.pop();
@@ -92,3 +92,16 @@ export class Queue<T> {
     }
 
   }
+
+  @Injectable()
+  export class QueryStats{
+    public location: Location;
+    public address: String;
+  }
+
+  export class Location{
+    public lat: Double;
+    public lng: Double;
+  }
+
+

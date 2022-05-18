@@ -1,4 +1,4 @@
-package Handlers;
+package au.coaas.grafana.util;
 
 import com.google.gson.Gson;
 import com.mongodb.MongoClient;

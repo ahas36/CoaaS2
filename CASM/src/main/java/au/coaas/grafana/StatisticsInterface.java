@@ -1,4 +1,6 @@
-package Handlers;
+package au.coaas.grafana;
+
+import au.coaas.grafana.util.QueryStatHandler;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -7,7 +9,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.logging.Logger;
 
-@Path("stats")
+@Path("cqstats")
 public class StatisticsInterface {
     public StatisticsInterface() {}
 

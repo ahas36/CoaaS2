@@ -83,12 +83,11 @@ public class QueryFetchJob implements Job {
                 "where targetWeather.location=targetLocation" +
             "entity targetCarpark is from mv:carpark " +
                 "where " +
-                    "("+
-                        "(distance(targetCarpark.location, targetLocation, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.7) or " +
-                        "(goodForWalking(targetWeather)>=0.5)) and " +
-                        "targetCarparks.height <= cosumerCar.height and " +
-                        "targetCarparks.isOpen = \"true\" and " +
-                        "targetCarparks.availability > 0";
+                    "((distance(targetCarpark.location, targetLocation, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.6) or " +
+                    "goodForWalking(targetWeather)>=0.9) and " +
+                    "targetCarparks.height <= cosumerCar.height and " +
+                    "targetCarparks.isOpen = \"true\" and " +
+                    "targetCarparks.availability > 0";
 
         Stream<String> defKeys = Arrays.stream(new String[]{"_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"});
 
@@ -97,7 +96,7 @@ public class QueryFetchJob implements Job {
                 queryString += getAddOnToQuery(key, query.get(key));
         }
 
-        String finalQuery = String.format(queryString + " )",
+        String finalQuery = String.format(queryString,
                 query.getString("address"),
                 query.getString("vin"),
                 query.getInteger("distance"));

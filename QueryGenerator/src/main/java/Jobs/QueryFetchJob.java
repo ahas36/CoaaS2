@@ -16,7 +16,9 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 public class QueryFetchJob implements Job {
 
@@ -70,8 +72,55 @@ public class QueryFetchJob implements Job {
     }
 
     private static String buildQuery(Document query){
-        //TODO: Query String Generation
-        return "query";
+        String queryString = "prefix mv:http://schema.mobivoc.org, schema:http://schema.org " +
+            "select (targetCarparks.*) " +
+            "define " +
+            "entity targetLocation is from schema:place " +
+                "where targetLocation.name=\"%s\"" +
+            "entity cosumerCar is from schema:car " +
+                "where consumerCar.vin=\"%s\"" +
+            "entity targetWeather is from schema:weather " +
+                "where targetWeather.location=targetLocation" +
+            "entity targetCarpark is from mv:carpark " +
+                "where " +
+                    "("+
+                        "(distance(targetCarpark.location, targetLocation, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.7) or " +
+                        "(goodForWalking(targetWeather)>=0.5)) and " +
+                        "targetCarparks.height <= cosumerCar.height and " +
+                        "targetCarparks.isOpen = \"true\" and " +
+                        "targetCarparks.availability > 0";
+
+        Stream<String> defKeys = Arrays.stream(new String[]{"_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"});
+
+        for(String key : query.keySet()){
+            if (defKeys.anyMatch(key::equals))
+                queryString += getAddOnToQuery(key, query.get(key));
+        }
+
+        String finalQuery = String.format(queryString + " )",
+                query.getString("address"),
+                query.getString("vin"),
+                query.getInteger("distance"));
+
+        return finalQuery;
+    }
+
+    private static String getAddOnToQuery(String prop, Object value){
+        switch(prop){
+            case "price": {
+                // TODO: how do CoaaS resolve this kind of a problem?
+                return "and targetCarparks.price >= " + String.valueOf((double) value);
+            }
+            case "rating": return "and targetCarparks.rating >= " + String.valueOf((int) value);
+            case "expected_time": {
+                LocalDateTime time = LocalDateTime.now();
+                long minutes = Math.round((double)value*60);
+                time.plusMinutes(minutes);
+                return "and isAvailable (targetCarparks.availability, {\"start_time\":now(), \"end_time\":{\"value\":\""
+                        + time.toString() + "\", \"unit\":\"datetime\"}";
+            }
+        }
+        return "";
     }
 
     private static String getDayOfWeek(int val){

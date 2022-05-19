@@ -11,6 +11,7 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -46,11 +47,33 @@ public class QueryFetchJob implements Job {
             MongoCollection<Document> collection = db.getCollection("query-params");
 
             LocalDateTime time = LocalDateTime.now();
+            LocalDateTime newtime = time.plusMinutes(10);
 
-            FindIterable<Document> queries = collection.find(Filters.and(
-                    Filters.eq("hour", time.getHour()),
-                    Filters.eq("day", getDayOfWeek(time.getDayOfWeek().getValue()))
-            ));
+            Bson filters = null;
+            if(newtime.getHour() == time.getHour()){
+                filters = Filters.and(
+                        Filters.eq("hour", time.getHour()),
+                        Filters.gte("minute", time.getMinute()),
+                        Filters.lt("minute", newtime.getMinute()),
+                        Filters.eq("day", getDayOfWeek(time.getDayOfWeek().getValue()))
+                );
+            }
+            else if(newtime.getHour() == 0){
+                filters = Filters.and(
+                        Filters.eq("hour", time.getHour()),
+                        Filters.gte("minute", time.getMinute()),
+                        Filters.eq("day", getDayOfWeek(newtime.getDayOfWeek().getValue()))
+                );
+            }
+            else{
+                filters = Filters.and(
+                        Filters.eq("hour", time.getHour()),
+                        Filters.gte("minute", time.getMinute()),
+                        Filters.eq("day", getDayOfWeek(time.getDayOfWeek().getValue()))
+                );
+            }
+
+            FindIterable<Document> queries = collection.find(filters);
 
             for(Document doc: queries){
                 ContextQuery cq = new ContextQuery(doc.getString("day"), doc.getInteger("hour"),

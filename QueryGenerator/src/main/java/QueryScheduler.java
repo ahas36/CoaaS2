@@ -76,7 +76,7 @@ public class QueryScheduler {
                 .withIdentity("fetchTrigger", "queryGen")
                 .startNow()
                 .withSchedule(simpleSchedule()
-                        .withIntervalInHours(1))
+                        .withIntervalInMinutes(10))
                 .build();
 
         log.info("Started job to fetch hourly queries");

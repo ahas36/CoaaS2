@@ -1,6 +1,8 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.join('.')))
 
+import time
+import random
 import traceback
 import configparser
 from datetime import datetime
@@ -16,10 +18,12 @@ from flask_restful import Resource
 start_time = datetime.now()
 config = configparser.ConfigParser()
 config.read(os.getcwd()+'/config.ini')
-default_config = config['DEFAULT']
+
+top_config = config['DEFAULT']
+default_config = config['CARPARK']
 
 # Creating a DB client
-db = MongoClient(default_config['ConnectionString'], default_config['DBName'])
+db = MongoClient(top_config['ConnectionString'], top_config['DBName'])
 
 class CarParkContext(Resource):
     # Saving the current session 
@@ -51,6 +55,9 @@ class CarParkContext(Resource):
             
             # Retriving the measurement
             data = self.carpark.get_current_status(time_diff)
+            
+            # Simulating variation of response latencies
+            time.sleep(random.uniform(float(default_config['MinLatency']), float(default_config['MaxLatency'])))
             
             # Return data and 200 OK code
             return parse_response(data, meta=self.meta), 200  

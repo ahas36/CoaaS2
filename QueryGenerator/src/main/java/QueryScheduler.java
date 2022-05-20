@@ -2,7 +2,6 @@ import Jobs.ContextQuery;
 import Jobs.QueryFetchJob;
 import Jobs.QueryJob;
 import Utils.PubSub.Event;
-import Utils.PubSub.Subscriber;
 import org.quartz.*;
 
 import java.time.LocalDateTime;
@@ -58,9 +57,14 @@ public class QueryScheduler {
         Date startTime = new Date(now.getYear(), now.getMonthValue(), now.getDayOfMonth(),
                 query.hour, query.minute, query.second);
 
+        LocalDateTime eTime = now.plusMinutes(10);
+        Date endTime = new Date(eTime.getYear(), eTime.getMonthValue(), eTime.getDayOfMonth(),
+                eTime.getHour(), eTime.getMinute(), eTime.getMinute());
+
         SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
                 .withIdentity(queryId+":Trigger", "queryGen")
                 .startAt(startTime)
+                .endAt(endTime)
                 .build();
 
         log.info("Scheduling context query: " + queryId);

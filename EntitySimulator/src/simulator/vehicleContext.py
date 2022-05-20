@@ -1,6 +1,6 @@
 import sys, os
 
-from vehcile.vehiclehandler import VehicleHandler
+from handlers.vehiclehandler import VehicleHandler
 sys.path.append(os.path.abspath(os.path.join('.')))
 
 import time
@@ -31,6 +31,7 @@ class VehicleContext(Resource):
         'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
     )
+    
     handler = VehicleHandler()
     handler.setDBClient(db)
 

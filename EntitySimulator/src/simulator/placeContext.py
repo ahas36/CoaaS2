@@ -13,6 +13,7 @@ from lib.mongoclient import MongoClient
 from lib.response import parse_response
 
 from flask_restful import Resource
+from flask import request
 
 # Global Variables
 start_time = datetime.now()
@@ -24,7 +25,7 @@ place_config = config['PLACE']
 # Creating a DB client
 db = MongoClient(default_config['ConnectionString'], default_config['DBName'])
 
-class VehicleContext(Resource):
+class PlaceContext(Resource):
 
     current_session = db.insert_one('simulator-sessions', {
         'entity-type': 'vehicles',
@@ -39,7 +40,8 @@ class VehicleContext(Resource):
     def get(self):
         try:            
             # Retriving the measurement
-            data = self.handler.getPlace()
+            args = request.args
+            data = self.handler.getPlace(args['address'])
 
             # Simulating variation of response latencies
             time.sleep(random.uniform(float(place_config['MinLatency']), float(place_config['MaxLatency'])))

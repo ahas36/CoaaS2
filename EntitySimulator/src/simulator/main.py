@@ -12,9 +12,9 @@ from flask_restful import Resource, Api
 app = Flask(__name__)
 api = Api(app)
 
-api.add_resource(PlaceContext, '/places/<address>')
+api.add_resource(PlaceContext, '/places')
 api.add_resource(WeatherContext, '/weather')
-api.add_resource(VehicleContext, '/vehicles/<vin>')
+api.add_resource(VehicleContext, '/vehicles')
 api.add_resource(CarParkContext, '/carparks')
 
 if __name__ == '__main__':

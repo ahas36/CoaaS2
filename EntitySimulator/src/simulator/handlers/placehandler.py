@@ -27,8 +27,9 @@ class PlaceHandler(metaclass=SingletonMeta):
             response = self.requester.get_response(uri)
 
             if(response['status'] == 'OK'):
-                return response['results'], 200
+                return {'results': response['results']}, 200
 
-            return [],200
+            return {'results': []},200
         else:
-            return [place], 200
+            del place['_id']
+            return {'results': [place]}, 200

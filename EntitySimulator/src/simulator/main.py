@@ -1,10 +1,11 @@
 import sys, os
 
-from placeContext import PlaceContext
-from weatherContext import WeatherContext
-from vehicleContext import VehicleContext
-from carparksContext import CarParkContext
-from carParkContext import SimCarParkContext
+from resources.placeContext import PlaceContext
+from resources.weatherContext import WeatherContext
+from resources.vehicleContext import VehicleContext
+from resources.carparksContext import CarParkContext
+from resources.carParkContext import SimCarParkContext
+
 sys.path.append(os.path.abspath(os.path.join('.')))
 
 from flask import Flask

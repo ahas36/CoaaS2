@@ -34,7 +34,7 @@ class CarparkHandler(metaclass=SingletonMeta):
             total_mins = hour*60 + min
             index = round(total_mins/num)
             capacity = park['capacity']
-            variation = park['occupancy'][date]['occupancy']
+            variation = park['occupancy'][date]
             current_availability = capacity - variation[index]
 
             del park['_id']

@@ -20,12 +20,12 @@ config = configparser.ConfigParser()
 config.read(os.getcwd()+'/config.ini')
 
 top_config = config['DEFAULT']
-default_config = config['CARPARK']
+default_config = config['SINGLECARPARK']
 
 # Creating a DB client
 db = MongoClient(top_config['ConnectionString'], top_config['DBName'])
 
-class CarParkContext(Resource):
+class SimCarParkContext(Resource):
     # Saving the current session 
     current_session = db.insert_one('simulator-sessions', {'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")})
 

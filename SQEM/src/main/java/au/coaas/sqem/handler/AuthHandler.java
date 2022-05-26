@@ -40,7 +40,11 @@ public class AuthHandler {
                     Filters.eq("status", true)
             )).projection(project).first();
 
-            return SQEMResponse.newBuilder().setStatus("200").setBody(value.toJson()).build();
+            if(value !=  null){
+                return SQEMResponse.newBuilder().setStatus("200").setBody(value.toJson()).build();
+            }
+            return SQEMResponse.newBuilder().setStatus("404").setBody("Consumer Not Found.").build();
+
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }

@@ -45,7 +45,7 @@ public class SQEMServer {
         monitorManager.start();
 
         monitorManager.registerRoutine(Routine.STAT, StorageRoutine.newBuilder()
-                .setFrequency(1).setFreqUnit("m").build());
+                .setFrequency(1).setFreqUnit("min").build());
 
         server.awaitTermination();
         monitorManager.shutdown();

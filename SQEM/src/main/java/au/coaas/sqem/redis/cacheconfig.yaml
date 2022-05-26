@@ -1,4 +1,4 @@
-clusterServerConfig:
+clusterServersConfig:
   username: "shakthi"
   password: "contextcache_21"
   slaveConnectionPoolSize: 400

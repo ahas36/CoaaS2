@@ -114,7 +114,7 @@ public class PerformanceLogHandler {
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
             String getString = "SELECT * FROM %s WHERE createdDatetime <= \"%s\";";
-            String deleteString = "DELETE * FROM %s WHERE createdDatetime <= \"%s\";";
+            String deleteString = "DELETE FROM %s WHERE createdDatetime <= \"%s\";";
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -163,7 +163,8 @@ public class PerformanceLogHandler {
                 persRecords.add(records);
             }
 
-            collection.insertMany(persRecords);
+            if(persRecords.size() > 0)
+                collection.insertMany(persRecords);
         }
         catch(Exception ex){
             log.severe(ex.getMessage());
@@ -394,9 +395,8 @@ public class PerformanceLogHandler {
             statement.setQueryTimeout(30);
 
             // CSMS Method performances
-            ResultSet rs_1 = statement.executeQuery("SELECT method, status, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +
-                    "FROM csms_performance " +
-                    "GROUP BY (method, status);");
+            ResultSet rs_1 = statement.executeQuery("SELECT method, status, count(*) AS cnt, avg(response_time) AS average " +
+                    "FROM csms_performance GROUP BY method, status;");
             HashMap<String, BasicDBObject> res_1 = new HashMap<>();
             while(rs_1.next()){
                 if(res_1.containsKey(rs_1.getString("method"))){
@@ -404,14 +404,14 @@ public class PerformanceLogHandler {
                             (BasicDBObject) res_1.get(rs_1.getString("method"))
                                     .put(Utilty.getStatus(rs_1.getString("status")), new BasicDBObject(){{
                                         put("count", rs_1.getInt("cnt"));
-                                        put("average", rs_1.getInt("avg"));
+                                        put("average", rs_1.getInt("average"));
                                     }}));
                 }
                 else {
                     res_1.put(rs_1.getString("method"), new BasicDBObject(){{
                         put(Utilty.getStatus(rs_1.getString("status")), new BasicDBObject(){{
                             put("count", rs_1.getInt("cnt"));
-                            put("average", rs_1.getInt("avg"));
+                            put("average", rs_1.getInt("average"));
                         }});
                     }});
                 }
@@ -421,9 +421,9 @@ public class PerformanceLogHandler {
 
             // Overall COASS performance
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
-                    "COUNT(id) AS cnt, AVERAGE(response_time) AS avg, SUM(earning) AS tearn, SUM(cost) AS tcost, SUM(isDelayed) AS tdelay" +
+                    "count(id) AS cnt, avg(response_time) AS average, sum(earning) AS tearn, sum(cost) AS tcost, sum(isDelayed) AS tdelay " +
                     "FROM coass_performance " +
-                    "GROUP BY (method, status);");
+                    "GROUP BY method, status;");
 
             double totalEarning = 0;
             double totalPenalties = 0;
@@ -444,7 +444,7 @@ public class PerformanceLogHandler {
 
                 if(method == "execute"){
                     totalQueries += rs_2.getLong("cnt");
-                    queryOverhead += (rs_2.getLong("avg")*rs_2.getLong("cnt"));
+                    queryOverhead += (rs_2.getLong("average")*rs_2.getLong("cnt"));
                     delayedResponses += rs_2.getLong("tdelay");
 
                     if(status == "200"){
@@ -457,7 +457,7 @@ public class PerformanceLogHandler {
                         totalRetrievals += rs_2.getLong("cnt");
                         totalRetrievalCost += rs_2.getDouble("tcost");
                     }
-                    totalNetworkOverhead += (rs_2.getLong("avg")*rs_2.getLong("cnt"));
+                    totalNetworkOverhead += (rs_2.getLong("average")*rs_2.getLong("cnt"));
                 }
 
                 if(res_2.containsKey(method)){
@@ -465,14 +465,14 @@ public class PerformanceLogHandler {
                             (BasicDBObject) res_2.get(method)
                                     .put(Utilty.getStatus(status), new BasicDBObject(){{
                                         put("count", rs_2.getLong("cnt"));
-                                        put("average", rs_2.getLong("avg"));
+                                        put("average", rs_2.getLong("average"));
                                     }}));
                 }
                 else {
                     res_2.put(method, new BasicDBObject(){{
                         put(Utilty.getStatus(status), new BasicDBObject(){{
                             put("count", rs_2.getLong("cnt"));
-                            put("average", rs_2.getLong("avg"));
+                            put("average", rs_2.getLong("average"));
                         }});
                     }});
                 }
@@ -484,13 +484,13 @@ public class PerformanceLogHandler {
             dbo.put("no_of_queries", totalQueries);
             dbo.put("delayed_queries", delayedResponses);
             dbo.put("no_of_retrievals", totalRetrievals);
-            dbo.put("avg_query_overhead", queryOverhead / totalQueries);
-            dbo.put("avg_network_overhead", totalNetworkOverhead / totalRetrievals);
-            dbo.put("avg_processing_overhead", (queryOverhead - totalNetworkOverhead) / totalQueries);
+            dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
+            dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
+            dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / totalQueries : 0);
 
             double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
             dbo.put("gain", monetaryGain);
-            dbo.put("avg_gain", monetaryGain / totalQueries);
+            dbo.put("avg_gain", totalQueries > 0 ? monetaryGain / totalQueries : 0);
             dbo.put("earning", totalEarning);
             dbo.put("penalty_cost", totalPenalties);
             dbo.put("retrieval_cost", totalRetrievalCost);
@@ -503,8 +503,8 @@ public class PerformanceLogHandler {
             // Utility from saving response time from caching.
 
             // Individual context cache level performance
-            String query = "SELECT itemId, isHit, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +
-                    "FROM %s GROUP BY (isHit, itemId)";
+            String query = "SELECT itemId, isHit, count(id) AS cnt, avg(response_time) AS average " +
+                    "FROM %s GROUP BY isHit, itemId";
             HashMap<String, BasicDBObject> level_res = new HashMap<>();
             for(LogicalContextLevel lvl : LogicalContextLevel.values()){
                 ResultSet rs_3 = statement.executeQuery(String.format(query, lvl.toString().toLowerCase()));
@@ -522,17 +522,18 @@ public class PerformanceLogHandler {
 
                     if(isHit) {
                         acc_hits += curr_value;
-                        res_avg_hit += rs_3.getLong("avg");
+                        res_avg_hit += rs_3.getLong("average");
                     } else {
                         acc_misses += curr_value;
-                        res_avg_miss += rs_3.getLong("avg");
+                        res_avg_miss += rs_3.getLong("average");
                     }
 
                     if(res_3.containsKey(rs_3.getString("itemId"))){
                         BasicDBObject cur_Rec = (BasicDBObject) res_3.get(rs_1.getString("itemId"));
                         long curr_saved_value = cur_Rec.getLong(isHit ? "hits" : "misses");
 
-                        double hitRate = (isHit ? curr_saved_value : curr_value)/(curr_saved_value + curr_value);
+                        double hitRate = (curr_saved_value + curr_value) > 0 ?
+                                (isHit ? curr_saved_value : curr_value)/(curr_saved_value + curr_value) : 0;
 
                         cur_Rec.put(isHit?"hits":"misses",curr_value);
                         cur_Rec.put("hitrate",hitRate);
@@ -550,9 +551,9 @@ public class PerformanceLogHandler {
                 HashMap<String, Object> res_lvl = new HashMap<>();
 
                 res_lvl.put("items", res_3.values());
-                res_lvl.put("hitrate", acc_hits/(acc_hits + acc_misses));
-                res_lvl.put("hit_response_time", res_avg_hit/acc_hits);
-                res_lvl.put("miss_response_time", res_avg_miss/acc_misses);
+                res_lvl.put("hitrate", (acc_hits + acc_misses) > 0 ? acc_hits/(acc_hits + acc_misses) : 0);
+                res_lvl.put("hit_response_time", acc_hits > 0 ? res_avg_hit/acc_hits : 0);
+                res_lvl.put("miss_response_time", acc_misses > 0 ? res_avg_miss/acc_misses : 0);
                 level_res.put(lvl.toString().toLowerCase(), new BasicDBObject(res_lvl));
             }
 

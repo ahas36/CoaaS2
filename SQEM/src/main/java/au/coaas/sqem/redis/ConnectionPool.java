@@ -37,7 +37,13 @@ public class ConnectionPool {
         // Using Clustered Node
         // Could be connected to AWS ElasticCache or Azure Redis Cache (Change only the connection string)
         try{
-            Config config = Config.fromYAML(new File("cacheconfig.yaml"));
+            String currdir = System.getProperty("user.dir");
+            // When executing locally
+            String yamlFile = "/SQEM/src/main/java/au/coaas/sqem/redis/cacheconfig.yaml";
+            // When executing in a container
+            // String yamlFile = "/cacheconfig.yaml";
+
+            Config config = Config.fromYAML(new File(currdir + yamlFile));
             redisClient = Redisson.create(config);
 
             // TODO:

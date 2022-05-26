@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { PerfData, Queue } from './service-classes';
+import { PerfData, QueryStats, Queue } from './service-classes';
 import { CSMSModel, LevelsModel, SummaryModel, SimpleModel } from './service-view-models';
 import { config } from '../config';
 

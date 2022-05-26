@@ -74,14 +74,14 @@ export class MapComponent implements OnInit {
       this.queryLocations = data.query;
 
       carparks.subscribe(parks => {
-        for(let i=0; i < parks.length; i++){
+        for(const element of parks){
 
           this.parkmarkers.push({
-            lat: parks[i].location.lat,
-            lng: parks[i].location.long,
-            label: parks[i].name,
-            address: parks[i].address,
-            rating: parks[i].rating,
+            lat: element.location.lat,
+            lng: element.location.long,
+            label: element.name,
+            address: element.address,
+            rating: element.rating,
             icon: {
                 url: './assets/parking.png',
                 scaledSize: {
@@ -94,14 +94,14 @@ export class MapComponent implements OnInit {
       });
 
       places.subscribe(place => {
-        for(let i=0; i < place.length; i++){
+        for(const element of place){
 
           this.placemarkers.push({
-            lat: place[i].geometry.location.lat,
-            lng: place[i].geometry.location.lng,
-            label: place[i].name,
-            address: place[i].formatted_address,
-            rating: place[i].rating,
+            lat: element.geometry.location.lat,
+            lng: element.geometry.location.lng,
+            label: element.name,
+            address: element.formatted_address,
+            rating: element.rating,
             icon: {
               url: './assets/building.png',
               scaledSize: {
@@ -112,22 +112,36 @@ export class MapComponent implements OnInit {
           });
         }
       });
+   
+      // this.queryLocations.subscribe(locs => {
+      //   for(const element of locs){
+      //     this.querymarkers.push({
+      //         lat: element.location.lat,
+      //         lng: element.location.lng,
+      //         dest: element.address,
+      //         icon: {
+      //           url: './assets/query.gif',
+      //           scaledSize: {
+      //               width: 50,
+      //               height: 50
+      //           }
+      //       }});
+      //     }
+      // });
 
-      queryLocations.subscribe(locs => {
-        for(let i=0; i < locs.length; i++){
-          this.querymarkers.push({
-              lat: locs[i].location.lat,
-              lng: locs[i].location.lng,
-              dest: locs[i].address,
-              icon: {
-                url: './assets/query.gif',
-                scaledSize: {
-                    width: 50,
-                    height: 50
-                }
-            }});
+      this.querymarkers.push({
+        lat: -37.825901243583886,
+        lng: 144.95778574794554,
+        dest: "Royal Botanic Gardens Victoria - Melbourne Gardens",
+        icon: {
+          url: './assets/query.gif',
+          scaledSize: {
+              width: 50,
+              height: 50
           }
-      });
+      }});
+
+
     }
     catch(ex){
       console.log('An error occured!'+ ex);
@@ -161,6 +175,7 @@ interface queryMarker {
   lat: number;
 	lng: number;
   icon: object;
+  dest: string
 }
 
 

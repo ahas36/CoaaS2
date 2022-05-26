@@ -100,8 +100,8 @@ export class Queue<T> {
   }
 
   export class Location{
-    public lat: Double;
-    public lng: Double;
+    public lat: number;
+    public lng: number;
   }
 
 

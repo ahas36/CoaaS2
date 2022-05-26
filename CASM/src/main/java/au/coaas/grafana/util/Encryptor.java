@@ -14,7 +14,7 @@ import java.nio.charset.StandardCharsets;
 public class Encryptor {
     private static final String SALT = "jz8WmQmrfm8x3tZF5snFAaUiCFoxDyfd";
     private static final String SECRET_KEY = "NgoThlX1WPyVvYa1xPj9CHE4OMWxdmmH";
-    private static final String BYTE_CODE = "214543";
+    private static final String BYTE_CODE = "3191705790678302";
 
     private static final byte[] IV = BYTE_CODE.getBytes();
 

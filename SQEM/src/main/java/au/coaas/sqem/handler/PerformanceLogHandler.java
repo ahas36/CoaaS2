@@ -321,14 +321,14 @@ public class PerformanceLogHandler {
             statement.setQueryTimeout(30);
 
             statement.executeUpdate("CREATE TABLE csms_performance(" +
-                    "id INT AUTOINCREMENT, " +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "method TEXT NOT NULL, " +
                     "status TEXT NOT NULL, " +
                     "response_time BIGINT NOT NULL, " +
-                    "createdDatetime DATETIME NOT NULL, PRIMARY KEY (id))");
+                    "createdDatetime DATETIME NOT NULL)");
 
             statement.executeUpdate("CREATE TABLE coass_performance(" +
-                    "id INT AUTOINCREMENT, " +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "method TEXT NOT NULL, " +
                     "status TEXT NOT NULL, " +
                     "response_time BIGINT NOT NULL, " +
@@ -336,16 +336,15 @@ public class PerformanceLogHandler {
                     "identifier TEXT NOT NULL, " +
                     "hashKey TEXT NULL, " +
                     "createdDatetime DATETIME NOT NULL, " +
-                    "isDelayed BOOLEAN NOT NULL, PRIMARY KEY (id))");
+                    "isDelayed BOOLEAN NOT NULL)");
 
             for(LogicalContextLevel level : LogicalContextLevel.values()){
                 statement.executeUpdate(String.format("CREATE TABLE %s (" +
-                        "id INT AUTOINCREMENT, " +
+                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                         "itemId TEXT NOT NULL, " +
                         "isHit BOOLEAN NOT NULL, " +
                         "response_time BIGINT NOT NULL, " +
-                        "createdDatetime DATETIME NOT NULL, " +
-                        "PRIMARY KEY (id))", level.toString().toLowerCase()));
+                        "createdDatetime DATETIME NOT NULL)", level.toString().toLowerCase()));
             }
         }
         catch(SQLException ex){

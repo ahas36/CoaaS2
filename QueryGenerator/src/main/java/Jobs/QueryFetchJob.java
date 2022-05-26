@@ -95,7 +95,8 @@ public class QueryFetchJob implements Job {
     }
 
     private static String buildQuery(Document query){
-        String queryString = "prefix mv:http://schema.mobivoc.org, schema:http://schema.org " +
+        String queryString = "prefix " +
+            "mv:http://schema.mobivoc.org, schema:http://schema.org " +
             "select (targetCarparks.*) " +
             "define " +
             "entity targetLocation is from schema:place " +

@@ -16,7 +16,9 @@ public class MonitorRoutineManager {
     private SchedulerFactory schedulerFactory;
     private static MonitorRoutineManager instance;
 
-    private MonitorRoutineManager() throws SchedulerException {
+    private MonitorRoutineManager() throws SchedulerException {}
+
+    private void SetSchedules() throws SchedulerException {
         schedulerFactory = new StdSchedulerFactory();
         scheduler = schedulerFactory.getScheduler();
 
@@ -94,7 +96,6 @@ public class MonitorRoutineManager {
                         .usingJobData(routineDataMap);
                 break;
             }
-                
             case "refresh": {
                 // Add the relevant data into the routineDataMap
                 tiggerBuilder = TriggerBuilder.newTrigger()
@@ -164,7 +165,8 @@ public class MonitorRoutineManager {
 
     // Start and shutting the monitoring routines
     public void start() throws SchedulerException {
-        if (!scheduler.isStarted()) {
+        if (scheduler == null || !scheduler.isStarted()) {
+            this.SetSchedules();
             scheduler.start();
         }
     }

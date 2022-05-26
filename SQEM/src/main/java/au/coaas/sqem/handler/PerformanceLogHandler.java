@@ -35,7 +35,7 @@ public class PerformanceLogHandler {
     public static void insertRecord(LogicalContextLevel level, String id, Boolean isHit, long rTime) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO %s VALUES(%s, %d, %d, datetime('now'))";
+        String queryString = "INSERT INTO %s VALUES(%s, %d, %d, datetime('now'));";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -67,7 +67,7 @@ public class PerformanceLogHandler {
     public static void genericRecord(String method, String status, long rTime) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO csms_performance VALUES(%s, %s, %d, datetime('now'))";
+        String queryString = "INSERT INTO csms_performance VALUES(%s, %s, %d, datetime('now'));";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -113,8 +113,8 @@ public class PerformanceLogHandler {
         level = level.toLowerCase();
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
-            String getString = "SELECT * FROM %s WHERE createdDatetime <= \"%s\"";
-            String deleteString = "DELETE * FROM %s WHERE createdDatetime <= \"%s\"";
+            String getString = "SELECT * FROM %s WHERE createdDatetime <= \"%s\";";
+            String deleteString = "DELETE * FROM %s WHERE createdDatetime <= \"%s\";";
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -190,7 +190,7 @@ public class PerformanceLogHandler {
 
         // Connection connection = null;
         String queryString = "SELECT SUM(isHit)/COUNT(*) AS hitrate" +
-                "FROM %s WHERE itemId = %s AND createdDatetime >= %s";
+                "FROM %s WHERE itemId = %s AND createdDatetime >= %s;";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -232,7 +232,7 @@ public class PerformanceLogHandler {
     public static void coassPerformanceRecord(Statistic request) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %f, %f, %s, %s, datetime('now'), %d)";
+        String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %f, %f, %s, %s, datetime('now'), %d);";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -286,7 +286,7 @@ public class PerformanceLogHandler {
     public static double getLastRetrievalTime(String csId){
         // Connection connection = null;
         String queryString = "SELECT response_time" +
-                "FROM coass_performance WHERE status = \"200\" AND identifier = %s ORDER BY id DESC LIMIT 1";
+                "FROM coass_performance WHERE status = \"200\" AND identifier = %s ORDER BY id DESC LIMIT 1;";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -396,7 +396,7 @@ public class PerformanceLogHandler {
             // CSMS Method performances
             ResultSet rs_1 = statement.executeQuery("SELECT method, status, COUNT(id) AS cnt, AVERAGE(response_time) AS avg" +
                     "FROM csms_performance " +
-                    "GROUP BY (method, status)");
+                    "GROUP BY (method, status);");
             HashMap<String, BasicDBObject> res_1 = new HashMap<>();
             while(rs_1.next()){
                 if(res_1.containsKey(rs_1.getString("method"))){
@@ -423,7 +423,7 @@ public class PerformanceLogHandler {
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
                     "COUNT(id) AS cnt, AVERAGE(response_time) AS avg, SUM(earning) AS tearn, SUM(cost) AS tcost, SUM(isDelayed) AS tdelay" +
                     "FROM coass_performance " +
-                    "GROUP BY (method, status)");
+                    "GROUP BY (method, status);");
 
             double totalEarning = 0;
             double totalPenalties = 0;

@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 public class PerformanceLogHandler {
 
+    private static Connection connection = null;
     private static final Logger log = Logger.getLogger(LogHandler.class.getName());
     private static List<String> all_tables = Stream.of(LogicalContextLevel.values())
             .map(Enum::name)
@@ -33,11 +34,11 @@ public class PerformanceLogHandler {
     // Inserts a new performance record
     public static void insertRecord(LogicalContextLevel level, String id, Boolean isHit, long rTime) {
 
-        Connection connection = null;
+        // Connection connection = null;
         String queryString = "INSERT INTO %s VALUES(%s, %d, %d, datetime('now'))";
 
         try{
-            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -47,27 +48,29 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-        finally
-        {
-            try
-            {
-                if(connection != null)
-                    connection.close();
-            }
-            catch(SQLException e)
-            {
-                log.severe(e.getMessage());
-            }
-        }
+//        finally
+//        {
+//            try
+//            {
+//                if(connection != null){
+//                    connection.commit();
+//                    connection.close();
+//                }
+//            }
+//            catch(SQLException e)
+//            {
+//                log.severe(e.getMessage());
+//            }
+//        }
     }
 
     public static void genericRecord(String method, String status, long rTime) {
 
-        Connection connection = null;
+        // Connection connection = null;
         String queryString = "INSERT INTO csms_performance VALUES(%s, %s, %d, datetime('now'))";
 
         try{
-            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -76,18 +79,20 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-        finally
-        {
-            try
-            {
-                if(connection != null)
-                    connection.close();
-            }
-            catch(SQLException e)
-            {
-                log.severe(e.getMessage());
-            }
-        }
+//        finally
+//        {
+//            try
+//            {
+//                if(connection != null){
+//                    connection.commit();
+//                    connection.close();
+//                }
+//            }
+//            catch(SQLException e)
+//            {
+//                log.severe(e.getMessage());
+//            }
+//        }
     }
 
     // Clears older records earlier than the current window from the in-memory database
@@ -104,19 +109,25 @@ public class PerformanceLogHandler {
     }
 
     private static void removeAndPersistRecord(String level, int duration) {
-        Connection connection = null;
+        // Connection connection = null;
         level = level.toLowerCase();
         try{
-            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
-            String getString = "SELECT * FROM %s WHERE createdTime <= %s";
-            String deleteString = "DELETE * FROM %s WHERE createdTime <= %s";
+            // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            String getString = "SELECT * FROM %s WHERE createdDatetime <= \"%s\"";
+            String deleteString = "DELETE * FROM %s WHERE createdDatetime <= \"%s\"";
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
+//            ArrayList<String> test = new ArrayList<>();
+//            ResultSet rs1 = statement.executeQuery("SELECT name FROM sqlite_master WHERE type = \"table\"");
+//            while(rs1.next()){
+//                test.add(rs1.getString("name"));
+//            }
+
             LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
-            ResultSet rs = statement.executeQuery(String.format(getString,
-                    level, windowThresh));
+            String qStr = String.format(getString, level, windowThresh);
+            ResultSet rs = statement.executeQuery(qStr);
 
             statement.executeUpdate(String.format(deleteString,
                     level, windowThresh));
@@ -147,7 +158,7 @@ public class PerformanceLogHandler {
                     records.put("is_hit", rs.getBoolean("isHit"));
                 }
 
-                records.put("datetime", rs.getString("createdTime"));
+                records.put("datetime", rs.getString("createdDatetime"));
 
                 persRecords.add(records);
             }
@@ -157,30 +168,32 @@ public class PerformanceLogHandler {
         catch(Exception ex){
             log.severe(ex.getMessage());
         }
-        finally
-        {
-            try
-            {
-                if(connection != null)
-                    connection.close();
-            }
-            catch(SQLException e)
-            {
-                // Failed to close connection.
-                log.severe(e.getMessage());
-            }
-        }
+//        finally
+//        {
+//            try
+//            {
+//                if(connection != null){
+//                    connection.commit();
+//                    connection.close();
+//                }
+//            }
+//            catch(SQLException e)
+//            {
+//                // Failed to close connection.
+//                log.severe(e.getMessage());
+//            }
+//        }
     }
 
     // Returns the current hit rate of a context item
     public static double getHitRate(LogicalContextLevel level, String id, int duration) {
 
-        Connection connection = null;
+        // Connection connection = null;
         String queryString = "SELECT SUM(isHit)/COUNT(*) AS hitrate" +
-                "FROM %s WHERE itemId = %s AND createdTime >= %s";
+                "FROM %s WHERE itemId = %s AND createdDatetime >= %s";
 
         try{
-            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -195,19 +208,21 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-        finally
-        {
-            try
-            {
-                if(connection != null)
-                    connection.close();
-            }
-            catch(SQLException e)
-            {
-                // Failed to close connection.
-                log.severe(e.getMessage());
-            }
-        }
+//        finally
+//        {
+//            try
+//            {
+//                if(connection != null){
+//                    connection.commit();
+//                    connection.close();
+//                }
+//            }
+//            catch(SQLException e)
+//            {
+//                // Failed to close connection.
+//                log.severe(e.getMessage());
+//            }
+//        }
 
         // Returns HR = 0 since there are no performance records
         return 0;
@@ -216,11 +231,11 @@ public class PerformanceLogHandler {
     // COASS Performance
     public static void coassPerformanceRecord(Statistic request) {
 
-        Connection connection = null;
+        // Connection connection = null;
         String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %f, %f, %s, %s, datetime('now'), %d)";
 
         try{
-            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -250,29 +265,31 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-        finally
-        {
-            try
-            {
-                if(connection != null)
-                    connection.close();
-            }
-            catch(SQLException e)
-            {
-                log.severe(e.getMessage());
-            }
-        }
+//        finally
+//        {
+//            try
+//            {
+//                if(connection != null){
+//                    connection.commit();
+//                    connection.close();
+//                }
+//            }
+//            catch(SQLException e)
+//            {
+//                log.severe(e.getMessage());
+//            }
+//        }
     }
 
     // Context Service Performance for retrievals
 
     public static double getLastRetrievalTime(String csId){
-        Connection connection = null;
+        // Connection connection = null;
         String queryString = "SELECT response_time" +
                 "FROM coass_performance WHERE status = \"200\" AND identifier = %s ORDER BY id DESC LIMIT 1";
 
         try{
-            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -292,19 +309,21 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-        finally
-        {
-            try
-            {
-                if(connection != null)
-                    connection.close();
-            }
-            catch(SQLException e)
-            {
-                // Failed to close connection.
-                log.severe(e.getMessage());
-            }
-        }
+//        finally
+//        {
+//            try
+//            {
+//                if(connection != null){
+//                    connection.commit();
+//                    connection.close();
+//                }
+//            }
+//            catch(SQLException e)
+//            {
+//                // Failed to close connection.
+//                log.severe(e.getMessage());
+//            }
+//        }
 
         // We can ignore the retrieval latency of context services which has retrievals earlier than a window size.
         // That is because, as the lifetime grows larger in value, network latency can be ignored.
@@ -313,7 +332,6 @@ public class PerformanceLogHandler {
 
     // Creating the tables at the start
     public static void seed_performance_db(){
-        Connection connection = null;
         try{
             connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
@@ -350,18 +368,20 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-        finally
-        {
-            try
-            {
-                if(connection != null)
-                    connection.close();
-            }
-            catch(SQLException e)
-            {
-                log.severe(e.getMessage());
-            }
-        }
+//        finally
+//        {
+//            try
+//            {
+//                if(connection != null){
+//                    connection.commit();
+//                    connection.close();
+//                }
+//            }
+//            catch(SQLException e)
+//            {
+//                log.severe(e.getMessage());
+//            }
+//        }
     }
 
     // Summarizes the performance data of the last window and stores in the logs.
@@ -369,7 +389,7 @@ public class PerformanceLogHandler {
 
         Document persRecord = new Document();
         try{
-            Connection connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            // Connection connection = DriverManager.getConnection("jdbc:sqlite::memory:");
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 

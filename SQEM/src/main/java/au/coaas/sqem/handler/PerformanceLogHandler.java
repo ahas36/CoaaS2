@@ -299,7 +299,7 @@ public class PerformanceLogHandler {
 
             if(!rs.next()) {
                 SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead");
-                if(avg_latency.getStatus() == "200")
+                if(avg_latency.getStatus().equals("200"))
                     return Double.valueOf(avg_latency.getBody());
 
                 return 0;
@@ -447,13 +447,13 @@ public class PerformanceLogHandler {
                     queryOverhead += (rs_2.getLong("average")*rs_2.getLong("cnt"));
                     delayedResponses += rs_2.getLong("tdelay");
 
-                    if(status == "200"){
+                    if(status.equals("200")){
                         totalEarning += rs_2.getDouble("tearn");
                         totalPenalties += rs_2.getDouble("tcost");
                     }
                 }
                 else if(method == "executeFetch"){
-                    if(status == "200"){
+                    if(status.equals("200")){
                         totalRetrievals += rs_2.getLong("cnt");
                         totalRetrievalCost += rs_2.getDouble("tcost");
                     }

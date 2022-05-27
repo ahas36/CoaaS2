@@ -108,11 +108,12 @@ public class ContextConsumerHandler {
             Document value = tokenCollection.find(Filters.and(
                     Filters.eq("status", true),
                     Filters.eq("token", authToken)
-            )).projection(project).first();
+            )).first();
 
             MongoCollection<Document> consumerCollection = db.getCollection("contextConsumer");
+            String id = value.getString("consumerId");
             Document sla = consumerCollection.find(Filters.and(
-                    Filters.eq("_id", new ObjectId(value.getString("id"))),
+                    Filters.eq("_id", new ObjectId(id)),
                     Filters.eq("status", true)
             )).projection(project).first();
 

@@ -51,7 +51,7 @@ public class SQEMInterceptor implements ServerInterceptor {
                 case "handleContextRequestInCache": {
                     // LogicalContextLevel level, String id, Boolean isHit, long rTime
                     PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY, res.getHashKey(),
-                            res.getStatus() == "200", responseTime);
+                            res.getStatus().equals("200"), responseTime);
                     break;
                 }
                 default:

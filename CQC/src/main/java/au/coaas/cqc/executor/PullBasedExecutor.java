@@ -645,7 +645,7 @@ public class PullBasedExecutor {
         // Fetching Consumer SLA
         JSONObject sla = null;
         SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setToken(authToken).build());
-        if(slaMessage.getStatus() == "200")
+        if(slaMessage.getStatus().equals("200"))
             sla = new JSONObject(slaMessage.getBody());
 
         for (int i = 0; i < contextServices.length(); i++) {
@@ -740,7 +740,7 @@ public class PullBasedExecutor {
         asyncStub.logPerformanceData(Statistic.newBuilder()
                 .setMethod("executeFetch").setStatus(fetch.getStatus())
                 .setTime(endTime-startTime).setCs(fetchRequest).setEarning(0)
-                .setCost(fetch.getStatus() == "200"? fetch.getSummary().getPrice() : 0).build());
+                .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
         // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
 
         if (fetch.getStatus().equals("200")) {
@@ -862,7 +862,8 @@ public class PullBasedExecutor {
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setToken(authToken).build());
-        if(slaMessage.getStatus() == "200")
+        String status = slaMessage.getStatus();
+        if(status.equals("200"))
             sla = new JSONObject(slaMessage.getBody());
         JSONObject qos = sla.getJSONObject("sla").getJSONObject("qos");
 

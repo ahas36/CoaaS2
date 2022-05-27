@@ -61,7 +61,7 @@ public class AuthHandler {
             String id = tokenRequest.getId();
             if(id != null){
                 BasicDBObject query = new BasicDBObject(){{
-                    put("id", tokenRequest.getId());
+                    put("consumerId", tokenRequest.getId());
                     put("status", true);
                 }};
 
@@ -73,7 +73,7 @@ public class AuthHandler {
                 collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
 
                 Document consumer = new Document() {{
-                    put("id", tokenRequest.getId());
+                    put("consumerId", tokenRequest.getId());
                     put("token", tokenRequest.getToken());
                     put("status", true);
                     put("createdDate", LocalDateTime.now());
@@ -89,7 +89,7 @@ public class AuthHandler {
                 }}).first();
 
                 Document token = new Document() {{
-                    put("id", consumer.getString("_id"));
+                    put("consumerId", consumer.getString("_id"));
                     put("token", tokenRequest.getToken());
                     put("status", true);
                     put("createdDate", LocalDateTime.now());

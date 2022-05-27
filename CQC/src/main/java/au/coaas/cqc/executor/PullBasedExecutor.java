@@ -267,24 +267,17 @@ public class PullBasedExecutor {
 
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
         // If this response need to be cached, this is where the caching action should happen.
-        try{
-            CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
-                    .setBody(result.toString()).setQueryId(queryId)
-                    .setAdmin(CdqlAdmin.newBuilder()
-                            .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
-                            .setPrice(consumerQoS.getDouble("price"))
-                            .setRtpenalty(consumerQoS.getJSONObject("rtmax").getJSONObject("penalty")
-                                    .getDouble("value"))
-                            .build())
-                    .build();
+        CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
+                .setBody(result.toString()).setQueryId(queryId)
+                .setAdmin(CdqlAdmin.newBuilder()
+                        .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
+                        .setPrice(consumerQoS.getDouble("price"))
+                        .setRtpenalty(consumerQoS.getJSONObject("rtmax").getJSONObject("penalty")
+                                .getDouble("value"))
+                        .build())
+                .build();
 
-            return cdqlResponse;
-        }
-        catch(Exception ex){
-            log.severe(ex.getMessage());
-            return CdqlResponse.newBuilder().setStatus("500").build();
-        }
-
+        return cdqlResponse;
     }
 
     private static Object executeFunctionCall(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query) {

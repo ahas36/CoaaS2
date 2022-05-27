@@ -1,4 +1,4 @@
-version: "3.1.1"
+version: "3.2.1"
 services:
     casm:
         image: coaas/casm:latest
@@ -63,7 +63,6 @@ services:
           - "8585"
           - "8007:8007"
         restart: always
-
 
     cqc:
         image: coaas/cqc:latest
@@ -186,7 +185,7 @@ services:
         #- /userlogin/pgdata:/var/lib/redis/data
       ports:
         - 6379:6379
-      command: redis-server --logpath=/dev/null # --quiet
+      command: redis redis-server --save 60 1 --loglevel warning # --quiet
 
     kafka:
       image: confluentinc/cp-kafka:latest

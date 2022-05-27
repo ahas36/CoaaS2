@@ -43,7 +43,15 @@ public class ConnectionPool {
             // When executing in a container
             // String yamlFile = "/cacheconfig.yaml";
 
-            Config config = Config.fromYAML(new File(currdir + yamlFile));
+            // Comment this line out when the cluster is set
+            // Config config = Config.fromYAML(new File(currdir + yamlFile));
+
+            // The following lines are only for local testing purposes.
+            Config config = new Config();
+            config.useSingleServer()
+                    .setAddress("redis://127.0.0.1:6379");
+            // Test lines, end here.
+
             redisClient = Redisson.create(config);
 
             // TODO:
@@ -55,7 +63,7 @@ public class ConnectionPool {
             // CacheManager manager = Caching.getCachingProvider().getCacheManager();
             // Cache<String, String> cache = manager.createCache("namedCache", mgrconfig);
         }
-        catch(IOException ex){
+        catch(Exception ex){
             log.severe(ex.getMessage());
         }
     }

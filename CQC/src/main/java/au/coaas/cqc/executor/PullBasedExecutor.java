@@ -134,7 +134,6 @@ public class PullBasedExecutor {
                             } else {
                                 try {
                                     get = getValueOfJsonObject(ce.get(valueEntityID), valueEntityBody);
-
                                 } catch (Exception ex) {
                                     get = getValueOfJsonObject(ce.get(valueEntityID).getJSONArray("results").getJSONObject(0), valueEntityBody);
                                 }
@@ -223,7 +222,10 @@ public class PullBasedExecutor {
                     // In fact, querying from MongoDB is actually to query the "Context Service Descriptions".
 
                     // This can also be if the context service is a data stream.
-                    ce.put(entity.getEntityID(), executeSQEMQuery(entity, query, ce, page, limit));
+
+                    AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, authToken);
+                    ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
+                    if(consumerQoS == null)  consumerQoS = (JSONObject) rex.getValue();
                     continue;
                 }
 
@@ -265,17 +267,24 @@ public class PullBasedExecutor {
 
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
         // If this response need to be cached, this is where the caching action should happen.
-        CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
-                .setBody(result.toString()).setQueryId(queryId)
-                .setAdmin(CdqlAdmin.newBuilder()
-                        .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
-                        .setPrice(consumerQoS.getDouble("price"))
-                        .setRtpenalty(consumerQoS.getJSONObject("rtmax").getJSONObject("penalty")
-                                .getDouble("value"))
-                        .build())
-                .build();
+        try{
+            CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
+                    .setBody(result.toString()).setQueryId(queryId)
+                    .setAdmin(CdqlAdmin.newBuilder()
+                            .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
+                            .setPrice(consumerQoS.getDouble("price"))
+                            .setRtpenalty(consumerQoS.getJSONObject("rtmax").getJSONObject("penalty")
+                                    .getDouble("value"))
+                            .build())
+                    .build();
 
-        return cdqlResponse;
+            return cdqlResponse;
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+            return CdqlResponse.newBuilder().setStatus("500").build();
+        }
+
     }
 
     private static Object executeFunctionCall(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query) {
@@ -850,11 +859,19 @@ public class PullBasedExecutor {
         return cr;
     }
 
-    private static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
+    private static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
+                                               Map<String, JSONObject> ce, int page, int limit, String authToken) {
+        JSONObject sla = null;
+
         ContextRequest cr = generateContextRequest(targetEntity, query, ce, page, limit);
 
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+        SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setToken(authToken).build());
+        if(slaMessage.getStatus() == "200")
+            sla = new JSONObject(slaMessage.getBody());
+        JSONObject qos = sla.getJSONObject("sla").getJSONObject("qos");
 
         Iterator<Chunk> data = sqemStub.handleContextRequest(cr);
 
@@ -881,7 +898,6 @@ public class PullBasedExecutor {
 //        JSONArray result = new JSONArray();
 //        JSONArray jsonArray = invoke.getJSONArray("result");
 //
-//
 //        for (int i = 0; i < Math.min(jsonArray.length(), 10); i++) {
 //            JSONObject carpark = jsonArray.getJSONObject(i);
 //            if (this.evaluate(carpark, ce, targetEntity.getCondition().getRPNCondition())) {
@@ -892,7 +908,9 @@ public class PullBasedExecutor {
 //                }
 //            }
 //        }
-        return invoke;
+
+        return new AbstractMap.SimpleEntry(invoke,
+                qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
     }
 
     private static CdqlConstantConditionTokenType getConstantType(String val) {

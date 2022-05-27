@@ -5,8 +5,9 @@ clusterServersConfig:
   masterConnectionPoolSize: 400
   idleConnectionTimeout: 60000
   nodeAddresses:
-    - "redis://localhost:6379"
+    - "redis://127.0.0.1:6379"
   pingConnectionInterval: 30000
 threads: 16
 nettyThreads: 32
 codec: !<org.redisson.codec.MarshallingCodec> {}
+

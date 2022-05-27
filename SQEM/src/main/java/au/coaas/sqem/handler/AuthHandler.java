@@ -8,6 +8,7 @@ import au.coaas.sqem.mongo.ConnectionPool;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoCollection;
 
@@ -54,29 +55,49 @@ public class AuthHandler {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
         MongoDatabase db = mongoClient.getDatabase("coaas");
         MongoCollection<Document> collection = db.getCollection("consumerToken");
+        MongoCollection<Document> consumerCollection = db.getCollection("contextConsumer");
 
         try{
-            BasicDBObject query = new BasicDBObject(){{
-                put("id", tokenRequest.getId());
-                put("status", true);
-            }};
+            String id = tokenRequest.getId();
+            if(id != null){
+                BasicDBObject query = new BasicDBObject(){{
+                    put("id", tokenRequest.getId());
+                    put("status", true);
+                }};
 
-            BasicDBObject updateFields = new BasicDBObject(){{
-                put("status", false);
-                put("updatedDate", LocalDateTime.now());
-            }};
+                BasicDBObject updateFields = new BasicDBObject(){{
+                    put("status", false);
+                    put("updatedDate", LocalDateTime.now());
+                }};
 
-            collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
+                collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
 
-            Document consumer = new Document() {{
-                put("id", tokenRequest.getId());
-                put("token", tokenRequest.getToken());
-                put("status", true);
-                put("createdDate", LocalDateTime.now());
-                put("updatedDate", null);
-            }};
+                Document consumer = new Document() {{
+                    put("id", tokenRequest.getId());
+                    put("token", tokenRequest.getToken());
+                    put("status", true);
+                    put("createdDate", LocalDateTime.now());
+                    put("updatedDate", null);
+                }};
 
-            collection.insertOne(consumer);
+                collection.insertOne(consumer);
+            }
+            else {
+                Document consumer = consumerCollection.find(new BasicDBObject() {{
+                    put("info.username", tokenRequest.getUsername());
+                    put("status", true);
+                }}).first();
+
+                Document token = new Document() {{
+                    put("id", consumer.getString("_id"));
+                    put("token", tokenRequest.getToken());
+                    put("status", true);
+                    put("createdDate", LocalDateTime.now());
+                    put("updatedDate", null);
+                }};
+
+                collection.insertOne(token);
+            }
         }
         catch(Exception ex){
             log.severe(ex.getMessage());

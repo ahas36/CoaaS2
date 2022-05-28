@@ -164,10 +164,9 @@ public class ContextCacheHandler {
 
             RLock lock = cacheClient.getFairLock("refreshLock");
             RMap<String, Object> map = cacheClient.getMap("perf_stats");
-
-            perfMetrics.forEach((k,v) -> map.fastPut((String)k,v));
-
+            map.putAll(perfMetrics);
             lock.unlockAsync();
+
         } catch (Exception e) {
             log.info(e.getMessage());
         }
@@ -188,7 +187,7 @@ public class ContextCacheHandler {
             });
 
             return SQEMResponse.newBuilder()
-                    .setStatus("200").setBody(stat.getNow().toString())
+                    .setStatus("200").setBody((String) stat.getNow())
                     .build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder()

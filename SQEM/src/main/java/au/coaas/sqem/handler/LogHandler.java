@@ -79,7 +79,9 @@ public class LogHandler {
 
             MongoCollection<Document> collection = db.getCollection("queryTree");
 
-            Document doc = new Document("query_tree", new JSONObject(queryString.getRawQuery()));
+            Document doc = new Document();
+            Document queryPlan = Document.parse(queryString.getRawQuery());
+            doc.append("query_tree", queryPlan);
             doc.append("timestamp", System.currentTimeMillis());
             doc.append("queryId", queryString.getQueryId());
 

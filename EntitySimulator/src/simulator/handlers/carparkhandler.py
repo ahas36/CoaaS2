@@ -36,10 +36,41 @@ class CarparkHandler(metaclass=SingletonMeta):
             capacity = park['capacity']
             variation = park['occupancy'][date]
             current_availability = capacity - variation[index]
+            park['ownedBy'] = {
+                'name': park['owner']
+            }
+            park['primary_location'] = {
+                'address': park['address'],
+                'latitude': park['location']['lat'],
+                'longitude': park['location']['long']
+            }
+            park['currenciesAccepted'] = 'AUD'
+            park['maxHeight'] = {
+                "value": park['gates'][0]['height']['value'],
+                "unitText": park['gates'][0]['height']['unit']
+            }
+
+            if 'hourly' in park['price']:
+                for off in park['price']['hourly']:
+                    if off['max'] >= 1:
+                        park['price_offer'] = {
+                            'price': off['amount'],
+                            'priceCurrency': 'AUD'
+                        }
+                        break
+            elif 'flat' in park['price']:
+                park['price_offer'] = {
+                    'price': park['price']['flat'],
+                    'priceCurrency': 'AUD'
+                }
 
             del park['_id']
             del park['occupancy']
             del park['sampling_interval']
+            del park['owner']
+            del park['address']
+            del park['location']
+            del park['price']
             
             schedule = park['open_hours'][now.weekday()]
             open = int(schedule['open'].split(':')[0])
@@ -63,16 +94,42 @@ class CarparkHandler(metaclass=SingletonMeta):
 
         except:
             park = self.__db.read_single('carparks', {'reference': id})
+            park['ownedBy'] = {
+                'name': park['owner']
+            }
+            park['primary_location'] = {
+                'address': park['address'],
+                'latitude': park['location']['lat'],
+                'longitude': park['location']['long']
+            }
+            park['currenciesAccepted'] = 'AUD'
 
+            if 'hourly' in park['price']:
+                for off in park['price']['hourly']:
+                    if off['max'] >= 1:
+                        park['price_offer'] = {
+                            'price': off['amount'],
+                            'priceCurrency': 'AUD'
+                        }
+                        break
+            elif 'flat' in park['price']:
+                park['price_offer'] = {
+                    'price': park['price']['flat'],
+                    'priceCurrency': 'AUD'
+                }
+            
             del park['_id']
             del park['occupancy']
             del park['sampling_interval']
+            del park['owner']
+            del park['address']
+            del park['location']
+            del park['price']
 
             park['free_slots'] = 0
             park['is_open'] = False
 
-            return park, 200
-            
+            return park, 200      
 
 def getDate(day):
     if day == 0:

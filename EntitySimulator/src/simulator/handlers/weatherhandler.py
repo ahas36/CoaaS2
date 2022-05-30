@@ -36,11 +36,26 @@ class WeatherHandler(metaclass=SingletonMeta):
         weather = self.__db.read_single('weather', {'timestamp':curr_time})
 
         return {
-            'temperature': weather['Temperature ']['2 m elevation corrected'],
-            'precipitation': weather['Precipitation Total'],
-            'wind_gust': weather['Wind Gust'],
-            'wind_speed': weather['Wind Speed ']['10 m'],
-            'wind_direction': weather['Wind Direction ']['10 m'],     
+            'temperature': {
+                'value': weather['Temperature ']['2 m elevation corrected'],
+                'unitText': 'celcius'
+            },
+            'precipitation': {
+                'value':weather['Precipitation Total'],
+                'unitText': 'mm'
+            },
+            'wind_gust': {
+                'value': weather['Wind Gust'],
+                'unitText': 'kmph'
+            },
+            'wind_speed': {
+                'value':weather['Wind Speed ']['10 m'],
+                'unitText':'kmph'
+            },
+            'wind_direction': {
+                'value':weather['Wind Direction ']['10 m'],  
+                'unitText':'degrees'   
+            },
             'cloud_cover': {
                 'total': weather['Cloud Cover Total'],
                 'high': weather['Cloud Cover High ']['high cld lay'],
@@ -52,10 +67,18 @@ class WeatherHandler(metaclass=SingletonMeta):
                 'water': weather['Total Column Cloud Water ']['atmos col']
             },
             'cape': weather['CAPE ']['180-0 mb above gnd'],
-            'radition': {
-                'shortwave': weather['Shortwave Radiation'],
-                'longwave': weather['Longwave Radiation'],
-                'uv': weather['UV Radiation'],
+            'direct_radition': {
+                'value': weather['Shortwave Radiation'],
+                'unitIndex': 'index'
             },
-            'mean_sea_level_presssure': weather['Mean Sea Level Pressure ']['MSL']
+            'longwave_radiation': weather['Longwave Radiation'],
+            'uvIndex': {
+                'value': weather['UV Radiation'],
+                'unitText': 'index'
+            },
+            'mean_sea_level_presssure': {
+                'value':weather['Mean Sea Level Pressure ']['MSL'],
+                'unitText': 'hPa'
+            },
+            'location':'Melbourne, Australia'
         }, 200

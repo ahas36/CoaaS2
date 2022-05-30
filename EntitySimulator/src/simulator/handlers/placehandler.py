@@ -32,4 +32,10 @@ class PlaceHandler(metaclass=SingletonMeta):
             return {'results': []},200
         else:
             del place['_id']
+            place['primary_location'] = {
+                'address': place['formatted_address'],
+                'latitude': place['geometry']['location']['lat'],
+                'longitude': place['geometry']['location']['lng']
+            }
+
             return {'results': [place]}, 200

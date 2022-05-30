@@ -20,24 +20,39 @@ class VehicleHandler(metaclass=SingletonMeta):
                 'plateNumber': vehicle['plate-no'],
                 'specifications': {
                     'make': vehicle['make'],
-                    'type': vehicle['body-style'],
-                    'dimensions': {
-                        'height': vehicle['dimensions']['height'],
-                        'width': vehicle['dimensions']['width'],
-                        'length': vehicle['dimensions']['length'],
-                        'unit': vehicle['dimensions']['unit'],
-                        'wheelBase': vehicle['wheel-base']
-                    }
+                    'type': vehicle['body-style']
                 },
-                'performance': vehicle['milage'],
-                'telemetry': {
-                    'location': {
-                        'latitude': location['location']['lat'],
-                        'longitude': location['location']['lng'],
-                    },
-                    'speed': {
-                        'value': 60,
-                        'unit': 'kmph'
-                    }
-                }   
+                'height': {
+                    'value': vehicle['dimensions']['height'],
+                    'unitText': 'm'
+                },
+                'width': {
+                    'value': vehicle['dimensions']['width'],
+                    'unitText': 'm'
+                },
+                'length': {
+                    'value': vehicle['dimensions']['length'],
+                    'unitText': 'm'
+                },
+                'unit': {
+                    'value': vehicle['dimensions']['unit'],
+                    'unitText': 'm'
+                },
+                'wheelBase': {
+                    'value': vehicle['wheel-base'],
+                    'unitText': 'm'
+
+                },
+                'performance': {
+                    'value': vehicle['milage']['city'],
+                    'unitText': 'liters per kilometer'
+                },
+                'location': {
+                    'latitude': location['location']['lat'],
+                    'longitude': location['location']['lng']
+                },
+                'speed': {
+                    'value': 60,
+                    'unitText': 'kmph'
+                } 
             }, 200

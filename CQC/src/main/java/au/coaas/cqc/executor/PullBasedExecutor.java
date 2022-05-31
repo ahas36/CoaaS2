@@ -716,12 +716,15 @@ public class PullBasedExecutor {
         Double fthresh = -1.0;
 
         if(qos.getBoolean("staged") && qos.getJSONObject("criticality").has(criticality)){
-            JSONArray conList = qos.getJSONObject("criticality").getJSONArray("criticality");
+            JSONObject crit = qos.getJSONObject("criticality").getJSONObject(criticality);
 
-            for(int i = 0; i<conList.length(); i++){
-                if(conList.getJSONObject(i).getString("@context").equals(etype.getVocabURI()) &&
-                    conList.getJSONObject(i).getString("@type").equals(etype.getType())){
-                    fthresh = conList.getJSONObject(i).getDouble("value");
+            if(crit.has("fthresh")){
+                JSONArray conList = crit.getJSONArray("fthresh");
+                for(int i = 0; i<conList.length(); i++){
+                    if(conList.getJSONObject(i).getString("@context").equals(etype.getVocabURI()) &&
+                            conList.getJSONObject(i).getString("@type").equals(etype.getType())){
+                        fthresh = conList.getJSONObject(i).getDouble("value");
+                    }
                 }
             }
 

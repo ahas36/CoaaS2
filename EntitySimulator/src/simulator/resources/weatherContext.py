@@ -13,6 +13,7 @@ from lib.mongoclient import MongoClient
 from lib.response import parse_response
 
 from flask_restful import Resource
+from flask import request
 
 # Global Variables
 start_time = datetime.now()
@@ -37,7 +38,10 @@ class WeatherContext(Resource):
 
     # GET Endpoint 
     def get(self):
-        try:            
+        try:  
+            args = request.args
+            data = self.handler.getPlace(args['location'])
+
             # Retriving the measurement
             data = self.handler.getWeather()
 

@@ -96,15 +96,15 @@ public class QueryFetchJob implements Job {
 
     private static String buildQuery(Document query){
         String queryString = "prefix " +
-            "schema:http://schema.org , weat:https://bimerr.iot.linkeddata.es/def/weather" +
+            "schema:http://schema.org " +
             "pull (targetCarparks.*) " +
             "define " +
             "entity targetLocation is from schema:Place " +
-                "where targetLocation.name=\"%s\"" +
+                "where targetLocation.name=\"%s\", " +
             "entity cosumerCar is from schema:vehicle " +
-                "where consumerCar.vin=\"%s\"" +
-            "entity targetWeather is from weat:WeatherProperty " +
-                "where targetWeather.location=\"Melbourne, Australia\"" +
+                "where consumerCar.vin=\"%s\", " +
+            "entity targetWeather is from schema:Thing " +
+                "where targetWeather.location=\"Melbourne,Australia\", " +
             "entity targetCarpark is from schema:ParkingFacility " +
                 "where " +
                     "((distance(targetCarpark.location, targetLocation.location, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.6) or " +

@@ -41,7 +41,7 @@ class PlaceContext(Resource):
         try:            
             # Retriving the measurement
             args = request.args
-            data = self.handler.getPlace(args['address'])
+            data = self.handler.getPlace(args['name'])
 
             # Simulating variation of response latencies
             time.sleep(random.uniform(float(place_config['MinLatency']), float(place_config['MaxLatency'])))

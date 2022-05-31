@@ -80,5 +80,5 @@ class WeatherHandler(metaclass=SingletonMeta):
                 'value':weather['Mean Sea Level Pressure ']['MSL'],
                 'unitText': 'hPa'
             },
-            'location':'Melbourne, Australia'
+            'location':'Melbourne,Australia'
         }, 200

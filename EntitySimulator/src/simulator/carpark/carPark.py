@@ -30,7 +30,7 @@ class CarPark:
             elif(self.configuration.variation[count] == 6):
                 self.distribution.append(StaticDistribution(self.configuration, configuration.random_noise))
 
-        self.print_distrubtions()
+        """self.print_distrubtions()"""
         print('Car park service running!')
 
     # Produces the current occupancy

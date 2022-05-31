@@ -26,8 +26,7 @@ class CarparkHandler(metaclass=SingletonMeta):
                 num = 48
             else:
                 num = 24
-            
-            
+                     
             hour = now.hour
             min = now.minute
 

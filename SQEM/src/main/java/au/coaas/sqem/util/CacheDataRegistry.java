@@ -136,11 +136,12 @@ public final class CacheDataRegistry{
 
         // There can be 2 types of returns
         // 1. (hashkey, false) - the specific entity (by parameter combination) is not cached.
-        // 2. (null, false) - either the entity type or the context service is not cached.
-        return res.setHashkey(hashKey.get())
-                .setIsCached(false)
-                .setIsValid(false)
-                .setRemainingLife(remainingLife).build();
+        // 2. ("", false) - either the entity type or the context service is not cached.
+        res.setIsCached(false).setIsValid(false).setRemainingLife(remainingLife).build();
+        if(hashKey != null)
+            res.setHashkey(hashKey.get());
+
+        return res.build();
     }
 
     // Adds or updates the cached context repository

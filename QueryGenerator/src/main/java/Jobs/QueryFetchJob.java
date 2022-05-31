@@ -96,22 +96,22 @@ public class QueryFetchJob implements Job {
 
     private static String buildQuery(Document query){
         String queryString = "prefix " +
-            "mv:http://schema.mobivoc.org, schema:http://schema.org " +
-            "select (targetCarparks.*) " +
+            "schema:http://schema.org , weat:https://bimerr.iot.linkeddata.es/def/weather" +
+            "pull (targetCarparks.*) " +
             "define " +
-            "entity targetLocation is from schema:place " +
+            "entity targetLocation is from schema:Place " +
                 "where targetLocation.name=\"%s\"" +
-            "entity cosumerCar is from schema:car " +
+            "entity cosumerCar is from schema:vehicle " +
                 "where consumerCar.vin=\"%s\"" +
-            "entity targetWeather is from schema:weather " +
-                "where targetWeather.location=targetLocation" +
-            "entity targetCarpark is from mv:carpark " +
+            "entity targetWeather is from weat:WeatherProperty " +
+                "where targetWeather.location=\"Melbourne, Australia\"" +
+            "entity targetCarpark is from schema:ParkingFacility " +
                 "where " +
-                    "((distance(targetCarpark.location, targetLocation, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.6) or " +
+                    "((distance(targetCarpark.location, targetLocation.location, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.6) or " +
                     "goodForWalking(targetWeather)>=0.9) and " +
                     "targetCarparks.height <= cosumerCar.height and " +
                     "targetCarparks.isOpen = \"true\" and " +
-                    "targetCarparks.availability > 0";
+                    "targetCarparks.availabileSlots > 0";
 
         Stream<String> defKeys = Arrays.stream(new String[]{"_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"});
 
@@ -139,7 +139,7 @@ public class QueryFetchJob implements Job {
                 LocalDateTime time = LocalDateTime.now();
                 long minutes = Math.round((double)value*60);
                 time.plusMinutes(minutes);
-                return "and isAvailable (targetCarparks.availability, {\"start_time\":now(), \"end_time\":{\"value\":\""
+                return "and isAvailable (targetCarparks.availabileSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
                         + time.toString() + "\", \"unit\":\"datetime\"}";
             }
         }

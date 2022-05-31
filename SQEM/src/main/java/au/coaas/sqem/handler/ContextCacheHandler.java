@@ -79,7 +79,8 @@ public class ContextCacheHandler {
     public static SQEMResponse evictEntity(CacheLookUp request) {
         // Ideally the initial evict should push the context into ghost cache
         CacheLookUpResponse result= registry.lookUpRegistry(request);
-        if(result.getHashkey() != null){
+
+        if(result.getHashkey() != ""){
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
@@ -118,7 +119,7 @@ public class ContextCacheHandler {
     private static SQEMResponse lookUp(CacheLookUp request){
         CacheLookUpResponse result= registry.lookUpRegistry(request);
 
-        if(result.getHashkey() == null){
+        if(result.getHashkey().equals("")){
             return SQEMResponse.newBuilder().setStatus("404").setBody("Not Cached.").build();
         }
         return SQEMResponse.newBuilder().setStatus("200").setBody("Cached.").build();
@@ -128,7 +129,7 @@ public class ContextCacheHandler {
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
         CacheLookUpResponse result= registry.lookUpRegistry(request);
 
-        if(result.getHashkey() != null && result.getIsCached() && result.getIsValid()){
+        if(result.getHashkey() != "" && result.getIsCached() && result.getIsValid()){
             try{
                 RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
@@ -149,7 +150,7 @@ public class ContextCacheHandler {
                 SQEMResponse.newBuilder().setStatus("500").build();
             }
         }
-        else if(result.getHashkey() != null && result.getIsCached() && !result.getIsValid()){
+        else if(result.getHashkey() != "" && result.getIsCached() && !result.getIsValid()){
             return SQEMResponse.newBuilder().setStatus("400")
                     .setHashKey(result.getHashkey()).build();
         }

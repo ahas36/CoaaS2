@@ -1,0 +1,7 @@
+services:
+    dashboard:
+        container_name: acoca
+        restart: always
+        build: .
+        ports: 
+            - '4200:80'

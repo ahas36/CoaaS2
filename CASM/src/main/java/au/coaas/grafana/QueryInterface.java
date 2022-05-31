@@ -41,11 +41,13 @@ public class QueryInterface {
 
         String authToken = headers.getHeaderString(HttpHeaders.AUTHORIZATION);
         String queryId = headers.getHeaderString("query-id");
+        String critical_level = headers.getHeaderString("critical-level");
 
         CdqlResponse cdql =  stub.execute(ExecutionRequest.newBuilder()
                 .setCdql(query).setPage(page).setLimit(limit)
                 .setQueryid(queryId)
-                .setToken(authToken).build());
+                .setToken(authToken)
+                .setCriticality(critical_level).build());
 
         return Response.ok(cdql.getBody()).header("query-id", queryId).build();
     }

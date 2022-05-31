@@ -27,6 +27,7 @@ message ExecutionRequest
     int32 limit = 3;
     string queryid = 4;
     string token = 5;
+    string criticality = 6;
 }
 
 service CQCService {

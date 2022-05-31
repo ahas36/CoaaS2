@@ -37,7 +37,7 @@ public class CDQLExecutor {
                 if(query.getQueryType().equals(QueryType.PULL_BASED))
                 {
                     return PullBasedExecutor.executePullBaseQuery(query,request.getToken(),
-                            request.getPage(),request.getLimit(), request.getQueryid());
+                            request.getPage(),request.getLimit(), request.getQueryid(), request.getCriticality());
                 }else {
                     return PushBasedExecutor.executePushBaseQuery(query, request.getQueryid());
                 }

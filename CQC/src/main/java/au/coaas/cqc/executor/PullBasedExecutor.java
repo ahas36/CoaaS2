@@ -79,7 +79,7 @@ public class PullBasedExecutor {
     }
 
     // This method executes the query plan for pull based queries
-    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit, String queryId) {
+    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit, String queryId, String criticality) {
 
         // Initialize values
         // How are the values assigned to 'ce'? I only see values assigned in the catch block.
@@ -209,7 +209,7 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, authToken, contextService, params);
+                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, authToken, contextService, params, criticality);
                     if(cacheResult != null){
                         ce.put(entity.getEntityID(), (JSONObject) cacheResult.getKey());
                         if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
@@ -261,8 +261,6 @@ public class PullBasedExecutor {
 //                    }
 //                }
             }
-
-
         }
 
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
@@ -635,8 +633,8 @@ public class PullBasedExecutor {
         }
     }
 
-    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String authToken,
-                                                           String contextServicesText, HashMap<String,String> params) {
+    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String authToken, String contextServicesText,
+                                                            HashMap<String,String> params, String criticality) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -654,7 +652,7 @@ public class PullBasedExecutor {
             JSONObject conSer = contextServices.getJSONObject(i);
 
             if(qos.getBoolean("staged")){
-                conSer = mapServiceWithSLA(contextServices.getJSONObject(i),qos);
+                conSer = mapServiceWithSLA(conSer, qos, targetEntity.getType(), criticality.toLowerCase());
             }
 
             if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){
@@ -663,13 +661,12 @@ public class PullBasedExecutor {
                         .setServiceId(conSer.getJSONObject("_id").toString())
                         .setCheckFresh(true)
                         .setUniformFreshness(conSer.getJSONObject("sla")
-                                .getJSONObject("freshness")
-                                .put("fthresh", qos.getDouble("fthresh")).toString())
+                                .getJSONObject("freshness").toString())
                         .build();
 
                 SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
 
-                if(data.getBody() == null && data.getStatus() != "500"){
+                if(data.getBody().equals("") && data.getStatus() != "500"){
                     JSONObject retEntity = executeFetch(conSer.toString(), params);
 
                     switch(data.getStatus()){
@@ -715,10 +712,31 @@ public class PullBasedExecutor {
         return null;
     }
 
-    private static JSONObject mapServiceWithSLA(JSONObject service, JSONObject qos){
-        // TODO:
-        // Map relevant context service attribute with the criticality based freshness requirement
-        return null;
+    private static JSONObject mapServiceWithSLA(JSONObject conSer, JSONObject qos, ContextEntityType etype, String criticality){
+        Double fthresh = -1.0;
+
+        if(qos.getBoolean("staged") && qos.getJSONObject("criticality").has(criticality)){
+            JSONArray conList = qos.getJSONObject("criticality").getJSONArray("criticality");
+
+            for(int i = 0; i<conList.length(); i++){
+                if(conList.getJSONObject(i).getString("@context").equals(etype.getVocabURI()) &&
+                    conList.getJSONObject(i).getString("@type").equals(etype.getType())){
+                    fthresh = conList.getJSONObject(i).getDouble("value");
+                }
+            }
+
+            if(fthresh < 0){
+                fthresh = qos.getDouble("fthresh");
+            }
+        }
+        else
+            fthresh = qos.getDouble("fthresh");
+
+        conSer.getJSONObject("sla")
+                .getJSONObject("freshness")
+                .put("fthresh", fthresh);
+
+        return conSer;
     }
 
     private static JSONObject executeFetch(String contextService, HashMap<String,String> params) {

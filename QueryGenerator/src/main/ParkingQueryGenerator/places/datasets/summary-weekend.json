@@ -1,0 +1,92 @@
+{
+    "Melbourne Skydeck": {
+        "count": 23170, "prop": 0.025800345192361226
+    }, 
+    "Royal Botanic Gardens Victoria - Melbourne Gardens": {
+        "count": 30080, "prop": 0.033494794276487945
+    }, 
+    "Shrine of Remembrance": {
+        "count": 30420, "prop": 0.03387339235009187
+    }, 
+    "SEA LIFE Melbourne Aquarium": {
+        "count": 20020, "prop": 0.0222927453927955
+    }, 
+    "Old Melbourne Gaol": {
+        "count": 16720, "prop": 0.018618117031345693
+    }, 
+    "Melbourne Museum": {
+        "count": 27800, "prop": 0.0309559601358499
+    }, 
+    "Queen Victoria Market": {
+        "count": 19570, "prop": 0.021791659707143255
+    }, 
+    "Cooks' Cottage": {
+        "count": 26200, "prop": 0.029174322142419686
+    }, 
+    "Fed Square": {
+        "count": 43650, "prop": 0.04860531150826791
+    }, 
+    "St Paul's Cathedral, Melbourne": {
+        "count": 16360, "prop": 0.018217248482823897
+    }, 
+    "Australian Sports Museum": {
+        "count": 13650, "prop": 0.015199599131451478
+    }, 
+    "Fitzroy Gardens": {
+        "count": 40400, "prop": 0.044986359334112797
+    }, 
+    "Melbourne Zoo": {
+        "count": 24650, "prop": 0.027448360336284172
+    }, 
+    "Immigration Museum": {
+        "count": 27620, "prop": 0.030755525861588997
+    }, 
+    "The Fairies Tree": {
+        "count": 21910, "prop": 0.024397305272534937
+    }, 
+    "Melbourne Central": {
+        "count": 48910, "prop": 0.05446244641166973
+    }, 
+    "Melbourne Cricket Ground": {
+        "count": 18670, "prop": 0.02078948833583876
+    }, 
+    "Flinders Street Railway Station": {
+        "count": 65870, "prop": 0.07334780914202996
+    }, 
+    "National Gallery of Victoria": {
+        "count": 25840, "prop": 0.02877345359389789
+    }, 
+    "The Ian Potter Centre": {
+        "count": 34300, "prop": 0.03819386448416012
+    }, 
+    "Birrarung Marr": {
+        "count": 17840, "prop": 0.01986526362674684
+    }, 
+    "Chinatown Melbourne": {
+        "count": 41300, "prop": 0.045988530705417294
+    }, 
+    "Shanghai Street (Chinatown)": {
+        "count": 25220, "prop": 0.028083068871443684
+    }, 
+    "Parliament House": {
+        "count": 27870, "prop": 0.03103390679806247
+    }, 
+    "St Patrick's Cathedral": {
+        "count": 13150, "prop": 0.014642837258504538
+    }, 
+    "Melbourne Convention and Exhibition Centre (MCEC)": {
+        "count": 28150, "prop": 0.03134569344691276
+    }, 
+    "Crown Melbourne": {
+        "count": 62390, "prop": 0.06947274650631925
+    }, 
+    "State Library Victoria": {
+        "count": 39770, "prop": 0.04428483937419966
+    }, 
+    "Southern Cross": {
+        "count": 52150, "prop": 0.0580702633483659
+    }, 
+    "Australian Centre for Contemporary Art": {
+        "count": 14400, "prop": 0.01603474194087189
+    }
+}

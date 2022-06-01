@@ -1,0 +1,9 @@
+{
+    "radius": 2, 
+    "center": {
+        "lat": 37.81920458921331,
+        "lng": 144.96821792887687
+    },
+    "multiplier": 10,
+    "probability": 1
+}

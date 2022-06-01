@@ -1,0 +1,116 @@
+[
+    {
+        "name":"1",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "time": "peak",
+        "location": "static"
+    },
+    {
+        "name":"2",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "time": "random",
+        "location": "static"
+    },
+    {
+        "name":"3",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "time": "static",
+        "location": "random"
+    },
+    {
+        "name":"4",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"5",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "time": "peak",
+        "location": "static"
+    },
+    {
+        "name":"6",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "time": "random",
+        "location": "static"
+    },
+    {
+        "name":"7",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "time": "static",
+        "location": "random"
+    },
+    {
+        "name":"8",
+        "days":["Monday","Tuesday","Wednesday","Thursday","Friday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"9",
+        "days":["Saturday","Sunday"],
+        "time": "static",
+        "location": "static"
+    },
+    {
+        "name":"10",
+        "days":["Saturday","Sunday"],
+        "time": "random",
+        "location": "static"
+    },
+    {
+        "name":"11",
+        "days":["Saturday","Sunday"],
+        "time": "static",
+        "location": "random"
+    },
+    {
+        "name":"12",
+        "days":["Saturday","Sunday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"13",
+        "days":["Monday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"14",
+        "days":["Tuesday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"15",
+        "days":["Wednesday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"16",
+        "days":["Thursday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"17",
+        "days":["Friday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"18",
+        "days":["Saturday"],
+        "time": "random",
+        "location": "random"
+    },
+    {
+        "name":"19",
+        "days":["Sunday"],
+        "time": "random",
+        "location": "random"
+    }
+]

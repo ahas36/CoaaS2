@@ -92,6 +92,14 @@ services:
         links:
           - mongodb
 
+    cqg:
+      image: coaas/cqg:latest
+      container_name: "cqg"
+      depends_on:
+        - mongodb
+      links:
+        - mongodb
+
     acoca:
       image: coaas/acoca:latest
       container_name: "acoca"

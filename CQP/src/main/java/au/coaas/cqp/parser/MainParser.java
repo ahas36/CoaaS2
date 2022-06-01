@@ -45,6 +45,7 @@ public class MainParser {
     private static Logger log = Logger.getLogger(MainParser.class.getName());
 
     public static CDQLConstruct parse(String stringQuery, String queryId) throws CDQLSyntaxtErrorException {
+
         CDQLConstruct.Builder cdqlConstructBuilder = CDQLConstruct.newBuilder();
         StringBuilder res = new StringBuilder();
         // Creates a lexer that feeds off of input CharStream
@@ -106,6 +107,7 @@ public class MainParser {
                     .setFunction(stringCDQLBaseVisitor.getContextFunction().build())
                     .setQueryId(queryId).build();
         }
+
         return null;
     }
 

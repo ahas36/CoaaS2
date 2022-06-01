@@ -170,6 +170,7 @@ services:
           #- /userlogin/pgdata:/var/lib/postgresql/data
         ports:
             - 5433:5432
+
     zookeeper:
       image: confluentinc/cp-zookeeper:latest
       environment:
@@ -179,21 +180,14 @@ services:
         - 22181:2181
 
     redis:
-      image: redis:latest
-      container_name: "redis"
-      environment:
-        - REDIS_DATA_DIR=/data/db
-        - REDIS_LOG_DIR=/dev/null
-        - REDIS_USER=shakthi
-        - REDIS_PASS=contextcache_21
-      volumes:
-        #for mac
-        - ./data/db:/data/db
-        #for windows
-        #- /userlogin/pgdata:/var/lib/redis/data
-      ports:
-        - 6379:6379
-      command: redis redis-server --save 60 1 --loglevel warning # --quiet
+      redis:
+        image: redis
+        restart: always
+        ports:
+          - '6379:6379'
+        command: redis-server --save 20 1 --loglevel warning
+        volumes:
+          - redis:/data
 
     kafka:
       image: confluentinc/cp-kafka:latest
@@ -208,3 +202,7 @@ services:
         KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
         KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+volumes:
+  redis:
+    driver: local

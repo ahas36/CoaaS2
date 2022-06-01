@@ -1,7 +1,7 @@
 #!/bin/bash
 # Step 1: Location popularity distribution creation
 python3 /places/1-places.py
-python3 /places/2-sumamry.py
+python3 /places/2-summary.py
 
 # Step 2: Query template creation and origin assignment
 #query location assignment

@@ -21,6 +21,9 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
+import static com.mongodb.client.model.Aggregates.match;
+import static com.mongodb.client.model.Aggregates.sample;
+
 public class QueryFetchJob implements Job {
 
     private final static String conn_string =  "mongodb://localhost:27017";
@@ -120,10 +123,29 @@ public class QueryFetchJob implements Job {
                 queryString += getAddOnToQuery(key, query.get(key));
         }
 
-        String finalQuery = String.format(queryString,
-                query.getString("address"),
-                query.getString("vin"),
-                query.getInteger("distance"));
+        String finalQuery = "";
+        if(query.keySet().contains("vin")){
+            finalQuery = String.format(queryString,
+                    query.getString("address"),
+                    query.getString("vin"),
+                    query.getInteger("distance"));
+        }
+        else {
+            MongoDatabase db = mongoClient.getDatabase("acoca-experiments");
+            MongoCollection<Document> collection = db.getCollection("vehicles");
+
+            Bson filter = Filters.and(
+                    Filters.eq("category.name", "13"),
+                    Filters.exists("assigned", false)
+                );
+
+            Document vehicle = collection.aggregate(Arrays.asList(match(filter), sample(1))).first();
+
+            finalQuery = String.format(queryString,
+                    query.getString("address"),
+                    vehicle.getString("vin"),
+                    query.getInteger("distance"));
+        }
 
         return finalQuery;
     }

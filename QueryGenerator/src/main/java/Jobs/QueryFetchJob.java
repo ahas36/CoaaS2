@@ -97,11 +97,11 @@ public class QueryFetchJob implements Job {
     private static String buildQuery(Document query){
         String queryString = "prefix " +
             "schema:http://schema.org " +
-            "pull (targetCarparks.*) " +
+            "pull (targetCarpark.*) " +
             "define " +
             "entity targetLocation is from schema:Place " +
                 "where targetLocation.name=\"%s\", " +
-            "entity cosumerCar is from schema:vehicle " +
+            "entity consumerCar is from schema:vehicle " +
                 "where consumerCar.vin=\"%s\", " +
             "entity targetWeather is from schema:Thing " +
                 "where targetWeather.location=\"Melbourne,Australia\", " +
@@ -109,9 +109,9 @@ public class QueryFetchJob implements Job {
                 "where " +
                     "((distance(targetCarpark.location, targetLocation.location, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.6) or " +
                     "goodForWalking(targetWeather)>=0.9) and " +
-                    "targetCarparks.height <= cosumerCar.height and " +
-                    "targetCarparks.isOpen = \"true\" and " +
-                    "targetCarparks.availabileSlots > 0";
+                    "targetCarpark.maxHeight <= consumerCar.height and " +
+                    "targetCarpark.isOpen = true and " +
+                    "targetCarpark.availableSlots > 0";
 
         Stream<String> defKeys = Arrays.stream(new String[]{"_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"});
 
@@ -132,14 +132,14 @@ public class QueryFetchJob implements Job {
         switch(prop){
             case "price": {
                 // TODO: how do CoaaS resolve this kind of a problem?
-                return "and targetCarparks.price >= " + String.valueOf((double) value);
+                return "and targetCarpark.price >= " + String.valueOf((double) value);
             }
-            case "rating": return "and targetCarparks.rating >= " + String.valueOf((int) value);
+            case "rating": return "and targetCarpark.rating >= " + String.valueOf((int) value);
             case "expected_time": {
                 LocalDateTime time = LocalDateTime.now();
                 long minutes = Math.round((double)value*60);
                 time.plusMinutes(minutes);
-                return "and isAvailable (targetCarparks.availabileSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
+                return "and isAvailable (targetCarpark.availableSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
                         + time.toString() + "\", \"unit\":\"datetime\"}";
             }
         }

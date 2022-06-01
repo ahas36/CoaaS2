@@ -27,11 +27,11 @@ db = MongoClient(default_config['ConnectionString'], default_config['DBName'])
 
 class VehicleContext(Resource):
 
-    current_session = db.insert_one('simulator-sessions', {
-        'entity-type': 'vehicles',
-        'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-    )
+    # current_session = db.insert_one('simulator-sessions', {
+    #    'entity-type': 'vehicles',
+    #    'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #    }
+    # )
     
     handler = VehicleHandler()
     handler.setDBClient(db)

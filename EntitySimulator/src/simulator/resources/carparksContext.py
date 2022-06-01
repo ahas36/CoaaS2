@@ -27,11 +27,11 @@ db = MongoClient(default_config['ConnectionString'], default_config['DBName'])
 
 class CarParkContext(Resource):
 
-    current_session = db.insert_one('simulator-sessions', {
-        'entity-type': 'carparks',
-        'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-    )
+    # current_session = db.insert_one('simulator-sessions', {
+    #    'entity-type': 'carparks',
+    #    'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    #    }
+    #)
     
     handler = CarparkHandler()
     handler.setProperties(db)

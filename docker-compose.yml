@@ -100,6 +100,17 @@ services:
       links:
         - mongodb
 
+    simulator:
+      image: coaas/simulator:latest
+      container_name: "simulator"
+      ports:
+        - "5000:5000"
+      restart: always
+      depends_on:
+        - mongodb
+      links:
+        - mongodb
+
     acoca:
       image: coaas/acoca:latest
       container_name: "acoca"

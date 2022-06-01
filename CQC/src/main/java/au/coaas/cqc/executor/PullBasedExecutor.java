@@ -88,7 +88,16 @@ public class PullBasedExecutor {
 
         // Iterates over execution plan
         // The first loop goes over dependent sets of entities
-        for (ListOfString entityList : query.getExecutionPlanMap().values()) {
+        Collection<ListOfString> aList = query.getExecutionPlanMap().values();
+        // ArrayList<ListOfString> bList = new ArrayList<>();
+        // ListOfString lastElement = null;
+        // for (ListOfString element : aList) {
+        //     lastElement = element;
+        // }
+        // bList.add(lastElement);
+
+        // Replace with bList for Testing
+        for (ListOfString entityList : aList) {
             // Second loop iterates over the entities in the dependent set
             for (String entityID : entityList.getValueList()) {
                 ContextEntity entity = query.getDefine().getDefinedEntitiesList().stream().filter(v -> v.getEntityID().equals(entityID)).findFirst().get();
@@ -133,6 +142,7 @@ public class PullBasedExecutor {
                                 get = ce.get(valueEntityID);
                             } else {
                                 try {
+                                    // When there is no value set to the parameter it is here the exception is thrown
                                     get = getValueOfJsonObject(ce.get(valueEntityID), valueEntityBody);
                                 } catch (Exception ex) {
                                     get = getValueOfJsonObject(ce.get(valueEntityID).getJSONArray("results").getJSONObject(0), valueEntityBody);

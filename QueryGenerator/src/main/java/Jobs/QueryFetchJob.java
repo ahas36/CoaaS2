@@ -111,7 +111,7 @@ public class QueryFetchJob implements Job {
                     "goodForWalking(targetWeather)>=0.9) and " +
                     "targetCarpark.maxHeight <= consumerCar.height and " +
                     "targetCarpark.isOpen = true and " +
-                    "targetCarpark.availableSlots > 0";
+                    "targetCarpark.availableSlots > 0 ";
 
         Stream<String> defKeys = Arrays.stream(new String[]{"_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"});
 

@@ -4,24 +4,24 @@
 # Places ensure the places-list.txt is filled 
 python3 ./scraper/run.py
 
-# Step 1: Location popularity distribution creation
+# Step 2: Location popularity distribution creation
 python3 ./places/1-places.py
 python3 ./places/2-summary.py
 
-# Step 2: Query template creation and origin assignment
+# Step 3: Query template creation and origin assignment
 #query location assignment
 python3 ./query-temp/locations.py
 
-# Step 3: Context consumer generation
+# Step 4: Context consumer generation
 # Vehicle creation
 python3 ./consumers/consumerGenerator.py
 
-# Step 4: Location matching
+# Step 5: Location matching
 python3 ./places/3-assign-place.py
 python3 ./places/4-assign-hour.py
 python3 ./places/5-matching.py
 
-# Step 5 (Final): Matching the Context Consumers with the Query Templates
+# Step 6 (Final): Matching the Context Consumers with the Query Templates
 # Consumer-query matching for each category of commuters
 python3 ./query-consumer-matcher/1-matcher.py
 python3 ./query-consumer-matcher/5-matcher.py

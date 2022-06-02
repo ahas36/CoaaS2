@@ -17,6 +17,7 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -28,10 +29,6 @@ public class QueryFetchJob implements Job {
 
     private final static String conn_string =  "mongodb://localhost:27017";
     private static MongoClient mongoClient;
-
-    // The following key is temporary to test with a single context consumer.
-    // Ideally, the token should be saved in the query repository relevant to the consumer.
-    private final String token = "";
 
     private static Logger log = Logger.getLogger(QueryFetchJob.class.getName());
 
@@ -48,6 +45,7 @@ public class QueryFetchJob implements Job {
         try {
             MongoDatabase db = mongoClient.getDatabase("acoca-experiments");
             MongoCollection<Document> collection = db.getCollection("query-params");
+
 
             LocalDateTime time = LocalDateTime.now();
             LocalDateTime newtime = time.plusMinutes(10);
@@ -78,12 +76,22 @@ public class QueryFetchJob implements Job {
 
             FindIterable<Document> queries = collection.find(filters);
 
+            MongoDatabase db_2 = mongoClient.getDatabase("coaas");
+            MongoCollection<Document> token_collection = db_2.getCollection("consumerToken");
+
+            Bson filter = Filters.eq("status", true);
+            Document sample_token = token_collection.aggregate(Arrays.asList(match(filter), sample(1))).first();
+            String token = sample_token.getString("token");
+
             for(Document doc: queries){
-                ContextQuery cq = new ContextQuery(doc.getString("day"), doc.getInteger("hour"),
-                        doc.getInteger("minute"), doc.getInteger("second"),
-                        buildQuery(doc), doc.getString("_id"),
-                        token
-                        );
+                String day = doc.getString("day");
+                int hour = doc.getInteger("hour");
+                int min = doc.getInteger("minute");
+                int second = doc.getInteger("second");
+                String query = buildQuery(doc);
+                String id = doc.getObjectId("_id").toString();
+
+                ContextQuery cq = new ContextQuery(day, hour, min, second, query, id, token);
 
                 Message message = new Message(cq);
                 Event.operation.publish("cq-sim", message);
@@ -104,7 +112,7 @@ public class QueryFetchJob implements Job {
             "define " +
             "entity targetLocation is from schema:Place " +
                 "where targetLocation.name=\"%s\", " +
-            "entity consumerCar is from schema:vehicle " +
+            "entity consumerCar is from schema:Vehicle " +
                 "where consumerCar.vin=\"%s\", " +
             "entity targetWeather is from schema:Thing " +
                 "where targetWeather.location=\"Melbourne,Australia\", " +
@@ -112,14 +120,14 @@ public class QueryFetchJob implements Job {
                 "where " +
                     "((distance(targetCarpark.location, targetLocation.location, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.6) or " +
                     "goodForWalking(targetWeather)>=0.9) and " +
-                    "targetCarpark.maxHeight <= consumerCar.height and " +
+                    "targetCarpark.maxHeight > consumerCar.height and " +
                     "targetCarpark.isOpen = true and " +
                     "targetCarpark.availableSlots > 0 ";
 
-        Stream<String> defKeys = Arrays.stream(new String[]{"_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"});
+        ArrayList<String> defKeys = new ArrayList<>(Arrays.asList("_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"));
 
         for(String key : query.keySet()){
-            if (defKeys.anyMatch(key::equals))
+            if (!defKeys.contains(key))
                 queryString += getAddOnToQuery(key, query.get(key));
         }
 
@@ -154,7 +162,7 @@ public class QueryFetchJob implements Job {
         switch(prop){
             case "price": {
                 // TODO: how do CoaaS resolve this kind of a problem?
-                return "and targetCarpark.price >= " + String.valueOf((double) value);
+                return "and targetCarpark.price >= " + String.valueOf(value);
             }
             case "rating": return "and targetCarpark.rating >= " + String.valueOf((int) value);
             case "expected_time": {

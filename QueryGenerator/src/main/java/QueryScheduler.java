@@ -83,7 +83,7 @@ public class QueryScheduler {
                         .withIntervalInMinutes(10))
                 .build();
 
-        log.info("Started job to fetch hourly queries");
+        log.info("Started job to fetch queries that are planned for execution during the next 10 minutes");
         scheduler.scheduleJob(job, trigger);
     }
 }

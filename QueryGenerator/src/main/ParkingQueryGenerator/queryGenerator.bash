@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# Step 1: Collect data of intereted places
+# Places ensure the places-list.txt is filled 
+python3 ../PlacesScraper/run.py
+
 # Step 1: Location popularity distribution creation
 python3 ./places/1-places.py
 python3 ./places/2-summary.py

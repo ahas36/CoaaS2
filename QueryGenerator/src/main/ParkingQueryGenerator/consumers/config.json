@@ -1,0 +1,9 @@
+{
+    "total_vehicles": 543050,
+    "plate_no_length": 8,
+    "modification_limits": {
+        "max_height_change": 1,
+        "max_width_change": 0.5,
+        "max_length_change": 1
+    }
+}

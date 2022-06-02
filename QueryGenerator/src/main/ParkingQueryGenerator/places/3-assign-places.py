@@ -10,8 +10,8 @@ mycol = mydb["query-params"]
 all = mycol.find()
 index = -1
 
-f = open('place_busy.json')
-data = json.load(f)
+with open('place_busy.json') as f:
+    data = json.load(f)
 
 for day in data['days'].keys():
     for p in data['places'].keys():

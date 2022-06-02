@@ -10,10 +10,11 @@ with the configured radius from a specific a location"""
 with open('config.json', 'r') as f:
     config = json.load(f)
 
-R = 0.011197501823889 * config['radius']
-popularity = 89805 #Pre-calculated from the output of Step 1
+with open('../places/datasets/place_busy.json', 'r') as f2:
+    place_summary = json.load(f2)
 
-locations = popularity * config['multiplier'] * config['probability']
+R = 0.011197501823889 * config['radius']
+locations = place_summary['total']
 
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 mydb = myclient["acoca-experiments"]

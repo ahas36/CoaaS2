@@ -1,0 +1,4 @@
+{
+    "api_key": "AIzaSyDbQyw3NVus6k_21insLPHI5Uoq0LUdmqw",
+    "url": "https://maps.googleapis.com/maps/api/place/textsearch/json?query={0}&key={1}"
+}

@@ -2,7 +2,7 @@
 
 # Step 1: Collect data of intereted places
 # Places ensure the places-list.txt is filled 
-python3 ../PlacesScraper/run.py
+python3 ./scraper/run.py
 
 # Step 1: Location popularity distribution creation
 python3 ./places/1-places.py

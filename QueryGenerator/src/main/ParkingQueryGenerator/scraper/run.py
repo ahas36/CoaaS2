@@ -22,7 +22,7 @@ for pl in places:
     place = populartimes.get_id(config['api_key'], first_item['place_id'])
     place_collection.append(place)
 
-with open('../ParkingQueryGenerator/places/datasets/places.json', 'w') as f2:
+with open('../places/datasets/places.json', 'w') as f2:
     json.dump(place_collection, f2)
 
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")

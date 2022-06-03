@@ -89,12 +89,24 @@ public class PullBasedExecutor {
         // Iterates over execution plan
         // The first loop goes over dependent sets of entities
         Collection<ListOfString> aList = query.getExecutionPlanMap().values();
-        // ArrayList<ListOfString> bList = new ArrayList<>();
-        // ListOfString lastElement = null;
-        // for (ListOfString element : aList) {
-        //     lastElement = element;
-        // }
-        // bList.add(lastElement);
+
+        /*
+        ArrayList<ListOfString> bList = new ArrayList<>();
+        ListOfString lastElement = null;
+        for (ListOfString element : aList) {
+            lastElement = element;
+        }
+        bList.add(lastElement);
+
+        ce.put("consumerCars", new JSONObject("{\"time_stamp\":\"2022-06-0318:29:31\"," +
+                "\"vin\":\"C335DBB3B31248F986B99CBBBAE1E064\",\"plateNumber\":\"UMB-BHAO\"," +
+                "\"specifications\":{\"make\":\"alfa-romero\",\"type\":\"convertible\"}," +
+                "\"height\":{\"value\":1.67,\"unitText\":\"m\"},\"width\":{\"value\":1.63,\"unitText\":\"m\"}," +
+                "\"length\":{\"value\":4.45,\"unitText\":\"m\"},\"unit\":{\"value\":\"m\",\"unitText\":\"m\"}," +
+                "\"wheelBase\":{\"value\":88.6,\"unitText\":\"m\"},\"performance\":{\"value\":49.39515," +
+                "\"unitText\":\"litersperkilometer\"},\"location\":{\"latitude\":-37.80411643534407," +
+                "\"longitude\":144.9783143972314},\"speed\":{\"value\":60,\"unitText\":\"kmph\"}}"));
+        */
 
         // Replace with bList for Testing
         for (ListOfString entityList : aList) {
@@ -135,6 +147,7 @@ public class PullBasedExecutor {
                         }
                         else if (value.contains("{")) { }
                         else if (valueToken.getType() != CdqlConditionTokenType.Constant && (ce.containsKey(value) || value.contains("."))) {
+                            // This step sees if the value of the condition is an attribute of another entity
                             String valueEntityID = value.split("\\.")[0];
                             String valueEntityBody = value.replace(valueEntityID + ".", "");
                             Object get = null;
@@ -142,7 +155,8 @@ public class PullBasedExecutor {
                                 get = ce.get(valueEntityID);
                             } else {
                                 try {
-                                    // When there is no value set to the parameter it is here the exception is thrown
+                                    // What happens here is, the query contains a condition that compares that values of an existing entity.
+                                    // So, this try to get the matched attribute (i.e., valueEntityBody) value from the 'ce'.
                                     get = getValueOfJsonObject(ce.get(valueEntityID), valueEntityBody);
                                 } catch (Exception ex) {
                                     get = getValueOfJsonObject(ce.get(valueEntityID).getJSONArray("results").getJSONObject(0), valueEntityBody);
@@ -150,11 +164,21 @@ public class PullBasedExecutor {
                             }
                             if (get instanceof JSONObject) {
                                 JSONObject tmp = (JSONObject) get;
-                                for (String jsonKey : tmp.keySet()) {
-                                    Object subItemValue = tmp.get(jsonKey);
+                                Set<String> keySet = tmp.keySet();
+                                if(keySet.contains("value")){
+                                    Object subItemValue = tmp.get("value");
                                     if (!(subItemValue instanceof JSONObject)) {
                                         String pathEncode = URLEncoder.encode(subItemValue.toString(), java.nio.charset.StandardCharsets.UTF_8.toString());
-                                        terms.put(key + "." + jsonKey, pathEncode);
+                                        terms.put(key, pathEncode);
+                                    }
+                                }
+                                else {
+                                    for (String jsonKey : tmp.keySet()) {
+                                        Object subItemValue = tmp.get(jsonKey);
+                                        if (!(subItemValue instanceof JSONObject)) {
+                                            String pathEncode = URLEncoder.encode(subItemValue.toString(), java.nio.charset.StandardCharsets.UTF_8.toString());
+                                            terms.put(key + "." + jsonKey, pathEncode);
+                                        }
                                     }
                                 }
                             } else {
@@ -221,7 +245,7 @@ public class PullBasedExecutor {
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, authToken, contextService, params, criticality);
                     if(cacheResult != null){
-                        ce.put(entity.getEntityID(), (JSONObject) cacheResult.getKey());
+                        ce.put(entity.getEntityID(), new JSONObject((String) cacheResult.getKey()));
                         if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                     }
 
@@ -249,8 +273,8 @@ public class PullBasedExecutor {
 
         // Filter out the neccesary attributes from the retrieved entity data
         for (Map.Entry<String, ListOfContextAttribute> entry : query.getSelect().getSelectAttrsMap().entrySet()) {
-            String key = entry.getKey();
-            result.put(key, ce.get(key));
+            String entity = entry.getKey();
+            result.put(entity, ce.get(entity));
         }
 
         for (FunctionCall fCall : query.getSelect().getSelectFunctionsList()) {
@@ -677,7 +701,7 @@ public class PullBasedExecutor {
                 SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
 
                 if(data.getBody().equals("") && data.getStatus() != "500"){
-                    JSONObject retEntity = executeFetch(conSer.toString(), params);
+                    String retEntity = executeFetch(conSer.toString(), params);
 
                     switch(data.getStatus()){
                         case "400": {
@@ -685,7 +709,7 @@ public class PullBasedExecutor {
                                     = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                             asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                                     .setReference(lookup)
-                                    .setJson(retEntity.toString()).build());
+                                    .setJson(retEntity).build());
                             break;
                         }
                         case "404": {
@@ -695,7 +719,7 @@ public class PullBasedExecutor {
                                     = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
 
                             asyncStub.cacheEntity(CacheRequest.newBuilder()
-                                    .setJson(retEntity.toString())
+                                    .setJson(retEntity)
                                     // This cache life should be saved in the eviction registry
                                     .setCachelife(600)
                                     .setReference(lookup).build());
@@ -707,12 +731,12 @@ public class PullBasedExecutor {
                             sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
                 else {
-                    return new AbstractMap.SimpleEntry(new JSONObject(data.getBody()),
+                    return new AbstractMap.SimpleEntry(data.getBody(),
                             qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
             }
 
-            JSONObject retEntity = executeFetch(conSer.toString(), params);
+            String retEntity = executeFetch(conSer.toString(), params);
             if(retEntity != null)
                 return new AbstractMap.SimpleEntry(retEntity,
                         qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
@@ -752,7 +776,7 @@ public class PullBasedExecutor {
         return conSer;
     }
 
-    private static JSONObject executeFetch(String contextService, HashMap<String,String> params) {
+    private static String executeFetch(String contextService, HashMap<String,String> params) {
         long startTime = System.currentTimeMillis();
 
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
@@ -775,7 +799,7 @@ public class PullBasedExecutor {
         // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
 
         if (fetch.getStatus().equals("200")) {
-            return new JSONObject(fetch.getBody());
+            return fetch.getBody();
         }
 
         return null;

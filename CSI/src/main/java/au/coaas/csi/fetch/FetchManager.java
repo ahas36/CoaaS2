@@ -56,7 +56,13 @@ public class FetchManager {
             if(cs.has("attributes")){
                 Object result = semanticMapper(cs.getJSONArray("attributes"), res, info.optString("resultTag",null));
                 // This return value should be what should be cached.
-                return CSIResponse.newBuilder().setStatus("200").setBody(result.toString()).build();
+                return CSIResponse.newBuilder().setStatus("200")
+                        .setBody(result.toString())
+                        .setSummary(CSSummary.newBuilder()
+                                .setId(cs.getString("_id"))
+                                .setFreshness(sla.getJSONObject("freshness").getLong("value"))
+                                .setPrice(sla.getJSONObject("cost").getDouble("value")).build())
+                        .build();
             }
 
             JSONObject rawResult = null;
@@ -123,6 +129,10 @@ public class FetchManager {
     }
 
     private static Object getResponseValue(String res, String expression) {
+        // e.g., res = response object, expression = name of the attribute in the response
+        if(expression.startsWith("&"))
+            expression = expression.replaceAll("&","");
+
         Matcher matcher = pattern.matcher(expression);
         while (matcher.find()) {
             String pram = matcher.group(0).trim().substring(1);
@@ -184,7 +194,7 @@ public class FetchManager {
     }
 
 
-    private static Object semanticMapper(JSONArray attributes, String service,String resultTag) {
+    private static Object semanticMapper(JSONArray attributes, String service, String resultTag) {
         if(service.trim().startsWith("[") || resultTag!=null)
         {
             JSONArray result = new JSONArray();

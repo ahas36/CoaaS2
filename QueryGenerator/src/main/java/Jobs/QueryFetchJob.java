@@ -161,8 +161,7 @@ public class QueryFetchJob implements Job {
     private static String getAddOnToQuery(String prop, Object value){
         switch(prop){
             case "price": {
-                // TODO: how do CoaaS resolve this kind of a problem?
-                return "and targetCarpark.price >= " + String.valueOf(value);
+                return "and targetCarpark.price <= " + String.valueOf(value);
             }
             case "rating": return "and targetCarpark.rating >= " + String.valueOf((int) value);
             case "expected_time": {

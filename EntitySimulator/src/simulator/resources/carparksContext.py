@@ -41,7 +41,10 @@ class CarParkContext(Resource):
         try:            
             # Retriving the measurement
             args = request.args
-            data = self.handler.getAvailability(args['id'])
+            if len(args) > 1:
+                data = self.handler.getCarparks(args)
+            else:
+                data = self.handler.getAvailability(args['id'])
 
             # Simulating variation of response latencies
             time.sleep(random.uniform(float(vehicle_config['MinLatency']), float(vehicle_config['MaxLatency'])))

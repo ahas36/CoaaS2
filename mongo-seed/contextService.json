@@ -708,5 +708,963 @@
         "sampleValue": 27
       }
     ]
+  },
+  {
+    "info":{
+      "serviceURL": "http://localhost:5000/carparks?maxHeight={0}&isOpen={1}&availableSlots={2}&price={3}&rating={4}",
+      "ontClass": "<http://schema.org/ParkingFacility>",
+      "graph": "<http://schema.org>",
+      "name": "Carpark",
+      "description": "Carpark",
+      "resultTag": null,
+      "params": [
+        {
+          "name": "{0}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/height",
+              "range": [
+                "http://schema.org/Distance",
+                "http://schema.org/QuantitativeValue"
+              ],
+              "label": "maxHeight"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{1}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Boolean"
+              ],
+              "label": "isOpen"
+            }
+          ],
+          "value": true,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{2}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Number"
+              ],
+              "label": "availableSlots"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{3}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/Intangible",
+              "range": [
+                "http://schema.org/Offer"
+              ],
+              "label": "price"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{4}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/ratingValue",
+              "range": [
+                "http://schema.org/Text",
+                "http://schema.org/Number"
+              ],
+              "label": "rating"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        }
+      ]
+    },
+    "sla":{
+      "cache": true,
+      "cost": {
+        "unit": "aud",
+        "value": 0.2
+      },
+      "updateFrequency":{
+        "unit": "s",
+        "value": 60
+      },
+      "autoFetch": true,
+      "freshness": {
+        "unit": "s",
+        "value": 60
+      },
+      "key": [
+        "id"
+      ]
+    },
+    "attributes":[
+      {
+        "key": {
+          "subject": "http://schema.org/identifier",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/PropertyValue",
+            "http://schema.org/URL"
+          ],
+          "label": "id"
+        },
+        "value": "&reference",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "abcd"
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/GeoCoordinates",
+          "range": [
+            "http://schema.org/address",
+            "http://schema.org/latitude",
+            "http://schema.org/longitude"
+          ],
+          "label": "location"
+        },
+        "value": "&primary_location",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/owns",
+          "range": [
+            "http://schema.org/OwnershipInfo",
+            "http://schema.org/Product"
+          ],
+          "label": "owns"
+        },
+        "value": "&ownedBy",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/currenciesAccepted",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "currenciesAccepted"
+        },
+        "value": "&currenciesAccepted",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/ratingValue",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/Number"
+          ],
+          "label": "rating"
+        },
+        "value": "&rating",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Boolean"
+          ],
+          "label": "isOpen"
+        },
+        "value": "&is_open",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Number"
+          ],
+          "label": "availabileSlots"
+        },
+        "value": "&free_slots",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/height",
+          "range": [
+            "http://schema.org/Distance",
+            "http://schema.org/QuantitativeValue"
+          ],
+          "label": "maxHeight"
+        },
+        "value": "&maxHeight",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/Intangible",
+          "range": [
+            "http://schema.org/Offer"
+          ],
+          "label": "price"
+        },
+        "value": "&price_offer",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/name",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "name"
+        },
+        "value": "&name",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "name"
+      }
+    ]
+  },
+  {
+    "info":{
+      "serviceURL": "http://localhost:5000/carparks?maxHeight={0}&isOpen={1}&availableSlots={2}",
+      "ontClass": "<http://schema.org/ParkingFacility>",
+      "graph": "<http://schema.org>",
+      "name": "Carpark",
+      "description": "Carpark",
+      "resultTag": null,
+      "params": [
+        {
+          "name": "{0}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/height",
+              "range": [
+                "http://schema.org/Distance",
+                "http://schema.org/QuantitativeValue"
+              ],
+              "label": "maxHeight"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{1}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Boolean"
+              ],
+              "label": "isOpen"
+            }
+          ],
+          "value": true,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{2}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Number"
+              ],
+              "label": "availableSlots"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        }
+      ]
+    },
+    "sla":{
+      "cache": true,
+      "cost": {
+        "unit": "aud",
+        "value": 0.2
+      },
+      "updateFrequency":{
+        "unit": "s",
+        "value": 60
+      },
+      "autoFetch": true,
+      "freshness": {
+        "unit": "s",
+        "value": 60
+      },
+      "key": [
+        "id"
+      ]
+    },
+    "attributes":[
+      {
+        "key": {
+          "subject": "http://schema.org/identifier",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/PropertyValue",
+            "http://schema.org/URL"
+          ],
+          "label": "id"
+        },
+        "value": "&reference",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "abcd"
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/GeoCoordinates",
+          "range": [
+            "http://schema.org/address",
+            "http://schema.org/latitude",
+            "http://schema.org/longitude"
+          ],
+          "label": "location"
+        },
+        "value": "&primary_location",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/owns",
+          "range": [
+            "http://schema.org/OwnershipInfo",
+            "http://schema.org/Product"
+          ],
+          "label": "owns"
+        },
+        "value": "&ownedBy",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/currenciesAccepted",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "currenciesAccepted"
+        },
+        "value": "&currenciesAccepted",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/ratingValue",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/Number"
+          ],
+          "label": "rating"
+        },
+        "value": "&rating",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Boolean"
+          ],
+          "label": "isOpen"
+        },
+        "value": "&is_open",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Number"
+          ],
+          "label": "availabileSlots"
+        },
+        "value": "&free_slots",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/height",
+          "range": [
+            "http://schema.org/Distance",
+            "http://schema.org/QuantitativeValue"
+          ],
+          "label": "maxHeight"
+        },
+        "value": "&maxHeight",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/Intangible",
+          "range": [
+            "http://schema.org/Offer"
+          ],
+          "label": "price"
+        },
+        "value": "&price_offer",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/name",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "name"
+        },
+        "value": "&name",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "name"
+      }
+    ]
+  },
+  {
+    "info":{
+      "serviceURL": "http://localhost:5000/carparks?maxHeight={0}&isOpen={1}&availableSlots={2}&price={3}",
+      "ontClass": "<http://schema.org/ParkingFacility>",
+      "graph": "<http://schema.org>",
+      "name": "Carpark",
+      "description": "Carpark",
+      "resultTag": null,
+      "params": [
+        {
+          "name": "{0}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/height",
+              "range": [
+                "http://schema.org/Distance",
+                "http://schema.org/QuantitativeValue"
+              ],
+              "label": "maxHeight"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{1}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Boolean"
+              ],
+              "label": "isOpen"
+            }
+          ],
+          "value": true,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{2}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Number"
+              ],
+              "label": "availableSlots"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{3}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/Intangible",
+              "range": [
+                "http://schema.org/Offer"
+              ],
+              "label": "price"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        }
+      ]
+    },
+    "sla":{
+      "cache": true,
+      "cost": {
+        "unit": "aud",
+        "value": 0.2
+      },
+      "updateFrequency":{
+        "unit": "s",
+        "value": 60
+      },
+      "autoFetch": true,
+      "freshness": {
+        "unit": "s",
+        "value": 60
+      },
+      "key": [
+        "id"
+      ]
+    },
+    "attributes":[
+      {
+        "key": {
+          "subject": "http://schema.org/identifier",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/PropertyValue",
+            "http://schema.org/URL"
+          ],
+          "label": "id"
+        },
+        "value": "&reference",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "abcd"
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/GeoCoordinates",
+          "range": [
+            "http://schema.org/address",
+            "http://schema.org/latitude",
+            "http://schema.org/longitude"
+          ],
+          "label": "location"
+        },
+        "value": "&primary_location",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/owns",
+          "range": [
+            "http://schema.org/OwnershipInfo",
+            "http://schema.org/Product"
+          ],
+          "label": "owns"
+        },
+        "value": "&ownedBy",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/currenciesAccepted",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "currenciesAccepted"
+        },
+        "value": "&currenciesAccepted",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/ratingValue",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/Number"
+          ],
+          "label": "rating"
+        },
+        "value": "&rating",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Boolean"
+          ],
+          "label": "isOpen"
+        },
+        "value": "&is_open",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Number"
+          ],
+          "label": "availabileSlots"
+        },
+        "value": "&free_slots",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/height",
+          "range": [
+            "http://schema.org/Distance",
+            "http://schema.org/QuantitativeValue"
+          ],
+          "label": "maxHeight"
+        },
+        "value": "&maxHeight",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/Intangible",
+          "range": [
+            "http://schema.org/Offer"
+          ],
+          "label": "price"
+        },
+        "value": "&price_offer",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/name",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "name"
+        },
+        "value": "&name",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "name"
+      }
+    ]
+  },
+  {
+    "info":{
+      "serviceURL": "http://localhost:5000/carparks?maxHeight={0}&isOpen={1}&availableSlots={2}&rating={3}",
+      "ontClass": "<http://schema.org/ParkingFacility>",
+      "graph": "<http://schema.org>",
+      "name": "Carpark",
+      "description": "Carpark",
+      "resultTag": null,
+      "params": [
+        {
+          "name": "{0}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/height",
+              "range": [
+                "http://schema.org/Distance",
+                "http://schema.org/QuantitativeValue"
+              ],
+              "label": "maxHeight"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{1}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Boolean"
+              ],
+              "label": "isOpen"
+            }
+          ],
+          "value": true,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{2}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/DataType",
+              "range": [
+                "http://schema.org/Number"
+              ],
+              "label": "availableSlots"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        },
+        {
+          "name": "{3}",
+          "g": "<http://schema.org>",
+          "class": "<http://schema.org/Thing>",
+          "term": [
+            {
+              "subject": "http://schema.org/ratingValue",
+              "range": [
+                "http://schema.org/Text",
+                "http://schema.org/Number"
+              ],
+              "label": "rating"
+            }
+          ],
+          "value": 2,
+          "key": 0,
+          "termParent": "http://schema.org/Text"
+        }
+      ]
+    },
+    "sla":{
+      "cache": true,
+      "cost": {
+        "unit": "aud",
+        "value": 0.2
+      },
+      "updateFrequency":{
+        "unit": "s",
+        "value": 60
+      },
+      "autoFetch": true,
+      "freshness": {
+        "unit": "s",
+        "value": 60
+      },
+      "key": [
+        "id"
+      ]
+    },
+    "attributes":[
+      {
+        "key": {
+          "subject": "http://schema.org/identifier",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/PropertyValue",
+            "http://schema.org/URL"
+          ],
+          "label": "id"
+        },
+        "value": "&reference",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "abcd"
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/GeoCoordinates",
+          "range": [
+            "http://schema.org/address",
+            "http://schema.org/latitude",
+            "http://schema.org/longitude"
+          ],
+          "label": "location"
+        },
+        "value": "&primary_location",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/owns",
+          "range": [
+            "http://schema.org/OwnershipInfo",
+            "http://schema.org/Product"
+          ],
+          "label": "owns"
+        },
+        "value": "&ownedBy",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/currenciesAccepted",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "currenciesAccepted"
+        },
+        "value": "&currenciesAccepted",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/ratingValue",
+          "range": [
+            "http://schema.org/Text",
+            "http://schema.org/Number"
+          ],
+          "label": "rating"
+        },
+        "value": "&rating",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Boolean"
+          ],
+          "label": "isOpen"
+        },
+        "value": "&is_open",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/DataType",
+          "range": [
+            "http://schema.org/Number"
+          ],
+          "label": "availabileSlots"
+        },
+        "value": "&free_slots",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/height",
+          "range": [
+            "http://schema.org/Distance",
+            "http://schema.org/QuantitativeValue"
+          ],
+          "label": "maxHeight"
+        },
+        "value": "&maxHeight",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/Intangible",
+          "range": [
+            "http://schema.org/Offer"
+          ],
+          "label": "price"
+        },
+        "value": "&price_offer",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": 1
+      },
+      {
+        "key": {
+          "subject": "http://schema.org/name",
+          "range": [
+            "http://schema.org/Text"
+          ],
+          "label": "name"
+        },
+        "value": "&name",
+        "GeoJson": false,
+        "hasValue": true,
+        "sampleValue": "name"
+      }
+    ]
   }
 ]

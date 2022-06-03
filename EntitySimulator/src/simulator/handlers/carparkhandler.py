@@ -231,7 +231,7 @@ class CarparkHandler(metaclass=SingletonMeta):
             
             selected_parks.append(park)
         
-        return { 'results': selected_parks }, 200
+        return selected_parks, 200
 
 def getDate(day):
     if day == 0:

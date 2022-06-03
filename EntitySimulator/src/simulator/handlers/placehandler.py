@@ -27,9 +27,9 @@ class PlaceHandler(metaclass=SingletonMeta):
             response = self.requester.get_response(uri)
 
             if(response['status'] == 'OK'):
-                return {'results': response['results']}, 200
+                return response['results'], 200
 
-            return {'results': []},200
+            return [],200
         else:
             del place['_id']
             place['primary_location'] = {
@@ -38,4 +38,4 @@ class PlaceHandler(metaclass=SingletonMeta):
                 'longitude': place['geometry']['location']['lng']
             }
 
-            return {'results': [place]}, 200
+            return [place], 200

@@ -47,7 +47,8 @@ class PlaceContext(Resource):
             time.sleep(random.uniform(float(place_config['MinLatency']), float(place_config['MaxLatency'])))
         
             # Return data and 200 OK code
-            return parse_response(data[0]), data[1]
+            # return parse_response(data[0]), data[1]
+            return data[0], data[1]
 
         except(Exception):
             print('An error occured : ' + traceback.format_exc())

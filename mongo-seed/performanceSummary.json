@@ -155,6 +155,28 @@
       "earning":  3435.0,
       "penalty_cost": 3256.25,
       "retrieval_cost": 8735.15
+    },
+    "cachememory": {
+      "used_memory": {
+        "value": 1194648,
+        "unit": "Number"
+      },
+      "used_memory_dataset": {
+        "value": 281816,
+        "unit": "Number"
+      },
+      "used_memory_dataset_perc": {
+        "value": 84.93,
+        "unit": "Percentage"
+      },
+      "total_system_memory": {
+        "value": 4125417472,
+        "unit": "Number"
+      },
+      "used_memory_peak_perc": {
+        "value": 57.72,
+        "unit": "Percentage"
+      }
     }
   }
 ]

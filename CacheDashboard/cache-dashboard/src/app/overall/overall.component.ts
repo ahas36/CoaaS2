@@ -12,7 +12,8 @@ import { ApiServiceService } from '../services/api-service.service';
 export class OverallComponent implements OnInit {
 
   gain;
-  avg_gain
+  avg_gain;
+  cache;
 
   earning;
   penalty_cost;
@@ -27,6 +28,10 @@ export class OverallComponent implements OnInit {
   avg_processing_overhead;
   processing_overhead_ratio;
   network_overhead_ratio;
+
+  total_cache;
+  occupied_cache;
+  data_occupied_cache;
 
   query_latency;
 
@@ -43,8 +48,10 @@ export class OverallComponent implements OnInit {
   public line2ChartData: ChartDataSets[] = [];
   public line3ChartData: ChartDataSets[] = [];
   public line4ChartData: ChartDataSets[] = [];
+  public line5ChartData: ChartDataSets[] = [];
 
   public pieChartData: SingleDataSet; 
+  public pie2ChartData: SingleDataSet; 
 
   public scatter1Data = {
     'data': [],
@@ -68,6 +75,7 @@ export class OverallComponent implements OnInit {
   
   public pieChartLegend = true;
   public pieChartLabels: Label[] = ['Earning', 'Retrieval Cost', 'Penalty Cost'];
+  public pie2ChartLabels: Label[] = ['Unoccupied','Data Occupied', 'Overhead Occupied'];
   public pieChartOptions: ChartOptions = {
     responsive: true,
   };
@@ -143,6 +151,27 @@ export class OverallComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Ratio'
+        },
+        ticks: {
+          beginAtZero: true 
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Window Index'
+        }
+      }]
+    }
+  };
+
+  public line5ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Size (GB)'
         },
         ticks: {
           beginAtZero: true 
@@ -281,10 +310,10 @@ export class OverallComponent implements OnInit {
       this.line2ChartData.push({ data: this.avg_processing_overhead, label: 'Processing Overhead' }); 
 
       this.processing_overhead_ratio = data.processing_overhead_ratio.get();
-      this.line3ChartData.push({ data: this.earning, label: 'Processing Overhead Ratio' }); 
+      this.line3ChartData.push({ data: this.processing_overhead_ratio, label: 'Processing Overhead Ratio' }); 
 
       this.network_overhead_ratio = data.network_overhead_ratio.get();
-      this.line3ChartData.push({ data: this.earning, label: 'Network Overhead Ratio' }); 
+      this.line3ChartData.push({ data: this.network_overhead_ratio, label: 'Network Overhead Ratio' }); 
 
       // 5th
       this.scatter1Data.data = data.rt_pod;
@@ -295,6 +324,19 @@ export class OverallComponent implements OnInit {
 
       this.scatter3Data.data = data.poh_pod;
       this.scatter3ChartData.push(this.scatter3Data);
+
+      // 6th
+      this.cache = data.cache;
+      this.total_cache = data.total_cache.get();
+      this.line5ChartData.push({ data: this.total_cache, label: 'Total Cache Size' }); 
+
+      this.occupied_cache = data.occupied_cache.get();
+      this.line5ChartData.push({ data: this.occupied_cache, label: 'Size Occupied' }); 
+
+      this.data_occupied_cache = data.data_occupied_cache.get();
+      this.line5ChartData.push({ data: this.data_occupied_cache, label: 'Sizd Data Occupied' }); 
+
+      this.pie2ChartData = data.cache_occupancy;
 
       // General
       this.timeTicks = data.timeTicks.get();
@@ -321,12 +363,12 @@ export class OverallComponent implements OnInit {
 
       // 3rd - Left
       this.earning = data.earning.get();
-      this.lineChartData[0].data = this.earning;   
+      this.lineChartData[1].data = this.earning;   
 
       this.retrieval_cost = data.retrieval_cost.get();
-      this.lineChartData[0].data = this.retrieval_cost;
+      this.lineChartData[2].data = this.retrieval_cost;
       this.penalty_cost = data.penalty_cost.get();
-      this.lineChartData[0].data = this.penalty_cost;
+      this.lineChartData[3].data = this.penalty_cost;
 
       this.costearningratio = data.costearningratio.get();
       this.line4ChartData[0].data = this.costearningratio; 
@@ -336,16 +378,16 @@ export class OverallComponent implements OnInit {
       this.line2ChartData[0].data = this.avg_query_overhead; 
 
       this.avg_network_overhead = data.avg_network_overhead.get();
-      this.line2ChartData[0].data = this.avg_network_overhead; 
+      this.line2ChartData[1].data = this.avg_network_overhead; 
 
       this.avg_processing_overhead = data.avg_processing_overhead.get();
-      this.line2ChartData[0].data = this.avg_processing_overhead; 
+      this.line2ChartData[2].data = this.avg_processing_overhead; 
 
       this.processing_overhead_ratio = data.processing_overhead_ratio.get();
-      this.line3ChartData[0].data = this.earning; 
+      this.line3ChartData[0].data = this.processing_overhead_ratio; 
 
       this.network_overhead_ratio = data.network_overhead_ratio.get();
-      this.line3ChartData[0].data = this.earning; 
+      this.line3ChartData[1].data = this.network_overhead_ratio; 
 
       // General
       this.timeTicks = data.timeTicks.get();
@@ -362,6 +404,20 @@ export class OverallComponent implements OnInit {
 
       this.scatter3Data.data = data.poh_pod;
       this.scatter3ChartData.push(this.scatter3Data);
+
+      // 6th
+      this.cache = data.cachememory;
+
+      this.total_cache = data.total_cache.get();
+      this.line5ChartData[0].data = this.total_cache; 
+
+      this.occupied_cache = data.occupied_cache.get();
+      this.line5ChartData[1].data = this.occupied_cache; 
+
+      this.data_occupied_cache = data.data_occupied_cache.get();
+      this.line5ChartData[2].data = this.data_occupied_cache; 
+
+      this.pie2ChartData = data.cache_occupancy;
 
     }
     catch(ex){

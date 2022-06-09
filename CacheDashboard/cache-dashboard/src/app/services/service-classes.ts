@@ -6,6 +6,7 @@ export class PerfData{
   public coass: COASS;
   public levels: Level;
   public summary: Summary;
+  public cachememory: CacheStat;
 }
 
 export class CSMS{
@@ -25,6 +26,19 @@ export class Level{
   public aggfunction:Method;
   public contextrequest:Method;
   public query:Method;
+}
+
+export class CacheStat{
+  public used_memory: CachePerfStat;
+  public total_system_memory: CachePerfStat;
+  public used_memory_dataset: CachePerfStat;
+  public used_memory_peak_perc: CachePerfStat;
+  public used_memory_dataset_perc: CachePerfStat;
+}
+
+export class CachePerfStat{
+  public value: number;
+  public unit: String;
 }
 
 export class LevelStat{

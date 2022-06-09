@@ -4,6 +4,8 @@ import { PerfData, QueryStats, Queue } from './service-classes';
 import { CSMSModel, LevelsModel, SummaryModel, SimpleModel } from './service-view-models';
 import { config } from '../config';
 
+const divisor = 1073741824;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -33,6 +35,7 @@ export class ApiServiceService {
   placesData;
 
   counter = 0;
+  
   timeTicks:Queue<number> = new Queue<number>();
 
   constructor(private http:HttpClient) {
@@ -109,6 +112,30 @@ export class ApiServiceService {
         this.summaryData.rt_pod.push({'x': res.summary.avg_query_overhead, 'y': pod});
         this.summaryData.noh_pod.push({'x': res.summary.avg_network_overhead, 'y': pod});
         this.summaryData.poh_pod.push({'x': res.summary.avg_processing_overhead, 'y': pod});
+
+        let cachestats = res.cachememory;
+        this.summaryData.cache.used_memory = (cachestats.used_memory.value/divisor).toFixed(2);
+        this.summaryData.cache.used_memory_dataset = (cachestats.used_memory_dataset.value/divisor).toFixed(2);
+        this.summaryData.cache.total_system_memory = (cachestats.total_system_memory.value/divisor).toFixed(2);
+        this.summaryData.cache.used_memory_dataset_perc = cachestats.used_memory_dataset_perc.value;
+        this.summaryData.cache.used_memory_peak_perc = cachestats.used_memory_peak_perc.value;
+
+        this.summaryData.total_cache.push(this.summaryData.cache.total_system_memory);
+        this.summaryData.occupied_cache.push(this.summaryData.cache.used_memory);
+        this.summaryData.data_occupied_cache.push(this.summaryData.cache.used_memory_dataset);
+
+        let overhead = this.summaryData.cache.used_memory - this.summaryData.cache.used_memory_dataset
+        let unoccupied = this.summaryData.cache.total_system_memory - this.summaryData.cache.used_memory
+
+        var unoccu_perc = unoccupied/this.summaryData.cache.total_system_memory;
+        var oh_perc = overhead/this.summaryData.cache.total_system_memory;
+        var data_perc = 1 - oh_perc - unoccu_perc;
+
+        this.summaryData.cache_occupancy.splice(0, this.summaryData.cache_occupancy.length);
+        this.summaryData.cache_occupancy.push(unoccu_perc.toFixed(2));
+        this.summaryData.cache_occupancy.push(data_perc.toFixed(2));
+        this.summaryData.cache_occupancy.push(oh_perc.toFixed(2));
+        
       });
     }
 

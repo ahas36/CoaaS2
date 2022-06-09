@@ -25,6 +25,12 @@ export class SummaryModel{
 
   public timeTicks:Queue<number>;
   public currentCosts;
+
+  public cache;
+  public total_cache: Queue<number>;
+  public occupied_cache: Queue<number>;
+  public data_occupied_cache: Queue<number>;
+  public cache_occupancy;
     
   constructor(){
     this.gain = new Queue<number>();
@@ -49,6 +55,12 @@ export class SummaryModel{
 
     this.timeTicks = new Queue<number>();
     this.currentCosts = [];
+
+    this.cache = {};
+    this.total_cache = new Queue<number>();
+    this.occupied_cache = new Queue<number>();
+    this.data_occupied_cache = new Queue<number>();
+    this.cache_occupancy = [];
   }   
 }
 

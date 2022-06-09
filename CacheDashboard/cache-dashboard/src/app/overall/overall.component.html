@@ -258,5 +258,107 @@
             </mat-card-content>
         </mat-card>
     </div>
-    
+    <br/>
+    <div class="first-card">
+        <h1>Cache Memory Statistics <sup><i class="fa fa-info-circle tooltip">
+            <span class="tooltiptext">Current cache memory statistics.</span>
+        </i></sup></h1>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{cache.total_system_memory}}</h1>
+                    <h3> GB</h3>
+                    <p>Total Cache Size <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">The total size of all the cache memories.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{cache.used_memory}}</h1>
+                    <h3> GB</h3>
+                    <p>Used Cache Memory <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Total used up cache memory space including the overheads.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{cache.used_memory_dataset}}</h1>
+                    <h3> GB</h3>
+                    <p>Cache occupied by data <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Total cache memory space occupied by context data items.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{cache.used_memory_dataset_perc}}</h1>
+                    <h3> %</h3>
+                    <p>Percentage of Data <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Percentage of context data in cache in relation to the total occupied cache space.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{cache.used_memory_peak_perc}}</h1>
+                    <h3> %</h3>
+                    <p>Peak Cache Usage <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Peak amount of cache memory utilized in relation to the total occupied cache space.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div> 
+    <br/>
+    <div class="grid-container">
+        <mat-card class="chart-card">
+            <mat-card-content>
+                <div class="chart-line">
+                    <h2>Cache Memory Occupancy</h2>
+                    <canvas baseChart
+                        width = 900px
+                        height = 360px
+                        [datasets]="line5ChartData"
+                        [labels]="timeTicks"
+                        [colors]="ChartColors"
+                        [legend]="lineChartLegend"
+                        [options]="line5ChartOptions"
+                        [chartType]="lineChartType"
+                        [plugins]="lineChartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card-2" style="width:305px; height:400px">
+            <mat-card-content class="description">
+                <div>
+                    <h2>Occupancy Breakdown</h2>
+                    <br/><br/>
+                    <div style="margin-left:30px; margin-top: 20px;">
+                        <canvas baseChart 
+                        width = 230px
+                        height = 230px
+                        [data]="pie2ChartData"
+                        [labels]="pie2ChartLabels" 
+                        [colors]="pieChartColors"
+                        [legend]="false"
+                        [options]="pieChartOptions"
+                        [plugins]="pieChartPlugins"
+                        [chartType]="doughnutChartType">
+                    </canvas>
+                    </div>
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div>
 </div>

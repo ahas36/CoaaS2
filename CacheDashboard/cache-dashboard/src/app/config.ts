@@ -1,6 +1,6 @@
 export var config = {
     "refresh_rate": 60000,
-    "uri": "http://demo0724795.mockable.io/log/performance",
+    "uri": "http://localhost:8070/CASM-2.0.1/api/log/performance",
     "carparks": "https://demo0724795.mockable.io/carparks",
     "places": "https://demo0724795.mockable.io/places",
     "querystaturi": "http://localhost:8070/CASM-2.0.1/api/cqstats"

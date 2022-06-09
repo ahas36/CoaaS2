@@ -8,21 +8,26 @@ import au.coaas.sqem.util.ScheduleTasks;
 import au.coaas.sqem.util.Utilty;
 import org.bson.Document;
 
+import org.json.JSONObject;
 import org.redisson.api.*;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.TemporalUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
+import static java.lang.Character.isDigit;
+
 public class ContextCacheHandler {
 
     private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
     private static CacheDataRegistry registry = CacheDataRegistry.getInstance();
+    private static final String regex = "^[\\d\\.]*[BGKM%]{0,1}$";
 
     // Caches all context under an entity
     public static SQEMResponse cacheEntity(CacheRequest registerRequest) {
@@ -206,4 +211,54 @@ public class ContextCacheHandler {
         return SQEMResponse.newBuilder().setStatus("200").setBody("Cleared context cache").build();
     }
 
+    public static JSONObject getMemoryUtility() {
+        try {
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+            String script = "return redis.pcall('info','memory')";
+            String result = cacheClient.getScript().eval(RScript.Mode.READ_ONLY,
+                    script, RScript.ReturnType.STATUS);
+
+            String[] resultset = result.split("\r\n");
+            JSONObject cachestats = new JSONObject();
+
+            for(int i = 1; i<resultset.length; i++){
+                String[] keyval = resultset[i].split(":");
+                if(keyval[1].matches(regex)){
+                    char lastChar = keyval[1].charAt(keyval[1].length()-1);
+                    String unit = isDigit(lastChar)? "Number": convertToUnit(lastChar);
+                    String value = unit.equals("Number") ? keyval[1] :
+                            keyval[1].substring(0, keyval[1].length()-1);
+                    cachestats.put(keyval[0], new JSONObject(){{
+                        put("value", value.contains(".") ? Double.parseDouble(value) : Long.parseLong(value));
+                        put("unit", unit);
+                    }});
+                }
+            }
+
+            return cachestats;
+
+        } catch (Exception e) {
+            log.info(e.getMessage());
+            return null;
+        }
+    }
+
+    private static String convertToUnit(char unit) {
+        switch (unit) {
+            case '%':
+                return "Percentage";
+            case 'B':
+                return "Bytes";
+            case 'K':
+                return "KiloBytes";
+            case 'M':
+                return "MegaBytes";
+            case 'G':
+                return "GigaBytes";
+            default:
+                return "Unknown";
+        }
+    }
 }
+
+

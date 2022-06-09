@@ -558,6 +558,7 @@ public class PerformanceLogHandler {
             }
 
             persRecord.put("levels", level_res);
+            persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
 
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");

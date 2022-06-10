@@ -1,7 +1,8 @@
 services:
     dashboard:
-        container_name: acoca
+        image: coaas/dashboard:latest
+        container_name: "dashboard"
         restart: always
         build: .
-        ports: 
+        ports:
             - '4200:80'

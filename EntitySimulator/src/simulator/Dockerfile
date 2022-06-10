@@ -13,6 +13,9 @@ RUN pip3 install --upgrade pip
 # Install the libaries in reqiurements.txt
 RUN pip3 install -r requirements.txt
 
+# Setting environment var
+ENV MONGO_HOST "host.docker.internal"
+
 EXPOSE 5000
 EXPOSE 27017
 

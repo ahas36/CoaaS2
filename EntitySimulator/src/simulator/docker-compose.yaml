@@ -1,0 +1,8 @@
+services:
+  service-simulator:
+    image: coaas/service-simulator:latest
+    container_name: "services-sim"
+    restart: always
+    build: .
+    ports:
+      - '5000:5000'

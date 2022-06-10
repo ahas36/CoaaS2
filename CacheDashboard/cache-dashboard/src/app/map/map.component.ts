@@ -113,33 +113,33 @@ export class MapComponent implements OnInit {
         }
       });
    
-      // this.queryLocations.subscribe(locs => {
-      //   for(const element of locs){
-      //     this.querymarkers.push({
-      //         lat: element.location.lat,
-      //         lng: element.location.lng,
-      //         dest: element.address,
-      //         icon: {
-      //           url: './assets/query.gif',
-      //           scaledSize: {
-      //               width: 50,
-      //               height: 50
-      //           }
-      //       }});
-      //     }
-      // });
-
-      this.querymarkers.push({
-        lat: -37.825901243583886,
-        lng: 144.95778574794554,
-        dest: "Royal Botanic Gardens Victoria - Melbourne Gardens",
-        icon: {
-          url: './assets/query.gif',
-          scaledSize: {
-              width: 50,
-              height: 50
+      this.queryLocations.subscribe(locs => {
+        for(const element of locs){
+          this.querymarkers.push({
+              lat: element.location.lat,
+              lng: element.location.lng,
+              dest: element.address,
+              icon: {
+                url: './assets/query.gif',
+                scaledSize: {
+                    width: 50,
+                    height: 50
+                }
+            }});
           }
-      }});
+      });
+
+      // this.querymarkers.push({
+      //   lat: -37.825901243583886,
+      //   lng: 144.95778574794554,
+      //   dest: "Royal Botanic Gardens Victoria - Melbourne Gardens",
+      //   icon: {
+      //     url: './assets/query.gif',
+      //     scaledSize: {
+      //         width: 50,
+      //         height: 50
+      //     }
+      // }});
 
 
     }

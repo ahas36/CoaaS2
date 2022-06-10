@@ -33,6 +33,7 @@ message CacheLookUp {
     map<string, string> params = 3;
     string uniformFreshness = 4;
     bool checkFresh = 5;
+    string key = 6;
 }
 
 message CacheLookUpResponse {

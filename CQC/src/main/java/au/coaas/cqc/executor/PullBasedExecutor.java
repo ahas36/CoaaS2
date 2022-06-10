@@ -690,10 +690,16 @@ public class PullBasedExecutor {
             }
 
             if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){
+                JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
+                String keys = "";
+                for(Object k : candidate_keys)
+                    keys = keys + "," + k.toString();
+
                 final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").toString())
                         .setCheckFresh(true)
+                        .setKey(keys)
                         .setUniformFreshness(conSer.getJSONObject("sla")
                                 .getJSONObject("freshness").toString())
                         .build();

@@ -18,6 +18,7 @@ import au.coaas.cqp.proto.*;
 import au.coaas.sqem.proto.*;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonParser;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -42,6 +43,7 @@ public class PullBasedExecutor {
     private static boolean cacheEnabled = true;
 
     private static Logger log = Logger.getLogger(PullBasedExecutor.class.getName());
+    private static JsonParser parser = new JsonParser();
 
     private static Object getValueOfJsonObject(final JSONObject obj, String path) {
         JSONObject jo = new JSONObject(obj.toString());
@@ -49,7 +51,16 @@ public class PullBasedExecutor {
         for (int i = 0; i < split.length - 1; i++) {
             jo = jo.getJSONObject(split[i]);
         }
-        return jo.get(split[split.length - 1]);
+
+        Object result = jo.get(split[split.length - 1]);
+        if(result instanceof String){
+            if(((String) result).startsWith("{"))
+                return new JSONObject((String) result);
+            else if(((String) result).startsWith("["))
+                return new JSONArray((String) result);
+        }
+
+        return result;
     }
 
     private static List<FunctionCall> getFunctionCalls(Queue<CdqlConditionToken> tokens) {
@@ -693,7 +704,7 @@ public class PullBasedExecutor {
                 JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
                 String keys = "";
                 for(Object k : candidate_keys)
-                    keys = keys + "," + k.toString();
+                    keys = keys.isEmpty() ? keys : keys + "," + k.toString();
 
                 final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())

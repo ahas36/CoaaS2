@@ -4,6 +4,7 @@ import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSSummary;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 
+import com.google.gson.JsonParser;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -12,7 +13,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import javax.script.ScriptEngine;
-import javax.script.ScriptException;
 import javax.script.ScriptEngineManager;
 
 import java.io.IOException;
@@ -35,13 +35,37 @@ public class FetchManager {
         JSONObject sla = cs.getJSONObject("sla");
 
         String serviceUrl = info.getString("serviceURL");
+        JSONArray definedParamSet = info.getJSONArray("params");
+        Map<String, String> setParams = contextService.getParamsMap();
 
-        // How does this definition fit all?
-        for (Map.Entry<String, String> entry : contextService.getParamsMap().entrySet()) {
-            if(serviceUrl.endsWith("{}"))
-                serviceUrl = serviceUrl.replaceAll("\\{\\}", entry.getValue().replaceAll("\"",""));
-            else
-                serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
+        if(serviceUrl.contains("{0}")){
+            for(Object pr : definedParamSet){
+                String key = ((JSONObject) pr).getString("key");
+                String defaultVal = ((JSONObject) pr).get("value").toString();
+                String placeholder = ((JSONObject) pr).getString("name");
+
+                if(setParams.containsKey(key)){
+                    String paramVal = setParams.get(key);
+                    if(paramVal.startsWith("{")){
+                        JSONObject value = new JSONObject(paramVal);
+                        Object readVal = value.get("value");
+                        String setVal = readVal instanceof String ? (String)readVal : String.valueOf(readVal);
+                        serviceUrl = serviceUrl.replace(placeholder, setVal);
+                    }
+                    else
+                        serviceUrl = serviceUrl.replace(placeholder, paramVal.replaceAll("\"",""));
+                }
+                else
+                    serviceUrl = serviceUrl.replace(placeholder, defaultVal.replaceAll("\"",""));
+            }
+        }
+        else {
+            for (Map.Entry<String, String> entry : setParams.entrySet()) {
+                if(serviceUrl.endsWith("{}"))
+                    serviceUrl = serviceUrl.replaceAll("\\{\\}", entry.getValue().replaceAll("\"",""));
+                else
+                    serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
+            }
         }
 
         OkHttpClient client = new OkHttpClient();
@@ -137,13 +161,16 @@ public class FetchManager {
 
     final static Pattern pattern = Pattern.compile("([a-z]|[A-Z])+(\\d|-|_|([a-z]|[A-Z]))*(\\.(\\d|([a-z]|[A-Z])|-|_)+)*", Pattern.MULTILINE);
 
-    private static ScriptEngine engine = new ScriptEngineManager().getEngineByName("rhino");
+    private static ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
 
     private static Object evaluateExpression(String expression){
         try {
-            ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
-            return engine.eval(expression);
-        } catch (ScriptException e) {
+            if(expression.startsWith("{") || expression.startsWith("[")){
+                JsonParser parse = new JsonParser();
+                return parse.parse(expression);
+            }
+            return expression;
+        } catch (Exception e) {
             e.printStackTrace();
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("error",e.getMessage());
@@ -167,8 +194,8 @@ public class FetchManager {
                 expression = expression.replaceAll(pram,attributeValue.toString());
             }
         }
-        return expression;
-        // return evaluateExpression(expression);
+        // return expression;
+        return evaluateExpression(expression);
     }
 
     private static JSONArray parseCoordintes(JSONArray ja,String res)

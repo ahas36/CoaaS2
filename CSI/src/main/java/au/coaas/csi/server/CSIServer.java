@@ -28,23 +28,28 @@ public class CSIServer {
     private static Logger log = Logger.getLogger(CSIServer.class.getName());
 
     static public void main (String [] args) throws IOException, InterruptedException, SchedulerException {
-        JobSchedulerManager jobScheduler = JobSchedulerManager.getInstance();
-        log.info("Starting");
-        log.info("Scheduler started");
-        Server server = ServerBuilder.forPort(8582).addService(new CSIServiceImpl()).maxInboundMessageSize(MAX_MESSAGE_SIZE).build();
-        server.start();
-        jobScheduler.start();
+        try{
+            // JobSchedulerManager jobScheduler = JobSchedulerManager.getInstance();
+            // log.info("Starting");
+            // log.info("Scheduler started");
+            Server server = ServerBuilder.forPort(8582).addService(new CSIServiceImpl()).maxInboundMessageSize(MAX_MESSAGE_SIZE).build();
+            server.start();
+            // jobScheduler.start();
 
-        log.info(jobScheduler.registerJob(ContextService.newBuilder().setJson("test").setMongoID("12342").build()).getStatus());
-        log.info("wait...");
-        Thread.sleep(10000);
-        log.info(jobScheduler.updateJob(ContextService.newBuilder().setJson("test3").setMongoID("12342").build()).getStatus());
-        log.info("wait...");
-        Thread.sleep(10000);
-        log.info(jobScheduler.cancelJob(ContextService.newBuilder().setJson("test3").setMongoID("12342").build()).getStatus());
+            // log.info(jobScheduler.registerJob(ContextService.newBuilder().setJson("test").setMongoID("12342").build()).getStatus());
+            // log.info("wait...");
+            // Thread.sleep(10000);
+            // log.info(jobScheduler.updateJob(ContextService.newBuilder().setJson("test3").setMongoID("12342").build()).getStatus());
+            // log.info("wait...");
+            // Thread.sleep(10000);
+            // log.info(jobScheduler.cancelJob(ContextService.newBuilder().setJson("test3").setMongoID("12342").build()).getStatus());
 
-        log.info("Server started on port 8582");
-        server.awaitTermination();
-        jobScheduler.shutdown();
+            log.info("Server started on port 8582");
+            server.awaitTermination();
+            // jobScheduler.shutdown();
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
     }
 }

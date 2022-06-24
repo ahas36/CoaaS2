@@ -169,7 +169,7 @@ public class QueryFetchJob implements Job {
                 long minutes = Math.round((double)value*60);
                 time.plusMinutes(minutes);
                 return "and isAvailable (targetCarpark.availableSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
-                        + time.toString() + "\", \"unit\":\"datetime\"}";
+                        + time.toString() + "\", \"unit\":\"datetime\"})";
             }
         }
         return "";

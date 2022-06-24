@@ -20,6 +20,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.concurrent.Executors;
@@ -37,7 +38,10 @@ public class FetchManager {
 
         // How does this definition fit all?
         for (Map.Entry<String, String> entry : contextService.getParamsMap().entrySet()) {
-            serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
+            if(serviceUrl.endsWith("{}"))
+                serviceUrl = serviceUrl.replaceAll("\\{\\}", entry.getValue().replaceAll("\"",""));
+            else
+                serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
         }
 
         OkHttpClient client = new OkHttpClient();
@@ -59,8 +63,9 @@ public class FetchManager {
                 return CSIResponse.newBuilder().setStatus("200")
                         .setBody(result.toString())
                         .setSummary(CSSummary.newBuilder()
-                                .setId(cs.getString("_id"))
+                                .setId(cs.getJSONObject("_id").getString("$oid"))
                                 .setFreshness(sla.getJSONObject("freshness").getLong("value"))
+                                .setFthresh(sla.getJSONObject("freshness").getDouble("fthresh"))
                                 .setPrice(sla.getJSONObject("cost").getDouble("value")).build())
                         .build();
             }
@@ -101,24 +106,42 @@ public class FetchManager {
     private static Object getAttributeValue(String res, String valueIndex) {
         String[] valuesIndexArray = valueIndex.split("\\.");
         Object value = new JSONObject(res);
+        Object response = null;
 
+        // The original code seems to be having a limitation here. It assumes the passed parameter key is available
+        // in the 1st level of the response body itself. Nested properties are ignored.
         for (int j = 0; j < valuesIndexArray.length; j++) {
             if (value instanceof JSONObject) {
-                value = ((JSONObject) value).get(valuesIndexArray[j]);
+                // See if the key is in the 1st level
+                if(((JSONObject) value).has(valuesIndexArray[j]))
+                    response = ((JSONObject) value).get(valuesIndexArray[j]);
+                else {
+                    Set<String> keys = ((JSONObject) value).keySet();
+                    for(String key : keys){
+                        if(((JSONObject) value).get(key) instanceof JSONObject){
+                            Object attaVal = getAttributeValue(((JSONObject) value).get(key).toString(), valuesIndexArray[j]);
+                            if(attaVal != null){
+                                response = attaVal;
+                                break;
+                            }
+                        }
+                    }
+                }
             } else if (value instanceof JSONArray) {
-                value = ((JSONArray) value).get(Integer.valueOf(valuesIndexArray[j]));
+                response = ((JSONArray) value).get(Integer.valueOf(valuesIndexArray[j]));
             }
         }
 
-        return value;
+        return response;
     }
 
-    final static Pattern pattern = Pattern.compile("\\$([a-z]|[A-Z])+(\\d|-|_|([a-z]|[A-Z]))*(\\.(\\d|([a-z]|[A-Z])|-|_)+)*", Pattern.MULTILINE);
+    final static Pattern pattern = Pattern.compile("([a-z]|[A-Z])+(\\d|-|_|([a-z]|[A-Z]))*(\\.(\\d|([a-z]|[A-Z])|-|_)+)*", Pattern.MULTILINE);
 
-    private static ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
+    private static ScriptEngine engine = new ScriptEngineManager().getEngineByName("rhino");
 
     private static Object evaluateExpression(String expression){
         try {
+            ScriptEngine engine = new ScriptEngineManager().getEngineByName("js");
             return engine.eval(expression);
         } catch (ScriptException e) {
             e.printStackTrace();
@@ -135,16 +158,17 @@ public class FetchManager {
 
         Matcher matcher = pattern.matcher(expression);
         while (matcher.find()) {
-            String pram = matcher.group(0).trim().substring(1);
+            String pram = matcher.group(0).trim();
             Object attributeValue = getAttributeValue(res,pram);
             if(attributeValue instanceof String){
-                expression = expression.replaceAll("\\$"+pram,"\""+attributeValue.toString()+"\"");
+                expression = expression.replaceAll(pram,"\""+attributeValue.toString()+"\"");
             }
             else {
-                expression = expression.replaceAll("\\$"+pram,attributeValue.toString());
+                expression = expression.replaceAll(pram,attributeValue.toString());
             }
         }
-        return evaluateExpression(expression);
+        return expression;
+        // return evaluateExpression(expression);
     }
 
     private static JSONArray parseCoordintes(JSONArray ja,String res)

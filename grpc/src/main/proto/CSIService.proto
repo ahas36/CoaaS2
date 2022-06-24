@@ -17,6 +17,7 @@ message CSSummary {
     string id = 1;
     double price = 2;
     uint64 freshness = 3;
+    double fthresh = 4;
 }
 
 message ContextService

@@ -38,7 +38,7 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'value': vehicle['dimensions']['unit'],
                     'unitText': 'm'
                 },
-                'wheelBase': {
+                'wheel-base': {
                     'value': vehicle['wheel-base'],
                     'unitText': 'm'
 

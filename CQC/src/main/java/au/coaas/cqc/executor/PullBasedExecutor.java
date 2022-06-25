@@ -311,7 +311,8 @@ public class PullBasedExecutor {
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
         // If this response need to be cached, this is where the caching action should happen.
         CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
-                .setBody(result.toString()).setQueryId(queryId)
+                .setQueryId(queryId)
+                .setBody(result.toString())
                 .setAdmin(CdqlAdmin.newBuilder()
                         .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
                         .setPrice(consumerQoS.getDouble("price"))

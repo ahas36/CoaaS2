@@ -41,7 +41,6 @@ class VehicleHandler(metaclass=SingletonMeta):
                 'wheel-base': {
                     'value': vehicle['wheel-base'],
                     'unitText': 'm'
-
                 },
                 'performance': {
                     'value': vehicle['milage']['city'],

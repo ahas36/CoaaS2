@@ -76,7 +76,7 @@ public final class CacheDataRegistry{
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
         long remainingLife = 0;
         LocalDateTime staleTime;
-        AtomicReference<String> hashKey = null;
+        AtomicReference<String> hashKey = new AtomicReference<>();
         CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
 
         if(this.root.containsKey(lookup.getEt().getType())){
@@ -138,7 +138,7 @@ public final class CacheDataRegistry{
         // 1. (hashkey, false) - the specific entity (by parameter combination) is not cached.
         // 2. ("", false) - either the entity type or the context service is not cached.
         res.setIsCached(false).setIsValid(false).setRemainingLife(remainingLife).build();
-        if(hashKey != null)
+        if(hashKey.get() != null)
             res.setHashkey(hashKey.get());
 
         return res.build();
@@ -146,7 +146,7 @@ public final class CacheDataRegistry{
 
     // Adds or updates the cached context repository
     public AtomicReference<String> updateRegistry(CacheLookUp lookup){
-        AtomicReference<String> hashKey = null;
+        AtomicReference<String> hashKey = new AtomicReference<>();
         if(this.root.containsKey(lookup.getEt().getType())){
             // Updating the last update time of the entity type
 
@@ -194,7 +194,7 @@ public final class CacheDataRegistry{
 
     // Removes context items from the cached context registry
     public AtomicReference<String> removeFromRegistry(CacheLookUp lookup){
-        AtomicReference<String> hashKey = null;
+        AtomicReference<String> hashKey = new AtomicReference<>();
         if(this.root.containsKey(lookup.getEt().getType())){
             this.root.compute(lookup.getEt().getType(), (k,v) -> {
 

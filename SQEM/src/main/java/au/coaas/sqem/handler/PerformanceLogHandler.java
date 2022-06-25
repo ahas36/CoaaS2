@@ -35,7 +35,7 @@ public class PerformanceLogHandler {
     public static void insertRecord(LogicalContextLevel level, String id, Boolean isHit, long rTime) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO %s VALUES(%s, %d, %d, datetime('now'));";
+        String queryString = "INSERT INTO %s(itemId,iHit,response_time,createdDatetime) VALUES(\"%s\", %d, %d, datetime('now'));";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -67,7 +67,8 @@ public class PerformanceLogHandler {
     public static void genericRecord(String method, String status, long rTime) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO csms_performance VALUES(%s, %s, %d, datetime('now'));";
+        String queryString = "INSERT INTO csms_performance(method,status,response_time,createdDatetime) "
+                + "VALUES(\"%s\", \"%s\", \"%d\", datetime('now'));";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -233,7 +234,9 @@ public class PerformanceLogHandler {
     public static void coassPerformanceRecord(Statistic request) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO coass_performance VALUES(%s, %s, %d, %f, %f, %s, %s, datetime('now'), %d);";
+        String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                "cost,identifier,hashKey,createdDatetime,isDelayed) " +
+                "VALUES(\"%s\", \"%s\", %d, %f, %f, \"%s\", \"%s\", datetime('now'), %d);";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -253,12 +256,20 @@ public class PerformanceLogHandler {
                 case "executeFetch": {
                     String hashKey = Utilty.getHashKey(request.getCs().getParamsMap());
 
-                    JSONObject cs = new JSONObject(request.getCs().getContextService());
-                    String cs_id = cs.getString("_id");
+                    JSONObject cs = new JSONObject(request.getCs().getContextService().getJson());
+                    String cs_id = cs.getJSONObject("_id").getString("$oid");
 
                     // Value at the Identifier column here is the Context Service ID
-                    statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(),
-                            request.getEarning(), request.getCost(), cs_id, hashKey, 0));
+                    String formatted_string = String.format(queryString,
+                            method, // Method name
+                            request.getStatus(), // Status of the request
+                            request.getTime(), // Response time
+                            request.getEarning(), // Earnings from the query
+                            request.getCost(), // Cost from query
+                            cs_id, // Context Service Identifier
+                            hashKey, // Hashkey of the cached item
+                            0); // is Delayed?
+                    statement.executeUpdate(formatted_string);
                     break;
                 }
             }

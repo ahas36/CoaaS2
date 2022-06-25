@@ -211,7 +211,7 @@ public class ContextCacheHandler {
         return SQEMResponse.newBuilder().setStatus("200").setBody("Cleared context cache").build();
     }
 
-    public static JSONObject getMemoryUtility() {
+    public static Document getMemoryUtility() {
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
             String script = "return redis.pcall('info','memory')";
@@ -219,7 +219,7 @@ public class ContextCacheHandler {
                     script, RScript.ReturnType.STATUS);
 
             String[] resultset = result.split("\r\n");
-            JSONObject cachestats = new JSONObject();
+            Document cachestats = new Document();
 
             for(int i = 1; i<resultset.length; i++){
                 String[] keyval = resultset[i].split(":");
@@ -228,10 +228,12 @@ public class ContextCacheHandler {
                     String unit = isDigit(lastChar)? "Number": convertToUnit(lastChar);
                     String value = unit.equals("Number") ? keyval[1] :
                             keyval[1].substring(0, keyval[1].length()-1);
-                    cachestats.put(keyval[0], new JSONObject(){{
-                        put("value", value.contains(".") ? Double.parseDouble(value) : Long.parseLong(value));
-                        put("unit", unit);
-                    }});
+
+                    Document setValue = new Document();
+                    setValue.put("value", value.contains(".") ? Double.parseDouble(value) : Long.parseLong(value));
+                    setValue.put("unit", unit);
+
+                    cachestats.put(keyval[0],setValue);
                 }
             }
 

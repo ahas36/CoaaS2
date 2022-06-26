@@ -200,6 +200,16 @@ services:
       volumes:
         - redis:/data
 
+    sqlserver:
+      container_name: "sqlserver"
+      image: mcr.microsoft.com/mssql/server
+      restart: always
+      environment:
+        ACCEPT_EULA: "Y"
+        SA_PASSWORD: "coaas@PerfDB2k22"
+      ports:
+        - '1433:1433'
+
     kafka:
       image: confluentinc/cp-kafka:latest
       depends_on:

@@ -35,7 +35,7 @@ public class PerformanceLogHandler {
     public static void insertRecord(LogicalContextLevel level, String id, Boolean isHit, long rTime) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO %s(itemId,isHit,response_time,createdDatetime) VALUES(\"%s\", %d, %d, datetime('now'));";
+        String queryString = "INSERT INTO %s(itemId,isHit,response_time,createdDatetime) VALUES('%s', %d, %d, GETDATE());";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -68,7 +68,7 @@ public class PerformanceLogHandler {
 
         // Connection connection = null;
         String queryString = "INSERT INTO csms_performance(method,status,response_time,createdDatetime) "
-                + "VALUES(\"%s\", \"%s\", \"%d\", datetime('now'));";
+                + "VALUES('%s', '%s', %d, GETDATE());";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -114,8 +114,8 @@ public class PerformanceLogHandler {
         level = level.toLowerCase();
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
-            String getString = "SELECT * FROM %s WHERE createdDatetime <= \"%s\";";
-            String deleteString = "DELETE FROM %s WHERE createdDatetime <= \"%s\";";
+            String getString = "SELECT * FROM %s WHERE createdDatetime <= '%s';";
+            String deleteString = "DELETE FROM %s WHERE createdDatetime <= '%s';";
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -192,7 +192,7 @@ public class PerformanceLogHandler {
 
         // Connection connection = null;
         String queryString = "SELECT SUM(isHit)/COUNT(*) AS hitrate" +
-                "FROM %s WHERE itemId = \"%s\" AND createdDatetime >= \"%s\";";
+                "FROM %s WHERE itemId = '%s' AND createdDatetime >= '%s';";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -236,7 +236,7 @@ public class PerformanceLogHandler {
         // Connection connection = null;
         String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
                 "cost,identifier,hashKey,createdDatetime,isDelayed) " +
-                "VALUES(\"%s\", \"%s\", %d, %f, %f, \"%s\", \"%s\", datetime('now'), %d);";
+                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d);";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -297,8 +297,8 @@ public class PerformanceLogHandler {
 
     public static double getLastRetrievalTime(String csId){
         // Connection connection = null;
-        String queryString = "SELECT response_time" +
-                "FROM coass_performance WHERE status = \"200\" AND identifier = \"%s\" ORDER BY id DESC LIMIT 1;";
+        String queryString = "SELECT TOP 1 response_time" +
+                "FROM coass_performance WHERE status = '200' AND identifier = '%s' ORDER BY id DESC;";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -344,39 +344,63 @@ public class PerformanceLogHandler {
         return 0;
     }
 
+    private static void getPerfDBConnection() throws SQLException {
+        String connectionString = "jdbc:sqlserver://localhost;database=AdventureWorks;integratedSecurity=true;" +
+                "user=sa;password=coaas@PerfDB2k22";
+        connection = DriverManager.getConnection(connectionString);
+    }
+
+    private static Boolean checkForDB(Statement statement) throws SQLException {
+        ResultSet rs = statement.executeQuery("SELECT * FROM sys.databases WHERE name = 'coassPerformance'");
+        if(!rs.next())
+            return false;
+        return true;
+    }
+
     // Creating the tables at the start
     public static void seed_performance_db(){
         try{
-            connection = DriverManager.getConnection("jdbc:sqlite::memory:");
-
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
-            statement.executeUpdate("CREATE TABLE csms_performance(" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "method TEXT NOT NULL, " +
-                    "status TEXT NOT NULL, " +
-                    "response_time BIGINT NOT NULL, " +
-                    "createdDatetime DATETIME NOT NULL)");
+            if(!checkForDB(statement)){
+                statement.execute("CREATE DATABASE coassPerformance;");
+                statement.execute("USE coassPerformance;");
 
-            statement.executeUpdate("CREATE TABLE coass_performance(" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "method TEXT NOT NULL, " +
-                    "status TEXT NOT NULL, " +
-                    "response_time BIGINT NOT NULL, " +
-                    "earning REAL NULL, cost REAL NULL, " +
-                    "identifier TEXT NOT NULL, " +
-                    "hashKey TEXT NULL, " +
-                    "createdDatetime DATETIME NOT NULL, " +
-                    "isDelayed BOOLEAN NOT NULL)");
+                statement.execute(
+                        "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +
+                        "CREATE TABLE csms_performance(\n" +
+                        "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                        "    method VARCHAR NOT NULL,\n" +
+                        "    status VARCHAR NOT NULL,\n" +
+                        "    response_time BIGINT NOT NULL,\n" +
+                        "    createdDatetime DATETIME NOT NULL)\n" +
+                        "GO");
 
-            for(LogicalContextLevel level : LogicalContextLevel.values()){
-                statement.executeUpdate(String.format("CREATE TABLE %s (" +
-                        "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                        "itemId TEXT NOT NULL, " +
-                        "isHit BOOLEAN NOT NULL, " +
-                        "response_time BIGINT NOT NULL, " +
-                        "createdDatetime DATETIME NOT NULL)", level.toString().toLowerCase()));
+                statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='coass_performance')\n" +
+                        "CREATE TABLE coass_performance(\n" +
+                        "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                        "    method VARCHAR NOT NULL,\n" +
+                        "    status VARCHAR NOT NULL,\n" +
+                        "    response_time BIGINT NOT NULL,\n" +
+                        "    earning REAL NULL,\n" +
+                        "    cost REAL NULL,\n" +
+                        "    identifier VARCHAR NOT NULL,\n" +
+                        "    hashKey VARCHAR NULL,\n" +
+                        "    createdDatetime DATETIME NOT NULL,\n" +
+                        "    isDelayed BIT NOT NULL)\n" +
+                        "GO");
+
+                for(LogicalContextLevel level : LogicalContextLevel.values()){
+                    statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +
+                            "CREATE TABLE %s(\n" +
+                            "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                            "    itemId VARCHAR NOT NULL,\n" +
+                            "    isHit BIT NOT NULL,\n" +
+                            "    response_time BIGINT NOT NULL,\n" +
+                            "    createdDatetime DATETIME NOT NULL)\n" +
+                            "GO", level.toString().toLowerCase(), level.toString().toLowerCase()));
+                }
             }
         }
         catch(SQLException ex){

@@ -707,7 +707,7 @@ public class PullBasedExecutor {
                 for(Object k : candidate_keys)
                     keys = keys.isEmpty() ? keys : keys + "," + k.toString();
 
-                final CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
+                CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").toString())
                         .setCheckFresh(true)

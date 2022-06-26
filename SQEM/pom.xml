@@ -98,5 +98,10 @@
             <version>2.3.2</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>10.2.1.jre11</version>
+        </dependency>
     </dependencies>
 </project>

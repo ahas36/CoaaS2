@@ -48,24 +48,9 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-//        finally
-//        {
-//            try
-//            {
-//                if(connection != null){
-//                    connection.commit();
-//                    connection.close();
-//                }
-//            }
-//            catch(SQLException e)
-//            {
-//                log.severe(e.getMessage());
-//            }
-//        }
     }
 
     public static void genericRecord(String method, String status, long rTime) {
-
         // Connection connection = null;
         String queryString = "INSERT INTO csms_performance(method,status,response_time,createdDatetime) "
                 + "VALUES('%s', '%s', %d, GETDATE());";
@@ -80,20 +65,6 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-//        finally
-//        {
-//            try
-//            {
-//                if(connection != null){
-//                    connection.commit();
-//                    connection.close();
-//                }
-//            }
-//            catch(SQLException e)
-//            {
-//                log.severe(e.getMessage());
-//            }
-//        }
     }
 
     // Clears older records earlier than the current window from the in-memory database
@@ -170,21 +141,6 @@ public class PerformanceLogHandler {
         catch(Exception ex){
             log.severe(ex.getMessage());
         }
-//        finally
-//        {
-//            try
-//            {
-//                if(connection != null){
-//                    connection.commit();
-//                    connection.close();
-//                }
-//            }
-//            catch(SQLException e)
-//            {
-//                // Failed to close connection.
-//                log.severe(e.getMessage());
-//            }
-//        }
     }
 
     // Returns the current hit rate of a context item
@@ -210,21 +166,6 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-//        finally
-//        {
-//            try
-//            {
-//                if(connection != null){
-//                    connection.commit();
-//                    connection.close();
-//                }
-//            }
-//            catch(SQLException e)
-//            {
-//                // Failed to close connection.
-//                log.severe(e.getMessage());
-//            }
-//        }
 
         // Returns HR = 0 since there are no performance records
         return 0;
@@ -277,24 +218,9 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-//        finally
-//        {
-//            try
-//            {
-//                if(connection != null){
-//                    connection.commit();
-//                    connection.close();
-//                }
-//            }
-//            catch(SQLException e)
-//            {
-//                log.severe(e.getMessage());
-//            }
-//        }
     }
 
     // Context Service Performance for retrievals
-
     public static double getLastRetrievalTime(String csId){
         // Connection connection = null;
         String queryString = "SELECT TOP 1 response_time" +
@@ -323,21 +249,6 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-//        finally
-//        {
-//            try
-//            {
-//                if(connection != null){
-//                    connection.commit();
-//                    connection.close();
-//                }
-//            }
-//            catch(SQLException e)
-//            {
-//                // Failed to close connection.
-//                log.severe(e.getMessage());
-//            }
-//        }
 
         // We can ignore the retrieval latency of context services which has retrievals earlier than a window size.
         // That is because, as the lifetime grows larger in value, network latency can be ignored.
@@ -345,8 +256,8 @@ public class PerformanceLogHandler {
     }
 
     private static void getPerfDBConnection() throws SQLException {
-        String connectionString = "jdbc:sqlserver://localhost;database=AdventureWorks;integratedSecurity=true;" +
-                "user=sa;password=coaas@PerfDB2k22";
+        String connectionString = "jdbc:sqlserver://localhost:1433;database=coassPerformance;" +
+                "user=sa;password=coaas@PerfDB2k22;encrypt=true;trustServerCertificate=true";
         connection = DriverManager.getConnection(connectionString);
     }
 
@@ -360,66 +271,50 @@ public class PerformanceLogHandler {
     // Creating the tables at the start
     public static void seed_performance_db(){
         try{
+            getPerfDBConnection();
+
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
-            if(!checkForDB(statement)){
-                statement.execute("CREATE DATABASE coassPerformance;");
-                statement.execute("USE coassPerformance;");
+            // Create the database tables if not existing
+            statement.execute(
+                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +
+                    "CREATE TABLE csms_performance(\n" +
+                    "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                    "    method VARCHAR NOT NULL,\n" +
+                    "    status VARCHAR NOT NULL,\n" +
+                    "    response_time BIGINT NOT NULL,\n" +
+                    "    createdDatetime DATETIME NOT NULL)\n" +
+                    "GO");
 
-                statement.execute(
-                        "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +
-                        "CREATE TABLE csms_performance(\n" +
+            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='coass_performance')\n" +
+                    "CREATE TABLE coass_performance(\n" +
+                    "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                    "    method VARCHAR NOT NULL,\n" +
+                    "    status VARCHAR NOT NULL,\n" +
+                    "    response_time BIGINT NOT NULL,\n" +
+                    "    earning REAL NULL,\n" +
+                    "    cost REAL NULL,\n" +
+                    "    identifier VARCHAR NOT NULL,\n" +
+                    "    hashKey VARCHAR NULL,\n" +
+                    "    createdDatetime DATETIME NOT NULL,\n" +
+                    "    isDelayed BIT NOT NULL)\n" +
+                    "GO");
+
+            for(LogicalContextLevel level : LogicalContextLevel.values()){
+                statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +
+                        "CREATE TABLE %s(\n" +
                         "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                        "    method VARCHAR NOT NULL,\n" +
-                        "    status VARCHAR NOT NULL,\n" +
+                        "    itemId VARCHAR NOT NULL,\n" +
+                        "    isHit BIT NOT NULL,\n" +
                         "    response_time BIGINT NOT NULL,\n" +
                         "    createdDatetime DATETIME NOT NULL)\n" +
-                        "GO");
-
-                statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='coass_performance')\n" +
-                        "CREATE TABLE coass_performance(\n" +
-                        "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                        "    method VARCHAR NOT NULL,\n" +
-                        "    status VARCHAR NOT NULL,\n" +
-                        "    response_time BIGINT NOT NULL,\n" +
-                        "    earning REAL NULL,\n" +
-                        "    cost REAL NULL,\n" +
-                        "    identifier VARCHAR NOT NULL,\n" +
-                        "    hashKey VARCHAR NULL,\n" +
-                        "    createdDatetime DATETIME NOT NULL,\n" +
-                        "    isDelayed BIT NOT NULL)\n" +
-                        "GO");
-
-                for(LogicalContextLevel level : LogicalContextLevel.values()){
-                    statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +
-                            "CREATE TABLE %s(\n" +
-                            "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                            "    itemId VARCHAR NOT NULL,\n" +
-                            "    isHit BIT NOT NULL,\n" +
-                            "    response_time BIGINT NOT NULL,\n" +
-                            "    createdDatetime DATETIME NOT NULL)\n" +
-                            "GO", level.toString().toLowerCase(), level.toString().toLowerCase()));
-                }
+                        "GO", level.toString().toLowerCase(), level.toString().toLowerCase()));
             }
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-//        finally
-//        {
-//            try
-//            {
-//                if(connection != null){
-//                    connection.commit();
-//                    connection.close();
-//                }
-//            }
-//            catch(SQLException e)
-//            {
-//                log.severe(e.getMessage());
-//            }
-//        }
     }
 
     // Summarizes the performance data of the last window and stores in the logs.
@@ -458,7 +353,7 @@ public class PerformanceLogHandler {
 
             // Overall COASS performance
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
-                    "count(id) AS cnt, avg(response_time) AS average, sum(earning) AS tearn, sum(cost) AS tcost, sum(isDelayed) AS tdelay " +
+                    "count(id) AS cnt, avg(response_time) AS average, sum(earning) AS tearn, sum(cost) AS tcost, sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
                     "FROM coass_performance " +
                     "GROUP BY method, status;");
 

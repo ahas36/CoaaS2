@@ -35,7 +35,7 @@ public class PerformanceLogHandler {
     public static void insertRecord(LogicalContextLevel level, String id, Boolean isHit, long rTime) {
 
         // Connection connection = null;
-        String queryString = "INSERT INTO %s(itemId,iHit,response_time,createdDatetime) VALUES(\"%s\", %d, %d, datetime('now'));";
+        String queryString = "INSERT INTO %s(itemId,isHit,response_time,createdDatetime) VALUES(\"%s\", %d, %d, datetime('now'));";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -192,7 +192,7 @@ public class PerformanceLogHandler {
 
         // Connection connection = null;
         String queryString = "SELECT SUM(isHit)/COUNT(*) AS hitrate" +
-                "FROM %s WHERE itemId = %s AND createdDatetime >= %s;";
+                "FROM %s WHERE itemId = \"%s\" AND createdDatetime >= \"%s\";";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -298,15 +298,17 @@ public class PerformanceLogHandler {
     public static double getLastRetrievalTime(String csId){
         // Connection connection = null;
         String queryString = "SELECT response_time" +
-                "FROM coass_performance WHERE status = \"200\" AND identifier = %s ORDER BY id DESC LIMIT 1;";
+                "FROM coass_performance WHERE status = \"200\" AND identifier = \"%s\" ORDER BY id DESC LIMIT 1;";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
+            csId = csId.startsWith("{") ? (new JSONObject(csId)).getString("$oid") : csId;
+            String finalString = String.format(queryString,csId);
 
-            ResultSet rs = statement.executeQuery(String.format(queryString,csId));
+            ResultSet rs = statement.executeQuery(finalString);
 
             if(!rs.next()) {
                 SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead");

@@ -1,9 +1,9 @@
 import json
 
-"""Takes all the places and calculate the following distributions:
-1) Total Number of crowd (or context queries)
-1) Total crowd (or context queries) by day
-2) Total crowd (or context queries) by day per location"""
+# Takes all the places and calculate the following distributions:
+# 1) Total Number of crowd (or context queries)
+# 2) Total crowd (or context queries) by day
+# 3) Total crowd (or context queries) by day per location
 
 with open('/datasets/places.json', 'r') as f:
     data = json.load(f)

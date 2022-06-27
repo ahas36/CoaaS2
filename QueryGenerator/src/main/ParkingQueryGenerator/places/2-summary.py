@@ -1,8 +1,8 @@
 
 import json
 
-"""For each main categories of commuters, this script creates the distribution of 
-commuters to each location"""
+# For each main categories of commuters, this script creates the distribution of 
+# commuters to each location
 
 with open('/datasets/place_busy.json') as f:
     data = json.load(f)

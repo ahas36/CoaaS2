@@ -165,7 +165,7 @@ public class FetchManager {
 
     private static Object evaluateExpression(String expression){
         try {
-            if(expression.startsWith("{") || expression.startsWith("[")){
+            if(expression != null && (expression.startsWith("{") || expression.startsWith("["))){
                 JsonParser parse = new JsonParser();
                 return parse.parse(expression);
             }

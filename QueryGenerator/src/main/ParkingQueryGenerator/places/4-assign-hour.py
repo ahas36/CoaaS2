@@ -2,7 +2,7 @@ import json
 import pymongo
 import random
 
-"""Assigns execution time, expected time at place, rating, price, distnace from parking paramters to query template"""
+# Assigns execution time, expected time at place, rating, price, distnace from parking paramters to query template
 
 days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
 f = open('place_busy.json')

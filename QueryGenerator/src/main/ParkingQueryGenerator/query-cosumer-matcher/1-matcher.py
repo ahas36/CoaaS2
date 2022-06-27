@@ -3,7 +3,7 @@ from queue import Empty
 import pymongo
 import random
 
-"""This matches for daily commuters who arrive at the same location at relativey the same time"""
+#This matches for daily commuters who arrive at the same location at relativey the same time
 
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 mydb = myclient["acoca-experiments"]
@@ -26,7 +26,9 @@ print('Number of cars to assign: '+ str(cars.count()))
 count = 0
 
 for car in cars:
-    """One of the cars here"""
+    # One of the cars here
+    # Retrieve a random context query executable on Monday
+    # The condition selects a query exectable duing the peak traffic hours.
     monday_query = list(query_col.aggregate([
         { "$match": { 
             "vin": { "$exists": False },
@@ -45,6 +47,8 @@ for car in cars:
     assignedCar = { "$set": { "vin": car['vin'] } }
     query_col.update_one(mon, assignedCar)
 
+    # For each of the other days in the week, given the vehcile is assigned to query execting on Monday
+    # the queries selected for each other day is picked based on similarity to the assigned query on Monday.
     for day in days:
         new_hour = hour
         new_minute = minute + random.randrange(-15,15)

@@ -14,7 +14,8 @@ from configuration import CarParkConfiguration
 # Generates a standard normal distribution that is guranteed no-skew.
 # Config Value: random
 class RandomDistribution(object):
-      
+    
+    # Produces the distribution
     def create_dist(self, configuration):
         occupancy = []
         final = []

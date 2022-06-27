@@ -3,6 +3,10 @@ from queue import Empty
 import pymongo
 import random
 
+# This script is useful during development or improvement to the
+# Context Qquery Generator to revert any generated context queries 
+# stored in the Context Query Repository.
+
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 mydb = myclient["acoca-experiments"]
 

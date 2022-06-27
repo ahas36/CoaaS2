@@ -1,7 +1,7 @@
 import json
 import pymongo
 
-"""Day and Location Matching"""
+# Day and Location Matching to the context query
 
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 mydb = myclient["acoca-experiments"]

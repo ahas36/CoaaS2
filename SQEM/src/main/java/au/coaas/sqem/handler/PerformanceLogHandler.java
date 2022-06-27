@@ -486,6 +486,7 @@ public class PerformanceLogHandler {
                     else {
                         res_3.put(rs_3.getString("itemId"), new BasicDBObject(){{
                             put(isHit?"hits":"misses", curr_value);
+                            put("hitrate", isHit? 1.0 : 0.0);
                             put("id", rs_3.getString("itemId"));
                         }});
                     }
@@ -494,7 +495,8 @@ public class PerformanceLogHandler {
                 HashMap<String, Object> res_lvl = new HashMap<>();
 
                 res_lvl.put("items", res_3.values());
-                res_lvl.put("hitrate", (acc_hits + acc_misses) > 0 ? acc_hits/(acc_hits + acc_misses) : 0);
+                double hitrate = (acc_hits + acc_misses) > 0 ? Double.valueOf(acc_hits)/(acc_hits + acc_misses) : 0;
+                res_lvl.put("hitrate", hitrate);
                 res_lvl.put("hit_response_time", acc_hits > 0 ? res_avg_hit/acc_hits : 0);
                 res_lvl.put("miss_response_time", acc_misses > 0 ? res_avg_miss/acc_misses : 0);
                 level_res.put(lvl.toString().toLowerCase(), new BasicDBObject(res_lvl));

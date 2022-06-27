@@ -2,7 +2,7 @@ import json
 import random
 import pymongo
 
-"""Matches a context consumer with a place and target location"""
+# Matches a context consumer with a place and target location
 
 with open('/datasets/categories.json') as f:
     categories = json.load(f)

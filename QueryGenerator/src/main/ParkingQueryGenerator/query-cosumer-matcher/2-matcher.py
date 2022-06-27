@@ -1,7 +1,7 @@
 import pymongo
 import random
 
-"""This matches for daily commuters who arrive at the same location but at different times of the day"""
+# This matches for daily commuters who arrive at the same location but at different times of the day
 
 myclient = pymongo.MongoClient("mongodb://localhost:27017/")
 mydb = myclient["acoca-experiments"]

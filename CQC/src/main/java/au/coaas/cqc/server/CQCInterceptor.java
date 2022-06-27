@@ -55,8 +55,8 @@ public class CQCInterceptor implements ServerInterceptor {
                             earning = res.getAdmin().getPrice();
                     }
 
-                    SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
-                            = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                    SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                            = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
                     sqemStub.logPerformanceData (Statistic.newBuilder()
                             .setMethod(method).setTime(responseTime)
                             .setStatus(res.getStatus()).setIdentifier(res.getQueryId())

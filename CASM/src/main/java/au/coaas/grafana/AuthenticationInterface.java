@@ -84,8 +84,8 @@ public class AuthenticationInterface {
                 .withPayload(payload)
                 .sign(algorithm);
 
-        SQEMServiceGrpc.SQEMServiceFutureStub stub
-                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        SQEMServiceGrpc.SQEMServiceBlockingStub stub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
         stub.saveOrUpdateToken(AuthToken.newBuilder()
                 .setUsername(conObj.getJSONObject("info").getString("username"))
                 .setToken(token).build());

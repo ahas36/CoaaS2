@@ -35,11 +35,8 @@ public class ContextCacheHandler {
             String hashKey = String.valueOf(registry.updateRegistry(registerRequest.getReference()));
 
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-
             Document entityJson =  Document.parse(registerRequest.getJson());
-
             RBucket<Document> ent = cacheClient.getBucket(hashKey);
-
             ent.set (entityJson);
 
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
@@ -142,13 +139,10 @@ public class ContextCacheHandler {
                 RLock lock = rwLock.readLock();
 
                 RBucket<Document> ent = cacheClient.getBucket(result.getHashkey());
-                RFuture<Document> entityContext = ent.getAsync();
+                Document entityContext = ent.get();
+                lock.unlockAsync();
 
-                entityContext.whenCompleteAsync((res, exception) -> {
-                    lock.unlockAsync();
-                });
-
-                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.getNow().toJson())
+                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.toJson())
                         .setHashKey(result.getHashkey()).build();
             }
             catch(Exception ex){
@@ -186,14 +180,11 @@ public class ContextCacheHandler {
             RLock lock = rwLock.readLock();
 
             RMap<String, Object> map = cacheClient.getMap("perf_stats");
-            RFuture<Object> stat = map.getAsync(statKey);
-
-            stat.whenCompleteAsync((res, exception) -> {
-                lock.unlockAsync();
-            });
+            Object stat = map.get(statKey);
+            lock.unlockAsync();
 
             return SQEMResponse.newBuilder()
-                    .setStatus("200").setBody((String) stat.getNow())
+                    .setStatus("200").setBody(stat.toString())
                     .build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder()

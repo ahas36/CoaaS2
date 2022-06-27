@@ -101,24 +101,6 @@ public class PullBasedExecutor {
         // The first loop goes over dependent sets of entities
         Collection<ListOfString> aList = query.getExecutionPlanMap().values();
 
-        /*
-        ArrayList<ListOfString> bList = new ArrayList<>();
-        ListOfString lastElement = null;
-        for (ListOfString element : aList) {
-            lastElement = element;
-        }
-        bList.add(lastElement);
-
-        ce.put("consumerCars", new JSONObject("{\"time_stamp\":\"2022-06-0318:29:31\"," +
-                "\"vin\":\"C335DBB3B31248F986B99CBBBAE1E064\",\"plateNumber\":\"UMB-BHAO\"," +
-                "\"specifications\":{\"make\":\"alfa-romero\",\"type\":\"convertible\"}," +
-                "\"height\":{\"value\":1.67,\"unitText\":\"m\"},\"width\":{\"value\":1.63,\"unitText\":\"m\"}," +
-                "\"length\":{\"value\":4.45,\"unitText\":\"m\"},\"unit\":{\"value\":\"m\",\"unitText\":\"m\"}," +
-                "\"wheelBase\":{\"value\":88.6,\"unitText\":\"m\"},\"performance\":{\"value\":49.39515," +
-                "\"unitText\":\"litersperkilometer\"},\"location\":{\"latitude\":-37.80411643534407," +
-                "\"longitude\":144.9783143972314},\"speed\":{\"value\":60,\"unitText\":\"kmph\"}}"));
-        */
-
         // Replace with bList for Testing
         for (ListOfString entityList : aList) {
             // Second loop iterates over the entities in the dependent set
@@ -220,9 +202,12 @@ public class PullBasedExecutor {
                 if (errorDetected) {
                     break;
                 }
+
+                // TODO:
                 // The context query executes as a collection of context-requests. That is why service discovery and executing happen per entity over a loop.
                 // Not the loop here isn't parallelized either. Now consider, multiple parallel context queries, trying to access the same context. Discovering and executing is not efficient at all.
 
+                // This is
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
 
                 if (contextService != null) {
@@ -723,8 +708,8 @@ public class PullBasedExecutor {
 
                     switch(data.getStatus()){
                         case "400": {
-                            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
                             asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                                     .setReference(lookup)
                                     .setJson(retEntity).build());
@@ -733,8 +718,8 @@ public class PullBasedExecutor {
                         case "404": {
                             // Trigger Selective Caching Evaluation (Implement to run in a separate thread)
                             // In Phase 1, "Cache All policy is used if allowed in the SLA"
-                            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                             asyncStub.cacheEntity(CacheRequest.newBuilder()
                                     .setJson(retEntity)
@@ -808,8 +793,8 @@ public class PullBasedExecutor {
         CSIResponse fetch = csiStub.fetch(fetchRequest.build());
 
         long endTime = System.currentTimeMillis();
-        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
         asyncStub.logPerformanceData(Statistic.newBuilder()
                 .setMethod("executeFetch").setStatus(fetch.getStatus())
                 .setTime(endTime-startTime).setCs(fetchRequest).setEarning(0)

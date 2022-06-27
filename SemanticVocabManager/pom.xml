@@ -95,13 +95,13 @@
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongo-java-driver</artifactId>
-            <version>3.11.2</version>
+            <version>3.11.3</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.mongodb</groupId>
             <artifactId>mongo-java-driver</artifactId>
-            <version>3.11.2</version>
+            <version>3.11.3</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

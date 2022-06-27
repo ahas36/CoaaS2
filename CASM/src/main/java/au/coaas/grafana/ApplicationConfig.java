@@ -34,5 +34,7 @@ public class ApplicationConfig extends Application {
         resources.add(SubscriptionInterface.class);
         resources.add(GrafanaInterface.class);
         resources.add(LogInterface.class);
+        resources.add(ConsumerInterface.class);
+        resources.add(StatisticsInterface.class);
     }
 }

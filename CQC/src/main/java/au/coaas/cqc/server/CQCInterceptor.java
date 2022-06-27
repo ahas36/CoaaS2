@@ -31,7 +31,7 @@ public class CQCInterceptor implements ServerInterceptor {
                 super.sendMessage(message);
                 long endTime = System.currentTimeMillis();
                 logMessage(RESPONSE,
-                        methodDescriptor.getFullMethodName().replace("au.coaas.sqem.proto.CQCService/",""),
+                        methodDescriptor.getFullMethodName().replace("au.coaas.cqc.proto.CQCService/",""),
                         message, endTime - startTime);
             }
 

@@ -14,9 +14,8 @@ public class StatisticsAction implements Job {
     @Override
     public void execute(JobExecutionContext jobExecutionContext){
         try {
-            PerformanceLogHandler.clearOldRecords(60);
             PerformanceLogHandler.summarize();
-
+            PerformanceLogHandler.clearOldRecords(60);
         }catch (Exception e){
             log.info(e.getMessage());
             e.printStackTrace();

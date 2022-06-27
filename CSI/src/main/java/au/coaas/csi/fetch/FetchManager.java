@@ -188,10 +188,12 @@ public class FetchManager {
             String pram = matcher.group(0).trim();
             Object attributeValue = getAttributeValue(res,pram);
             if(attributeValue instanceof String){
-                expression = expression.replaceAll(pram,"\""+attributeValue.toString()+"\"");
+                expression = expression.replaceAll(pram,"\""+attributeValue != null ?
+                        attributeValue.toString() : null+"\"");
             }
             else {
-                expression = expression.replaceAll(pram,attributeValue.toString());
+                expression = expression.replaceAll(pram,attributeValue != null ?
+                        attributeValue.toString() : null);
             }
         }
         // return expression;

@@ -16,6 +16,7 @@ import org.json.JSONObject;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import java.util.*;
 import java.util.logging.Logger;
@@ -80,13 +81,15 @@ public class PerformanceLogHandler {
         });
     }
 
+    private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+
     private static void removeAndPersistRecord(String level, int duration) {
         // Connection connection = null;
         level = level.toLowerCase();
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
-            String getString = "SELECT * FROM %s WHERE createdDatetime <= '%s';";
-            String deleteString = "DELETE FROM %s WHERE createdDatetime <= '%s';";
+            String getString = "SELECT * FROM %s WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
+            String deleteString = "DELETE FROM %s WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
 
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -98,11 +101,9 @@ public class PerformanceLogHandler {
 //            }
 
             LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
-            String qStr = String.format(getString, level, windowThresh);
-            ResultSet rs = statement.executeQuery(qStr);
+            String forwT = windowThresh.format(formatter);
 
-            statement.executeUpdate(String.format(deleteString,
-                    level, windowThresh));
+            ResultSet rs = statement.executeQuery(String.format(getString, level, forwT));
 
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");
@@ -135,6 +136,8 @@ public class PerformanceLogHandler {
                 persRecords.add(records);
             }
 
+            statement.executeUpdate(String.format(deleteString, level, forwT));
+
             if(persRecords.size() > 0)
                 collection.insertMany(persRecords);
         }
@@ -148,7 +151,7 @@ public class PerformanceLogHandler {
 
         // Connection connection = null;
         String queryString = "SELECT SUM(isHit)/COUNT(*) AS hitrate" +
-                "FROM %s WHERE itemId = '%s' AND createdDatetime >= '%s';";
+                "FROM %s WHERE itemId = '%s' AND createdDatetime >= CAST('%s' AS DATETIME2);";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -157,8 +160,10 @@ public class PerformanceLogHandler {
             statement.setQueryTimeout(30);
 
             LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
+            String forwT = windowThresh.format(formatter);
+
             ResultSet rs = statement.executeQuery(String.format(queryString,
-                    level.toString().toLowerCase(), id, windowThresh.toString()));
+                    level.toString().toLowerCase(), id, forwT));
 
             // Returns the actual hit rate as recorded
             return rs.getDouble("hitrate");
@@ -189,9 +194,16 @@ public class PerformanceLogHandler {
             switch(method){
                 case "execute" :{
                     // Value at the Identifier column here is the Query ID
-                    statement.executeUpdate(String.format(queryString, method, request.getStatus(), request.getTime(),
-                            request.getEarning(), request.getCost(),
-                            request.getIdentifier(), "NULL", request.getIsDelayed()));
+                    String formatted_string = String.format(queryString,
+                            method, // Method name
+                            request.getStatus(), // Status of the request
+                            request.getTime(), // Response time
+                            request.getEarning(), // Earnings from the query
+                            request.getCost(), // Cost from query
+                            request.getIdentifier(), // Context Service Identifier
+                            "NULL", // Hashkey of the cached item
+                            request.getIsDelayed() ? 1 : 0);// is Delayed?
+                    statement.executeUpdate(formatted_string);
                     break;
                 }
                 case "executeFetch": {
@@ -223,7 +235,7 @@ public class PerformanceLogHandler {
     // Context Service Performance for retrievals
     public static double getLastRetrievalTime(String csId){
         // Connection connection = null;
-        String queryString = "SELECT TOP 1 response_time" +
+        String queryString = "SELECT TOP 1 response_time " +
                 "FROM coass_performance WHERE status = '200' AND identifier = '%s' ORDER BY id DESC;";
 
         try{
@@ -281,35 +293,33 @@ public class PerformanceLogHandler {
                     "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +
                     "CREATE TABLE csms_performance(\n" +
                     "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                    "    method VARCHAR NOT NULL,\n" +
-                    "    status VARCHAR NOT NULL,\n" +
+                    "    method VARCHAR(255) NOT NULL,\n" +
+                    "    status VARCHAR(5) NOT NULL,\n" +
                     "    response_time BIGINT NOT NULL,\n" +
-                    "    createdDatetime DATETIME NOT NULL)\n" +
-                    "GO");
+                    "    createdDatetime DATETIME NOT NULL)");
 
             statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='coass_performance')\n" +
                     "CREATE TABLE coass_performance(\n" +
                     "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                    "    method VARCHAR NOT NULL,\n" +
-                    "    status VARCHAR NOT NULL,\n" +
+                    "    method VARCHAR(255) NOT NULL,\n" +
+                    "    status VARCHAR(5) NOT NULL,\n" +
                     "    response_time BIGINT NOT NULL,\n" +
                     "    earning REAL NULL,\n" +
                     "    cost REAL NULL,\n" +
                     "    identifier VARCHAR NOT NULL,\n" +
                     "    hashKey VARCHAR NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL,\n" +
-                    "    isDelayed BIT NOT NULL)\n" +
-                    "GO");
+                    "    isDelayed BIT NOT NULL)");
 
             for(LogicalContextLevel level : LogicalContextLevel.values()){
                 statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +
                         "CREATE TABLE %s(\n" +
                         "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                        "    itemId VARCHAR NOT NULL,\n" +
+                        "    itemId VARCHAR(255) NOT NULL,\n" +
                         "    isHit BIT NOT NULL,\n" +
                         "    response_time BIGINT NOT NULL,\n" +
-                        "    createdDatetime DATETIME NOT NULL)\n" +
-                        "GO", level.toString().toLowerCase(), level.toString().toLowerCase()));
+                        "    createdDatetime DATETIME NOT NULL)",
+                        level.toString().toLowerCase(), level.toString().toLowerCase()));
             }
         }
         catch(SQLException ex){
@@ -353,7 +363,8 @@ public class PerformanceLogHandler {
 
             // Overall COASS performance
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
-                    "count(id) AS cnt, avg(response_time) AS average, sum(earning) AS tearn, sum(cost) AS tcost, sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
+                    "count(id) AS cnt, avg(response_time) AS average, sum(earning) AS tearn, sum(cost) AS tcost, " +
+                    "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
                     "FROM coass_performance " +
                     "GROUP BY method, status;");
 
@@ -374,7 +385,7 @@ public class PerformanceLogHandler {
                 String method = rs_2.getString("method");
                 String status = rs_2.getString("status");
 
-                if(method == "execute"){
+                if(method.equals("execute")){
                     totalQueries += rs_2.getLong("cnt");
                     queryOverhead += (rs_2.getLong("average")*rs_2.getLong("cnt"));
                     delayedResponses += rs_2.getLong("tdelay");
@@ -384,7 +395,7 @@ public class PerformanceLogHandler {
                         totalPenalties += rs_2.getDouble("tcost");
                     }
                 }
-                else if(method == "executeFetch"){
+                else if(method.equals("executeFetch")){
                     if(status.equals("200")){
                         totalRetrievals += rs_2.getLong("cnt");
                         totalRetrievalCost += rs_2.getDouble("tcost");

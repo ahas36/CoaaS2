@@ -1,0 +1,11 @@
+version: "3.6"
+services:
+  casm:
+    image: coaas/casm:latest
+    environment:
+      PAYARA_ARGS: "--debug"
+    ports:
+      - "8070:8080"
+      - "4848:4848"
+      - "8171:8181"
+      - "9009:9009"

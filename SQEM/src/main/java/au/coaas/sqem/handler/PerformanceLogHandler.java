@@ -181,8 +181,8 @@ public class PerformanceLogHandler {
 
         // Connection connection = null;
         String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
-                "cost,identifier,hashKey,createdDatetime,isDelayed) " +
-                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d);";
+                "cost,identifier,hashKey,createdDatetime,isDelayed,age) " +
+                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d);";
 
         try{
             // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
@@ -202,7 +202,8 @@ public class PerformanceLogHandler {
                             request.getCost(), // Cost from query
                             request.getIdentifier(), // Context Service Identifier
                             "NULL", // Hashkey of the cached item
-                            request.getIsDelayed() ? 1 : 0);// is Delayed?
+                            request.getIsDelayed() ? 1 : 0, // is Delayed?
+                            "NULL"); // age
                     statement.executeUpdate(formatted_string);
                     break;
                 }
@@ -221,7 +222,8 @@ public class PerformanceLogHandler {
                             request.getCost(), // Cost from query
                             cs_id, // Context Service Identifier
                             hashKey, // Hashkey of the cached item
-                            0); // is Delayed?
+                            0, // is Delayed?
+                            request.getAge()); //age
                     statement.executeUpdate(formatted_string);
                     break;
                 }
@@ -235,7 +237,7 @@ public class PerformanceLogHandler {
     // Context Service Performance for retrievals
     public static double getLastRetrievalTime(String csId){
         // Connection connection = null;
-        String queryString = "SELECT TOP 1 response_time " +
+        String queryString = "SELECT TOP 1 response_time, age " +
                 "FROM coass_performance WHERE status = '200' AND identifier = '%s' ORDER BY id DESC;";
 
         try{
@@ -256,7 +258,10 @@ public class PerformanceLogHandler {
                 return 0;
             }
 
-            return rs.getDouble("response_time");
+            double retrieval_latency = rs.getDouble("response_time");
+            long age = rs.getLong("response_time")*1000;
+
+            return retrieval_latency+age;
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -309,7 +314,8 @@ public class PerformanceLogHandler {
                     "    identifier VARCHAR NOT NULL,\n" +
                     "    hashKey VARCHAR NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL,\n" +
-                    "    isDelayed BIT NOT NULL)");
+                    "    isDelayed BIT NOT NULL," +
+                    "    age BIGINT)");
 
             for(LogicalContextLevel level : LogicalContextLevel.values()){
                 statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +

@@ -168,7 +168,8 @@ message Statistic {
     double earning = 5;
     double cost = 6;
     bool isDelayed = 7;
-    au.coaas.csi.proto.ContextServiceInvokerRequest cs = 8;
+    int64 age = 8;
+    au.coaas.csi.proto.ContextServiceInvokerRequest cs = 9;
 }
 
 service SQEMService {

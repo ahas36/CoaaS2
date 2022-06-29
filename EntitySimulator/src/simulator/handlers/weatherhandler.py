@@ -32,6 +32,8 @@ class WeatherHandler(metaclass=SingletonMeta):
         else:
             hour = str(hour)
 
+        age = time.second + (60*time.minute)
+
         curr_time = "2019{0}{1}T{2}00".format(month,date,hour)
         weather = self.__db.read_single('weather', {'timestamp':curr_time})
 
@@ -80,5 +82,9 @@ class WeatherHandler(metaclass=SingletonMeta):
                 'value':weather['Mean Sea Level Pressure ']['MSL'],
                 'unitText': 'hPa'
             },
-            'location':'Melbourne,Australia'
+            'location':'Melbourne,Australia',
+            'age': {
+                'value':age,
+                'unitText': 's'
+            }
         }, 200

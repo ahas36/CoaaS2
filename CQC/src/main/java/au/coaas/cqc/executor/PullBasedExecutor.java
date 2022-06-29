@@ -793,11 +793,30 @@ public class PullBasedExecutor {
         CSIResponse fetch = csiStub.fetch(fetchRequest.build());
 
         long endTime = System.currentTimeMillis();
+
+        long age = 0;
+        if(fetch.getStatus().equals("200")){
+            JSONObject response = new JSONObject(fetch.getBody());
+            if(response.has("age")){
+                JSONObject age_obj = response.getJSONObject("age");
+
+                String unit = age_obj.getString("unitText");
+                long value = age_obj.getLong("value");
+
+                // Age is always considered in seconds in the code
+                switch(unit){
+                    case "ms": age = value/1000; break;
+                    case "s": age = value; break;
+                    case "h": age = value*60; break;
+                }
+            }
+        }
+
         SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
         asyncStub.logPerformanceData(Statistic.newBuilder()
                 .setMethod("executeFetch").setStatus(fetch.getStatus())
-                .setTime(endTime-startTime).setCs(fetchRequest).setEarning(0)
+                .setTime(endTime-startTime).setCs(fetchRequest).setEarning(0).setAge(age)
                 .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
         // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
 

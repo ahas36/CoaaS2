@@ -9,15 +9,15 @@ import org.json.JSONObject;
 import java.time.LocalDateTime;
 
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class CacheDataRegistry{
     class ContextItem {
         private LocalDateTime createdTime;
         private LocalDateTime updatedTime;
-        ConcurrentHashMap<String, ContextItem> child;
+        HashMap<String, ContextItem> child;
 
         /*
         ContextItem(CacheLookUp lookup){
@@ -31,21 +31,26 @@ public final class CacheDataRegistry{
         ContextItem(CacheLookUp lookup, String hashKey){
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
-            this.child = new ConcurrentHashMap<>();
-            this.child.put(lookup.getServiceId(), new ContextItem(hashKey));
+            this.child = new HashMap<>();
+            String serId = lookup.getServiceId();
+            if(serId.startsWith("{")){
+                JSONObject obj = new JSONObject(serId);
+                serId = obj.getString("$oid");
+            }
+            this.child.put(serId, new ContextItem(hashKey));
         }
 
         ContextItem(Map<String,String> params){
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
-            this.child = new ConcurrentHashMap<>();
+            this.child = new HashMap<>();
             this.child.put(Utilty.getHashKey(params), new ContextItem());
         }
 
         ContextItem(String hashKey){
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
-            this.child = new ConcurrentHashMap<>();
+            this.child = new HashMap<>();
             this.child.put(hashKey, new ContextItem());
         }
 
@@ -56,10 +61,10 @@ public final class CacheDataRegistry{
     }
 
     private static CacheDataRegistry singleton = null;
-    private ConcurrentHashMap<String, ContextItem> root;
+    private HashMap<String, ContextItem> root;
 
     private CacheDataRegistry(){
-        this.root = new ConcurrentHashMap<>();
+        this.root = new HashMap<>();
     }
 
     public static CacheDataRegistry getInstance()
@@ -81,16 +86,24 @@ public final class CacheDataRegistry{
 
         if(this.root.containsKey(lookup.getEt().getType())){
             Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).child;
-            if(cs.containsKey(lookup.getServiceId())){
-                Map<String,ContextItem> entities = cs.get(lookup.getServiceId()).child;
+
+            String serId = lookup.getServiceId();
+            if(serId.startsWith("{")){
+                JSONObject obj = new JSONObject(serId);
+                serId = obj.getString("$oid");
+            }
+
+            if(cs.containsKey(serId)){
+                Map<String,ContextItem> entities = cs.get(serId).child;
 
                 hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                 if(entities.containsKey(hashKey.get())){
                     if(lookup.getCheckFresh()){
                         JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
-                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(lookup.getServiceId())/1000;
+                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId)/1000;
 
                         LocalDateTime expiryTime;
+                        LocalDateTime now = LocalDateTime.now();
                         switch(freshness.getString("unit")){
                             case "m": {
                                 Double residual_life = freshness.getLong("value")
@@ -107,7 +120,7 @@ public final class CacheDataRegistry{
                             default:
                                 Double residual_life = freshness.getLong("value")
                                         - ageLoss;
-                                Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
+                                Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
 
                                 LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
 
@@ -116,7 +129,7 @@ public final class CacheDataRegistry{
                                 break;
                         }
 
-                        if(LocalDateTime.now().isAfter(expiryTime)){
+                        if(now.isAfter(expiryTime)){
                             return res.setHashkey(hashKey.get())
                                     .setIsValid(false)
                                     .setIsCached(true)
@@ -151,37 +164,43 @@ public final class CacheDataRegistry{
             // Updating the last update time of the entity type
 
             this.root.compute(lookup.getEt().getType(), (k,v) -> {
-                v.updatedTime = LocalDateTime.now();
+                if(v != null){
+                    v.updatedTime = LocalDateTime.now();
 
-                // Updating the last update time of the context service
-                // Add a new context service if any available.
+                    // Updating the last update time of the context service
+                    // Add a new context service if any available.
 
-                if(v.child.containsKey(lookup.getServiceId())){
-                    v.child.compute(lookup.getServiceId(), (id,stat) -> {
-                        stat.updatedTime = LocalDateTime.now();
+                    String serId = lookup.getServiceId();
+                    if(serId.startsWith("{")){
+                        JSONObject obj = new JSONObject(serId);
+                        serId = obj.getString("$oid");
+                    }
 
-                        // Updating the last update time of the entity by hash key
-                        // Add a new entity by hash key if not available.
+                    if(v.child.containsKey(serId)){
+                        v.child.compute(serId, (id,stat) -> {
+                            if(stat != null){
+                                stat.updatedTime = LocalDateTime.now();
 
-                        hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-                        if(!stat.child.contains(hashKey.get())){
-                            stat.child.compute(hashKey.get(), (k1,v1) -> {
-                                v1.updatedTime = LocalDateTime.now();
-
-                                return v1;
-                            });
-                        }
-                        else {
-                            stat.child.put(hashKey.get(),new ContextItem());
-                        }
-
-                        return stat;
-                    });
+                                // Updating the last update time of the entity by hash key
+                                // Add a new entity by hash key if not available.
+                                hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
+                                if(!stat.child.containsKey(hashKey.get()))
+                                    stat.child.put(hashKey.get(),new ContextItem());
+                                else {
+                                    stat.child.compute(hashKey.get(), (k1,v1) -> {
+                                        if(v1!=null)
+                                            v1.updatedTime = LocalDateTime.now();
+                                        return v1;
+                                    });
+                                }
+                            }
+                            return stat;
+                        });
+                    }
+                    else {
+                        v.child.put(serId,new ContextItem(lookup.getParamsMap()));
+                    }
                 }
-                else {
-                    v.child.put(lookup.getServiceId(),new ContextItem(lookup.getParamsMap()));
-                }
-
                 return v;
             });
         }
@@ -198,19 +217,25 @@ public final class CacheDataRegistry{
         if(this.root.containsKey(lookup.getEt().getType())){
             this.root.compute(lookup.getEt().getType(), (k,v) -> {
 
-                if(v.child.containsKey(lookup.getServiceId())){
-                    v.child.compute(lookup.getServiceId(), (id,stat) -> {
+                String serId = lookup.getServiceId();
+                if(serId.startsWith("{")){
+                    JSONObject obj = new JSONObject(serId);
+                    serId = obj.getString("$oid");
+                }
+
+                if(v.child.containsKey(serId)){
+                    v.child.compute(serId, (id,stat) -> {
 
                         hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-                        if(stat.child.contains(hashKey)){
+                        if(stat.child.containsKey(hashKey)){
                             stat.child.remove(hashKey);
                         }
 
                         return stat;
                     });
 
-                    if(v.child.get(lookup.getServiceId()).child.isEmpty()){
-                        v.child.remove(lookup.getServiceId());
+                    if(v.child.get(serId).child.isEmpty()){
+                        v.child.remove(serId);
                     }
                 }
 

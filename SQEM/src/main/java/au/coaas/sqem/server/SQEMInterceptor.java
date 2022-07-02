@@ -2,6 +2,7 @@ package au.coaas.sqem.server;
 
 import au.coaas.sqem.handler.PerformanceLogHandler;
 import au.coaas.sqem.monitor.LogicalContextLevel;
+import au.coaas.sqem.proto.Empty;
 import au.coaas.sqem.proto.SQEMResponse;
 import io.grpc.*;
 
@@ -39,25 +40,28 @@ public class SQEMInterceptor implements ServerInterceptor {
     private <T> void logMessage(String type, String method, T message, long responseTime) {
         // Asynchronously update the performance logs
         try{
-            SQEMResponse res = (SQEMResponse) message;
-            switch(method){
-                case "handleContextRequest":
-                case "discoverMatchingServices":
-                case "refreshContextEntity": {
-                    // Log response time
-                    PerformanceLogHandler.genericRecord(method, res.getStatus(), responseTime);
-                    break;
+            if(!message.toString().equals("")){
+                SQEMResponse res = (SQEMResponse) message;
+                switch(method){
+                    case "handleContextRequest":
+                    case "discoverMatchingServices":
+                    case "refreshContextEntity": {
+                        // Log response time
+                        PerformanceLogHandler.genericRecord(method, res.getStatus(), responseTime);
+                        break;
+                    }
+                    case "handleContextRequestInCache": {
+                        // LogicalContextLevel level, String id, Boolean isHit, long rTime
+                        PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY, res.getHashKey(),
+                                res.getStatus().equals("200"), responseTime);
+                        break;
+                    }
+                    case "logPerformanceData": break;
+                    default:
+                        log(String.format("%s responded in %d ms.", method, responseTime));
+                        log(String.format("%s message : %s", type, message));
+                        break;
                 }
-                case "handleContextRequestInCache": {
-                    // LogicalContextLevel level, String id, Boolean isHit, long rTime
-                    PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY, res.getHashKey(),
-                            res.getStatus().equals("200"), responseTime);
-                    break;
-                }
-                default:
-                    log(String.format("%s responded in %d ms.", method, responseTime));
-                    log(String.format("%s message : %s", type, message));
-                    break;
             }
         }
         catch(Exception ex){

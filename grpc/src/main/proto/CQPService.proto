@@ -91,6 +91,14 @@ message FunctionCall {
     repeated string subItems = 3;
 }
 
+message FunctionHolder {
+    FunctionCall function = 1;
+
+    string operand = 2;
+
+    string value = 3;
+}
+
 message CDQLSelect {
     map<string, ListOfContextAttribute> selectAttrs = 1;
 

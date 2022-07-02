@@ -120,10 +120,17 @@ public class PullBasedExecutor {
                 while (rpnCondition.peek() != null) {
                     try {
                         CdqlConditionToken token = rpnCondition.poll();
-                        String attributeName = token.getStringValue();
-                        if (attributeName.equals("and") || attributeName.equals("or")) {
+                        if(token.getType().equals(CdqlConditionTokenType.Function)){
+                            // Skipping the conditional value
+                            rpnCondition.poll();
+                            // Skipping the operand
+                            rpnCondition.poll().getStringValue();
                             continue;
                         }
+                        String attributeName = token.getStringValue();
+                        if (attributeName.equals("and") || attributeName.equals("or"))
+                            continue;
+
                         // Take only the identifier of the context attribute
                         // e.g., e1.attr1 --> key = attr1
                         String key = attributeName.replace(entity.getEntityID() + ".", "");
@@ -207,7 +214,6 @@ public class PullBasedExecutor {
                 // The context query executes as a collection of context-requests. That is why service discovery and executing happen per entity over a loop.
                 // Not the loop here isn't parallelized either. Now consider, multiple parallel context queries, trying to access the same context. Discovering and executing is not efficient at all.
 
-                // This is
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
 
                 if (contextService != null) {
@@ -216,16 +222,29 @@ public class PullBasedExecutor {
 
                     String key = null;
                     String value = null;
+                    boolean isFunc = false;
+
                     HashMap<String,String> params = new HashMap();
+                    Queue<CdqlConditionToken> functions = new LinkedList<>();
+
                     for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
                         switch (cdqlConditionToken.getType()) {
                             case Constant:
                                 value = cdqlConditionToken.getStringValue();
+                                if(value.startsWith("{")){
+                                    JSONObject valObj = new JSONObject(value);
+                                    // TODO:
+                                    // Should modify the following to converted to the defined unit of the Consumer SLA
+                                    if(valObj.has("value"))
+                                        value = valObj.get("value").toString();
+                                }
+                                if(isFunc && key == null)
+                                    functions.add(cdqlConditionToken);
                                 if (key != null) {
                                     params.put(key,value);
                                     key = null;
-                                    value = null;
                                 }
+                                value = null;
                                 break;
                             case Attribute:
                                 key = cdqlConditionToken.getContextAttribute().getAttributeName();
@@ -235,13 +254,43 @@ public class PullBasedExecutor {
                                     value = null;
                                 }
                                 break;
+                            case Function:
+                                if(cdqlConditionToken.getFunctionCall().getFunctionName()
+                                        .toLowerCase().equals("now")){
+                                    if (key != null) {
+                                        value = java.time.LocalDateTime.now().toString();
+                                        params.put(key,value);
+                                        key = null;
+                                    }
+                                    value = null;
+                                }
+                                else {
+                                    functions.add(cdqlConditionToken);
+                                    isFunc = true;
+                                }
+                                break;
+                            case Operator:
+                                if(isFunc) {
+                                    functions.add(cdqlConditionToken);
+                                    isFunc = false;
+                                }
                             default:
                         }
                     }
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, authToken, contextService, params, criticality);
                     if(cacheResult != null){
-                        ce.put(entity.getEntityID(), new JSONObject((String) cacheResult.getKey()));
+                        JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
+                        ce.put(entity.getEntityID(),resultJson);
+
+                        if(!functions.isEmpty()){
+                            while(functions.peek() != null) {
+                                CdqlConditionToken token = functions.poll();
+                                String compValue = functions.poll().getStringValue();
+                                String operator = functions.poll().getStringValue();
+                                executeFunction(token.getFunctionCall(), ce, operator, compValue);
+                            }
+                        }
                         if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                     }
 
@@ -307,6 +356,94 @@ public class PullBasedExecutor {
                 .build();
 
         return cdqlResponse;
+    }
+
+    private static Object executeFunction(FunctionCall fCall, Map<String, JSONObject> ce, String operand, String value){
+        switch(fCall.getFunctionName().toLowerCase()){
+            case "distance":
+                String resultEntity = null;
+
+                String attribute = null;
+                JSONArray appliee = null;
+                JSONObject comparison = null;
+
+                JSONArray result = new JSONArray();
+
+                for(Operand op: fCall.getArgumentsList()){
+                    ContextAttribute ca = op.getContextAttribute();
+                    if(appliee == null) {
+                        attribute = ca.getAttributeName();
+                        resultEntity = ca.getEntityName();
+                        appliee = ce.get(resultEntity).getJSONArray("results");
+                    }
+                    else {
+                        JSONObject comparator = ce.get(ca.getEntityName());
+                        if(comparator.has("results"))
+                            comparison = new JSONObject(comparator.getJSONArray("results")
+                                    .getJSONObject(0)
+                                    .getString(ca.getAttributeName()));
+                        else
+                            comparison = (JSONObject) comparator.get(ca.getAttributeName());
+
+                        double lat2 = comparison.getDouble("latitude");
+                        double long2 = comparison.getDouble("longitude");
+
+                        double distanceThreshold = 0.0;
+                        if(value.startsWith("{")){
+                            // TODO:
+                            // Should convert any unit to meters
+                            JSONObject val = new JSONObject(value);
+                            distanceThreshold = Double.valueOf(val.getDouble("value"));
+                        }
+                        else
+                            distanceThreshold = Double.valueOf(value);
+
+                        for(Object resItem: appliee){
+                            JSONObject item = new JSONObject(((JSONObject) resItem).getString(attribute));
+                            if(isSatidfied(distance(item.getDouble("latitude"),
+                                    item.getDouble("longitude"),lat2,long2), operand, distanceThreshold)){
+                                result.put((JSONObject)resItem);
+                            }
+                        }
+                    }
+                }
+                ce.put(resultEntity, new JSONObject(){{
+                    put("results",result);
+                }});
+                break;
+        }
+        return null;
+    }
+
+    private static boolean isSatidfied(double distance, String operator, double value){
+        switch(operator){
+            case "=": return distance == value;
+            case "!=": return distance != value;
+            case ">": return distance > value;
+            case ">=": return distance >= value;
+            case "<": return distance < value;
+            case "<=": return distance <= value;
+        }
+        return false;
+    }
+
+    private static double distance(double lat1, double lon1, double lat2, double lon2)
+    {
+        lon1 = Math.toRadians(lon1);
+        lon2 = Math.toRadians(lon2);
+        lat1 = Math.toRadians(lat1);
+        lat2 = Math.toRadians(lat2);
+
+        double dlon = lon2 - lon1;
+        double dlat = lat2 - lat1;
+        double a = Math.pow(Math.sin(dlat / 2), 2)
+                + Math.cos(lat1) * Math.cos(lat2)
+                * Math.pow(Math.sin(dlon / 2),2);
+
+        // Radius of the earth in meters.
+        double c = 2 * Math.asin(Math.sqrt(a));
+        double r = 6371000;
+        return(c * r);
     }
 
     private static Object executeFunctionCall(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query) {
@@ -552,7 +689,6 @@ public class PullBasedExecutor {
         CREServiceGrpc.CREServiceBlockingStub creStub
                 = CREServiceGrpc.newBlockingStub(CREChannel.getInstance().getChannel());
 
-
         List<Operand> arguments = fCall.getArgumentsList();
 
         Map<String, ContextEntityType> tempList = new LinkedHashMap(function.getRelatedEntitiesMap());
@@ -690,11 +826,11 @@ public class PullBasedExecutor {
                 JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
                 String keys = "";
                 for(Object k : candidate_keys)
-                    keys = keys.isEmpty() ? keys : keys + "," + k.toString();
+                    keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
 
                 CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
-                        .setServiceId(conSer.getJSONObject("_id").toString())
+                        .setServiceId(conSer.getJSONObject("_id").getString("$oid").toString())
                         .setCheckFresh(true)
                         .setKey(keys)
                         .setUniformFreshness(conSer.getJSONObject("sla")
@@ -1080,5 +1216,4 @@ public class PullBasedExecutor {
         }
         return null;
     }
-
 }

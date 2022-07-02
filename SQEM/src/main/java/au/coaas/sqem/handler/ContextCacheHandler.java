@@ -131,7 +131,7 @@ public class ContextCacheHandler {
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
         CacheLookUpResponse result= registry.lookUpRegistry(request);
 
-        if(result.getHashkey() != "" && result.getIsCached() && result.getIsValid()){
+        if(!result.getHashkey().equals("") && result.getIsCached() && result.getIsValid()){
             try{
                 RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
@@ -149,7 +149,7 @@ public class ContextCacheHandler {
                 SQEMResponse.newBuilder().setStatus("500").build();
             }
         }
-        else if(result.getHashkey() != "" && result.getIsCached() && !result.getIsValid()){
+        else if(!result.getHashkey().equals("") && result.getIsCached() && !result.getIsValid()){
             return SQEMResponse.newBuilder().setStatus("400")
                     .setHashKey(result.getHashkey()).build();
         }

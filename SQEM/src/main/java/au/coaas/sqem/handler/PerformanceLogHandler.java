@@ -203,7 +203,7 @@ public class PerformanceLogHandler {
                             request.getIdentifier(), // Context Service Identifier
                             "NULL", // Hashkey of the cached item
                             request.getIsDelayed() ? 1 : 0, // is Delayed?
-                            "NULL"); // age
+                            0); // age
                     statement.executeUpdate(formatted_string);
                     break;
                 }
@@ -258,8 +258,8 @@ public class PerformanceLogHandler {
                 return 0;
             }
 
-            double retrieval_latency = rs.getDouble("response_time");
-            long age = rs.getLong("response_time")*1000;
+            double retrieval_latency = rs.getDouble("response_time")/1000;
+            long age = rs.getLong("response_time");
 
             return retrieval_latency+age;
         }
@@ -478,23 +478,27 @@ public class PerformanceLogHandler {
                     }
 
                     if(res_3.containsKey(rs_3.getString("itemId"))){
-                        BasicDBObject cur_Rec = (BasicDBObject) res_3.get(rs_1.getString("itemId"));
-                        long curr_saved_value = cur_Rec.getLong(isHit ? "hits" : "misses");
+                        String itemId = rs_3.getString("itemId");
+                        BasicDBObject cur_Rec = (BasicDBObject) res_3.get(itemId);
+                        if(!cur_Rec.containsField(isHit ? "hits" : "misses"))
+                            cur_Rec.put(isHit ? "hits" : "misses", 0);
+
+                        long curr_saved_value = cur_Rec.getLong(isHit ? "misses" : "hits");
 
                         double hitRate = (curr_saved_value + curr_value) > 0 ?
-                                (isHit ? curr_saved_value : curr_value)/(curr_saved_value + curr_value) : 0;
+                                (isHit ? Double.valueOf(curr_value) : Double.valueOf(curr_saved_value))/(curr_saved_value + curr_value) : 0;
 
                         cur_Rec.put(isHit?"hits":"misses",curr_value);
                         cur_Rec.put("hitrate",hitRate);
 
-                        res_3.put(rs_3.getString("itemId"),cur_Rec);
+                        res_3.put(itemId,cur_Rec);
                     }
                     else {
-                        res_3.put(rs_3.getString("itemId"), new BasicDBObject(){{
-                            put(isHit?"hits":"misses", curr_value);
-                            put("hitrate", isHit? 1.0 : 0.0);
-                            put("id", rs_3.getString("itemId"));
-                        }});
+                        BasicDBObject newObj = new BasicDBObject();
+                        newObj.put(isHit?"hits":"misses", curr_value);
+                        newObj.put("hitrate", isHit? 1.0 : 0.0);
+                        newObj.put("id", rs_3.getString("itemId"));
+                        res_3.put(rs_3.getString("itemId"), newObj);
                     }
                 }
 

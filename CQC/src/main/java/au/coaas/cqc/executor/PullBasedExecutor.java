@@ -828,13 +828,15 @@ public class PullBasedExecutor {
                 for(Object k : candidate_keys)
                     keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
 
+                JSONObject slaObj = conSer.getJSONObject("sla");
                 CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").getString("$oid").toString())
                         .setCheckFresh(true)
                         .setKey(keys)
-                        .setUniformFreshness(conSer.getJSONObject("sla")
-                                .getJSONObject("freshness").toString())
+                        .setUniformFreshness(slaObj.getJSONObject("freshness").toString())
+                        .setSamplingInterval(slaObj.has("updateFrequency")?
+                                slaObj.getJSONObject("updateFrequency").toString():"")
                         .build();
 
                 SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);

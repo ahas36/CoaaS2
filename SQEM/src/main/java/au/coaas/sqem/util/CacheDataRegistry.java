@@ -99,13 +99,20 @@ public final class CacheDataRegistry{
                 hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                 if(entities.containsKey(hashKey.get())){
                     if(lookup.getCheckFresh()){
+                        // TODO:
+                        // Need to get this information from Himadri's lifetime profiler
                         JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
                         double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId)/1000;
+
+                        // Periodic Sampling Device Check
+                        JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
 
                         LocalDateTime expiryTime;
                         LocalDateTime now = LocalDateTime.now();
                         switch(freshness.getString("unit")){
                             case "m": {
+                                // TODO:
+                                // This block need to change similar to the "s" and default block
                                 Double residual_life = freshness.getLong("value")
                                         - ageLoss > 1 ? ageLoss/60 : 0;
                                 Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
@@ -118,14 +125,38 @@ public final class CacheDataRegistry{
                             }
                             case "s":
                             default:
-                                Double residual_life = freshness.getLong("value")
-                                        - ageLoss;
-                                Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
+                                if(sampling.equals("")){
+                                    Double residual_life = freshness.getLong("value") - ageLoss;
+                                    Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
 
-                                LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+                                    LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
 
-                                staleTime = updateTime.plusSeconds(residual_life.longValue());
-                                expiryTime = updateTime.plusSeconds(expPrd.longValue());
+                                    staleTime = updateTime.plusSeconds(residual_life.longValue());
+                                    expiryTime = updateTime.plusSeconds(expPrd.longValue());
+                                }
+                                else {
+                                    long samplingInterval = sampling.getLong("value");
+                                    long lifetime = freshness.getLong("value");
+                                    if(lifetime>samplingInterval){
+                                        // When the lifetime is longer than the sampling interval
+                                        long residual_life = lifetime - samplingInterval;
+                                        Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
+
+                                        LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+                                        LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+
+                                        expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                        staleTime = sampledTime.plusSeconds(lifetime);
+                                    }
+                                    else {
+                                        // When the lifetime is shorter
+                                        LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+                                        LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+
+                                        expiryTime = sampledTime.plusSeconds(samplingInterval);
+                                        staleTime = expiryTime;
+                                    }
+                                }
                                 break;
                         }
 

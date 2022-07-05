@@ -32,8 +32,9 @@ message CacheLookUp {
     string serviceId = 2;
     map<string, string> params = 3;
     string uniformFreshness = 4;
-    bool checkFresh = 5;
-    string key = 6;
+    string samplingInterval = 5;
+    bool checkFresh = 6;
+    string key = 7;
 }
 
 message CacheLookUpResponse {

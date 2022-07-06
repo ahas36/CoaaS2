@@ -40,7 +40,6 @@ class WeatherContext(Resource):
     def get(self):
         try:  
             args = request.args
-            data = self.handler.getPlace(args['location'])
 
             # Retriving the measurement
             data = self.handler.getWeather()

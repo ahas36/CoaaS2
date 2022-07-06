@@ -938,7 +938,7 @@ public class PullBasedExecutor {
         if(fetch.getStatus().equals("200")){
             JSONObject response = new JSONObject(fetch.getBody());
             if(response.has("age")){
-                JSONObject age_obj = response.getJSONObject("age");
+                JSONObject age_obj = new JSONObject(response.getString("age"));
 
                 String unit = age_obj.getString("unitText");
                 long value = age_obj.getLong("value");

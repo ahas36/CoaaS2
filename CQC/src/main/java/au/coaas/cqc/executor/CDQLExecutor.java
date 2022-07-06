@@ -18,7 +18,7 @@ public class CDQLExecutor {
 
     private static Logger log = Logger.getLogger(CDQLExecutor.class.getName());
 
-    public static CdqlResponse execute(ExecutionRequest request) {
+    public static CdqlResponse execute(ExecutionRequest request) throws Exception{
 
         // First logs the entire query as it is
         logQuery(request.getCdql(),request.getQueryid());

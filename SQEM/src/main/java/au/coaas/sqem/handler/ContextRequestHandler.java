@@ -20,6 +20,7 @@ import com.mongodb.client.model.Aggregates;
 
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.json.JSONObject;
 
 import java.util.*;
 import java.util.logging.Level;
@@ -208,10 +209,20 @@ public class ContextRequestHandler {
             location_prefix = ca.getPrefix();
         }
 
-        String dest_lat = fCall.getArgumentsList().get(1).getStringValue().replaceAll("\"", "");
-        String dest_lon = fCall.getArgumentsList().get(2).getStringValue().replaceAll("\"", "");
+        String dest_lat = "-37.8213341"; //fCall.getArgumentsList().get(1).getStringValue().replaceAll("\"", "");
+        String dest_lon = "144.9646982"; // fCall.getArgumentsList().get(2).getStringValue().replaceAll("\"", "");
 
         String distance_str = RPNcondition.poll().getStringValue();
+        if(distance_str.startsWith("{")){
+            JSONObject distanceObj = new JSONObject(distance_str);
+            String unit = distanceObj.getString("unit");
+            switch(unit){
+                case "m": distance_str = String.valueOf(distanceObj.getDouble("value")/1000); break;
+                case "km": distance_str = String.valueOf(distanceObj.getDouble("value")); break;
+                default:
+                    throw new WrongOperatorException(unit + " is not a valid measurement unit for distance.");
+            }
+        }
         double distance = Double.valueOf(distance_str);
 
         //get next comparison operator
@@ -227,7 +238,6 @@ public class ContextRequestHandler {
         }
         // This is one of the places where the context of a query is placed in the hierachy affects the retriveal decision.
         // This is a BSON function from mongo. Basically a filter function (to filter out entities that falls inside the sphere) defined in BSON.
-        // Why the radius is divided by 6371000.0?
         Bson eqDefault = Filters.geoWithinCenterSphere(attributePrefix + location_prefix, Double.valueOf(dest_lon), Double.valueOf(dest_lat), distance / 6371000.0);
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }

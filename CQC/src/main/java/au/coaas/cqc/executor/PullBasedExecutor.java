@@ -2,6 +2,7 @@ package au.coaas.cqc.executor;
 
 import au.coaas.base.proto.ListOfString;
 
+import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 import au.coaas.cre.proto.*;
 
 import au.coaas.csi.proto.CSIResponse;
@@ -90,7 +91,7 @@ public class PullBasedExecutor {
     }
 
     // This method executes the query plan for pull based queries
-    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit, String queryId, String criticality) {
+    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit, String queryId, String criticality) throws Exception{
 
         // Initialize values
         // How are the values assigned to 'ce'? I only see values assigned in the catch block.
@@ -358,7 +359,7 @@ public class PullBasedExecutor {
         return cdqlResponse;
     }
 
-    private static Object executeFunction(FunctionCall fCall, Map<String, JSONObject> ce, String operand, String value){
+    private static Object executeFunction(FunctionCall fCall, Map<String, JSONObject> ce, String operand, String value) throws Exception {
         switch(fCall.getFunctionName().toLowerCase()){
             case "distance":
                 String resultEntity = null;
@@ -415,7 +416,7 @@ public class PullBasedExecutor {
         return null;
     }
 
-    private static boolean isSatidfied(double distance, String operator, double value){
+    private static boolean isSatidfied(double distance, String operator, double value) throws WrongOperatorException {
         switch(operator){
             case "=": return distance == value;
             case "!=": return distance != value;
@@ -423,8 +424,11 @@ public class PullBasedExecutor {
             case ">=": return distance >= value;
             case "<": return distance < value;
             case "<=": return distance <= value;
+            default:
+                log.log(Level.INFO, "{0} not supported with Distance function", operator);
+                String result = "Only < (less than) is supported with Distance function";
+                throw new WrongOperatorException(result);
         }
-        return false;
     }
 
     private static double distance(double lat1, double lon1, double lat2, double lon2)

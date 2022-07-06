@@ -834,6 +834,8 @@ public class PullBasedExecutor {
                         .setServiceId(conSer.getJSONObject("_id").getString("$oid").toString())
                         .setCheckFresh(true)
                         .setKey(keys)
+                        // TODO:
+                        // The following line should change with the values from the fuzzy consumer SLA provider
                         .setUniformFreshness(slaObj.getJSONObject("freshness").toString())
                         .setSamplingInterval(slaObj.has("updateFrequency")?
                                 slaObj.getJSONObject("updateFrequency").toString():"")

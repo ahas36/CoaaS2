@@ -109,18 +109,28 @@ public final class CacheDataRegistry{
 
                         LocalDateTime expiryTime;
                         LocalDateTime now = LocalDateTime.now();
+                        // This freshness should be from the response coming from lifetime profiler
                         switch(freshness.getString("unit")){
                             case "m": {
-                                // TODO:
-                                // This block need to change similar to the "s" and default block
-                                Double residual_life = freshness.getLong("value")
-                                        - ageLoss > 1 ? ageLoss/60 : 0;
-                                Double expPrd = residual_life * (1 - freshness.getLong("fthresh"));
 
+                                Double fthresh = freshness.getDouble("fthresh");
                                 LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
 
-                                staleTime = updateTime.plusSeconds(residual_life.longValue());
-                                expiryTime = updateTime.plusMinutes(expPrd.longValue());
+                                if(fthresh < 1) {
+                                    // TODO:
+                                    // This block need to change similar to the "s" and default block
+                                    Double residual_life = freshness.getLong("value")
+                                            - ageLoss > 1 ? ageLoss/60 : 0;
+                                    Double expPrd = residual_life * (1 - fthresh);
+                                    staleTime = updateTime.plusMinutes(residual_life.longValue());
+                                    expiryTime = updateTime.plusMinutes(expPrd.longValue());
+                                }
+                                else {
+                                    Double expPrd = fthresh;
+                                    LocalDateTime sensedTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                    expiryTime = sensedTime.plusMinutes(expPrd.longValue());
+                                    staleTime = expiryTime;
+                                }
                                 break;
                             }
                             case "s":
@@ -136,24 +146,36 @@ public final class CacheDataRegistry{
                                 }
                                 else {
                                     long samplingInterval = sampling.getLong("value");
+                                    Double fthresh = freshness.getDouble("fthresh");
                                     long lifetime = freshness.getLong("value");
+
                                     if(lifetime>samplingInterval){
                                         // When the lifetime is longer than the sampling interval
                                         long residual_life = lifetime - samplingInterval;
-                                        Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
+                                        if(fthresh < 1){
+                                            Double expPrd = residual_life * (1 - fthresh);
+                                            LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+                                            LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
 
-                                        LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
-                                        LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                            expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                            staleTime = sampledTime.plusSeconds(lifetime);
+                                        }
+                                        else {
+                                            Double expPrd = fthresh;
+                                            LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+                                            LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
 
-                                        expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
-                                        staleTime = sampledTime.plusSeconds(lifetime);
+                                            expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                            staleTime = expiryTime;
+                                        }
                                     }
                                     else {
                                         // When the lifetime is shorter
                                         LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
                                         LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
 
-                                        expiryTime = sampledTime.plusSeconds(samplingInterval);
+                                        expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
+                                                : sampledTime.plusSeconds(samplingInterval);
                                         staleTime = expiryTime;
                                     }
                                 }

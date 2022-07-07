@@ -2,6 +2,7 @@ package au.coaas.cqc.executor;
 
 import au.coaas.base.proto.ListOfString;
 
+import au.coaas.cqc.utils.exceptions.ExtendedToken;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 import au.coaas.cre.proto.*;
 
@@ -27,14 +28,18 @@ import com.uber.h3core.H3Core;
 import com.uber.h3core.util.GeoCoord;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
@@ -194,7 +199,7 @@ public class PullBasedExecutor {
                         }
                         // This is the third part of the expression - Operator
                         // e.g., "=". This is only to skip to the next operand. Operator is not used here.
-                        String op = rpnCondition.poll().getStringValue();
+                        rpnCondition.poll();
 
                     } catch (Exception ex) {
                         Logger.getLogger(PullBasedExecutor.class
@@ -223,13 +228,19 @@ public class PullBasedExecutor {
 
                     String key = null;
                     String value = null;
-                    boolean isFunc = false;
 
                     HashMap<String,String> params = new HashMap();
-                    Queue<CdqlConditionToken> functions = new LinkedList<>();
 
                     for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
                         switch (cdqlConditionToken.getType()) {
+                            case Attribute:
+                                key = cdqlConditionToken.getContextAttribute().getAttributeName();
+                                if (value != null) {
+                                    params.put(key,value);
+                                    key = null;
+                                    value = null;
+                                }
+                                break;
                             case Constant:
                                 value = cdqlConditionToken.getStringValue();
                                 if(value.startsWith("{")){
@@ -239,59 +250,22 @@ public class PullBasedExecutor {
                                     if(valObj.has("value"))
                                         value = valObj.get("value").toString();
                                 }
-                                if(isFunc && key == null)
-                                    functions.add(cdqlConditionToken);
                                 if (key != null) {
                                     params.put(key,value);
                                     key = null;
                                 }
                                 value = null;
                                 break;
-                            case Attribute:
-                                key = cdqlConditionToken.getContextAttribute().getAttributeName();
-                                if (value != null) {
-                                    params.put(key,value);
-                                    key = null;
-                                    value = null;
-                                }
-                                break;
-                            case Function:
-                                if(cdqlConditionToken.getFunctionCall().getFunctionName()
-                                        .toLowerCase().equals("now")){
-                                    if (key != null) {
-                                        value = java.time.LocalDateTime.now().toString();
-                                        params.put(key,value);
-                                        key = null;
-                                    }
-                                    value = null;
-                                }
-                                else {
-                                    functions.add(cdqlConditionToken);
-                                    isFunc = true;
-                                }
-                                break;
-                            case Operator:
-                                if(isFunc) {
-                                    functions.add(cdqlConditionToken);
-                                    isFunc = false;
-                                }
-                            default:
                         }
                     }
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, authToken, contextService, params, criticality);
+
                     if(cacheResult != null){
                         JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
                         ce.put(entity.getEntityID(),resultJson);
-
-                        if(!functions.isEmpty()){
-                            while(functions.peek() != null) {
-                                CdqlConditionToken token = functions.poll();
-                                String compValue = functions.poll().getStringValue();
-                                String operator = functions.poll().getStringValue();
-                                executeFunction(token.getFunctionCall(), ce, operator, compValue);
-                            }
-                        }
+                        if(query.getSelect().getSelectAttrsMap().containsKey(entity.getEntityID()))
+                            executeQueryBlock(rpnConditionList, ce, entityID);
                         if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                     }
 
@@ -359,7 +333,418 @@ public class PullBasedExecutor {
         return cdqlResponse;
     }
 
-    private static Object executeFunction(FunctionCall fCall, Map<String, JSONObject> ce, String operand, String value) throws Exception {
+    private static void executeQueryBlock(List<CdqlConditionToken> rpnConditionList,
+                                          Map<String, JSONObject> ce, String entityId) throws Exception {
+        Queue<CdqlConditionToken> RPNcondition = new LinkedList<>(rpnConditionList);
+        Stack<ExtendedToken> stack = new Stack<>();
+        Stack<Predicate<JSONObject>> filter = new Stack<>();
+
+        if (!RPNcondition.isEmpty()) {
+            ExtendedToken extendedToken = new ExtendedToken(RPNcondition.poll());
+            CdqlConditionToken token = extendedToken.getCdqlConditionToken();
+            while (token != null) {
+                switch (token.getType()) {
+                    case Attribute:
+                        stack.push(new ExtendedToken(token));
+                        break;
+                    case Constant:
+                        stack.push(extendedToken);
+                        break;
+                    case Function:
+                        String value = RPNcondition.poll().getStringValue();
+                        String operand = RPNcondition.poll().getStringValue();
+                        stack.push(new ExtendedToken(CdqlConditionToken.newBuilder()
+                                .setType(CdqlConditionTokenType.Constant)
+                                .setConstantTokenType(CdqlConstantConditionTokenType.Array).build(),
+                                executeFunction(token.getFunctionCall(), ce, operand, value)));
+                        break;
+                    case Operator:
+                        processOperations(token.getStringValue(), stack, RPNcondition, filter, ce, entityId);
+                        break;
+                }
+                if(!RPNcondition.isEmpty()){
+                    extendedToken = new ExtendedToken(RPNcondition.poll());
+                    token = extendedToken.getCdqlConditionToken();
+                } else
+                    token = null;
+            }
+
+            JSONObject finalResult = new JSONObject();
+            finalResult.put("results", stack.pop().getData());
+            ce.put(entityId, finalResult);
+        }
+    }
+
+    private static void processOperations(String operator, Stack<ExtendedToken> stack,
+                                          Queue<CdqlConditionToken> RPNcondition, Stack<Predicate<JSONObject>> filter,
+                                          Map<String,JSONObject> ce, String entityId) throws WrongOperatorException {
+
+        switch (operator) {
+            case "=": {
+                ExtendedToken operand_2 = stack.pop();
+                ExtendedToken operand_1 = stack.pop();
+
+                if (operand_1.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant &&
+                        operand_2.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant) {
+                    stack.push(processConstantValues(operand_1, operand_2, operator));
+                    break;
+                }
+
+                if (operand_1.getCdqlConditionToken().getType() != CdqlConditionTokenType.Attribute)
+                    throw new WrongOperatorException("The first operand in the expression should be an attribute");
+
+                if (operand_2.getCdqlConditionToken().getType() != CdqlConditionTokenType.Constant)
+                    throw new WrongOperatorException("The second operand in the expression should be a constant value");
+
+                if(operand_1.getCdqlConditionToken().getType() == CdqlConditionTokenType.Attribute &&
+                        operand_2.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant){
+                    switch(operand_2.getCdqlConditionToken().getConstantTokenType()){
+                        case Numeric:
+                            filter.add( x -> x.getDouble(operand_1.getCdqlConditionToken()
+                                    .getContextAttribute().getAttributeName()) ==
+                                    Double.valueOf(operand_2.getCdqlConditionToken().getStringValue()));
+                            break;
+                        case String:
+                            String opValue = operand_2.getCdqlConditionToken().getStringValue();
+                            if(opValue.startsWith("{")){
+                                opValue = (new JSONObject(opValue)).getString("value");
+                                String finalOpValue = opValue;
+                                if(getConstantType(opValue) == CdqlConstantConditionTokenType.Numeric) {
+                                    filter.add(x -> x.getDouble(operand_1.getCdqlConditionToken()
+                                                    .getContextAttribute().getAttributeName()) == Double.valueOf(finalOpValue));
+                                }
+                            }
+                            String finalOpValue1 = opValue;
+                            filter.add(x -> x.getString(operand_1.getCdqlConditionToken()
+                                    .getContextAttribute().getAttributeName())
+                                    .equals(finalOpValue1));
+                            break;
+                        case Boolean:
+                            String attName = operand_1.getCdqlConditionToken().getContextAttribute().getAttributeName();
+                            Boolean value = Boolean.valueOf(operand_2.getCdqlConditionToken().getStringValue());
+                            filter.add( x -> x.getBoolean(attName) == value);
+                            break;
+                    }
+                }
+
+                break;
+            }
+
+            case "and": {
+                if(stack.size() < 2 && filter.size() > 0){
+                    List<Predicate<JSONObject>> filters = new ArrayList<>();
+                    while (!RPNcondition.isEmpty() && !filter.isEmpty() &&
+                            "and".equals(RPNcondition.peek().getStringValue())) {
+                        RPNcondition.poll();
+                        filters.add(filter.pop());
+                    }
+                    filters.add(filter.pop());
+                    List<JSONObject> result = new ArrayList<>();
+                    ce.get(entityId).getJSONArray("results").forEach(x -> result.add((JSONObject) x));
+
+                    List<JSONObject> dataList = result.stream().filter(filters.stream().reduce(x -> true, Predicate::and))
+                            .collect(Collectors.toList());
+                    stack.push(intersection((JSONArray) stack.pop().getData(), new JSONArray(dataList)));
+                    break;
+                }
+
+                ExtendedToken operand_2 = stack.pop();
+                ExtendedToken operand_1 = stack.pop();
+
+                if(operand_1.getCdqlConditionToken().getType() == operand_2.getCdqlConditionToken().getType()){
+                    if(operand_1.getCdqlConditionToken().getConstantTokenType() == operand_2.getCdqlConditionToken().getConstantTokenType()){
+                        switch (operand_1.getCdqlConditionToken().getConstantTokenType()){
+                            case Numeric:
+                            case Boolean:
+                            case String:
+                                stack.push(processConstantValues(operand_1, operand_2, operator));
+                                break;
+                            case Array:
+                                stack.push(intersection((JSONArray) operand_1.getData(),
+                                        (JSONArray) operand_2.getData()));
+                                break;
+                            default:
+                                throw new WrongOperatorException("Cannot apply AND operator for the given operands.");
+                        }
+                    }
+
+                    if(operand_1.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Boolean ||
+                            operand_2.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Boolean){
+                        if(operand_2.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Boolean &&
+                                Boolean.valueOf(operand_2.getCdqlConditionToken().getStringValue())){
+                            stack.push(operand_1);
+                            break;
+                        }
+                        if(operand_1.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Boolean &&
+                                Boolean.valueOf(operand_1.getCdqlConditionToken().getStringValue())){
+                            stack.push(operand_2);
+                            break;
+                        }
+
+                        operand_1.setData(new JSONArray());
+                        stack.push(operand_1);
+                        break;
+                    }
+                }
+
+                if(operand_1.getCdqlConditionToken().getType() == CdqlConditionTokenType.Attribute &&
+                        operand_2.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant){
+                    while (!RPNcondition.isEmpty() && "and".equals(RPNcondition.peek().getStringValue())) {
+                        RPNcondition.poll();
+                        ExtendedToken operand3 = stack.pop();
+                        if (operand3.getCdqlConditionToken().getType() != CdqlConditionTokenType.Expression) {
+                            throw new WrongOperatorException("Wrong Operand. Expression expected.");
+                        }
+                    }
+                }
+
+                break;
+            }
+            case "or": {
+                if(stack.size() < 2 && filter.size() > 0){
+                    List<Predicate<JSONObject>> filters = new ArrayList<>();
+                    while (!RPNcondition.isEmpty() && !filter.isEmpty() &&
+                            "and".equals(RPNcondition.peek().getStringValue())) {
+                        RPNcondition.poll();
+                        filters.add(filter.pop());
+                    }
+                    filters.add(filter.pop());
+                    List<JSONObject> result = new ArrayList<>();
+                    ce.get(entityId).getJSONArray("results").forEach(x -> result.add((JSONObject) x));
+
+                    List<JSONObject> dataList = result.stream().filter(filters.stream().reduce(x -> true, Predicate::and))
+                            .collect(Collectors.toList());
+                    stack.push(union((JSONArray) stack.pop().getData(), new JSONArray(dataList)));
+                    break;
+                }
+
+                ExtendedToken operand_2 = stack.pop();
+                ExtendedToken operand_1 = stack.pop();
+
+                if(operand_1.getCdqlConditionToken().getType() == operand_2.getCdqlConditionToken().getType()){
+                    if(operand_1.getCdqlConditionToken().getConstantTokenType() == operand_2.getCdqlConditionToken().getConstantTokenType()){
+                        switch (operand_1.getCdqlConditionToken().getConstantTokenType()){
+                            case Numeric:
+                            case Boolean:
+                            case String:
+                                stack.push(processConstantValues(operand_1, operand_2, operator));
+                                break;
+                            case Array:
+                                stack.push(union((JSONArray) operand_1.getData(),
+                                        (JSONArray) operand_2.getData()));
+                                break;
+                            default:
+                                throw new WrongOperatorException("Cannot apply AND operator for the given operands.");
+                        }
+                    }
+
+                    if(operand_1.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Boolean ||
+                            operand_2.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Boolean){
+                        stack.push(operand_1);
+                        break;
+                    }
+
+                }
+
+                break;
+            }
+            default: {
+                ExtendedToken operand_2 = stack.pop();
+                ExtendedToken operand_1 = stack.pop();
+
+                if (operand_1.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant
+                        && operand_2.getCdqlConditionToken().getType() == CdqlConditionTokenType.Constant) {
+                    stack.push(processConstantValues(operand_1, operand_2, operator));
+                    break;
+                }
+
+                if (operand_1.getCdqlConditionToken().getType() != CdqlConditionTokenType.Attribute)
+                    throw new WrongOperatorException("the first operand in the expression should be an attribute");
+
+                if (operand_2.getCdqlConditionToken().getType() != CdqlConditionTokenType.Constant)
+                    throw new WrongOperatorException("the second operand in the expression should be a constant value");
+
+                filter.push(getPredicate(operand_2.getCdqlConditionToken().getConstantTokenType(),
+                        operator, operand_1.getCdqlConditionToken().getContextAttribute().getAttributeName(),
+                        operand_2.getCdqlConditionToken().getStringValue()));
+            }
+        }
+    }
+
+    private static Predicate<JSONObject> getPredicate(CdqlConstantConditionTokenType type,
+                                                      String operator,
+                                                      String attribute,
+                                                      String value) throws WrongOperatorException {
+        switch(type){
+            case Numeric:
+                if(operator.equals(">"))
+                    return x -> x.getDouble(attribute) > Double.valueOf(value);
+                if(operator.equals(">="))
+                    return x -> x.getDouble(attribute) >= Double.valueOf(value);
+                if(operator.equals("<"))
+                    return x -> x.getDouble(attribute) < Double.valueOf(value);
+                if(operator.equals("<="))
+                    return x -> x.getDouble(attribute) <= Double.valueOf(value);
+                if(operator.equals("!="))
+                    return x -> x.getDouble(attribute) != Double.valueOf(value);
+                throw new WrongOperatorException("Can not apply this operator on Numerics.");
+            case String:
+                if(value.startsWith("{")){
+                    String finalValue = (new JSONObject(value)).getString("value");
+                    if(getConstantType(finalValue) == CdqlConstantConditionTokenType.Numeric) {
+                        if(operator.equals("="))
+                            return x -> x.getDouble(attribute) == Double.valueOf(finalValue);
+                    }
+                    else if(operator.equals("="))
+                        return x -> x.getString(attribute).equals(finalValue);
+                }
+                else {
+                    if(operator.equals("=")) {
+                        return x -> x.getString(attribute).equals(value);
+                    }
+                }
+                throw new WrongOperatorException("Can not apply this operator on Strings.");
+            case Json:
+                String finalValue = (new JSONObject(value)).get("value").toString();
+                if(getConstantType(finalValue) == CdqlConstantConditionTokenType.Numeric) {
+                    if(operator.equals("="))
+                        return x -> x.getDouble(attribute) == Double.valueOf(finalValue);
+                    if(operator.equals(">"))
+                        return x -> x.getDouble(attribute) > Double.valueOf(finalValue);
+                    if(operator.equals(">="))
+                        return x -> x.getDouble(attribute) >= Double.valueOf(finalValue);
+                    if(operator.equals("<"))
+                        return x -> x.getDouble(attribute) < Double.valueOf(finalValue);
+                    if(operator.equals("<="))
+                        return x -> x.getDouble(attribute) <= Double.valueOf(finalValue);
+                    if(operator.equals("!="))
+                        return x -> x.getDouble(attribute) != Double.valueOf(finalValue);
+                }
+                else if(operator.equals("="))
+                    return x -> x.getString(attribute).equals(finalValue);
+
+                throw new WrongOperatorException("Can not apply this operator on Strings.");
+            case Boolean:
+                if(operator.equals("="))
+                    return x -> x.getBoolean(attribute) == Boolean.valueOf(value);
+                if(operator.equals("!="))
+                    return x -> x.getBoolean(attribute) != Boolean.valueOf(value);
+                throw new WrongOperatorException("Can not apply this operator on Booleans.");
+            default:
+                throw new WrongOperatorException("Can not apply this operator.");
+        }
+    }
+
+    private static ExtendedToken intersection(JSONArray results1, JSONArray results2) throws JSONException {
+        ExtendedToken dataToken = new ExtendedToken(CdqlConditionToken.newBuilder()
+                .setType(CdqlConditionTokenType.Constant)
+                .setConstantTokenType(CdqlConstantConditionTokenType.Array)
+                .build());
+
+        Set<JSONObject> firstAsSet = convertJSONArrayToSet(results1);
+        Set<JSONObject> secondIdsAsSet = convertJSONArrayToSet(results2);
+        Set<JSONObject> intersection = firstAsSet.stream()
+                .distinct()
+                .filter(secondIdsAsSet::contains)
+                .collect(Collectors.toSet());
+
+        dataToken.setData(intersection.toArray());
+        return dataToken;
+    }
+
+    private static ExtendedToken union(JSONArray results1, JSONArray results2){
+        ExtendedToken dataToken = new ExtendedToken(CdqlConditionToken.newBuilder()
+                .setType(CdqlConditionTokenType.Constant)
+                .setConstantTokenType(CdqlConstantConditionTokenType.Array)
+                .build());
+
+        Set<JSONObject> firstAsSet = convertJSONArrayToSet(results1);
+        Set<JSONObject> secondIdsAsSet = convertJSONArrayToSet(results2);
+        Set<JSONObject>  union = Stream.concat(firstAsSet.stream(), secondIdsAsSet.stream())
+                                    .collect(Collectors.toSet());
+
+        dataToken.setData(union.toArray());
+        return dataToken;
+    }
+
+    private static Set<JSONObject> convertJSONArrayToSet(JSONArray input) throws JSONException {
+        Set<JSONObject> retVal = new HashSet<>();
+        for (Object item: input) {
+            retVal.add((JSONObject) item);
+        }
+        return retVal;
+    }
+
+    private static ExtendedToken processConstantValues(ExtendedToken operand1, ExtendedToken operand2, String operator) throws WrongOperatorException {
+
+        ExtendedToken tokenTrue = new ExtendedToken(CdqlConditionToken.newBuilder()
+                .setType(CdqlConditionTokenType.Constant)
+                .setStringValue("false")
+                .setConstantTokenType(CdqlConstantConditionTokenType.Boolean)
+                .build(), false);
+
+        ExtendedToken tokenFalse = new ExtendedToken(CdqlConditionToken.newBuilder()
+                .setType(CdqlConditionTokenType.Constant)
+                .setStringValue("true")
+                .setConstantTokenType(CdqlConstantConditionTokenType.Boolean)
+                .build(), true);
+
+            if (operand1.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Numeric) {
+                int res = Double.valueOf(operand1.getCdqlConditionToken().getStringValue())
+                            .compareTo(Double.valueOf(operand2.getCdqlConditionToken().getStringValue()));
+                switch (operator) {
+                    case ">":
+                        return res > 0 ? tokenTrue : tokenFalse;
+                    case ">=":
+                        return res >= 0 ? tokenTrue : tokenFalse;
+                    case "=":
+                        return res == 0 ? tokenTrue : tokenFalse;
+                    case "<=":
+                        return res <= 0 ? tokenTrue : tokenFalse;
+                    case "<":
+                        return res < 0 ? tokenTrue : tokenFalse;
+                    case "!=":
+                        return res != 0 ? tokenTrue : tokenFalse;
+                }
+            } else {
+                switch (operator) {
+                    case "=":
+                        return operand1.getCdqlConditionToken().getStringValue().equals(operand2.getCdqlConditionToken().getStringValue()) ?
+                                tokenTrue : tokenFalse;
+                    case "!=":
+                        return !operand1.getCdqlConditionToken().getStringValue().equals(operand2.getCdqlConditionToken().getStringValue()) ?
+                                tokenTrue : tokenFalse;
+                }
+            }
+
+        throw new WrongOperatorException("Wrong operator provided.");
+    }
+
+    private static Object tokenToString(CdqlConditionToken token) throws WrongOperatorException {
+        switch (token.getType()) {
+            case Attribute:
+                return token.getContextAttribute().getPrefix();
+            case Constant:
+                switch (token.getConstantTokenType()) {
+                    // This one is clear. If the token is a "constant" type, then read the value in string format
+                    case Json:
+                        return token.getStringValue().replaceAll("\"", "");
+                    case Numeric:
+                        return Double.valueOf(token.getStringValue().replaceAll("\"", ""));
+                    case String:
+                        return token.getStringValue().replaceAll("\"", "");
+                    case Boolean:
+                        return Boolean.parseBoolean(token.getStringValue());
+                    default:
+                        return token.getStringValue().replaceAll("\"", "");
+                }
+            default:
+                throw new WrongOperatorException("The token " + token.getStringValue() + " with type " + token.getType().name()
+                        + " is not accepted");
+        }
+    }
+
+    private static JSONArray executeFunction(FunctionCall fCall, Map<String, JSONObject> ce, String operand, String value) throws Exception {
         switch(fCall.getFunctionName().toLowerCase()){
             case "distance":
                 String resultEntity = null;
@@ -408,10 +793,7 @@ public class PullBasedExecutor {
                         }
                     }
                 }
-                ce.put(resultEntity, new JSONObject(){{
-                    put("results",result);
-                }});
-                break;
+                return result;
         }
         return null;
     }

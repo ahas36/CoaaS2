@@ -1324,17 +1324,20 @@ public class PullBasedExecutor {
         if(fetch.getStatus().equals("200")){
             JSONObject response = new JSONObject(fetch.getBody());
             if(response.has("age")){
-                JSONObject age_obj = new JSONObject(response.getString("age"));
+                if(response.getString("age").startsWith("{")){
+                    JSONObject age_obj = new JSONObject(response.getString("age"));
 
-                String unit = age_obj.getString("unitText");
-                long value = age_obj.getLong("value");
+                    String unit = age_obj.getString("unitText");
+                    long value = age_obj.getLong("value");
 
-                // Age is always considered in seconds in the code
-                switch(unit){
-                    case "ms": age = value/1000; break;
-                    case "s": age = value; break;
-                    case "h": age = value*60; break;
+                    // Age is always considered in seconds in the code
+                    switch(unit){
+                        case "ms": age = value/1000; break;
+                        case "s": age = value; break;
+                        case "h": age = value*60; break;
+                    }
                 }
+                else age = Long.valueOf(response.getString("age"));
             }
         }
 

@@ -137,14 +137,29 @@ public class FetchManager {
         for (int j = 0; j < valuesIndexArray.length; j++) {
             if (value instanceof JSONObject) {
                 // See if the key is in the 1st level
-                if(((JSONObject) value).has(valuesIndexArray[j]))
-                    response = ((JSONObject) value).get(valuesIndexArray[j]);
+                if(((JSONObject) value).has(valuesIndexArray[j])){
+                    Object attaVal = ((JSONObject) value).get(valuesIndexArray[j]);
+                    if(attaVal.toString().startsWith("{")){
+                        JSONObject resOb = new JSONObject(attaVal.toString());
+                        if(resOb.has("value")) response = resOb.get("value");
+                        else if(resOb.has("price")) response = resOb.get("price");
+                        else response = attaVal;
+                    }
+                    else response = attaVal;
+                }
                 else {
                     Set<String> keys = ((JSONObject) value).keySet();
                     for(String key : keys){
                         if(((JSONObject) value).get(key) instanceof JSONObject){
                             Object attaVal = getAttributeValue(((JSONObject) value).get(key).toString(), valuesIndexArray[j]);
                             if(attaVal != null){
+                                if(attaVal.toString().startsWith("{")){
+                                    JSONObject resOb = new JSONObject(attaVal.toString());
+                                    if(resOb.has("value")) response = resOb.get("value");
+                                    else if(resOb.has("price")) response = resOb.get("price");
+                                    else response = attaVal;
+                                    break;
+                                }
                                 response = attaVal;
                                 break;
                             }

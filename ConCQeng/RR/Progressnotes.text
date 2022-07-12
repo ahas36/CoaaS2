@@ -1,0 +1,45 @@
+These are things that are being done by the tool 
+
+--Assurance is working  (as of 1/02)
+
+--Sum of OQoC and Num of OQoC are being updated in QoC and CoC evaluator part
+
+-- context providers are being added for both the queries....phew!
+
+--context providers with provideing timeliness gaurantees within the agreed range are being added
+
+--context provider's RR metrics are being added to all RR collections 
+
+--sum of OQoC is also being updated acrosss all RR collections
+
+
+
+
+
+
+
+
+
+
+
+These are the things that are need to be improved or required 
+
+
+
+
+- (done)) timeliness should be computed based on the higher and lower bounds of the SLA  (there is no need for a lower bound - hence, we have considered 1 sec as lowerst amount of time within which the context is delivered)
+
+- (done) completeness should be computed based on the weights
+- (Done) completeness should be computed based on the keys in the context response  
+
+
+- (Fixed)Representation should be computed to add based on the context response format and also the metrics of response (e.g., integer)
+
+
+new context provider should be added only based on id 
+
+- need to include the QoC request validation with context request & QoC metadata validation
+
+- (Done) modify the code to compute and update the provider's RR value 
+        
+

@@ -1,7 +1,7 @@
 version: "3.2"
 services:
     casm:
-        image: coaas/casm:latest
+        image: shakthiw/casm:latest
         container_name: "casm"
         ports:
           - "8070:8080"
@@ -17,7 +17,7 @@ services:
             - cqc
 
     cre:
-        image: coaas/cre:latest
+        image: shakthiw/cre:latest
         container_name: "cre"
         ports:
           - "8583"
@@ -31,7 +31,7 @@ services:
 #        - "8989:8989"
 
     svm:
-        image: coaas/svm:latest
+        image: shakthiw/svm:latest
         container_name: "svm"
         ports:
           - "9191"
@@ -43,7 +43,7 @@ services:
             - fuseki
 
     csi:
-        image: coaas/csi:latest
+        image: shakthiw/csi:latest
         container_name: "csi"
         ports:
           - "8582"
@@ -57,7 +57,7 @@ services:
             - sqem
 
     cqp:
-        image: coaas/cqp:latest
+        image: shakthiw/cqp:latest
         container_name: "cqp"
         ports:
           - "8585"
@@ -65,7 +65,7 @@ services:
         restart: always
 
     cqc:
-        image: coaas/cqc:latest
+        image: shakthiw/cqc:latest
         container_name: "cqc"
         ports:
           - "8484"
@@ -81,7 +81,7 @@ services:
             - csi
 
     sqem:
-        image: coaas/sqem:latest
+        image: shakthiw/sqem:latest
         container_name: "sqem"
         ports:
           - "8686"
@@ -93,7 +93,7 @@ services:
           - mongodb
 
     cqg:
-      image: coaas/cqg:latest
+      image: shakthiw/cqg:latest
       container_name: "cqg"
       depends_on:
         - mongodb
@@ -101,7 +101,7 @@ services:
         - mongodb
 
     simulator:
-      image: coaas/simulator:latest
+      image: shakthiw/simulator:latest
       container_name: "simulator"
       ports:
         - "5000:5000"
@@ -112,7 +112,7 @@ services:
         - mongodb
 
     acoca:
-      image: coaas/acoca:latest
+      image: shakthiw/acoca:latest
       container_name: "acoca"
       ports:
         - "4200"

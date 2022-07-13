@@ -1,6 +1,6 @@
 services:
   service-simulator:
-    image: coaas/service-simulator:latest
+    image: shakthiw/service-simulator:latest
     container_name: "services-sim"
     restart: always
     build: .

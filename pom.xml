@@ -16,7 +16,7 @@
         <os.plugin.version>1.6.2</os.plugin.version>
         <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
         <protoc.version>3.5.1</protoc.version>
-        <docker.image.prefix>coaas</docker.image.prefix>
+        <docker.image.prefix>shakthiw</docker.image.prefix>
     </properties>
 
 

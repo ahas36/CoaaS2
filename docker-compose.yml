@@ -147,13 +147,13 @@ services:
             - 27017:27017
         command: mongod --logpath=/dev/null # --quiet
 
-    mongo-seed:
-        build: ./mongo-seed
-        restart: on-failure
-        depends_on:
-          - mongodb
-        links:
-          - mongodb
+#    mongo-seed:
+#        build: ./mongo-seed
+#        restart: on-failure
+#        depends_on:
+#          - mongodb
+#        links:
+#          - mongodb
 
     fuseki:
         container_name: fuseki

@@ -20,3 +20,4 @@ ENV MONGO_HOST "host.docker.internal"
 CMD [ "python3", "main.py" ]
 
 EXPOSE 5000
+EXPOSE 80

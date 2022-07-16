@@ -1,1 +1,0 @@
-RUN /dbcreate.sh

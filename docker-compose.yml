@@ -210,14 +210,6 @@ services:
       ports:
         - '1433:1433'
 
-    sql-seed:
-      build: ./sql-seed
-      restart: on-failure
-      depends_on:
-        - sqlserver
-      links:
-        - sqlserver
-        -
     kafka:
       image: confluentinc/cp-kafka:latest
       depends_on:

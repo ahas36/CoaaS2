@@ -1,20 +1,21 @@
 FROM mongo
 
-COPY mdpf.json /mdpf.json
-COPY mdwc.json /mdwc.json
-COPY googleCal.json /googleCal.json
-COPY empty.json /empty.json
-COPY house.json /house.json
-COPY person.json /person.json
+COPY consumerToken.json /consumerToken.json
 COPY contextConsumer.json /contextConsumer.json
 COPY contextService.json /contextService.json
+COPY query-params.json /query-params.json
+COPY vehicles.json /vehicles.json
+COPY places.json /places.json
+COPY carparks.json /carparks.json
+COPY weather.json /weather.json
+COPY empty.json /empty.json
 
-CMD   mongoimport --host mongodb --db coaas --collection ParkingFacility --type json --file /mdpf.json --jsonArray --legacy && \
-      mongoimport --host mongodb --db google_cal --collection auth --type json --file /googleCal.json --jsonArray --legacy && \
-      mongoimport --host mongodb --db coaas_situation --collection situations --type json --file /empty.json --jsonArray --legacy && \
-      mongoimport --host mongodb --db coaas_subscriptions --collection subscriptionsts --type json --file /empty.json --jsonArray --legacy && \
-      mongoimport --host mongodb --db coaas --collection house --type json --file /house.json --jsonArray --legacy && \
-      mongoimport --host mongodb --db coaas --collection person --type json --file /person.json --jsonArray --legacy && \
-      mongoimport --host mongodb --db coaas --collection WasteContainers --type json --file /mdwc.json --jsonArray  --legacy && \
-      mongoimport --host mongodb --db coaas --collection contextConsumer --type json --file /contextConsumer.json --jsonArray  --legacy && \
-      mongoimport --host mongodb --db coaas --collection contextService --type json --file /contextService.json --jsonArray  --legacy
+CMD   mongoimport --host mongodb --db coaas --collection consumerToken --type json --file /consumerToken.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db coaas --collection contextConsumer --type json --file /contextConsumer.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db coaas --collection contextService --type json --file /contextService.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db coaas_log --collection performanceSummary --type json --file /empty.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db acoca-experiments --collection weather --type json --file /weather.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db acoca-experiments --collection places --type json --file /places.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db acoca-experiments --collection carparks --type json --file /carparks.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db acoca-experiments --collection vehicles --type json --file /vehicles.json --jsonArray --legacy && \
+      mongoimport --host mongodb --db acoca-experiments --collection query-params --type json --file /query-params.json --jsonArray --legacy

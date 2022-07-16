@@ -1,7 +1,5 @@
-[
-  {
-    "status": true,
-    "token": "8b8e1915-f05e-4aec-84ff-c4d1da7c0361",
-    "id": "6266483ef8805834a82231f5"
-  }
-]
+[{
+  "status": true,
+  "token": "8b8e1915-f05e-4aec-84ff-c4d1da7c0361",
+  "consumerId": "6266483ef8805834a82231f5"
+}]

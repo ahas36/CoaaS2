@@ -1,7 +1,7 @@
 services:
     dashboard:
-        image: coaas/dashboard:latest
-        container_name: "dashboard"
+        image: coaas/acoca:latest
+        container_name: "acoca"
         restart: always
         build: .
         ports:

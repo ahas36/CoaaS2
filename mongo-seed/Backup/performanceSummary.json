@@ -1,0 +1,182 @@
+[
+  {
+    "csms": {
+      "handleContextRequest": {
+        "ok": {
+          "count": 20,
+          "average": 450
+        },
+        "error": {
+          "count": 4,
+          "average": 100
+        }
+      },
+      "discoverMatchingService": {
+        "ok": {
+          "count": 18,
+          "average": 100
+        }
+      },
+      "refreshContextEntity": {
+        "ok": {
+          "count": 10,
+          "average": 850
+        },
+        "error": {
+          "count": 1,
+          "average": 350
+        }
+      }
+    },
+    "coass": {
+      "execute": {
+        "ok": {
+          "count": 10,
+          "average": 850
+        }
+      },
+      "executeFetch": {
+        "ok": {
+          "count": 10,
+          "average": 850
+        },
+        "unauth": {
+          "count": 10,
+          "average": 850
+        }
+      }
+    },
+    "levels": {
+      "entity": {
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "situfunction": {
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "aggfunction": {
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "contextrequest": {
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      },
+      "query": {
+        "items": [
+          {
+            "items": "uhf93f36gbd392fg8bf209",
+            "hits": 234,
+            "misses": 57,
+            "hitrate": 0.76982
+          },
+          {
+            "id": "uhf93f36gbd3976g7f2499",
+            "hits": 200,
+            "misses": 50,
+            "hitrate": 0.8000
+          }
+        ],
+        "hitrate": 0.642,
+        "hit_response_time": 345,
+        "miss_response_time": 280
+      }
+    },
+    "summary": {
+      "gain": 220.0,
+      "avg_gain": 0.21,
+      "no_of_queries": 200,
+      "delayed_queries": 20,
+      "no_of_retrievals": 60,
+      "avg_query_overhead": 12424,
+      "avg_network_overhead": 463643,
+      "avg_processing_overhead": 745372,
+      "earning":  3435.0,
+      "penalty_cost": 3256.25,
+      "retrieval_cost": 8735.15
+    },
+    "cachememory": {
+      "used_memory": {
+        "value": 1194648,
+        "unit": "Number"
+      },
+      "used_memory_dataset": {
+        "value": 281816,
+        "unit": "Number"
+      },
+      "used_memory_dataset_perc": {
+        "value": 84.93,
+        "unit": "Percentage"
+      },
+      "total_system_memory": {
+        "value": 4125417472,
+        "unit": "Number"
+      },
+      "used_memory_peak_perc": {
+        "value": 57.72,
+        "unit": "Percentage"
+      }
+    }
+  }
+]

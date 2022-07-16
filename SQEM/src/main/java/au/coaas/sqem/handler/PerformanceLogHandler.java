@@ -10,6 +10,7 @@ import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 
 import org.bson.Document;
 import org.json.JSONObject;
@@ -272,8 +273,9 @@ public class PerformanceLogHandler {
         return 0;
     }
 
-    private static void getPerfDBConnection() throws SQLException {
-        String connectionString = "jdbc:sqlserver://localhost:1433;database=coassPerformance;" +
+    private static void getPerfDBConnection() throws Exception {
+        Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver").newInstance();
+        String connectionString = "jdbc:sqlserver://host.docker.internal:1433;database=coassPerformance;" +
                 "user=sa;password=coaas@PerfDB2k22;encrypt=true;trustServerCertificate=true";
         connection = DriverManager.getConnection(connectionString);
     }
@@ -328,7 +330,7 @@ public class PerformanceLogHandler {
                         level.toString().toLowerCase(), level.toString().toLowerCase()));
             }
         }
-        catch(SQLException ex){
+        catch(Exception ex){
             log.severe(ex.getMessage());
         }
     }

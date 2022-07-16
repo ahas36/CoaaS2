@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.logging.Logger;
 
 public class QueryStatHandler {
-    private final static String conn_string =  "mongodb://localhost:27017";
+    private final static String conn_string =  "mongodb://host.docker.internal:27017";
     private static MongoClient mongoClient;
 
     private static Logger log = Logger.getLogger(QueryStatHandler.class.getName());

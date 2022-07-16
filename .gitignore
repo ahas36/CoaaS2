@@ -10,3 +10,8 @@ data
 /lib
 /GrafanaWrapper
 /data
+/mongo-seed/weather.json
+/mongo-seed/query-params.json
+/mongo-seed/vehicles.json
+/mongo-seed/Backup
+

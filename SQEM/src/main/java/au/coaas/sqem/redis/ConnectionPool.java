@@ -49,7 +49,7 @@ public class ConnectionPool {
             // The following lines are only for local testing purposes.
             Config config = new Config();
             config.useSingleServer()
-                    .setAddress("redis://127.0.0.1:6379");
+                    .setAddress("redis://host.docker.internal:6379");
             // Test lines, end here.
 
             redisClient = Redisson.create(config);

@@ -27,7 +27,7 @@ import static com.mongodb.client.model.Aggregates.sample;
 
 public class QueryFetchJob implements Job {
 
-    private final static String conn_string =  "mongodb://localhost:27017";
+    private final static String conn_string =  "mongodb://host.docker.internal:27017";
     private static MongoClient mongoClient;
 
     private static Logger log = Logger.getLogger(QueryFetchJob.class.getName());

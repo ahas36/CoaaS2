@@ -313,8 +313,8 @@ public class PerformanceLogHandler {
                     "    response_time BIGINT NOT NULL,\n" +
                     "    earning REAL NULL,\n" +
                     "    cost REAL NULL,\n" +
-                    "    identifier VARCHAR NOT NULL,\n" +
-                    "    hashKey VARCHAR NULL,\n" +
+                    "    identifier VARCHAR(255) NOT NULL,\n" +
+                    "    hashKey VARCHAR(255) NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL,\n" +
                     "    isDelayed BIT NOT NULL," +
                     "    age BIGINT)");

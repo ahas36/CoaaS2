@@ -15,6 +15,7 @@ services:
         depends_on:
             - svm
             - cqc
+        restart: always
 
     cre:
         image: shakthiw/cre:latest

@@ -444,7 +444,16 @@ public class PullBasedExecutor {
 
                     List<JSONObject> dataList = result.stream().filter(filters.stream().reduce(x -> true, Predicate::and))
                             .collect(Collectors.toList());
-                    stack.push(intersection((JSONArray) stack.pop().getData(), new JSONArray(dataList)));
+                    if(stack.size()>=1)
+                        stack.push(intersection((JSONArray) stack.pop().getData(), new JSONArray(dataList)));
+                    else{
+                        ExtendedToken dataToken = new ExtendedToken(CdqlConditionToken.newBuilder()
+                                .setType(CdqlConditionTokenType.Constant)
+                                .setConstantTokenType(CdqlConstantConditionTokenType.Array)
+                                .build());
+                        dataToken.setData(dataList);
+                        stack.push(dataToken);
+                    }
                     break;
                 }
 

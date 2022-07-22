@@ -66,7 +66,12 @@ public class FetchManager {
             }
         }
 
-        OkHttpClient client = new OkHttpClient();
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.connectTimeout(10, TimeUnit.SECONDS);
+        builder.writeTimeout(10, TimeUnit.SECONDS);
+        builder.readTimeout(10, TimeUnit.SECONDS);
+        OkHttpClient client = builder.build();
+                
         HttpResponseFuture fu_res = new HttpResponseFuture();
 
         Request request = new Request.Builder()

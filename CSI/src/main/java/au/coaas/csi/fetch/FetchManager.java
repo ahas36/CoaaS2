@@ -4,10 +4,9 @@ import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSSummary;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 
+import au.coaas.csi.utils.HttpResponseFuture;
 import com.google.gson.JsonParser;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
+import okhttp3.*;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -21,10 +20,9 @@ import java.io.StringWriter;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
 
 public class FetchManager {
 
@@ -69,6 +67,7 @@ public class FetchManager {
         }
 
         OkHttpClient client = new OkHttpClient();
+        HttpResponseFuture fu_res = new HttpResponseFuture();
 
         Request request = new Request.Builder()
                 .url(serviceUrl)
@@ -76,7 +75,11 @@ public class FetchManager {
                 .build();
 
         try {
-            Response response = client.newCall(request).execute();
+            // Response response = client.newCall(request).execute();
+            Call call = client.newCall(request);
+            call.enqueue(fu_res);
+            Response response = fu_res.future.get();
+
             // This is what I should be caching at this point. Not the entity.
             // When the context service is resolved, the cache should look if the context service response is available in cache.
             String res = response.body().string().trim();
@@ -113,7 +116,7 @@ public class FetchManager {
                             .setPrice(sla.getJSONObject("cost").getDouble("value")).build())
                     .build();
             // Or this raw result.
-        } catch (IOException e) {
+        } catch (IOException | ExecutionException | InterruptedException e) {
             e.printStackTrace();
             JSONObject error = new JSONObject();
             error.put("message", e.getMessage());
@@ -125,7 +128,6 @@ public class FetchManager {
             return CSIResponse.newBuilder().setStatus("500").setBody(error.toString()).build();
         }
     }
-
 
     private static Object getAttributeValue(String res, String valueIndex) {
         String[] valuesIndexArray = valueIndex.split("\\.");
@@ -311,3 +313,4 @@ public class FetchManager {
     }
 
 }
+

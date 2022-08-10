@@ -74,7 +74,7 @@ public class MainParser {
         }
 
         // Logging the parsed query tree for collaborative filtering
-        Executors.newCachedThreadPool().execute(() -> logParsedQueryTree(tree,queryId));
+        Executors.newCachedThreadPool().execute(() -> logParsedQueryTree(Arrays.asList(parser.getRuleNames()), tree,queryId));
 
         CdqlVisitorImpl stringCDQLBaseVisitor = new CdqlVisitorImpl();
         // Walk the tree created during the parse, trigger callbacks
@@ -221,20 +221,19 @@ public class MainParser {
         query.putAllExecutionPlan(cdqlExecutionPlan);
     }
 
-    private static void logParsedQueryTree(ParseTree tree, String queryId){
+    private static void logParsedQueryTree(List<String> rulelist, ParseTree tree, String queryId){
         // These lines are for debugging (and Learning) purposes. Uncomment when neccesary.
         // Visualizes the Abstract Query Tree.
-        /**
-         *         JFrame frame = new JFrame("Context Query Abstract Query Tree");
-         *         JPanel panel = new JPanel();
-         *         TreeViewer viewer = new TreeViewer(ruleList,tree);
-         *         viewer.setScale(1.5);
-         *         panel.add(viewer);
-         *         frame.add(panel);
-         *         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-         *         frame.pack();
-         *         frame.setVisible(true);
-         */
+
+//        JFrame frame = new JFrame("Context Query Abstract Query Tree");
+//        JPanel panel = new JPanel();
+//        TreeViewer viewer = new TreeViewer(rulelist, tree);
+//        viewer.setScale(0.8);
+//        panel.add(viewer);
+//        frame.add(panel);
+//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//        frame.pack();
+//        frame.setVisible(true);
 
         SQEMServiceGrpc.SQEMServiceBlockingStub stub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());

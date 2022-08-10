@@ -10,7 +10,6 @@ import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
-import com.microsoft.sqlserver.jdbc.SQLServerDriver;
 
 import org.bson.Document;
 import org.json.JSONObject;
@@ -20,6 +19,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import java.util.*;
+import java.util.concurrent.*;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
@@ -275,7 +275,7 @@ public class PerformanceLogHandler {
 
     private static void getPerfDBConnection() throws Exception {
         Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver").newInstance();
-        String connectionString = "jdbc:sqlserver://host.docker.internal:1433;database=coassPerformance;" +
+        String connectionString = "jdbc:sqlserver://localhost:1433;database=coassPerformance;" +
                 "user=sa;password=coaas@PerfDB2k22;encrypt=true;trustServerCertificate=true";
         connection = DriverManager.getConnection(connectionString);
     }
@@ -337,17 +337,62 @@ public class PerformanceLogHandler {
 
     // Summarizes the performance data of the last window and stores in the logs.
     public static SQEMResponse summarize() {
-
         Document persRecord = new Document();
+
         try{
-            // Connection connection = DriverManager.getConnection("jdbc:sqlite::memory:");
+            ExecutorService executor = Executors.newFixedThreadPool(4);
+            Collection<Future<?>> tasks = new LinkedList<>();
+
+            tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
+            tasks.add(executor.submit(() -> { getLevelPerformanceSummary(persRecord); }));
+            tasks.add(executor.submit(() -> { getOverallPerfromanceSummary(persRecord); }));
+
+            persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
+
+            for (Future<?> currTask : tasks) {
+                currTask.get();
+            }
+
+            executor.submit(() -> { persistPerformanceSummary(persRecord); });
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+            return SQEMResponse.newBuilder().setStatus("500").build();
+        }
+
+        return SQEMResponse.newBuilder().setStatus("200").build();
+    }
+
+    private static Runnable getLevelPerformanceSummary(Document persRecord){
+        Map<String, BasicDBObject> level_res = new ConcurrentHashMap<>();
+        String query = "SELECT itemId, isHit, count(id) AS cnt, avg(response_time) AS average " +
+                "FROM %s GROUP BY isHit, itemId";
+
+        Arrays.stream(LogicalContextLevel.values()).parallel().forEach((lvl) -> {
+            level_res.put(lvl.toString().toLowerCase(),
+                    new BasicDBObject(getCacheLevelPerfromanceSummary(query,lvl)));
+        });
+
+        persRecord.put("levels", level_res);
+        return null;
+    }
+
+    private static void persistPerformanceSummary(Document persRecord){
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas_log");
+        MongoCollection<Document> collection = db.getCollection("performanceSummary");
+        collection.insertOne(persRecord);
+    }
+
+    private static Runnable getCSMSPerfromanceSummary(Document persRecord){
+        HashMap<String, BasicDBObject>  res_1= new HashMap<>();
+        try {
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
-            // CSMS Method performances
             ResultSet rs_1 = statement.executeQuery("SELECT method, status, count(*) AS cnt, avg(response_time) AS average " +
                     "FROM csms_performance GROUP BY method, status;");
-            HashMap<String, BasicDBObject> res_1 = new HashMap<>();
+
             while(rs_1.next()){
                 if(res_1.containsKey(rs_1.getString("method"))){
                     res_1.put(rs_1.getString("method"),
@@ -366,10 +411,24 @@ public class PerformanceLogHandler {
                     }});
                 }
             }
+        }
+        catch (Exception ex){
+            log.severe("Exception thrown when summarizing CSMS performance data: "
+                    + ex.getMessage());
+        }
 
-            persRecord.put("csms", res_1);
+        persRecord.put("csms", res_1);
+        return null;
+    }
 
-            // Overall COASS performance
+    private static Runnable getOverallPerfromanceSummary(Document persRecord){
+        HashMap<String, BasicDBObject> res_2 = new HashMap<>();
+        BasicDBObject dbo = new BasicDBObject();
+
+        try{
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
                     "count(id) AS cnt, avg(response_time) AS average, sum(earning) AS tearn, sum(cost) AS tcost, " +
                     "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
@@ -388,7 +447,6 @@ public class PerformanceLogHandler {
 
             long delayedResponses = 0;
 
-            HashMap<String, BasicDBObject> res_2 = new HashMap<>();
             while(rs_2.next()){
                 String method = rs_2.getString("method");
                 String status = rs_2.getString("status");
@@ -429,14 +487,13 @@ public class PerformanceLogHandler {
                 }
             }
 
-            persRecord.put("coass", res_2);
-
-            BasicDBObject dbo = new BasicDBObject();
             dbo.put("no_of_queries", totalQueries);
             dbo.put("delayed_queries", delayedResponses);
             dbo.put("no_of_retrievals", totalRetrievals);
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
+
+            // Fix this calculation
             dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / totalQueries : 0);
 
             double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
@@ -446,90 +503,84 @@ public class PerformanceLogHandler {
             dbo.put("penalty_cost", totalPenalties);
             dbo.put("retrieval_cost", totalRetrievalCost);
 
-            persRecord.put("summary", dbo);
-
+            // Update asynchronously
             ContextCacheHandler.updatePerformanceStats(dbo.toMap());
+        }
+        catch (Exception ex){
+            log.severe("Exception thrown when summarizing CSMS performance data: "
+                    + ex.getMessage());
+        }
 
-            // TODO:
-            // Utility from saving response time from caching.
+        persRecord.put("coaas", res_2);
+        persRecord.put("summary", dbo);
+        return null;
+    }
 
-            // Individual context cache level performance
-            String query = "SELECT itemId, isHit, count(id) AS cnt, avg(response_time) AS average " +
-                    "FROM %s GROUP BY isHit, itemId";
-            HashMap<String, BasicDBObject> level_res = new HashMap<>();
-            for(LogicalContextLevel lvl : LogicalContextLevel.values()){
-                ResultSet rs_3 = statement.executeQuery(String.format(query, lvl.toString().toLowerCase()));
+    private static HashMap<String, Object> getCacheLevelPerfromanceSummary(String query, LogicalContextLevel lvl){
+        HashMap<String, Object> res_lvl = new HashMap<>();
+        try{
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
 
-                long acc_hits = 0;
-                long acc_misses = 0;
+            ResultSet rs_3 = statement.executeQuery(String.format(query, lvl.toString().toLowerCase()));
 
-                double res_avg_hit = 0;
-                double res_avg_miss = 0;
+            long acc_hits = 0;
+            long acc_misses = 0;
 
-                HashMap<String, Object> res_3 = new HashMap<>();
-                while(rs_3.next()){
-                    Boolean isHit = rs_3.getBoolean("isHit");
-                    long curr_value = rs_3.getLong("cnt");
+            double res_avg_hit = 0;
+            double res_avg_miss = 0;
 
-                    if(isHit) {
-                        acc_hits += curr_value;
-                        res_avg_hit += rs_3.getLong("average");
-                    } else {
-                        acc_misses += curr_value;
-                        res_avg_miss += rs_3.getLong("average");
-                    }
+            HashMap<String, Object> res_3 = new HashMap<>();
+            while(rs_3.next()){
+                Boolean isHit = rs_3.getBoolean("isHit");
+                long curr_value = rs_3.getLong("cnt");
 
-                    if(res_3.containsKey(rs_3.getString("itemId"))){
-                        String itemId = rs_3.getString("itemId");
-                        BasicDBObject cur_Rec = (BasicDBObject) res_3.get(itemId);
-                        if(!cur_Rec.containsField(isHit ? "hits" : "misses"))
-                            cur_Rec.put(isHit ? "hits" : "misses", 0);
-
-                        long curr_saved_value = cur_Rec.getLong(isHit ? "misses" : "hits");
-
-                        double hitRate = (curr_saved_value + curr_value) > 0 ?
-                                (isHit ? Double.valueOf(curr_value) : Double.valueOf(curr_saved_value))/(curr_saved_value + curr_value) : 0;
-
-                        cur_Rec.put(isHit?"hits":"misses",curr_value);
-                        cur_Rec.put("hitrate",hitRate);
-
-                        res_3.put(itemId,cur_Rec);
-                    }
-                    else {
-                        BasicDBObject newObj = new BasicDBObject();
-                        newObj.put(isHit?"hits":"misses", curr_value);
-                        newObj.put("hitrate", isHit? 1.0 : 0.0);
-                        newObj.put("id", rs_3.getString("itemId"));
-                        res_3.put(rs_3.getString("itemId"), newObj);
-                    }
+                if(isHit) {
+                    acc_hits += curr_value;
+                    res_avg_hit += rs_3.getLong("average");
+                } else {
+                    acc_misses += curr_value;
+                    res_avg_miss += rs_3.getLong("average");
                 }
 
-                HashMap<String, Object> res_lvl = new HashMap<>();
+                if(res_3.containsKey(rs_3.getString("itemId"))){
+                    String itemId = rs_3.getString("itemId");
+                    BasicDBObject cur_Rec = (BasicDBObject) res_3.get(itemId);
+                    if(!cur_Rec.containsField(isHit ? "hits" : "misses"))
+                        cur_Rec.put(isHit ? "hits" : "misses", 0);
 
-                res_lvl.put("items", res_3.values());
-                double hitrate = (acc_hits + acc_misses) > 0 ? Double.valueOf(acc_hits)/(acc_hits + acc_misses) : 0;
-                res_lvl.put("hitrate", hitrate);
-                res_lvl.put("hit_response_time", acc_hits > 0 ? res_avg_hit/acc_hits : 0);
-                res_lvl.put("miss_response_time", acc_misses > 0 ? res_avg_miss/acc_misses : 0);
-                level_res.put(lvl.toString().toLowerCase(), new BasicDBObject(res_lvl));
+                    long curr_saved_value = cur_Rec.getLong(isHit ? "misses" : "hits");
+
+                    double hitRate = (curr_saved_value + curr_value) > 0 ?
+                            (isHit ? Double.valueOf(curr_value) : Double.valueOf(curr_saved_value))/(curr_saved_value + curr_value) : 0;
+
+                    cur_Rec.put(isHit?"hits":"misses",curr_value);
+                    cur_Rec.put("hitrate",hitRate);
+
+                    res_3.put(itemId,cur_Rec);
+                }
+                else {
+                    BasicDBObject newObj = new BasicDBObject();
+                    newObj.put(isHit?"hits":"misses", curr_value);
+                    newObj.put("hitrate", isHit? 1.0 : 0.0);
+                    newObj.put("id", rs_3.getString("itemId"));
+                    res_3.put(rs_3.getString("itemId"), newObj);
+                }
             }
 
-            persRecord.put("levels", level_res);
-            persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
 
-            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("coaas_log");
 
-            MongoCollection<Document> collection = db.getCollection("performanceSummary");
-
-            collection.insertOne(persRecord);
+            res_lvl.put("items", res_3.values());
+            double hitrate = (acc_hits + acc_misses) > 0 ? Double.valueOf(acc_hits)/(acc_hits + acc_misses) : 0;
+            res_lvl.put("hitrate", hitrate);
+            res_lvl.put("hit_response_time", acc_hits > 0 ? res_avg_hit/acc_hits : 0);
+            res_lvl.put("miss_response_time", acc_misses > 0 ? res_avg_miss/acc_misses : 0);
         }
         catch(Exception ex){
-            log.severe(ex.getMessage());
-            return SQEMResponse.newBuilder().setStatus("500").build();
+            log.severe("Exception thrown when summarizing CSMS performance data: "
+                    + ex.getMessage());
         }
-
-        return SQEMResponse.newBuilder().setStatus("200").build();
+        return res_lvl;
     }
 
     // Retrieves the current summary of performance

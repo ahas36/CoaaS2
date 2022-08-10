@@ -102,6 +102,7 @@ public final class CacheDataRegistry{
                         // TODO:
                         // Need to get this information from Himadri's lifetime profiler
                         JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
+                        // This is a potential cache item. But this should be cached lineant
                         double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId)/1000;
 
                         // Periodic Sampling Device Check

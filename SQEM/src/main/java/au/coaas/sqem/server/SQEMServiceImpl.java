@@ -92,7 +92,6 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         try {
             // Retrieving context for entity from cache
             responseObserver.onNext(ContextCacheHandler.retrieveFromCache(request));
-
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

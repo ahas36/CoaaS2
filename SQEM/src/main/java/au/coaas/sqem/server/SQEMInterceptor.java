@@ -6,6 +6,7 @@ import au.coaas.sqem.proto.Empty;
 import au.coaas.sqem.proto.SQEMResponse;
 import io.grpc.*;
 
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public class SQEMInterceptor implements ServerInterceptor {
@@ -29,9 +30,9 @@ public class SQEMInterceptor implements ServerInterceptor {
             public void sendMessage(RespT message) {
                 super.sendMessage(message);
                 long endTime = System.currentTimeMillis();
-                logMessage(RESPONSE,
-                        methodDescriptor.getFullMethodName().replace("au.coaas.sqem.proto.SQEMService/",""),
-                        message, endTime - startTime);
+                Executors.newCachedThreadPool().execute(() ->
+                    logMessage(RESPONSE, methodDescriptor.getFullMethodName().replace("au.coaas.sqem.proto.SQEMService/",""),
+                            message, endTime - startTime));
             }
 
         }, requestHeaders);

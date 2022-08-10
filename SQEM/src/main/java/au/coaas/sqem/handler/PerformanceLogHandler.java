@@ -237,13 +237,10 @@ public class PerformanceLogHandler {
 
     // Context Service Performance for retrievals
     public static double getLastRetrievalTime(String csId){
-        // Connection connection = null;
         String queryString = "SELECT TOP 1 response_time, age " +
                 "FROM coass_performance WHERE status = '200' AND identifier = '%s' ORDER BY id DESC;";
 
         try{
-            // connection = DriverManager.getConnection("jdbc:sqlite::memory:");
-
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
             csId = csId.startsWith("{") ? (new JSONObject(csId)).getString("$oid") : csId;

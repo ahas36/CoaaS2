@@ -263,7 +263,7 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    if(sla == null & slaMessage.isDone()) {
+                    if(sla == null) {
                         SQEMResponse slaResult = slaMessage.get();
                         if(slaResult.getStatus().equals("200"))
                             sla = new JSONObject(slaResult.getBody());
@@ -302,30 +302,29 @@ public class PullBasedExecutor {
         JSONObject result = new JSONObject();
 
         // Filter out the neccesary attributes from the retrieved entity data
-        for (Map.Entry<String, ListOfContextAttribute> entry : query.getSelect().getSelectAttrsMap().entrySet()) {
+        query.getSelect().getSelectAttrsMap().entrySet().parallelStream().forEach((entry) -> {
             String entity = entry.getKey();
             result.put(entity, ce.get(entity));
-        }
+        });
 
-        for (FunctionCall fCall : query.getSelect().getSelectFunctionsList()) {
+        query.getSelect().getSelectFunctionsList().parallelStream().forEach((fCall) -> {
             if (fCall.getFunctionName().equals("avg") || fCall.getFunctionName().equals("cluster")) {
                 result.put(fCall.getFunctionName(), executeFunctionCall(fCall, ce, query));
             } else {
                 // All other context functions that are not either "avg" or "cluster".
                 Object execute = executeFunctionCall(fCall, ce, query);
-
                 result.put(fCall.getFunctionName(), execute);
-//                if (execute.trim().startsWith("[")) {
-//                    result.put(fCall.getFunctionName(), new JSONArray(execute.replaceAll("\"", "")));
-//                } else {
-//                    if (fCall.getSubItemsList().isEmpty()) {
-//                        result.put(fCall.getFunctionName(), execute);
-//                    } else {
-//                        result.put(fCall.getSubItemsList().get(0), execute);
-//                    }
-//                }
+//              if (execute.trim().startsWith("[")) {
+//                  result.put(fCall.getFunctionName(), new JSONArray(execute.replaceAll("\"", "")));
+//              } else {
+//                  if (fCall.getSubItemsList().isEmpty()) {
+//                      result.put(fCall.getFunctionName(), execute);
+//                  } else {
+//                      result.put(fCall.getSubItemsList().get(0), execute);
+//                  }
+//              }
             }
-        }
+        });
 
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
         // If this response need to be cached, this is where the caching action should happen.
@@ -1247,6 +1246,7 @@ public class PullBasedExecutor {
 
                     switch(data.getStatus()){
                         case "400": {
+                            // This is reactive retrieveal
                             SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
                                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
                             asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
@@ -1282,7 +1282,6 @@ public class PullBasedExecutor {
             if(retEntity != null)
                 return new AbstractMap.SimpleEntry(retEntity,
                         qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
-
         }
 
         return null;

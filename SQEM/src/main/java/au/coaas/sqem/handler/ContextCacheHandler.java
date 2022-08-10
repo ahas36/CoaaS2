@@ -129,7 +129,7 @@ public class ContextCacheHandler {
 
     // Retrieve entity context from cache
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
-        CacheLookUpResponse result= registry.lookUpRegistry(request);
+        CacheLookUpResponse result = registry.lookUpRegistry(request);
 
         if(!result.getHashkey().equals("") && result.getIsCached() && result.getIsValid()){
             try{

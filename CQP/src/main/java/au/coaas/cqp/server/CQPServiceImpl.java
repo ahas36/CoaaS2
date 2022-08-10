@@ -25,7 +25,6 @@ public class CQPServiceImpl extends CQPServiceGrpc.CQPServiceImplBase {
         io.grpc.stub.StreamObserver<CDQLConstruct> responseObserver){
         try {
             log.info("Request received");
-            // log.info(request.getCdql());
             CDQLConstruct cdql = MainParser.parse(request.getCdql(), request.getQueryId());
             responseObserver.onNext(cdql);
         } catch (CDQLSyntaxtErrorException ex) {

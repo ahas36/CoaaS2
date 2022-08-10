@@ -10,7 +10,10 @@ import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.CDQLLog;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
+import com.google.common.util.concurrent.ListenableFuture;
 
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -21,7 +24,7 @@ public class CDQLExecutor {
     public static CdqlResponse execute(ExecutionRequest request) throws Exception{
 
         // First logs the entire query as it is
-        logQuery(request.getCdql(),request.getQueryid());
+        Executors.newCachedThreadPool().execute(() -> logQuery(request.getCdql(),request.getQueryid()));
 
         // Parse the incoming query
         CQPServiceGrpc.CQPServiceBlockingStub stub
@@ -55,13 +58,15 @@ public class CDQLExecutor {
         return null;
     }
 
-    public static void logQuery(String query, String queryId){
+    public static void logQuery(String query, String queryId) {
         SQEMServiceGrpc.SQEMServiceBlockingStub stub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        SQEMResponse response = stub.logQuery(CDQLLog.newBuilder().setRawQuery(query).setQueryId(queryId).build());
+        SQEMResponse response = stub.logQuery(CDQLLog.newBuilder()
+                .setRawQuery(query).setQueryId(queryId).build());
+
         if(!response.getStatus().equals("200")){
-            log.log(Level.WARNING,response.getBody());
+            log.log(Level.WARNING, "Query logging failed with an error.");
         }
     }
 }

@@ -493,9 +493,6 @@ public class PerformanceLogHandler {
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
 
-            // Fix this calculation
-            dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / totalQueries : 0);
-
             double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
             dbo.put("gain", monetaryGain);
             dbo.put("avg_gain", totalQueries > 0 ? monetaryGain / totalQueries : 0);
@@ -503,11 +500,10 @@ public class PerformanceLogHandler {
             dbo.put("penalty_cost", totalPenalties);
             dbo.put("retrieval_cost", totalRetrievalCost);
 
-            // Update asynchronously
             ContextCacheHandler.updatePerformanceStats(dbo.toMap());
         }
         catch (Exception ex){
-            log.severe("Exception thrown when summarizing CSMS performance data: "
+            log.severe("Exception thrown when summarizing COAAS performance data: "
                     + ex.getMessage());
         }
 
@@ -568,8 +564,6 @@ public class PerformanceLogHandler {
                 }
             }
 
-
-
             res_lvl.put("items", res_3.values());
             double hitrate = (acc_hits + acc_misses) > 0 ? Double.valueOf(acc_hits)/(acc_hits + acc_misses) : 0;
             res_lvl.put("hitrate", hitrate);
@@ -577,7 +571,7 @@ public class PerformanceLogHandler {
             res_lvl.put("miss_response_time", acc_misses > 0 ? res_avg_miss/acc_misses : 0);
         }
         catch(Exception ex){
-            log.severe("Exception thrown when summarizing CSMS performance data: "
+            log.severe("Exception thrown when summarizing " + lvl.toString() +" performance data: "
                     + ex.getMessage());
         }
         return res_lvl;

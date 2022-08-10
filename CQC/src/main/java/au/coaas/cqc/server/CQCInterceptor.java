@@ -2,11 +2,11 @@ package au.coaas.cqc.server;
 
 import au.coaas.cqc.proto.CdqlResponse;
 import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.Statistic;
 import io.grpc.*;
 
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public class CQCInterceptor implements ServerInterceptor {
@@ -30,9 +30,9 @@ public class CQCInterceptor implements ServerInterceptor {
             public void sendMessage(RespT message) {
                 super.sendMessage(message);
                 long endTime = System.currentTimeMillis();
-                logMessage(RESPONSE,
+                Executors.newCachedThreadPool().execute(() -> logMessage(RESPONSE,
                         methodDescriptor.getFullMethodName().replace("au.coaas.cqc.proto.CQCService/",""),
-                        message, endTime - startTime);
+                        message, endTime - startTime));
             }
 
         }, requestHeaders);

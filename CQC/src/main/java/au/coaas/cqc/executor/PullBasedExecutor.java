@@ -19,6 +19,7 @@ import au.coaas.cqc.proto.*;
 import au.coaas.cqp.proto.*;
 import au.coaas.sqem.proto.*;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import com.google.protobuf.ByteString;
@@ -54,6 +55,7 @@ public class PullBasedExecutor {
     private static Object getValueOfJsonObject(final JSONObject obj, String path) {
         JSONObject jo = new JSONObject(obj.toString());
         String[] split = path.split("\\.");
+
         for (int i = 0; i < split.length - 1; i++) {
             jo = jo.getJSONObject(split[i]);
         }
@@ -106,6 +108,12 @@ public class PullBasedExecutor {
         // Iterates over execution plan
         // The first loop goes over dependent sets of entities
         Collection<ListOfString> aList = query.getExecutionPlanMap().values();
+
+        // Fetching Consumer SLA
+        JSONObject sla = null;
+        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        ListenableFuture<SQEMResponse> slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setToken(authToken).build());
 
         // Replace with bList for Testing
         for (ListOfString entityList : aList) {
@@ -216,10 +224,6 @@ public class PullBasedExecutor {
                     break;
                 }
 
-                // TODO:
-                // The context query executes as a collection of context-requests. That is why service discovery and executing happen per entity over a loop.
-                // Not the loop here isn't parallelized either. Now consider, multiple parallel context queries, trying to access the same context. Discovering and executing is not efficient at all.
-
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
 
                 if (contextService != null) {
@@ -259,7 +263,13 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, authToken, contextService, params, criticality);
+                    if(sla == null & slaMessage.isDone()) {
+                        SQEMResponse slaResult = slaMessage.get();
+                        if(slaResult.getStatus().equals("200"))
+                            sla = new JSONObject(slaResult.getBody());
+                    }
+
+                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, criticality, sla);
 
                     if(cacheResult != null){
                         JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
@@ -1195,18 +1205,12 @@ public class PullBasedExecutor {
         }
     }
 
-    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String authToken, String contextServicesText,
-                                                            HashMap<String,String> params, String criticality) {
+    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
+                                                            HashMap<String,String> params, String criticality, JSONObject sla) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         JSONArray contextServices = new JSONArray(contextServicesText);
-
-        // Fetching Consumer SLA
-        JSONObject sla = null;
-        SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setToken(authToken).build());
-        if(slaMessage.getStatus().equals("200"))
-            sla = new JSONObject(slaMessage.getBody());
 
         for (int i = 0; i < contextServices.length(); i++) {
             // Mapping context service with SLA constraints

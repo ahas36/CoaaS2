@@ -5,6 +5,7 @@ import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.Statistic;
 import au.coaas.sqem.proto.SummarySLA;
+import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
 import com.mongodb.MongoClient;
@@ -33,6 +34,7 @@ public class PerformanceLogHandler {
             .map(Enum::name)
             .collect(Collectors.toList());
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+    private static LimitedQueue slahistory = new LimitedQueue(10); // TODO: the size of the queue should be adaptive to the size of the planning period
 
     // CSMS Performance Records
     // Inserts a new performance record
@@ -506,6 +508,8 @@ public class PerformanceLogHandler {
 
     private static Runnable profileConsumers(Document persRecord){
         HashMap<String, BasicDBObject>  res = new HashMap<>();
+        HashMap<String, Double> expected = new HashMap<>();
+
         try {
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -514,11 +518,25 @@ public class PerformanceLogHandler {
                     "avg(earning) AS avg_earning, avg(rtmax) AS avg_rtmax, avg(penalty) AS avg_penalty " +
                     "FROM consumer_slas GROUP BY consumerId;");
 
+            double ex_fth = 0;
+            double ex_ern = 0;
+            double ex_rtm = 0;
+            double ex_pen = 0;
+            long total_queries = 0;
+
             while(rs_1.next()){
                 if(!res.containsKey(rs_1.getString("consumerId"))){
+                    int count = rs_1.getInt("cnt");
+                    total_queries += count;
+
+                    ex_rtm += (count*rs_1.getInt("avg_rtmax"));
+                    ex_ern += (count*rs_1.getInt("avg_earning"));
+                    ex_pen += (count*rs_1.getInt("avg_penalty"));
+                    ex_fth += (count*rs_1.getInt("avg_freshness"));
+
                     res.put(rs_1.getString("consumerId"),
                             new BasicDBObject(){{
-                                put("count", rs_1.getInt("cnt"));
+                                put("count", count);
                                 put("fthresh", rs_1.getInt("avg_freshness"));
                                 put("earning", rs_1.getInt("avg_earning"));
                                 put("rtmax", rs_1.getInt("avg_rtmax"));
@@ -526,6 +544,11 @@ public class PerformanceLogHandler {
                             }});
                 }
             }
+
+            expected.put("exp_pen", ex_pen/total_queries);
+            expected.put("exp_fth", ex_fth/total_queries);
+            expected.put("exp_earn", ex_ern/total_queries);
+            expected.put("exp_rtmax", ex_rtm/total_queries);
         }
         catch (Exception ex){
             log.severe("Exception thrown when aggregating the context consumers: "
@@ -533,6 +556,9 @@ public class PerformanceLogHandler {
         }
 
         persRecord.put("consumers", res);
+        persRecord.put("expectedSLA", expected);
+        slahistory.add(expected);
+
         return null;
     }
 

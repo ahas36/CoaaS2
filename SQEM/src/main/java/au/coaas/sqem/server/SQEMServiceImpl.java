@@ -273,7 +273,6 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
 
 
     ////////// Log Functions ///////////
-
     @Override
     public void getAllQueryLogs(au.coaas.sqem.proto.Empty request,
                                  io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
@@ -312,6 +311,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
         try {
             PerformanceLogHandler.coassPerformanceRecord(request);
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void logConsumerProfile(au.coaas.sqem.proto.SummarySLA request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
+        try {
+            PerformanceLogHandler.consumerRecord(request);
             responseObserver.onNext(Empty.newBuilder().build());
         } catch (Exception ex) {
             responseObserver.onError(ex);

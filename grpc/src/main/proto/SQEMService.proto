@@ -173,6 +173,17 @@ message Statistic {
     au.coaas.csi.proto.ContextServiceInvokerRequest cs = 9;
 }
 
+message SummarySLA
+{
+    string csid = 1;
+    double fthresh = 2;
+    double earning = 3;
+    int64 rtmax = 4;
+    double penalty = 5;
+    int64 queryClass = 6;
+    string queryId = 7;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -210,4 +221,5 @@ service SQEMService {
     rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
     rpc logPerformanceData (Statistic) returns (Empty);
     rpc getPerformanceData (Empty) returns (SQEMResponse);
+    rpc logConsumerProfile (SummarySLA) returns (Empty);
 }

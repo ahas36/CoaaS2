@@ -2,9 +2,9 @@ package au.coaas.cqc.executor;
 
 import au.coaas.base.proto.ListOfString;
 
+import au.coaas.cre.proto.*;
 import au.coaas.cqc.utils.exceptions.ExtendedToken;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
-import au.coaas.cre.proto.*;
 
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
@@ -19,28 +19,29 @@ import au.coaas.cqc.proto.*;
 import au.coaas.cqp.proto.*;
 import au.coaas.sqem.proto.*;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.common.util.concurrent.ListenableFuture;
 
 import com.uber.h3core.H3Core;
 import com.uber.h3core.util.GeoCoord;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONException;
 
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.function.Predicate;
+import java.util.concurrent.Executors;
 
 import java.io.IOException;
 import java.net.URLEncoder;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
@@ -265,8 +266,12 @@ public class PullBasedExecutor {
 
                     if(sla == null) {
                         SQEMResponse slaResult = slaMessage.get();
-                        if(slaResult.getStatus().equals("200"))
+                        if(slaResult.getStatus().equals("200")){
                             sla = new JSONObject(slaResult.getBody());
+                            JSONObject finalSla = sla;
+                            // Profiling the context consumers
+                            Executors.newCachedThreadPool().execute(() -> profileConsumer(finalSla,queryId));
+                        }
                     }
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, criticality, sla);
@@ -340,6 +345,21 @@ public class PullBasedExecutor {
                 .build();
 
         return cdqlResponse;
+    }
+
+    private static void profileConsumer(JSONObject sla, String queryId){
+        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        sqemStub.logConsumerProfile(SummarySLA.newBuilder()
+                .setCsid(sla.getJSONObject("_id").getString("$oid"))
+                .setFthresh(sla.getJSONObject("sla").getJSONObject("qos").getDouble("fthresh"))
+                .setEarning(sla.getJSONObject("sla").getJSONObject("price").getDouble("value"))
+                .setRtmax(sla.getJSONObject("sla").getJSONObject("qos")
+                        .getJSONObject("rtmax").getLong("value"))
+                .setPenalty(sla.getJSONObject("sla").getJSONObject("qos").getJSONObject("rtmax")
+                        .getJSONObject("penalty").getDouble("value"))
+                .setQueryId(queryId)
+                .setQueryClass(1).build()); // TODO: Assign the correct query class
     }
 
     private static void executeQueryBlock(List<CdqlConditionToken> rpnConditionList,

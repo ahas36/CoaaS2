@@ -2,6 +2,7 @@ package au.coaas.sqem.util;
 
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.proto.ScheduleTask;
+import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.hash.Hashing;
 
 import java.util.Map;

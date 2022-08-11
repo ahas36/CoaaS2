@@ -8,6 +8,7 @@ import au.coaas.sqem.proto.SummarySLA;
 import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
+import au.coaas.sqem.util.enums.PerformanceStats;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
@@ -26,6 +27,8 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
+import static au.coaas.sqem.util.StatisticalUtils.predictExpectedValue;
+
 public class PerformanceLogHandler {
 
     private static Connection connection = null;
@@ -33,8 +36,37 @@ public class PerformanceLogHandler {
     private static List<String> all_tables = Stream.of(LogicalContextLevel.values())
             .map(Enum::name)
             .collect(Collectors.toList());
+
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
-    private static LimitedQueue slahistory = new LimitedQueue(10); // TODO: the size of the queue should be adaptive to the size of the planning period
+    private static final int max_history = 10;
+
+    // TODO: the size of the queue should be adaptive to the size of the planning period
+    // This is, based on the size of the planning, the queue should contain all the history up to maximum default
+    // For example, if PP = 10mins, then (since W = 1min) 10mins/1min = 10.
+    private static LimitedQueue<HashMap<String, Double>> slahistory = new LimitedQueue(max_history);
+    private static final ArrayList<String> slaProperties =
+            new ArrayList<>(Arrays.asList("exp_pen", "exp_fth", "exp_earn", "exp_rtmax"));
+
+    // Refresh the expected quality metrics during the next window by estimating
+    // Linear regression is used to estimate the expected values of the parameters
+    public static void refershExpectedConsumerSLA(){
+        ConcurrentHashMap<String, Double> exp_sla = new ConcurrentHashMap<>();
+        slaProperties.parallelStream().forEach((param) -> {
+            double[][] dataset = new double[max_history][2];
+            for(int i = 0; i < slahistory.size(); i++){
+                dataset[i][0] = i;
+                dataset[i][1] = slahistory.get(i).get(param);
+            }
+            exp_sla.put(param, predictExpectedValue(dataset, max_history + 1));
+        });
+        ContextCacheHandler.updatePerformanceStats(new HashMap<>(exp_sla), PerformanceStats.expected_sla);
+    }
+
+    // Get the expected quality metrics during the next window
+    // This value is for the overall CMP (different from the Context Query Class expectation)
+    public static SQEMResponse getExpectedSLAParameter(String key){
+        return ContextCacheHandler.getPerformanceStats(key, PerformanceStats.expected_sla);
+    }
 
     // CSMS Performance Records
     // Inserts a new performance record
@@ -84,6 +116,9 @@ public class PerformanceLogHandler {
     // These records are persisted in MongoDB logs
     public static void clearOldRecords(int duration){
         String[] stockArr = new String[all_tables.size()];
+
+        // Refreshing the expected consumer SLA in cache
+        Executors.newCachedThreadPool().execute(() -> refershExpectedConsumerSLA() );
 
         LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
         String forwT = windowThresh.format(formatter);
@@ -249,7 +284,7 @@ public class PerformanceLogHandler {
             ResultSet rs = statement.executeQuery(finalString);
 
             if(!rs.next()) {
-                SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead");
+                SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead", PerformanceStats.perf_stats);
                 if(avg_latency.getStatus().equals("200"))
                     return Double.valueOf(avg_latency.getBody());
 
@@ -275,7 +310,7 @@ public class PerformanceLogHandler {
         Document persRecord = new Document();
 
         try{
-            ExecutorService executor = Executors.newFixedThreadPool(12);
+            ExecutorService executor = Executors.newFixedThreadPool(10);
             Collection<Future<?>> tasks = new LinkedList<>();
 
             tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
@@ -429,7 +464,7 @@ public class PerformanceLogHandler {
             dbo.put("penalty_cost", totalPenalties);
             dbo.put("retrieval_cost", totalRetrievalCost);
 
-            ContextCacheHandler.updatePerformanceStats(dbo.toMap());
+            ContextCacheHandler.updatePerformanceStats(dbo.toMap(), PerformanceStats.perf_stats);
         }
         catch (Exception ex){
             log.severe("Exception thrown when summarizing COAAS performance data: "
@@ -529,18 +564,18 @@ public class PerformanceLogHandler {
                     int count = rs_1.getInt("cnt");
                     total_queries += count;
 
-                    ex_rtm += (count*rs_1.getInt("avg_rtmax"));
-                    ex_ern += (count*rs_1.getInt("avg_earning"));
-                    ex_pen += (count*rs_1.getInt("avg_penalty"));
-                    ex_fth += (count*rs_1.getInt("avg_freshness"));
+                    ex_rtm += (count*rs_1.getDouble("avg_rtmax"));
+                    ex_pen += (count*rs_1.getDouble("avg_penalty"));
+                    ex_ern += (count*rs_1.getDouble("avg_earning"));
+                    ex_fth += (count*rs_1.getDouble("avg_freshness"));
 
                     res.put(rs_1.getString("consumerId"),
                             new BasicDBObject(){{
                                 put("count", count);
-                                put("fthresh", rs_1.getInt("avg_freshness"));
-                                put("earning", rs_1.getInt("avg_earning"));
-                                put("rtmax", rs_1.getInt("avg_rtmax"));
-                                put("penalty", rs_1.getInt("avg_penalty"));
+                                put("rtmax", rs_1.getDouble("avg_rtmax"));
+                                put("penalty", rs_1.getDouble("avg_penalty"));
+                                put("earning", rs_1.getDouble("avg_earning"));
+                                put("fthresh", rs_1.getDouble("avg_freshness"));
                             }});
                 }
             }
@@ -563,34 +598,63 @@ public class PerformanceLogHandler {
     }
 
     private static Runnable profileCQClasses(Document persRecord){
-        HashMap<String, BasicDBObject>  res = new HashMap<>();
+        ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
+
         try {
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
+            HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
             ResultSet rs_1 = statement.executeQuery("SELECT queryClass, count(*) AS cnt, avg(fthresh) AS avg_freshness, " +
                     "avg(earning) AS avg_earning, avg(rtmax) AS avg_rtmax, avg(penalty) AS avg_penalty " +
-                    "FROM consumer_slas GROUP BY queryClass;");
+                    "FROM consumer_slas GROUP BY queryClass, consumerId;");
 
             while(rs_1.next()){
+                long count = rs_1.getInt("cnt");
                 if(!res.containsKey(rs_1.getString("queryClass"))){
                     res.put(rs_1.getString("queryClass"),
-                            new BasicDBObject(){{
-                                put("count", rs_1.getInt("cnt"));
-                                put("fthresh", rs_1.getInt("avg_freshness"));
-                                put("earning", rs_1.getInt("avg_earning"));
-                                put("rtmax", rs_1.getInt("avg_rtmax"));
-                                put("penalty", rs_1.getInt("avg_penalty"));
+                            new HashMap(){{
+                                put("count", count);
+                                put("rtmax", rs_1.getDouble("avg_rtmax")*count);
+                                put("earning", rs_1.getDouble("avg_earning")*count);
+                                put("penalty", rs_1.getDouble("avg_penalty")*count);
+                                put("fthresh", rs_1.getDouble("avg_freshness")*count);
                             }});
                 }
+                else {
+                    HashMap<String,Double> temp = res.get(rs_1.getString("queryClass"));
+
+                    temp.put("count", temp.get("count") + count);
+                    temp.put("rtmax", temp.get("rtmax") + (rs_1.getDouble("avg_rtmax")*count));
+                    temp.put("earning", temp.get("earning") + (rs_1.getDouble("avg_earning")*count));
+                    temp.put("penalty", temp.get("penalty") + (rs_1.getDouble("avg_penalty")*count));
+                    temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("avg_freshness")*count));
+
+                    res.put(rs_1.getString("queryClass"), temp);
+                }
             }
+
+            res.entrySet().parallelStream().forEach((entry) -> {
+                String classId = entry.getKey();
+                HashMap<String,Double> temp = entry.getValue();
+
+                Double count = temp.get("count");
+
+                temp.put("rtmax", temp.get("rtmax")/count);
+                temp.put("earning", temp.get("earning")/count);
+                temp.put("penalty", temp.get("penalty")/count);
+                temp.put("fthresh", temp.get("fthresh")/count);
+
+                finalres.put(classId, new BasicDBObject(temp));
+                // TODO: Should update the context class tree with this data
+            });
         }
         catch (Exception ex){
             log.severe("Exception thrown when aggregating the context consumers: "
                     + ex.getMessage());
         }
 
-        persRecord.put("consumers", res);
+        persRecord.put("consumers", finalres);
         return null;
     }
 

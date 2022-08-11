@@ -4,21 +4,15 @@ import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
 
 import au.coaas.sqem.util.CacheDataRegistry;
-import au.coaas.sqem.util.ScheduleTasks;
+import au.coaas.sqem.util.enums.PerformanceStats;
+import au.coaas.sqem.util.enums.ScheduleTasks;
 import au.coaas.sqem.util.Utilty;
 import org.bson.Document;
 
-import org.json.JSONObject;
 import org.redisson.api.*;
 
-import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.TemporalUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import static java.lang.Character.isDigit;
@@ -158,12 +152,12 @@ public class ContextCacheHandler {
                 .setHashKey(result.getHashkey()).build();
     }
 
-    public static void updatePerformanceStats(Map perfMetrics) {
+    public static void updatePerformanceStats(Map perfMetrics, PerformanceStats key) {
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
             RLock lock = cacheClient.getFairLock("refreshLock");
-            RMap<String, Object> map = cacheClient.getMap("perf_stats");
+            RMap<String, Object> map = cacheClient.getMap(key.toString());
             map.putAll(perfMetrics);
             lock.unlockAsync();
 
@@ -172,14 +166,14 @@ public class ContextCacheHandler {
         }
     }
 
-    public static SQEMResponse getPerformanceStats(String statKey){
+    public static SQEMResponse getPerformanceStats(String statKey, PerformanceStats perf_stats){
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
             RLock lock = rwLock.readLock();
 
-            RMap<String, Object> map = cacheClient.getMap("perf_stats");
+            RMap<String, Object> map = cacheClient.getMap(perf_stats.toString());
             Object stat = map.get(statKey);
             lock.unlockAsync();
 

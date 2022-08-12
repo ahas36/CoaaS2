@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Timer;
 import java.util.TimerTask;
 
+// General utility functions used by the service
 public class Utilty {
     public static long convertTime2MilliSecond(String unit, int value) {
         switch (unit.toLowerCase()) {

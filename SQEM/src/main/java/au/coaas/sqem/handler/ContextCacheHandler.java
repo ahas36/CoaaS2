@@ -31,7 +31,9 @@ public class ContextCacheHandler {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
             Document entityJson =  Document.parse(registerRequest.getJson());
             RBucket<Document> ent = cacheClient.getBucket(hashKey);
-            ent.set (entityJson);
+            synchronized (ContextCacheHandler.class){
+                ent.set (entityJson);
+            }
 
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
         } catch (Exception e) {
@@ -42,16 +44,20 @@ public class ContextCacheHandler {
     // Updating cached context for an entity
     public static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
         try {
+
             String hashKey = String.valueOf(registry.updateRegistry(updateRequest.getReference()));
 
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-
             Document entityJson =  Document.parse(updateRequest.getJson());
-
-            RLock lock = cacheClient.getFairLock("refreshLock");
-
             RBucket<Document> ent = cacheClient.getBucket(hashKey);
-            RFuture<Document> refreshStatus = ent.getAndSetAsync(entityJson);
+
+            RLock lock;
+            RFuture<Document> refreshStatus;
+
+            synchronized (ContextCacheHandler.class){
+                lock = cacheClient.getFairLock("refreshLock");
+                refreshStatus = ent.getAndSetAsync(entityJson);
+            }
 
             refreshStatus.whenCompleteAsync((res, exception) -> {
                 lock.unlockAsync();
@@ -155,12 +161,13 @@ public class ContextCacheHandler {
     public static void updatePerformanceStats(Map perfMetrics, PerformanceStats key) {
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-
-            RLock lock = cacheClient.getFairLock("refreshLock");
             RMap<String, Object> map = cacheClient.getMap(key.toString());
-            map.putAll(perfMetrics);
-            lock.unlockAsync();
-
+            
+            synchronized (ContextCacheHandler.class){
+                RLock lock = cacheClient.getFairLock("refreshLock");
+                map.putAll(perfMetrics);
+                lock.unlockAsync();
+            }
         } catch (Exception e) {
             log.info(e.getMessage());
         }

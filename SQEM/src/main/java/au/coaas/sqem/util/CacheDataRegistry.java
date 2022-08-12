@@ -72,8 +72,6 @@ public final class CacheDataRegistry{
         if (singleton == null){
             singleton = new CacheDataRegistry();
         }
-
-
         return singleton;
     }
 
@@ -212,8 +210,9 @@ public final class CacheDataRegistry{
     }
 
     // Adds or updates the cached context repository
-    public AtomicReference<String> updateRegistry(CacheLookUp lookup){
+    public synchronized AtomicReference<String> updateRegistry(CacheLookUp lookup){
         AtomicReference<String> hashKey = new AtomicReference<>();
+
         if(this.root.containsKey(lookup.getEt().getType())){
             // Updating the last update time of the entity type
 

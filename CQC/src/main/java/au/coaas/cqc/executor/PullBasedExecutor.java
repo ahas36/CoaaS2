@@ -3,7 +3,9 @@ package au.coaas.cqc.executor;
 import au.coaas.base.proto.ListOfString;
 
 import au.coaas.cre.proto.*;
-import au.coaas.cqc.utils.RefreshLogics;
+import au.coaas.cqc.utils.Utilities;
+import au.coaas.cqc.utils.enums.RefreshLogics;
+import au.coaas.cqc.utils.enums.MeasuredProperty;
 import au.coaas.cqc.utils.exceptions.ExtendedToken;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
@@ -1238,6 +1240,8 @@ public class PullBasedExecutor {
             JSONObject conSer = contextServices.getJSONObject(i);
 
             if(qos.getBoolean("staged")){
+                // TODO:
+                // The following function should change with the values from the lifetime estimator
                 conSer = mapServiceWithSLA(conSer, qos, targetEntity.getType(), criticality.toLowerCase());
             }
 
@@ -1255,17 +1259,20 @@ public class PullBasedExecutor {
                         .setServiceId(conSer.getJSONObject("_id").getString("$oid").toString())
                         .setCheckFresh(true)
                         .setKey(keys)
-                        // TODO:
-                        // The following line should change with the values from the fuzzy consumer SLA provider
-                        .setUniformFreshness(slaObj.getJSONObject("freshness").toString())
+
+                        .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // lifetime & expected fthresh
                         .setSamplingInterval(slaObj.has("updateFrequency")?
-                                slaObj.getJSONObject("updateFrequency").toString():"")
+                                slaObj.getJSONObject("updateFrequency").toString():"") // sampling
                         .build();
 
                 // Look up should consider known refreshing logics
                 SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
 
                 if(data.getBody().equals("") && data.getStatus() != "500"){
+                    // TODO:
+                    // When, (1) lifetime < sampling scenario, and (2) streaming scenario, this should fetch from
+                    // a different context provider.
+                    // And for these 2 scenarioes, I shouldn't refresh but consider for caching
                     String retEntity = executeFetch(conSer.toString(), params);
                     Executors.newCachedThreadPool().execute(()
                             -> refreshContext(slaObj, data, lookup, retEntity));
@@ -1285,11 +1292,6 @@ public class PullBasedExecutor {
         }
 
         return null;
-    }
-
-    private static RefreshLogics resolveRefreshLogic(JSONObject sla){
-        // TODO: Should resolve the best refreshing loigc based on lifetime and sampling technique.
-        return RefreshLogics.REACTIVE;
     }
 
     private static void refreshContext(JSONObject sla, SQEMResponse data, CacheLookUp lookup, String retEntity){
@@ -1328,6 +1330,46 @@ public class PullBasedExecutor {
                 break;
             }
         }
+    }
+
+    private static RefreshLogics resolveRefreshLogic(JSONObject sla){
+        // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
+        boolean autoFetch = sla.getBoolean("autoFetch");
+        String life_unit = sla.getJSONObject("freshness").getString("unit");
+        double lifetime = sla.getJSONObject("freshness").getDouble("value");
+        double fthresh = sla.getJSONObject("freshness").getDouble("fthresh");
+        double samplingInterval = sla.getJSONObject("updateFrequency").getDouble("value");
+
+        if(life_unit != sla.getJSONObject("updateFrequency").getString("unit")) {
+            samplingInterval = Utilities.unitConverter(MeasuredProperty.TIME,
+                    sla.getJSONObject("updateFrequency").getString("unit"), life_unit, samplingInterval);
+        }
+
+        if(autoFetch){
+            // Context need to be refreshed based on validity.
+            if(lifetime > samplingInterval) {
+                if(samplingInterval == 0){
+                    // CP samples adhoc for retrieval requests
+                    // Therefore, the retrieval frequency can be best cost-optimized
+                    // using Proactive Retrieval with Shifting (A. Medvedev, 2020)
+                    return RefreshLogics.PROACTIVE_SHIFT;
+                }
+
+                double exp_prd = lifetime * (1-fthresh);
+                if(exp_prd >= samplingInterval){
+                    // When expiry period is longer than the sampling interval,
+                    // context can still be proactively retrieved.
+                    return RefreshLogics.PROACTIVE_SHIFT;
+                }
+            }
+        }
+        // Else, context are either,
+        // (1) Pushed into CoaaS via a data stream. In this case, the item should be fetched from the persistent storage into the cache.
+        // (2) Sampling Interval is greater or equal to the lifetime
+        // (3) Sampling interval is shorter than the lifetime, but the expiry period is shorter which creates an invalid period
+        // For (2) and (3), the item should rather be fetched as and when needed for queries.
+
+        return RefreshLogics.REACTIVE;
     }
 
     private static JSONObject mapServiceWithSLA(JSONObject conSer, JSONObject qos, ContextEntityType etype, String criticality){
@@ -1625,43 +1667,13 @@ public class PullBasedExecutor {
         if (!jsonValue.getString("@type").equalsIgnoreCase("QuantitativeValue")) {
             return value;
         }
-        String unitCode = jsonValue.getString("unitCode");
-        String defaultUnitCode = getDefaultUnitCode(unitCode);
 
-        return unitConverter(unitCode, defaultUnitCode, Double.valueOf(jsonValue.getString("value"))).toString();
-    }
+        String origUnit = jsonValue.getString("unitCode");
+        AbstractMap.SimpleEntry unitProp = Utilities.getDefaultUnitCode(origUnit);
+        if(((String) unitProp.getKey()).equals(origUnit))
+            return jsonValue.getString("value");
 
-    private static Double unitConverter(String originUnit, String targetUnit, double value) {
-        switch (originUnit.toLowerCase()) {
-            case "mm":
-                switch (targetUnit.toLowerCase()) {
-                    case "mm":
-                        return value;
-                    case "km":
-                        return value / 1000000;
-                    case "cm":
-                        return value / 10;
-                    case "m":
-                        return value / 1000;
-                    default:
-                        return null;
-                }
-            case "km":
-            case "cm":
-            case "m":
-            default:
-                return null;
-        }
-    }
-
-    private static String getDefaultUnitCode(String unitCode) {
-        switch (unitCode.toLowerCase()) {
-            case "mm":
-            case "km":
-            case "cm":
-            case "m":
-                return "m";
-        }
-        return null;
+        return Utilities.unitConverter((MeasuredProperty) unitProp.getValue(), origUnit,
+                (String) unitProp.getKey(), Double.valueOf(jsonValue.getString("value"))).toString();
     }
 }

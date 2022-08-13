@@ -1,4 +1,4 @@
-package au.coaas.cqc.utils;
+package au.coaas.cqc.utils.enums;
 
 public enum RefreshLogics {
     REACTIVE,

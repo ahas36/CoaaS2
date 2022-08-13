@@ -56,7 +56,7 @@ public class RetrievalManager {
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
         asyncStub.logPerformanceData(Statistic.newBuilder()
                 .setMethod("executeFetch").setStatus(fetch.getStatus())
-                .setTime(endTime-startTime).setCs(fetchRequest).setEarning(0).setAge(age)
+                .setTime(endTime-startTime).setCs(fetchRequest).setAge(age)
                 .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
         // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
 

@@ -64,6 +64,7 @@ message CacheRefreshRequest
     string json = 1;
     CacheLookUp reference = 2;
     int64 observedTime = 3;
+    string refreshType = 4;
 }
 
 message RegisterEntityRequest

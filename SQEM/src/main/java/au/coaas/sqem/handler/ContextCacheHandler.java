@@ -9,11 +9,13 @@ import au.coaas.sqem.util.enums.ScheduleTasks;
 import au.coaas.sqem.util.Utilty;
 import org.bson.Document;
 
+import org.json.JSONObject;
 import org.redisson.api.*;
 
-import java.time.Instant;
 import java.util.Map;
+import java.time.Instant;
 import java.util.logging.Logger;
+import java.util.concurrent.Executors;
 
 import static java.lang.Character.isDigit;
 
@@ -153,6 +155,8 @@ public class ContextCacheHandler {
                 Document entityContext = ent.get();
                 lock.unlockAsync();
 
+                Executors.newCachedThreadPool().execute(()
+                        -> logCacheSearch("200", request.getServiceId(), request.getUniformFreshness()));
                 return SQEMResponse.newBuilder().setStatus("200")
                         .setBody(entityContext.toJson())
                         .setMeta(result.getRefreshLogic())
@@ -163,13 +167,24 @@ public class ContextCacheHandler {
             }
         }
         else if(!result.getHashkey().equals("") && result.getIsCached() && !result.getIsValid()){
+            Executors.newCachedThreadPool().execute(()
+                    -> logCacheSearch("400", request.getServiceId(), request.getUniformFreshness()));
             return SQEMResponse.newBuilder().setStatus("400")
                     .setMeta(result.getRefreshLogic())
                     .setHashKey(result.getHashkey()).build();
         }
 
+        Executors.newCachedThreadPool().execute(()
+                -> logCacheSearch("404", request.getServiceId(), request.getUniformFreshness()));
         return SQEMResponse.newBuilder().setStatus("404")
                 .setHashKey(result.getHashkey()).build();
+    }
+
+    private static void logCacheSearch(String status, String csId, String freshness){
+        JSONObject frsh = new JSONObject(freshness);
+        Statistic stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status)
+                .setIdentifier(csId).setEarning(frsh.getDouble("fthresh")).build();
+        PerformanceLogHandler.coassPerformanceRecord(stat);
     }
 
     public static void updatePerformanceStats(Map perfMetrics, PerformanceStats key) {

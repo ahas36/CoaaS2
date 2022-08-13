@@ -244,7 +244,8 @@ public class PerformanceLogHandler {
                     statement.executeUpdate(formatted_string);
                     break;
                 }
-                case "executeFetch": {
+                case "executeFetch":
+                case "executeStreamRead":{
                     String hashKey = Utilty.getHashKey(request.getCs().getParamsMap());
 
                     JSONObject cs = new JSONObject(request.getCs().getContextService().getJson());
@@ -253,17 +254,31 @@ public class PerformanceLogHandler {
                     // Value at the Identifier column here is the Context Service ID
                     String formatted_string = String.format(queryString,
                             method, // Method name
-                            request.getStatus(), // Status of the request
+                            request.getStatus(), // Status of the retrieval
                             request.getTime(), // Response time
-                            request.getEarning(), // Earnings from the query
-                            request.getCost(), // Cost from query
+                            0, // Earnings from the retrieval (which is always 0)
+                            request.getCost(), // Cost of retrieval
                             cs_id, // Context Service Identifier
-                            hashKey, // Hashkey of the cached item
+                            hashKey, // Hashkey (cached or not cached)
                             0, // is Delayed?
-                            request.getAge(),//age
-                            cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); //fthresh
+                            request.getAge(), //age
+                            cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); // fthresh
                     statement.executeUpdate(formatted_string);
                     break;
+                }
+                case "cacheSearch": {
+                    String formatted_string = String.format(queryString,
+                            method, // Method name
+                            request.getStatus(), // Status of the request
+                            "NULL", // Response time
+                            "NULL", // Earnings from the query
+                            "NULL", // Cost from query
+                            request.getIdentifier(), // Context Service Identifier
+                            "NULL", // Hashkey of the cached item
+                            0, // is Delayed?
+                            "NULL",//age
+                            request.getEarning()); //fthresh
+                    statement.executeUpdate(formatted_string);
                 }
             }
         }
@@ -344,7 +359,7 @@ public class PerformanceLogHandler {
 
             HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
             ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, count(fthresh) AS cnt" +
-                    "FROM coass_performance WHERE status = '200' AND (method = 'executeFetch' OR method = 'executeStreamRead') " +
+                    "FROM coass_performance WHERE status = '200' AND method = 'cacheSearch' " +
                     "GROUP BY identifier, fthresh;");
 
             while(rs_1.next()){
@@ -447,7 +462,7 @@ public class PerformanceLogHandler {
             ResultSet rs_2 = statement.executeQuery("SELECT method, status, " +
                     "count(id) AS cnt, avg(response_time) AS average, sum(earning) AS tearn, sum(cost) AS tcost, " +
                     "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
-                    "FROM coass_performance " +
+                    "FROM coass_performance WHERE method != 'cacheSearch' " +
                     "GROUP BY method, status;");
 
             double totalEarning = 0;
@@ -775,7 +790,7 @@ public class PerformanceLogHandler {
                     "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
                     "    method VARCHAR(255) NOT NULL,\n" +
                     "    status VARCHAR(5) NOT NULL,\n" +
-                    "    response_time BIGINT NOT NULL,\n" +
+                    "    response_time BIGINT NULL,\n" +
                     "    earning REAL NULL,\n" +
                     "    cost REAL NULL,\n" +
                     "    identifier VARCHAR(255) NOT NULL,\n" +

@@ -3,6 +3,7 @@ package au.coaas.cqc.executor;
 import au.coaas.base.proto.ListOfString;
 
 import au.coaas.cre.proto.*;
+import au.coaas.cqc.utils.RefreshLogics;
 import au.coaas.cqc.utils.exceptions.ExtendedToken;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
@@ -1247,6 +1248,8 @@ public class PullBasedExecutor {
                     keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
 
                 JSONObject slaObj = conSer.getJSONObject("sla");
+
+                // By this line, I should have completed identifying the query class
                 CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").getString("$oid").toString())
@@ -1259,36 +1262,13 @@ public class PullBasedExecutor {
                                 slaObj.getJSONObject("updateFrequency").toString():"")
                         .build();
 
+                // Look up should consider known refreshing logics
                 SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
 
                 if(data.getBody().equals("") && data.getStatus() != "500"){
                     String retEntity = executeFetch(conSer.toString(), params);
-
-                    switch(data.getStatus()){
-                        case "400": {
-                            // This is reactive retrieveal
-                            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-                            asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
-                                    .setReference(lookup)
-                                    .setJson(retEntity).build());
-                            break;
-                        }
-                        case "404": {
-                            // Trigger Selective Caching Evaluation (Implement to run in a separate thread)
-                            // In Phase 1, "Cache All policy is used if allowed in the SLA"
-                            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-
-                            asyncStub.cacheEntity(CacheRequest.newBuilder()
-                                    .setJson(retEntity)
-                                    // This cache life should be saved in the eviction registry
-                                    .setCachelife(600)
-                                    .setReference(lookup).build());
-                            break;
-                        }
-                    }
-
+                    Executors.newCachedThreadPool().execute(()
+                            -> refreshContext(slaObj, data, lookup, retEntity));
                     return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
                             sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
@@ -1305,6 +1285,49 @@ public class PullBasedExecutor {
         }
 
         return null;
+    }
+
+    private static RefreshLogics resolveRefreshLogic(JSONObject sla){
+        // TODO: Should resolve the best refreshing loigc based on lifetime and sampling technique.
+        return RefreshLogics.REACTIVE;
+    }
+
+    private static void refreshContext(JSONObject sla, SQEMResponse data, CacheLookUp lookup, String retEntity){
+        // Based on the sampling nature, lifetime of the context,
+        // switching to the correct refreshing algorithm
+        switch(resolveRefreshLogic(sla)){
+            case REACTIVE: {
+                switch(data.getStatus()){
+                    // 400 means the cache missed due to invalidity
+                    case "400": {
+                        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                        asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
+                                .setReference(lookup)
+                                .setJson(retEntity).build());
+                        break;
+                    }
+                    case "404": {
+                        // 404 means the item is not at all cached
+                        // Trigger Selective Caching Evaluation
+                        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+                        asyncStub.cacheEntity(CacheRequest.newBuilder()
+                                .setJson(retEntity)
+                                // This cache life should be saved in the eviction registry
+                                .setCachelife(600)
+                                .setReference(lookup).build());
+                        break;
+                    }
+                }
+                break;
+            }
+            case PROACTIVE_SHIFT: {
+                // TODO: Proactive refreshing logics here.
+                break;
+            }
+        }
     }
 
     private static JSONObject mapServiceWithSLA(JSONObject conSer, JSONObject qos, ContextEntityType etype, String criticality){

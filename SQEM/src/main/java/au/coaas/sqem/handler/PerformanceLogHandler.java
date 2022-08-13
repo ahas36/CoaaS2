@@ -221,8 +221,8 @@ public class PerformanceLogHandler {
     // COASS Performance
     public static void coassPerformanceRecord(Statistic request) {
         String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
-                "cost,identifier,hashKey,createdDatetime,isDelayed,age) " +
-                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d);";
+                "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
+                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %d);";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -240,7 +240,7 @@ public class PerformanceLogHandler {
                             request.getIdentifier(), // Context Service Identifier
                             "NULL", // Hashkey of the cached item
                             request.getIsDelayed() ? 1 : 0, // is Delayed?
-                            0); // age
+                            0, "NULL"); // age, fthresh
                     statement.executeUpdate(formatted_string);
                     break;
                 }
@@ -260,7 +260,8 @@ public class PerformanceLogHandler {
                             cs_id, // Context Service Identifier
                             hashKey, // Hashkey of the cached item
                             0, // is Delayed?
-                            request.getAge()); //age
+                            request.getAge(),//age
+                            cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); //fthresh
                     statement.executeUpdate(formatted_string);
                     break;
                 }
@@ -310,12 +311,13 @@ public class PerformanceLogHandler {
         Document persRecord = new Document();
 
         try{
-            ExecutorService executor = Executors.newFixedThreadPool(10);
+            ExecutorService executor = Executors.newFixedThreadPool(12);
             Collection<Future<?>> tasks = new LinkedList<>();
 
             tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getLevelPerformanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getOverallPerfromanceSummary(persRecord); }));
+            tasks.add(executor.submit(() -> { profileContextProviders(persRecord); }));
             tasks.add(executor.submit(() -> { profileConsumers(persRecord); }));
             tasks.add(executor.submit(() -> { profileCQClasses(persRecord); }));
             persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
@@ -332,6 +334,55 @@ public class PerformanceLogHandler {
         }
 
         return SQEMResponse.newBuilder().setStatus("200").build();
+    }
+
+    private static Runnable profileContextProviders(Document persRecord){
+        ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+            ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, count(fthresh) AS cnt" +
+                    "FROM coass_performance WHERE status = '200' AND (method = 'executeFetch' OR method = 'executeStreamRead') " +
+                    "GROUP BY identifier, fthresh;");
+
+            while(rs_1.next()){
+                long count = rs_1.getInt("cnt");
+                if(!res.containsKey(rs_1.getString("identifier"))){
+                    res.put(rs_1.getString("identifier"),
+                            new HashMap(){{
+                                put("count", count);
+                                put("fthresh", rs_1.getDouble("fthresh")*count);
+                            }});
+                }
+                else {
+                    HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                    temp.put("count", temp.get("count") + count);
+                    temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
+
+                    res.put(rs_1.getString("identifier"), temp);
+                }
+            }
+
+            res.entrySet().parallelStream().forEach((entry) -> {
+                String csId = entry.getKey();
+                HashMap<String,Double> temp = entry.getValue();
+
+                Double count = temp.get("count");
+                temp.put("fthresh", temp.get("fthresh")/count);
+
+                finalres.put(csId, new BasicDBObject(temp));
+            });
+        }
+        catch (Exception ex){
+            log.severe("Exception thrown when aggregating the context consumers: "
+                    + ex.getMessage());
+        }
+
+        persRecord.put("rawContext", finalres);
+        return null;
     }
 
     private static Runnable getLevelPerformanceSummary(Document persRecord){
@@ -730,8 +781,9 @@ public class PerformanceLogHandler {
                     "    identifier VARCHAR(255) NOT NULL,\n" +
                     "    hashKey VARCHAR(255) NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL,\n" +
-                    "    isDelayed BIT NOT NULL," +
-                    "    age BIGINT)");
+                    "    isDelayed BIT NOT NULL,\n" +
+                    "    age BIGINT NULL,\n" +
+                    "    fthresh REAL NULL)");
 
             for(LogicalContextLevel level : LogicalContextLevel.values()){
                 statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +

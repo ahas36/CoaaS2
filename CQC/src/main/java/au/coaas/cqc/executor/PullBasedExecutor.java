@@ -1307,48 +1307,33 @@ public class PullBasedExecutor {
         // Based on the sampling nature, lifetime of the context,
         // switching to the correct refreshing algorithm
         RefreshLogics candidate = resolveRefreshLogic(sla);
-        switch(candidate){
-            case REACTIVE: {
-                if(!data.getMeta().equals("reactive")){
-                    Executors.newCachedThreadPool().execute(()
-                            -> toggleRefreshLogic(lookup.setRefreshLogic("proactive_shift").build()));
-                }
-                switch(data.getStatus()){
-                    // 400 means the cache missed due to invalidity
-                    case "400": {
-                        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-                        asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
-                                .setReference(lookup)
-                                .setJson(retEntity).build());
-                        break;
-                    }
-                    case "404": {
-                        // 404 means the item is not at all cached
-                        // Trigger Selective Caching Evaluation
-                        // This is where the Expected values should be considered (if there is a history)
-                        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        if(!data.getMeta().equals(candidate.toString().toLowerCase())){
+            Executors.newCachedThreadPool().execute(()
+                    -> toggleRefreshLogic(lookup.setRefreshLogic(candidate.toString().toLowerCase()).build()));
+        }
 
-                        asyncStub.cacheEntity(CacheRequest.newBuilder()
-                                .setJson(retEntity)
-                                .setRefreshLogic(candidate.toString().toLowerCase())
-                                // TODO: This cache life should be saved in the eviction registry
-                                .setCachelife(600)
-                                .setReference(lookup).build());
-                        break;
-                    }
-                }
-                break;
-            }
-            case PROACTIVE_SHIFT: {
-                if(!data.getMeta().equals("proactive_shift")){
-                    Executors.newCachedThreadPool().execute(()
-                            -> toggleRefreshLogic(lookup.setRefreshLogic("reactive").build()));
-                }
-                // TODO: Proactive refreshing logics here.
-                break;
-            }
+        if(data.getStatus().equals("400")){
+            // 400 means the cache missed due to invalidity
+            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
+                    .setReference(lookup)
+                    .setRefreshType(candidate.toString().toLowerCase())
+                    .setJson(retEntity).build());
+        }
+        else if(data.getStatus().equals("404")){
+            // 404 means the item is not at all cached
+            // Trigger Selective Caching Evaluation
+            // This is where the Expected values should be considered (if there is a history)
+            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+            asyncStub.cacheEntity(CacheRequest.newBuilder()
+                    .setJson(retEntity)
+                    .setRefreshLogic(candidate.toString().toLowerCase())
+                    // TODO: This cache life should be saved in the eviction registry
+                    .setCachelife(600)
+                    .setReference(lookup).build());
         }
     }
 

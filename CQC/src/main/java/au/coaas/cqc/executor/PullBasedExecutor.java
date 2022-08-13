@@ -277,7 +277,8 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, criticality, sla);
+                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,
+                                                                    criticality, sla);
 
                     if(cacheResult != null){
                         JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
@@ -1228,20 +1229,22 @@ public class PullBasedExecutor {
     }
 
     private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
-                                                            HashMap<String,String> params, String criticality, JSONObject sla) {
+                                                           HashMap<String,String> params, int limit, String criticality,
+                                                           JSONObject consumerSLA) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         JSONArray contextServices = new JSONArray(contextServicesText);
 
+        // This for loop returns the context data from the first context service.
+        // Although, there may be multiple other context services, this loop assumes the context services are ordered.
+        // Therefore, the 1st SC in the list is the best match (Input from Kanaka).
         for (int i = 0; i < contextServices.length(); i++) {
             // Mapping context service with SLA constraints
-            JSONObject qos = sla.getJSONObject("sla").getJSONObject("qos");
+            JSONObject qos = consumerSLA.getJSONObject("sla").getJSONObject("qos");
             JSONObject conSer = contextServices.getJSONObject(i);
 
             if(qos.getBoolean("staged")){
-                // TODO:
-                // The following function should change with the values from the lifetime estimator
                 conSer = mapServiceWithSLA(conSer, qos, targetEntity.getType(), criticality.toLowerCase());
             }
 
@@ -1254,51 +1257,62 @@ public class PullBasedExecutor {
                 JSONObject slaObj = conSer.getJSONObject("sla");
 
                 // By this line, I should have completed identifying the query class
-                CacheLookUp lookup = CacheLookUp.newBuilder().putAllParams(params)
+                CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").getString("$oid").toString())
                         .setCheckFresh(true)
                         .setKey(keys)
+                        .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
+                        .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()); // sampling
 
-                        .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // lifetime & expected fthresh
-                        .setSamplingInterval(slaObj.has("updateFrequency")?
-                                slaObj.getJSONObject("updateFrequency").toString():"") // sampling
-                        .build();
-
-                // Look up should consider known refreshing logics
-                SQEMResponse data = sqemStub.handleContextRequestInCache(lookup);
+                // Look up also considers known refreshing logics
+                SQEMResponse data = sqemStub.handleContextRequestInCache(lookup.build());
 
                 if(data.getBody().equals("") && data.getStatus() != "500"){
-                    // TODO:
-                    // When, (1) lifetime < sampling scenario, and (2) streaming scenario, this should fetch from
-                    // a different context provider.
-                    // And for these 2 scenarioes, I shouldn't refresh but consider for caching
-                    String retEntity = executeFetch(conSer.toString(), params);
+                    // Need to fetch from a different Context Provider for 2 scenarios when partial misses occur when proactively refreshed, and
+                    // (1) The data are streamed
+                    // (2) The sensor is sampling at a certain rate
+                    if(data.getStatus().equals("400") && data.getMeta().equals("proactive_shift")
+                        && slaObj.getJSONObject("updateFrequency").getDouble("value") == 0)
+                        continue;
+
+                    // Fetching from the same context provider OR it's stream otherwise
+                    String retEntity = slaObj.getBoolean("autoFetch") ?
+                            RetrievalManager.executeFetch(conSer.toString(), params) :
+                            RetrievalManager.executeStreamRead(conSer.toString(), params);
+
                     Executors.newCachedThreadPool().execute(()
-                            -> refreshContext(slaObj, data, lookup, retEntity));
+                            -> refreshOrCacheContext(slaObj, data, lookup, retEntity));
                     return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
-                            sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                            consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
                 else {
                     return new AbstractMap.SimpleEntry(data.getBody(),
-                            qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                            qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
             }
 
-            String retEntity = executeFetch(conSer.toString(), params);
+            String retEntity = conSer.getJSONObject("sla").getBoolean("autoFetch") ?
+                    RetrievalManager.executeFetch(conSer.toString(), params) :
+                    RetrievalManager.executeStreamRead(conSer.toString(), params);
             if(retEntity != null)
                 return new AbstractMap.SimpleEntry(retEntity,
-                        qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                        qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
         }
 
         return null;
     }
 
-    private static void refreshContext(JSONObject sla, SQEMResponse data, CacheLookUp lookup, String retEntity){
+    private static void refreshOrCacheContext(JSONObject sla, SQEMResponse data, CacheLookUp.Builder lookup, String retEntity){
         // Based on the sampling nature, lifetime of the context,
         // switching to the correct refreshing algorithm
-        switch(resolveRefreshLogic(sla)){
+        RefreshLogics candidate = resolveRefreshLogic(sla);
+        switch(candidate){
             case REACTIVE: {
+                if(!data.getMeta().equals("reactive")){
+                    Executors.newCachedThreadPool().execute(()
+                            -> toggleRefreshLogic(lookup.setRefreshLogic("proactive_shift").build()));
+                }
                 switch(data.getStatus()){
                     // 400 means the cache missed due to invalidity
                     case "400": {
@@ -1312,12 +1326,14 @@ public class PullBasedExecutor {
                     case "404": {
                         // 404 means the item is not at all cached
                         // Trigger Selective Caching Evaluation
+                        // This is where the Expected values should be considered (if there is a history)
                         SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
                                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                         asyncStub.cacheEntity(CacheRequest.newBuilder()
                                 .setJson(retEntity)
-                                // This cache life should be saved in the eviction registry
+                                .setRefreshLogic(candidate.toString().toLowerCase())
+                                // TODO: This cache life should be saved in the eviction registry
                                 .setCachelife(600)
                                 .setReference(lookup).build());
                         break;
@@ -1326,10 +1342,21 @@ public class PullBasedExecutor {
                 break;
             }
             case PROACTIVE_SHIFT: {
+                if(!data.getMeta().equals("proactive_shift")){
+                    Executors.newCachedThreadPool().execute(()
+                            -> toggleRefreshLogic(lookup.setRefreshLogic("reactive").build()));
+                }
                 // TODO: Proactive refreshing logics here.
                 break;
             }
         }
+    }
+
+    private static Runnable toggleRefreshLogic(CacheLookUp lookup){
+        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        asyncStub.toggleRefreshLogic(lookup);
+        return null;
     }
 
     private static RefreshLogics resolveRefreshLogic(JSONObject sla){
@@ -1400,57 +1427,6 @@ public class PullBasedExecutor {
                 .put("fthresh", fthresh);
 
         return conSer;
-    }
-
-    private static String executeFetch(String contextService, HashMap<String,String> params) {
-        long startTime = System.currentTimeMillis();
-
-        CSIServiceGrpc.CSIServiceBlockingStub csiStub
-                = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
-
-        final ContextServiceInvokerRequest.Builder fetchRequest = ContextServiceInvokerRequest.newBuilder();
-        fetchRequest.putAllParams(params);
-
-        final ContextService cs = ContextService.newBuilder().setJson(contextService).build();
-        fetchRequest.setContextService(cs);
-        CSIResponse fetch = csiStub.fetch(fetchRequest.build());
-
-        long endTime = System.currentTimeMillis();
-
-        long age = 0;
-        if(fetch.getStatus().equals("200")){
-            JSONObject response = new JSONObject(fetch.getBody());
-            if(response.has("age")){
-                if(response.getString("age").startsWith("{")){
-                    JSONObject age_obj = new JSONObject(response.getString("age"));
-
-                    String unit = age_obj.getString("unitText");
-                    long value = age_obj.getLong("value");
-
-                    // Age is always considered in seconds in the code
-                    switch(unit){
-                        case "ms": age = value/1000; break;
-                        case "s": age = value; break;
-                        case "h": age = value*60; break;
-                    }
-                }
-                else age = Long.valueOf(response.getString("age"));
-            }
-        }
-
-        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-        asyncStub.logPerformanceData(Statistic.newBuilder()
-                .setMethod("executeFetch").setStatus(fetch.getStatus())
-                .setTime(endTime-startTime).setCs(fetchRequest).setEarning(0).setAge(age)
-                .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
-        // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
-
-        if (fetch.getStatus().equals("200")) {
-            return fetch.getBody();
-        }
-
-        return null;
     }
 
     private static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {

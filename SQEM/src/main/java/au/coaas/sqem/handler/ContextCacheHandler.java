@@ -26,7 +26,8 @@ public class ContextCacheHandler {
     // Caches all context under an entity
     public static SQEMResponse cacheEntity(CacheRequest registerRequest) {
         try {
-            String hashKey = String.valueOf(registry.updateRegistry(registerRequest.getReference()));
+            String hashKey = String.valueOf(registry.updateRegistry(registerRequest.getReference(),
+                    registerRequest.getRefreshLogic()));
 
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
             Document entityJson =  Document.parse(registerRequest.getJson());
@@ -67,6 +68,16 @@ public class ContextCacheHandler {
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
+    }
+
+    public static Empty toggleRefreshLogic(CacheLookUp request) {
+        try {
+            registry.changeRefreshLogic(request);
+            // TODO: Subscriptions and Unsubscriptions
+        } catch (Exception e) {
+            log.severe("Couldn't toggle refresh logic: " + e.getMessage());
+        }
+        return null;
     }
 
     public static void fullyEvict(ScheduleTask request){
@@ -142,7 +153,9 @@ public class ContextCacheHandler {
                 Document entityContext = ent.get();
                 lock.unlockAsync();
 
-                return SQEMResponse.newBuilder().setStatus("200").setBody(entityContext.toJson())
+                return SQEMResponse.newBuilder().setStatus("200")
+                        .setBody(entityContext.toJson())
+                        .setMeta(result.getRefreshLogic())
                         .setHashKey(result.getHashkey()).build();
             }
             catch(Exception ex){
@@ -151,6 +164,7 @@ public class ContextCacheHandler {
         }
         else if(!result.getHashkey().equals("") && result.getIsCached() && !result.getIsValid()){
             return SQEMResponse.newBuilder().setStatus("400")
+                    .setMeta(result.getRefreshLogic())
                     .setHashKey(result.getHashkey()).build();
         }
 

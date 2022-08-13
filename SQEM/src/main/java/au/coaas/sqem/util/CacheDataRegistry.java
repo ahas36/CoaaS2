@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public final class CacheDataRegistry{
     class ContextItem {
+        private String refreshLogic;
         private LocalDateTime createdTime;
         private LocalDateTime updatedTime;
         HashMap<String, ContextItem> child;
@@ -28,7 +29,7 @@ public final class CacheDataRegistry{
         }
         */
 
-        ContextItem(CacheLookUp lookup, String hashKey){
+        ContextItem(CacheLookUp lookup, String hashKey, String refreshLogic){
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
             this.child = new HashMap<>();
@@ -37,7 +38,7 @@ public final class CacheDataRegistry{
                 JSONObject obj = new JSONObject(serId);
                 serId = obj.getString("$oid");
             }
-            this.child.put(serId, new ContextItem(hashKey));
+            this.child.put(serId, new ContextItem(hashKey, refreshLogic));
         }
 
         ContextItem(Map<String,String> params){
@@ -47,14 +48,21 @@ public final class CacheDataRegistry{
             this.child.put(Utilty.getHashKey(params), new ContextItem());
         }
 
-        ContextItem(String hashKey){
+        ContextItem(String hashKey, String refreshLogic){
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
             this.child = new HashMap<>();
-            this.child.put(hashKey, new ContextItem());
+            this.child.put(hashKey, new ContextItem(refreshLogic));
         }
 
         ContextItem(){
+            this.refreshLogic = "reactive";
+            this.createdTime = LocalDateTime.now();
+            this.updatedTime = LocalDateTime.now();
+        }
+
+        ContextItem(String refreshLogic){
+            this.refreshLogic = refreshLogic;
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
         }
@@ -79,6 +87,7 @@ public final class CacheDataRegistry{
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
         long remainingLife = 0;
         LocalDateTime staleTime;
+        String refreshLogic = "reactive";
         AtomicReference<String> hashKey = new AtomicReference<>();
         CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
 
@@ -98,10 +107,10 @@ public final class CacheDataRegistry{
                 if(entities.containsKey(hashKey.get())){
                     if(lookup.getCheckFresh()){
                         // TODO:
-                        // Need to get this information from Himadri's lifetime profiler
+                        // Need to get this information rather from Himadri's lifetime profiler
                         JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
                         // This is a potential cache item. But this should be cached lineant
-                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId)/1000;
+                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId, hashKey.get())/1000;
 
                         // Periodic Sampling Device Check
                         JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
@@ -185,6 +194,7 @@ public final class CacheDataRegistry{
                             return res.setHashkey(hashKey.get())
                                     .setIsValid(false)
                                     .setIsCached(true)
+                                    .setRefreshLogic(entities.get(hashKey.get()).refreshLogic)
                                     .setRemainingLife(remainingLife).build();
                         }
 
@@ -211,6 +221,10 @@ public final class CacheDataRegistry{
 
     // Adds or updates the cached context repository
     public synchronized AtomicReference<String> updateRegistry(CacheLookUp lookup){
+        return updateRegistry(lookup, null);
+    }
+
+    public synchronized AtomicReference<String> updateRegistry(CacheLookUp lookup, String refreshLogic){
         AtomicReference<String> hashKey = new AtomicReference<>();
 
         if(this.root.containsKey(lookup.getEt().getType())){
@@ -259,9 +273,46 @@ public final class CacheDataRegistry{
         }
         else {
             hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-            this.root.put(lookup.getEt().getType(), new ContextItem(lookup, hashKey.get()));
+            this.root.put(lookup.getEt().getType(), new ContextItem(lookup, hashKey.get(), refreshLogic));
         }
         return hashKey;
+    }
+
+    // Change the hashtable record of the current refreshing logic
+    public void changeRefreshLogic(CacheLookUp lookup){
+        AtomicReference<String> hashKey = new AtomicReference<>();
+
+        if(this.root.containsKey(lookup.getEt().getType())){
+            this.root.compute(lookup.getEt().getType(), (k,v) -> {
+                if(v != null){
+                    String serId = lookup.getServiceId();
+                    if(serId.startsWith("{")){
+                        JSONObject obj = new JSONObject(serId);
+                        serId = obj.getString("$oid");
+                    }
+
+                    if(v.child.containsKey(serId)){
+                        v.child.compute(serId, (id,stat) -> {
+                            if(stat != null){
+                                hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
+                                if(stat.child.containsKey(hashKey.get())){
+                                    stat.child.compute(hashKey.get(), (k1,v1) -> {
+                                        if(v1!=null)
+                                            v1.refreshLogic = lookup.getRefreshLogic();
+                                        return v1;
+                                    });
+                                }
+                            }
+                            return stat;
+                        });
+                    }
+                    else {
+                        v.child.put(serId,new ContextItem(lookup.getParamsMap()));
+                    }
+                }
+                return v;
+            });
+        }
     }
 
     // Removes context items from the cached context registry

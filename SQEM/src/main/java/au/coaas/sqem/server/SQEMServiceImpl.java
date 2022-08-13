@@ -76,6 +76,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void toggleRefreshLogic(au.coaas.sqem.proto.CacheLookUp request,
+                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.toggleRefreshLogic(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void evictContextEntity(au.coaas.sqem.proto.CacheLookUp request,
                                      io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {

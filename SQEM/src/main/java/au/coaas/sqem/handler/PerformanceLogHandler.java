@@ -9,6 +9,7 @@ import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
 import au.coaas.sqem.util.enums.PerformanceStats;
+import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCollection;
@@ -47,19 +48,27 @@ public class PerformanceLogHandler {
     private static final ArrayList<String> slaProperties =
             new ArrayList<>(Arrays.asList("exp_pen", "exp_fth", "exp_earn", "exp_rtmax"));
 
+    /** Statistical Handling */
     // Refresh the expected quality metrics during the next window by estimating
     // Linear regression is used to estimate the expected values of the parameters
     public static void refershExpectedConsumerSLA(){
-        ConcurrentHashMap<String, Double> exp_sla = new ConcurrentHashMap<>();
-        slaProperties.parallelStream().forEach((param) -> {
-            double[][] dataset = new double[max_history][2];
-            for(int i = 0; i < slahistory.size(); i++){
-                dataset[i][0] = i;
-                dataset[i][1] = slahistory.get(i).get(param);
-            }
-            exp_sla.put(param, predictExpectedValue(dataset, max_history + 1));
-        });
-        ContextCacheHandler.updatePerformanceStats(new HashMap<>(exp_sla), PerformanceStats.expected_sla);
+        try{
+            ConcurrentHashMap<String, Double> exp_sla = new ConcurrentHashMap<>();
+            slaProperties.parallelStream().forEach((param) -> {
+                double[][] dataset = new double[max_history][2];
+                for(int i = 0; i < slahistory.size(); i++){
+                    dataset[i][0] = i;
+                    dataset[i][1] = slahistory.get(i).get(param);
+                }
+                // There values are unconstrained. So, e.g., fthresh > 1 or < 0 which should be handled.
+                exp_sla.put(param, predictExpectedValue(dataset, max_history + 1));
+            });
+            ContextCacheHandler.updatePerformanceStats(new HashMap<>(exp_sla), PerformanceStats.expected_sla);
+        }
+        catch(Exception ex){
+            log.info("Failed to estimate the consumer SLA: " + ex.getMessage());
+        }
+
     }
 
     // Get the expected quality metrics during the next window
@@ -68,6 +77,7 @@ public class PerformanceLogHandler {
         return ContextCacheHandler.getPerformanceStats(key, PerformanceStats.expected_sla);
     }
 
+    /** Performance Logging */
     // CSMS Performance Records
     // Inserts a new performance record
     public static void insertRecord(LogicalContextLevel level, String id, Boolean isHit, long rTime) {
@@ -83,6 +93,7 @@ public class PerformanceLogHandler {
         }
     }
 
+    // Recording teh recent performance of CSMS
     public static void genericRecord(String method, String status, long rTime) {
         String queryString = "INSERT INTO csms_performance(method,status,response_time,createdDatetime) "
                 + "VALUES('%s', '%s', %d, GETDATE());";
@@ -96,6 +107,7 @@ public class PerformanceLogHandler {
         }
     }
 
+    // Recording for profiling context consumers
     public static void consumerRecord(SummarySLA conSummary) {
         String queryString = "INSERT INTO consumer_slas "
                 + "VALUES('%s', '%d', %d, %d, %d, %s, %d, GETDATE());";
@@ -110,112 +122,6 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
-    }
-
-    // Clears older records earlier than the current window from the in-memory database
-    // These records are persisted in MongoDB logs
-    public static void clearOldRecords(int duration){
-        String[] stockArr = new String[all_tables.size()];
-
-        // Refreshing the expected consumer SLA in cache
-        Executors.newCachedThreadPool().execute(() -> refershExpectedConsumerSLA() );
-
-        LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
-        String forwT = windowThresh.format(formatter);
-
-        Arrays.stream(all_tables.toArray(stockArr)).parallel().forEach((level)-> {
-            if(level.equals("consumer_slas")) resetconsumerrecords(forwT);
-            else removeAndPersistRecord(level, forwT);
-        });
-    }
-
-    private static void resetconsumerrecords(String forwT){
-        try{
-            String deleteString = "DELETE FROM consumer_slas WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(30);
-            statement.executeUpdate(String.format(deleteString, forwT));
-        }
-        catch(Exception ex){
-            log.severe(ex.getMessage());
-        }
-    }
-
-    private static void removeAndPersistRecord(String level, String forwT) {
-        level = level.toLowerCase();
-        try{
-            String getString = "SELECT * FROM %s WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
-            String deleteString = "DELETE FROM %s WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
-
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(30);
-
-            ResultSet rs = statement.executeQuery(String.format(getString, level, forwT));
-
-            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("coaas_log");
-
-            MongoCollection<Document> collection = db.getCollection("statistics_backup");
-
-            ArrayList<Document> persRecords = new ArrayList();
-            while(rs.next()){
-                Document records = new Document();
-                records.put("type", level);
-
-                if(level == "coass_performance" || level == "csms_performance"){
-                    records.put("method", rs.getString("method"));
-                    records.put("status", rs.getString("status"));
-                    records.put("latency", rs.getString("response_time"));
-                    if (level == "coass_performance"){
-                        records.put("identifier", rs.getString("identifier"));
-                        records.put("earning", rs.getString("earning"));
-                        records.put("cost", rs.getString("cost"));
-                        records.put("isdelayed", rs.getBoolean("isDelayed"));
-                    }
-                }
-                else {
-                    records.put("item_id", rs.getString("itemId"));
-                    records.put("is_hit", rs.getBoolean("isHit"));
-                }
-
-                records.put("datetime", rs.getString("createdDatetime"));
-
-                persRecords.add(records);
-            }
-
-            statement.executeUpdate(String.format(deleteString, level, forwT));
-
-            if(persRecords.size() > 0)
-                collection.insertMany(persRecords);
-        }
-        catch(Exception ex){
-            log.severe(ex.getMessage());
-        }
-    }
-
-    // Returns the current hit rate of a context item
-    public static double getHitRate(LogicalContextLevel level, String id, int duration) {
-        String queryString = "SELECT SUM(isHit)/COUNT(*) AS hitrate" +
-                "FROM %s WHERE itemId = '%s' AND createdDatetime >= CAST('%s' AS DATETIME2);";
-        try{
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(30);
-
-            LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
-            String forwT = windowThresh.format(formatter);
-
-            ResultSet rs = statement.executeQuery(String.format(queryString,
-                    level.toString().toLowerCase(), id, forwT));
-
-            // Returns the actual hit rate as recorded
-            return rs.getDouble("hitrate");
-        }
-        catch(SQLException ex){
-            log.severe(ex.getMessage());
-        }
-
-        // Returns HR = 0 since there are no performance records
-        return 0;
     }
 
     // COASS Performance
@@ -287,40 +193,99 @@ public class PerformanceLogHandler {
         }
     }
 
-    // Context Service Performance for retrievals
-    public static double getLastRetrievalTime(String csId, String hashKey){
-        String queryString = "SELECT TOP 1 response_time, age " +
-                "FROM coass_performance WHERE status = '200' AND identifier = '%s' AND hashKey = '%s' ORDER BY id DESC;";
-        try{
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(30);
-            csId = csId.startsWith("{") ? (new JSONObject(csId)).getString("$oid") : csId;
-            String finalString = String.format(queryString, csId, hashKey);
+    /** Resetting/Refreshing Temporary Performance Records */
+    // Clears older records earlier than the current window from the in-memory database
+    // These records are persisted in MongoDB logs
+    public static void clearOldRecords(int duration){
+        String[] stockArr = new String[all_tables.size()];
 
-            ResultSet rs = statement.executeQuery(finalString);
+        // Refreshing the expected consumer SLA in cache
+        Executors.newCachedThreadPool().execute(() -> refershExpectedConsumerSLA() );
 
-            if(!rs.next()) {
-                SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead", PerformanceStats.perf_stats);
-                if(avg_latency.getStatus().equals("200"))
-                    return Double.valueOf(avg_latency.getBody());
+        LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
+        String forwT = windowThresh.format(formatter);
 
-                return 0;
-            }
-
-            double retrieval_latency = rs.getDouble("response_time")/1000;
-            long age = rs.getLong("response_time");
-
-            return retrieval_latency+age;
-        }
-        catch(SQLException ex){
-            log.severe(ex.getMessage());
-        }
-
-        // We can ignore the retrieval latency of context services which has retrievals earlier than a window size.
-        // That is because, as the lifetime grows larger in value, network latency can be ignored.
-        return 0;
+        Arrays.stream(all_tables.toArray(stockArr)).parallel().forEach((level)-> {
+            if(level.equals("consumer_slas")) resetConsumerRecords(forwT);
+            else removeAndPersistRecord(level, forwT);
+        });
     }
 
+    // Clear context consumer records for the past window
+    private static void resetConsumerRecords(String forwT){
+        try{
+            String deleteString = "DELETE FROM consumer_slas WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            statement.executeUpdate(String.format(deleteString, forwT));
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
+    // Clear performance data in temporary storage and store them in persistent storage
+    private static void removeAndPersistRecord(String level, String forwT) {
+        level = level.toLowerCase();
+        try{
+            String getString = "SELECT * FROM %s WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
+            String deleteString = "DELETE FROM %s WHERE createdDatetime <= CAST('%s' AS DATETIME2);";
+
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            ResultSet rs = statement.executeQuery(String.format(getString, level, forwT));
+
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("statistics_backup");
+
+            ArrayList<Document> persRecords = new ArrayList();
+            while(rs.next()){
+                Document records = new Document();
+                records.put("type", level);
+
+                if(level == "coass_performance" || level == "csms_performance"){
+                    records.put("method", rs.getString("method"));
+                    records.put("status", rs.getString("status"));
+                    records.put("latency", rs.getString("response_time"));
+                    if (level == "coass_performance"){
+                        records.put("identifier", rs.getString("identifier"));
+                        records.put("earning", rs.getString("earning"));
+                        records.put("cost", rs.getString("cost"));
+                        records.put("isdelayed", rs.getBoolean("isDelayed"));
+                    }
+                }
+                else {
+                    records.put("item_id", rs.getString("itemId"));
+                    records.put("is_hit", rs.getBoolean("isHit"));
+                }
+
+                records.put("datetime", rs.getString("createdDatetime"));
+
+                persRecords.add(records);
+            }
+
+            statement.executeUpdate(String.format(deleteString, level, forwT));
+
+            if(persRecords.size() > 0)
+                collection.insertMany(persRecords);
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
+    // Persisting the performance summary in summary()
+    private static void persistPerformanceSummary(Document persRecord){
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas_log");
+        MongoCollection<Document> collection = db.getCollection("performanceSummary");
+        collection.insertOne(persRecord);
+    }
+
+    /** Aggregation Routines */
     // Summarizes the performance data of the last window and stores in the logs.
     public static SQEMResponse summarize() {
         Document persRecord = new Document();
@@ -351,6 +316,7 @@ public class PerformanceLogHandler {
         return SQEMResponse.newBuilder().setStatus("200").build();
     }
 
+    // Summarizing Context Providers profiles
     private static Runnable profileContextProviders(Document persRecord){
         ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
         try {
@@ -400,6 +366,7 @@ public class PerformanceLogHandler {
         return null;
     }
 
+    // Summarizing the performance of each context cache level
     private static Runnable getLevelPerformanceSummary(Document persRecord){
         Map<String, BasicDBObject> level_res = new ConcurrentHashMap<>();
         String query = "SELECT itemId, isHit, count(id) AS cnt, avg(response_time) AS average " +
@@ -414,6 +381,7 @@ public class PerformanceLogHandler {
         return null;
     }
 
+    // Summarizing the performance of the CSMS (Overall)
     private static Runnable getCSMSPerfromanceSummary(Document persRecord){
         HashMap<String, BasicDBObject>  res_1= new HashMap<>();
         try {
@@ -451,6 +419,7 @@ public class PerformanceLogHandler {
         return null;
     }
 
+    // Summarizing the performance of COAAS Overall
     private static Runnable getOverallPerfromanceSummary(Document persRecord){
         HashMap<String, BasicDBObject> res_2 = new HashMap<>();
         BasicDBObject dbo = new BasicDBObject();
@@ -542,6 +511,7 @@ public class PerformanceLogHandler {
         return null;
     }
 
+    // Summarizing the performance of each individual context cache level
     private static HashMap<String, Object> getCacheLevelPerfromanceSummary(String query, LogicalContextLevel lvl){
         HashMap<String, Object> res_lvl = new HashMap<>();
         try{
@@ -607,6 +577,7 @@ public class PerformanceLogHandler {
         return res_lvl;
     }
 
+    // Summarizing the Context Consumers interactions with the CMP
     private static Runnable profileConsumers(Document persRecord){
         HashMap<String, BasicDBObject>  res = new HashMap<>();
         HashMap<String, Double> expected = new HashMap<>();
@@ -663,6 +634,7 @@ public class PerformanceLogHandler {
         return null;
     }
 
+    // Summarizing and profiling each Context Query Classes
     private static Runnable profileCQClasses(Document persRecord){
         ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
 
@@ -724,12 +696,64 @@ public class PerformanceLogHandler {
         return null;
     }
 
-    // Finally, persisting the performance summary in summary()
-    private static void persistPerformanceSummary(Document persRecord){
-        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-        MongoDatabase db = mongoClient.getDatabase("coaas_log");
-        MongoCollection<Document> collection = db.getCollection("performanceSummary");
-        collection.insertOne(persRecord);
+    /** Performance Data Retrieval */
+    // Returns the current hit rate of a context item
+    public static double getHitRate(LogicalContextLevel level, String id, int duration) {
+        String queryString = "SELECT SUM(isHit)/COUNT(*) AS hitrate" +
+                "FROM %s WHERE itemId = '%s' AND createdDatetime >= CAST('%s' AS DATETIME2);";
+        try{
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            LocalDateTime windowThresh = LocalDateTime.now().minusSeconds(duration);
+            String forwT = windowThresh.format(formatter);
+
+            ResultSet rs = statement.executeQuery(String.format(queryString,
+                    level.toString().toLowerCase(), id, forwT));
+
+            // Returns the actual hit rate as recorded
+            return rs.getDouble("hitrate");
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+
+        // Returns HR = 0 since there are no performance records
+        return 0;
+    }
+
+    // Context Service Performance for retrievals
+    public static double getLastRetrievalTime(String csId, String hashKey){
+        String queryString = "SELECT TOP 1 response_time, age " +
+                "FROM coass_performance WHERE status = '200' AND identifier = '%s' AND hashKey = '%s' ORDER BY id DESC;";
+        try{
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            csId = csId.startsWith("{") ? (new JSONObject(csId)).getString("$oid") : csId;
+            String finalString = String.format(queryString, csId, hashKey);
+
+            ResultSet rs = statement.executeQuery(finalString);
+
+            if(!rs.next()) {
+                SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead", PerformanceStats.perf_stats);
+                if(avg_latency.getStatus().equals("200"))
+                    return Double.valueOf(avg_latency.getBody());
+
+                return 0;
+            }
+
+            double retrieval_latency = rs.getDouble("response_time")/1000;
+            long age = rs.getLong("response_time");
+
+            return retrieval_latency+age;
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+
+        // We can ignore the retrieval latency of context services which has retrievals earlier than a window size.
+        // That is because, as the lifetime grows larger in value, network latency can be ignored.
+        return 0;
     }
 
     // Retrieves the current summary of performance
@@ -755,6 +779,47 @@ public class PerformanceLogHandler {
         }
     }
 
+    // TODO: If the Context Provider is popular, this statistic should also be cached.
+    // Retrieves the summary of context provider's access profile to cache
+    public static SQEMResponse getContextProviderProfile(String cpId){
+        try{
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("performanceSummary");
+
+            Document sort = new Document();
+            sort.put("_id",-1);
+
+            Document project = new Document();
+            project.put("rawContext."+cpId+".fthresh",1);
+
+            Document filter = new Document();
+            filter.put("rawContext."+cpId, new Document(){{ put("$exists", true); }});
+
+            int index = 0;
+            double[][] dataset = new double[max_history][2];
+            collection.find(filter).projection(project)
+                    .sort(sort).limit(10).forEach((Block<Document>) document -> {
+                        dataset[index][0] = index;
+                        dataset[index][1] = document.getDouble("rawContext."+cpId+".fthresh");
+            });
+
+            // The list is inverted, so, estimating from x=-1.
+            double exp_fthr = predictExpectedValue(dataset, -1);
+            return SQEMResponse.newBuilder().setStatus("200")
+                    .setBody(exp_fthr < 0 || exp_fthr > 1 ?
+                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr)).build();
+        }
+        catch(Exception e){
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+        }
+    }
+
+    /** Initializing performance data monitoring */
     // Setting up the databases to store and persist the performance logs
     private static void getPerfDBConnection() throws Exception {
         Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver").newInstance();
@@ -763,7 +828,6 @@ public class PerformanceLogHandler {
         connection = DriverManager.getConnection(connectionString);
     }
 
-    // Creating the tables at the start
     public static void seed_performance_db(){
         try{
             all_tables.add("coass_performance");

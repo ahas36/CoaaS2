@@ -95,6 +95,20 @@ services:
           - mongodb
           - sqlserver
 
+    cpree:
+      image: shakthiw/cpree:latest
+      container_name: "cpree"
+      ports:
+        - "9292"
+        - "8014:8014"
+      restart: always
+      links:
+        - sqem:sqem
+        - cqc:cqc
+      depends_on:
+        - sqem
+        - cqc
+
     cqg:
       image: shakthiw/cqg:latest
       container_name: "cqg"

@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_generic_services = true;
+
+package au.coaas.cpree.proto;
+
+message CPREEResponse {
+  string status = 1;
+  string body = 2;
+}
+
+message ContextQueryPlan {
+  string parseTree = 1;
+}
+
+service CPREEService {
+  rpc classifyQuery (ContextQueryPlan) returns (CPREEResponse);
+}

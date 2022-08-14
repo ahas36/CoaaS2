@@ -7,3 +7,4 @@ Docker push shakthiw/cre:latest
 Docker push shakthiw/csi:latest
 Docker push shakthiw/cqg:latest
 Docker push shakthiw/acoca:latest
+Docker push shakthiw/cpree:latest

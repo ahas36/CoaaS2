@@ -30,6 +30,7 @@
         <module>CSI</module>
         <module>grpc</module>
         <module>CRE</module>
+        <module>CPREE</module>
         <module>QueryGenerator</module>
         <module>SeeSenseDataWrapper</module>
     </modules>
@@ -41,7 +42,6 @@
             <version>0.1.55</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/jsch/jsch -->
         <dependency>
             <groupId>jsch</groupId>
             <artifactId>jsch</artifactId>
@@ -52,24 +52,29 @@
             <groupId>io.grpc</groupId>
             <artifactId>grpc-netty-shaded</artifactId>
         </dependency>
+
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-protobuf</artifactId>
         </dependency>
+
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-stub</artifactId>
         </dependency>
+
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
         </dependency>
+
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20190722</version>
             <scope>compile</scope>
         </dependency>
+
         <dependency>
             <groupId>javax</groupId>
             <artifactId>javaee-web-api</artifactId>

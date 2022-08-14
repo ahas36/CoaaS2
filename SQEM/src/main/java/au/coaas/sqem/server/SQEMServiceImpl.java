@@ -16,9 +16,6 @@ import java.util.logging.Logger;
 
 import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
-import static io.grpc.stub.ClientCalls.asyncUnaryCall;
-import static io.grpc.stub.ServerCalls.asyncUnimplementedUnaryCall;
-
 /**
  * @author ali
  */
@@ -47,6 +44,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
             }
         } catch (Exception ex) {
             responseObserver.onError(ex);
+            log.severe(ex.getMessage());
         }
         responseObserver.onCompleted();
     }

@@ -9,13 +9,7 @@ import au.coaas.cqc.utils.enums.MeasuredProperty;
 import au.coaas.cqc.utils.exceptions.ExtendedToken;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
-import au.coaas.csi.proto.CSIResponse;
-import au.coaas.csi.proto.CSIServiceGrpc;
-import au.coaas.csi.proto.ContextService;
-import au.coaas.csi.proto.ContextServiceInvokerRequest;
-
 import au.coaas.grpc.client.CREChannel;
-import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
 
 import au.coaas.cqc.proto.*;

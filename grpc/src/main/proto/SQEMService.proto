@@ -35,7 +35,11 @@ message CacheLookUp {
     string samplingInterval = 5;
     bool checkFresh = 6;
     string key = 7;
-    string refreshLogic = 8;
+}
+
+message RefreshUpdate {
+    CacheLookUp lookup = 1;
+    string refreshLogic = 2;
 }
 
 message CacheLookUpResponse {
@@ -64,7 +68,7 @@ message CacheRefreshRequest
     string json = 1;
     CacheLookUp reference = 2;
     int64 observedTime = 3;
-    string refreshType = 4;
+    string sla = 4;
 }
 
 message RegisterEntityRequest
@@ -197,7 +201,7 @@ service SQEMService {
     rpc updateContextConsumerStatus (UpdateContextConsumerStatusRequest) returns (SQEMResponse);
 
     rpc clearCache (Empty) returns (SQEMResponse);
-    rpc toggleRefreshLogic(CacheLookUp) returns (Empty);
+    rpc toggleRefreshLogic(RefreshUpdate) returns (Empty);
     rpc cacheEntity (CacheRequest) returns (SQEMResponse);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);

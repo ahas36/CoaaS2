@@ -2,6 +2,9 @@ package au.coaas.cqc.executor;
 
 import au.coaas.base.proto.ListOfString;
 
+import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cpree.proto.CacheSelectionRequest;
+import au.coaas.cqc.utils.enums.CacheLevels;
 import au.coaas.cre.proto.*;
 import au.coaas.cqc.utils.Utilities;
 import au.coaas.cqc.utils.enums.RefreshLogics;
@@ -9,6 +12,7 @@ import au.coaas.cqc.utils.enums.MeasuredProperty;
 import au.coaas.cqc.utils.exceptions.ExtendedToken;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
+import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.grpc.client.CREChannel;
 import au.coaas.grpc.client.SQEMChannel;
 
@@ -1298,84 +1302,28 @@ public class PullBasedExecutor {
     }
 
     private static void refreshOrCacheContext(JSONObject sla, SQEMResponse data, CacheLookUp.Builder lookup, String retEntity){
-        // Based on the sampling nature, lifetime of the context,
-        // switching to the correct refreshing algorithm
-        RefreshLogics candidate = resolveRefreshLogic(sla);
-        if(!data.getMeta().equals(candidate.toString().toLowerCase())){
-            Executors.newCachedThreadPool().execute(()
-                    -> toggleRefreshLogic(lookup.setRefreshLogic(candidate.toString().toLowerCase()).build()));
-        }
-
         if(data.getStatus().equals("400")){
             // 400 means the cache missed due to invalidity
-            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            // The cached context needs to be refreshed.
+            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
             asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
-                    .setReference(lookup)
-                    .setRefreshType(candidate.toString().toLowerCase())
-                    .setJson(retEntity).build());
+                            .setSla(sla.toString())
+                            .setReference(lookup)
+                            .setJson(retEntity).build());
         }
         else if(data.getStatus().equals("404")){
             // 404 means the item is not at all cached
             // Trigger Selective Caching Evaluation
-            // This is where the Expected values should be considered (if there is a history)
-            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-
-            asyncStub.cacheEntity(CacheRequest.newBuilder()
-                    .setJson(retEntity)
-                    .setRefreshLogic(candidate.toString().toLowerCase())
-                    // TODO: This cache life should be saved in the eviction registry
-                    .setCachelife(600)
-                    .setReference(lookup).build());
+            CPREEServiceGrpc.CPREEServiceFutureStub asynStub
+                    = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+            asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
+                            .setSla(sla.toString())
+                            .setContext(retEntity)
+                            .setContextLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
+                            .setReference(lookup)
+                            .build());
         }
-    }
-
-    private static Runnable toggleRefreshLogic(CacheLookUp lookup){
-        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-        asyncStub.toggleRefreshLogic(lookup);
-        return null;
-    }
-
-    private static RefreshLogics resolveRefreshLogic(JSONObject sla){
-        // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
-        boolean autoFetch = sla.getBoolean("autoFetch");
-        String life_unit = sla.getJSONObject("freshness").getString("unit");
-        double lifetime = sla.getJSONObject("freshness").getDouble("value");
-        double fthresh = sla.getJSONObject("freshness").getDouble("fthresh");
-        double samplingInterval = sla.getJSONObject("updateFrequency").getDouble("value");
-
-        if(life_unit != sla.getJSONObject("updateFrequency").getString("unit")) {
-            samplingInterval = Utilities.unitConverter(MeasuredProperty.TIME,
-                    sla.getJSONObject("updateFrequency").getString("unit"), life_unit, samplingInterval);
-        }
-
-        if(autoFetch){
-            // Context need to be refreshed based on validity.
-            if(lifetime > samplingInterval) {
-                if(samplingInterval == 0){
-                    // CP samples adhoc for retrieval requests
-                    // Therefore, the retrieval frequency can be best cost-optimized
-                    // using Proactive Retrieval with Shifting (A. Medvedev, 2020)
-                    return RefreshLogics.PROACTIVE_SHIFT;
-                }
-
-                double exp_prd = lifetime * (1-fthresh);
-                if(exp_prd >= samplingInterval){
-                    // When expiry period is longer than the sampling interval,
-                    // context can still be proactively retrieved.
-                    return RefreshLogics.PROACTIVE_SHIFT;
-                }
-            }
-        }
-        // Else, context are either,
-        // (1) Pushed into CoaaS via a data stream. In this case, the item should be fetched from the persistent storage into the cache.
-        // (2) Sampling Interval is greater or equal to the lifetime
-        // (3) Sampling interval is shorter than the lifetime, but the expiry period is shorter which creates an invalid period
-        // For (2) and (3), the item should rather be fetched as and when needed for queries.
-
-        return RefreshLogics.REACTIVE;
     }
 
     private static JSONObject mapServiceWithSLA(JSONObject conSer, JSONObject qos, ContextEntityType etype, String criticality){

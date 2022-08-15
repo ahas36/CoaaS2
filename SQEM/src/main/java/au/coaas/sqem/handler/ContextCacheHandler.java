@@ -72,10 +72,9 @@ public class ContextCacheHandler {
         }
     }
 
-    public static Empty toggleRefreshLogic(CacheLookUp request) {
+    public static Empty toggleRefreshLogic(RefreshUpdate request) {
         try {
             registry.changeRefreshLogic(request);
-            // TODO: Subscriptions and Unsubscriptions
         } catch (Exception e) {
             log.severe("Couldn't toggle refresh logic: " + e.getMessage());
         }

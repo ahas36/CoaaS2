@@ -5,6 +5,8 @@ option java_generic_services = true;
 
 package au.coaas.cpree.proto;
 
+import "SQEMService.proto";
+
 message CPREEResponse {
   string status = 1;
   string body = 2;
@@ -14,6 +16,15 @@ message ContextQueryPlan {
   string parseTree = 1;
 }
 
+message CacheSelectionRequest {
+  string context = 1;
+  string contextLevel = 2;
+  string sla = 3;
+  au.coaas.sqem.proto.CacheLookUp reference = 4;
+}
+
 service CPREEService {
   rpc classifyQuery (ContextQueryPlan) returns (CPREEResponse);
+  rpc evaluateAndCacheContext (CacheSelectionRequest) returns (CPREEResponse);
 }
+

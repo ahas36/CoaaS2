@@ -4,6 +4,7 @@ import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.handler.PerformanceLogHandler;
 import au.coaas.sqem.proto.CacheLookUp;
 import au.coaas.sqem.proto.CacheLookUpResponse;
+import au.coaas.sqem.proto.RefreshUpdate;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
@@ -279,13 +280,13 @@ public final class CacheDataRegistry{
     }
 
     // Change the hashtable record of the current refreshing logic
-    public void changeRefreshLogic(CacheLookUp lookup){
+    public void changeRefreshLogic(RefreshUpdate lookup){
         AtomicReference<String> hashKey = new AtomicReference<>();
 
-        if(this.root.containsKey(lookup.getEt().getType())){
-            this.root.compute(lookup.getEt().getType(), (k,v) -> {
+        if(this.root.containsKey(lookup.getLookup().getEt().getType())){
+            this.root.compute(lookup.getLookup().getEt().getType(), (k,v) -> {
                 if(v != null){
-                    String serId = lookup.getServiceId();
+                    String serId = lookup.getLookup().getServiceId();
                     if(serId.startsWith("{")){
                         JSONObject obj = new JSONObject(serId);
                         serId = obj.getString("$oid");
@@ -294,7 +295,7 @@ public final class CacheDataRegistry{
                     if(v.child.containsKey(serId)){
                         v.child.compute(serId, (id,stat) -> {
                             if(stat != null){
-                                hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
+                                hashKey.set(Utilty.getHashKey(lookup.getLookup().getParamsMap()));
                                 if(stat.child.containsKey(hashKey.get())){
                                     stat.child.compute(hashKey.get(), (k1,v1) -> {
                                         if(v1!=null)
@@ -307,7 +308,7 @@ public final class CacheDataRegistry{
                         });
                     }
                     else {
-                        v.child.put(serId,new ContextItem(lookup.getParamsMap()));
+                        v.child.put(serId,new ContextItem(lookup.getLookup().getParamsMap()));
                     }
                 }
                 return v;

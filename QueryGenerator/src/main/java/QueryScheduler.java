@@ -11,7 +11,6 @@ import java.util.logging.Logger;
 
 import static org.quartz.SimpleScheduleBuilder.simpleSchedule;
 
-
 public class QueryScheduler {
 
     private static QueryScheduler queryScheduler;

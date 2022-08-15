@@ -1,23 +1,17 @@
-package au.coaas.cpree.executor.scheduler.jobs;
+package au.coaas.cpree.executor.scheduler;
 
 public class RefreshContext {
-
-    private String data;
     private String contextId;
     private long refreshInterval; // This is in miliseconds
 
     // Refresh Interval is specific to the next retrieval only because,
     // refInteral = Lifetime - age - retrievalLatency
-    public RefreshContext(String data, String contextId, double refInterval){
-        this.data = data;
+    public RefreshContext(String contextId, double refInterval){
         this.contextId = contextId;
-        // The parameter should be set in seconds.
+        // The parameter, when passed, should be set in seconds.
         this.refreshInterval = (long) refInterval * 1000;
     }
 
-    public String getData(){
-        return this.data;
-    }
     public String getContextId(){
         return this.contextId;
     }

@@ -743,7 +743,7 @@ public class PerformanceLogHandler {
             }
 
             double retrieval_latency = rs.getDouble("response_time")/1000;
-            long age = rs.getLong("response_time");
+            long age = rs.getLong("age");
 
             return retrieval_latency+age;
         }
@@ -781,7 +781,7 @@ public class PerformanceLogHandler {
 
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
-    public static SQEMResponse getContextProviderProfile(String cpId){
+    public static SQEMResponse getContextProviderProfile(String cpId, String hashKey){
         try{
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");
@@ -806,10 +806,12 @@ public class PerformanceLogHandler {
             });
 
             // The list is inverted, so, estimating from x=-1.
-            double exp_fthr = predictExpectedValue(dataset, -1);
+            double exp_fthr = index == 0 ? Double.NaN : predictExpectedValue(dataset, -1);
             return SQEMResponse.newBuilder().setStatus("200")
-                    .setBody(exp_fthr < 0 || exp_fthr > 1 ?
-                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr)).build();
+                    .setBody(Double.isNaN(exp_fthr) ? "NaN" : (exp_fthr < 0 || exp_fthr > 1 ?
+                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr))) // quality expectation
+                    .setMeta(Double.toString(getLastRetrievalTime(cpId, hashKey))) // last retrieval loss (retLatency + age)
+                    .build();
         }
         catch(Exception e){
             JSONObject body = new JSONObject();

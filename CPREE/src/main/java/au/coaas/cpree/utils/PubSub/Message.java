@@ -1,6 +1,6 @@
 package au.coaas.cpree.utils.PubSub;
 
-import au.coaas.cpree.executor.scheduler.jobs.RefreshContext;
+import au.coaas.cpree.executor.scheduler.RefreshContext;
 
 public class Message extends Post {
     private RefreshContext query;

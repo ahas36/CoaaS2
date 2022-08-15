@@ -1,13 +1,13 @@
 package au.coaas.cpree.executor;
 
-import au.coaas.cpree.executor.scheduler.jobs.RefreshContext;
+import au.coaas.cpree.executor.scheduler.RefreshContext;
 import au.coaas.cpree.executor.scheduler.RefreshScheduler;
 import au.coaas.cpree.utils.enums.MeasuredProperty;
-import au.coaas.cpree.proto.CacheSelectionRequest;
 import au.coaas.cpree.utils.enums.RefreshLogics;
 import au.coaas.cpree.utils.Utilities;
 
 import au.coaas.sqem.proto.CacheLookUp;
+import au.coaas.sqem.proto.CacheRefreshRequest;
 import au.coaas.sqem.proto.RefreshUpdate;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 
@@ -15,6 +15,7 @@ import au.coaas.grpc.client.SQEMChannel;
 
 import org.json.JSONObject;
 
+import java.util.HashMap;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
@@ -23,11 +24,10 @@ public class RefreshExecutor {
 
     private static final RefreshScheduler refreshScheduler = RefreshScheduler.getInstance();
 
-    public static void setProactiveRefreshing(CacheSelectionRequest request){
+    public static void setProactiveRefreshing(String contextId, double residualLife, double fthr){
         try{
-            // Should calculate the interval until the next refreshing
-            // Get the hashkey? Pass the lookup?
-            RefreshContext refObject = new RefreshContext(request.getContext(), "csId-hashKey", 2);
+            double exp_prd = residualLife * ( 1 - fthr);
+            RefreshContext refObject = new RefreshContext(contextId, exp_prd);
             refreshScheduler.scheduleRefresh(refObject);
         }
         catch(Exception ex){
@@ -38,7 +38,9 @@ public class RefreshExecutor {
     public static void changeRefreshLogic(JSONObject sla, String cur_type, CacheLookUp lookup){
         // Based on the sampling nature, lifetime of the context,
         // switching to the correct refreshing algorithm
-        RefreshLogics candidate = resolveRefreshLogic(sla);
+        RefreshLogics candidate = resolveRefreshLogic(sla, lookup.getServiceId(),
+                Utilities.getHashKey(lookup.getParamsMap()));
+
         if(!cur_type.equals(candidate.toString().toLowerCase())){
             Executors.newCachedThreadPool().execute(()
                     -> toggleRefreshLogic(RefreshUpdate.newBuilder()
@@ -56,7 +58,7 @@ public class RefreshExecutor {
         return null;
     }
 
-    public static RefreshLogics resolveRefreshLogic(JSONObject sla){
+    public static RefreshLogics resolveRefreshLogic(JSONObject sla, String cpId, String hashKey){
         // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
         boolean autoFetch = sla.getBoolean("autoFetch");
         String life_unit = sla.getJSONObject("freshness").getString("unit");
@@ -99,5 +101,16 @@ public class RefreshExecutor {
         // For (2) and (3), the item should rather be fetched as and when needed for queries.
 
         return RefreshLogics.REACTIVE;
+    }
+
+    public static void refreshContext(String context, String contextProvider, HashMap<String, String> params){
+        // TODO: Implement Logic
+
+        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
+                // .setSla(sla.toString())
+                // .setReference(lookup)
+                .setJson(context).build());
     }
 }

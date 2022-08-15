@@ -350,6 +350,20 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void getContextProviderProfile(au.coaas.sqem.proto.ContextProfileRequest request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler
+                    .getContextProviderProfile(request.getPrimaryKey(), request.getHashKey()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+
+
     ////////// Authentication & Context Consumers ///////////
     @Override
     public void authenticateConsumer(au.coaas.sqem.proto.AuthRequest request,

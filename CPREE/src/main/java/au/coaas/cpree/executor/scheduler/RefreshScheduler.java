@@ -1,6 +1,5 @@
 package au.coaas.cpree.executor.scheduler;
 
-import au.coaas.cpree.executor.scheduler.jobs.RefreshContext;
 import au.coaas.cpree.executor.scheduler.jobs.QueryJob;
 import au.coaas.cpree.utils.PubSub.Event;
 import org.quartz.*;
@@ -44,7 +43,6 @@ public class RefreshScheduler {
     public void scheduleRefresh(RefreshContext query) throws SchedulerException {
         JobDetail job = JobBuilder.newJob(QueryJob.class)
                 .withIdentity(query.getContextId(), "refreshGroup")
-                .usingJobData("data", query.getData())
                 .usingJobData("contextId", query.getContextId())
                 .build();
 

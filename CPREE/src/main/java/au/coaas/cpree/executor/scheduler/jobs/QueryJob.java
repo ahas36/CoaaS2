@@ -1,13 +1,12 @@
 package au.coaas.cpree.executor.scheduler.jobs;
 
-import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
-import au.coaas.sqem.proto.CacheRefreshRequest;
-
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 
+import au.coaas.cpree.executor.RefreshExecutor;
+
+import java.util.HashMap;
 import java.util.logging.Logger;
 
 public class QueryJob implements Job {
@@ -16,14 +15,23 @@ public class QueryJob implements Job {
 
     public void execute(JobExecutionContext context) {
         JobDataMap dataMap = context.getJobDetail().getJobDataMap();
-        String data = dataMap.getString("data");
 
-        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-        // asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
-        //        .setReference(lookup)
-        //        .setJson(data).build());
+        String fetchMode = dataMap.getString("fetchMode");
+        String contextProvider = dataMap.getString("contextProvider");
+        HashMap<String,String> params = (HashMap<String,String>) dataMap.get("params");
 
-        // Should reset the execution time of the tigger.
+        String fetchResponse = null;
+        switch (fetchMode){
+            case "reactive":
+                fetchResponse = RetrievalManager.executeFetch(contextProvider, params);
+                break;
+            case "proactive_shift":
+                fetchResponse = RetrievalManager.executeStreamRead(contextProvider, params);
+        }
+
+        // TODO:
+        // Refresh the item in cache and toggle if nessecary
+        // RefreshExecutor.refreshContext(fetchResponse, contextProvider, params);
+        // Schedule the next refrehsing operation.
     }
 }

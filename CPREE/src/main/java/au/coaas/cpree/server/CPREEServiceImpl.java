@@ -1,8 +1,8 @@
 package au.coaas.cpree.server;
 
-import au.coaas.cpree.executor.SelectionExecutor;
 import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cpree.executor.SelectionExecutor;
 import au.coaas.cpree.executor.ClusteringExecutor;
 
 import java.util.logging.Logger;

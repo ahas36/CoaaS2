@@ -7,7 +7,6 @@ import au.coaas.cpree.proto.CacheSelectionRequest;
 import au.coaas.cqc.utils.enums.CacheLevels;
 import au.coaas.cre.proto.*;
 import au.coaas.cqc.utils.Utilities;
-import au.coaas.cqc.utils.enums.RefreshLogics;
 import au.coaas.cqc.utils.enums.MeasuredProperty;
 import au.coaas.cqc.utils.exceptions.ExtendedToken;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
@@ -1257,7 +1256,7 @@ public class PullBasedExecutor {
                 // By this line, I should have completed identifying the query class
                 CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
                         .setEt(targetEntity.getType())
-                        .setServiceId(conSer.getJSONObject("_id").getString("$oid").toString())
+                        .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
                         .setCheckFresh(true)
                         .setKey(keys)
                         .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
@@ -1280,7 +1279,7 @@ public class PullBasedExecutor {
                             RetrievalManager.executeStreamRead(conSer.toString(), params);
 
                     Executors.newCachedThreadPool().execute(()
-                            -> refreshOrCacheContext(slaObj, data, lookup, retEntity));
+                            -> refreshOrCacheContext(slaObj, Integer.getInteger(data.getStatus()), lookup, retEntity));
                     return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
                             consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
@@ -1301,8 +1300,9 @@ public class PullBasedExecutor {
         return null;
     }
 
-    private static void refreshOrCacheContext(JSONObject sla, SQEMResponse data, CacheLookUp.Builder lookup, String retEntity){
-        if(data.getStatus().equals("400")){
+    private static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
+                                              String retEntity){
+        if(cacheStatus == 400){
             // 400 means the cache missed due to invalidity
             // The cached context needs to be refreshed.
             SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
@@ -1312,7 +1312,7 @@ public class PullBasedExecutor {
                             .setReference(lookup)
                             .setJson(retEntity).build());
         }
-        else if(data.getStatus().equals("404")){
+        else if(cacheStatus == 404){
             // 404 means the item is not at all cached
             // Trigger Selective Caching Evaluation
             CPREEServiceGrpc.CPREEServiceFutureStub asynStub

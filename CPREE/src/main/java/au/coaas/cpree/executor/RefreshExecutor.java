@@ -58,14 +58,21 @@ public class RefreshExecutor {
         return null;
     }
 
-    public static RefreshLogics resolveRefreshLogic(JSONObject sla, String cpId, String hashKey){
+    public static RefreshLogics resolveRefreshLogic(JSONObject sla, String cpId, String hashKey, String profile){
         // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
         boolean autoFetch = sla.getBoolean("autoFetch");
         String life_unit = sla.getJSONObject("freshness").getString("unit");
         double lifetime = sla.getJSONObject("freshness").getDouble("value");
-        // This should be the expected fthresh
-        double fthresh = sla.getJSONObject("freshness").getDouble("fthresh");
         double samplingInterval = sla.getJSONObject("updateFrequency").getDouble("value");
+
+        double fthresh = 0.0;
+        if(profile.startsWith("{")){
+            JSONObject cp_prof = new JSONObject(profile);
+            fthresh = cp_prof.getDouble("fthresh");
+        }
+        else
+            fthresh = !profile.equals("NaN") ? Double.valueOf(profile) :
+                    sla.getJSONObject("freshness").getDouble("fthresh");
 
         if(life_unit != sla.getJSONObject("updateFrequency").getString("unit")) {
             samplingInterval = Utilities.unitConverter(MeasuredProperty.TIME,

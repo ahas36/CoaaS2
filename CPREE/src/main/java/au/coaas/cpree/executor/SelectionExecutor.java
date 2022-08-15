@@ -19,8 +19,6 @@ public class SelectionExecutor {
     public static CPREEResponse execute(CacheSelectionRequest request){
         // Get Context Identifier
         String hashKey = Utilities.getHashKey(request.getReference().getParamsMap());
-        RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()),
-                request.getReference().getServiceId(),hashKey);
 
         // Configuring refreshing
         // Get Context Provider's Profile
@@ -32,6 +30,9 @@ public class SelectionExecutor {
                         .setHashKey(hashKey)
                         .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
                         .build());
+
+        RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()),
+                request.getReference().getServiceId(),hashKey,profile.getBody());
 
         if(ref_type.equals(RefreshLogics.PROACTIVE_SHIFT)){
             JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");

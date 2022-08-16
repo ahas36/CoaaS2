@@ -146,4 +146,25 @@ public class ContextServiceHandler {
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }
     }
+
+    public static SQEMResponse getContextServiceInfo(String contextProviderId) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas");
+
+            MongoCollection<Document> collection = db.getCollection("contextService");
+            BasicDBObject query = new BasicDBObject() {{
+                put("_id", contextProviderId);
+            }};
+
+            Document cpInfo = collection.find(query).first();
+            return SQEMResponse.newBuilder().setStatus("200").setBody(cpInfo.toJson()).build();
+
+        } catch (Exception e) {
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+        }
+    }
 }

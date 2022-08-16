@@ -2,14 +2,12 @@ package au.coaas.cpree.executor;
 
 import au.coaas.cpree.executor.scheduler.RefreshContext;
 import au.coaas.cpree.executor.scheduler.RefreshScheduler;
+import au.coaas.cpree.proto.ProactiveRefreshRequest;
 import au.coaas.cpree.utils.enums.MeasuredProperty;
 import au.coaas.cpree.utils.enums.RefreshLogics;
 import au.coaas.cpree.utils.Utilities;
 
-import au.coaas.sqem.proto.CacheLookUp;
-import au.coaas.sqem.proto.CacheRefreshRequest;
-import au.coaas.sqem.proto.RefreshUpdate;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
+import au.coaas.sqem.proto.*;
 
 import au.coaas.grpc.client.SQEMChannel;
 
@@ -22,16 +20,42 @@ import java.util.logging.Logger;
 public class RefreshExecutor {
     private static Logger log = Logger.getLogger(RefreshExecutor.class.getName());
 
+    // TODO: this need be implemented with read, update, and delete
+    private static HashMap<String,RefreshContext> prorefRegistery = new HashMap<>();
+
     private static final RefreshScheduler refreshScheduler = RefreshScheduler.getInstance();
 
-    public static void setProactiveRefreshing(String contextId, double residualLife, double fthr){
+    public static HashMap<String,RefreshContext> getSceduledRefreshes(){
+        return prorefRegistery;
+    }
+
+    public static void setProactiveRefreshing(ProactiveRefreshRequest refreshRequest){
         try{
-            double exp_prd = residualLife * ( 1 - fthr);
-            RefreshContext refObject = new RefreshContext(contextId, exp_prd);
-            refreshScheduler.scheduleRefresh(refObject);
+            SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+            SQEMResponse cpInfo = blockingStub.getContextServiceInfo(ContextServiceId.newBuilder()
+                            .setId(refreshRequest.getRequest().getReference().getServiceId()).build());
+
+            if(cpInfo.getStatus() == "200"){
+                String contextId = refreshRequest.getRequest().getReference().getServiceId() + "-" + refreshRequest.getHashKey();
+                RefreshContext refObject = new RefreshContext(contextId,
+                        refreshRequest.getFthreh(),
+                        refreshRequest.getRefreshPolicy(),
+                        refreshRequest.getResiLifetime(),
+                        refreshRequest.getLifetime(),
+                        (HashMap<String, String>) refreshRequest.getRequest().getReference().getParamsMap(),
+                        cpInfo.getBody(),
+                        refreshRequest.getEt());
+
+                prorefRegistery.put(contextId, refObject);
+                refreshScheduler.scheduleRefresh(refObject);
+            }
+            throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
         }
         catch(Exception ex){
             log.severe("Could not refresh context!");
+            log.info("Cause: " + ex.getMessage());
         }
     }
 
@@ -39,7 +63,7 @@ public class RefreshExecutor {
         // Based on the sampling nature, lifetime of the context,
         // switching to the correct refreshing algorithm
         RefreshLogics candidate = resolveRefreshLogic(sla, lookup.getServiceId(),
-                Utilities.getHashKey(lookup.getParamsMap()));
+                Utilities.getHashKey(lookup.getParamsMap()), "NaN");
 
         if(!cur_type.equals(candidate.toString().toLowerCase())){
             Executors.newCachedThreadPool().execute(()
@@ -110,14 +134,23 @@ public class RefreshExecutor {
         return RefreshLogics.REACTIVE;
     }
 
-    public static void refreshContext(String context, String contextProvider, HashMap<String, String> params){
-        // TODO: Implement Logic
-
+    public static void refreshContext(String contextId, String context){
         SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+
+        RefreshContext refObj = prorefRegistery.get(contextId);
+
+        JSONObject conSer = new JSONObject(refObj.getContextProvider());
+        conSer.getJSONObject("sla").getJSONObject("freshness").put("fthresh", refObj.getfthresh());
+
+        CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
+                .putAllParams(refObj.getParams())
+                .setCheckFresh(true)
+                .setEt(refObj.getEtype())
+                .setServiceId(conSer.getJSONObject("_id").getString("$oid"));
+
         asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
-                // .setSla(sla.toString())
-                // .setReference(lookup)
+                .setReference(lookup)
                 .setJson(context).build());
     }
 }

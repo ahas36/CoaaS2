@@ -1,11 +1,13 @@
 package au.coaas.cpree.executor;
 
+import au.coaas.cpree.proto.ProactiveRefreshRequest;
 import au.coaas.cpree.utils.Utilities;
 import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.utils.enums.CacheLevels;
 import au.coaas.cpree.utils.enums.RefreshLogics;
 import au.coaas.cpree.proto.CacheSelectionRequest;
 
+import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.sqem.proto.CacheRequest;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
@@ -41,8 +43,14 @@ public class SelectionExecutor {
                     freshReq.getDouble("fthresh");
 
             double res_life = freshReq.getDouble("value") - Double.valueOf(profile.getMeta());
-            RefreshExecutor.setProactiveRefreshing(request.getReference().getServiceId() + "-" + hashKey,
-                    res_life, fthresh);
+            RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
+                            .setEt(request.getReference().getEt())
+                            .setRequest(request).setFthreh(fthresh)
+                            .setLifetime(freshReq.getDouble("value"))
+                            .setResiLifetime(res_life)
+                            .setHashKey(hashKey)
+                            .setRefreshPolicy(ref_type.toString().toLowerCase())
+                    .build());
         }
 
         // TODO:

@@ -6,6 +6,7 @@ option java_generic_services = true;
 package au.coaas.cpree.proto;
 
 import "SQEMService.proto";
+import "CQPService.proto";
 
 message CPREEResponse {
   string status = 1;
@@ -21,6 +22,16 @@ message CacheSelectionRequest {
   string contextLevel = 2;
   string sla = 3;
   au.coaas.sqem.proto.CacheLookUp reference = 4;
+}
+
+message ProactiveRefreshRequest {
+    CacheSelectionRequest request = 1;
+    double fthreh = 2;
+    double resiLifetime = 3;
+    double lifetime = 4;
+    string hashKey = 5;
+    string refreshPolicy = 6;
+    au.coaas.cqp.proto.ContextEntityType et = 7;
 }
 
 service CPREEService {

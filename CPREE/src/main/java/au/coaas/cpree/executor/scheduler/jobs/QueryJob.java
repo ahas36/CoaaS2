@@ -1,5 +1,7 @@
 package au.coaas.cpree.executor.scheduler.jobs;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -14,24 +16,33 @@ public class QueryJob implements Job {
     private static Logger log = Logger.getLogger(QueryJob.class.getName());
 
     public void execute(JobExecutionContext context) {
-        JobDataMap dataMap = context.getJobDetail().getJobDataMap();
+        try {
+            JobDataMap dataMap = context.getJobDetail().getJobDataMap();
 
-        String fetchMode = dataMap.getString("fetchMode");
-        String contextProvider = dataMap.getString("contextProvider");
-        HashMap<String,String> params = (HashMap<String,String>) dataMap.get("params");
+            String contextId = dataMap.getString("contextId");
+            String fetchMode = dataMap.getString("fetchMode");
+            String contextProvider = dataMap.getString("contextProvider");
+            HashMap<String,String> params = new Gson().fromJson(
+                    dataMap.getString("params"),
+                    new TypeToken<HashMap<String, String>>() {}.getType());
 
-        String fetchResponse = null;
-        switch (fetchMode){
-            case "reactive":
-                fetchResponse = RetrievalManager.executeFetch(contextProvider, params);
-                break;
-            case "proactive_shift":
-                fetchResponse = RetrievalManager.executeStreamRead(contextProvider, params);
+            String fetchResponse = null;
+            switch (fetchMode){
+                case "reactive":
+                    fetchResponse = RetrievalManager.executeFetch(contextProvider, params);
+                    break;
+                case "proactive_shift":
+                    fetchResponse = RetrievalManager.executeStreamRead(contextProvider, params);
+            }
+
+            if(fetchResponse != null){
+                RefreshExecutor.refreshContext(contextId, fetchResponse);
+            }
+
+            throw new RuntimeException("Couldn't retrieve the context for refreshing.");
         }
-
-        // TODO:
-        // Refresh the item in cache and toggle if nessecary
-        // RefreshExecutor.refreshContext(fetchResponse, contextProvider, params);
-        // Schedule the next refrehsing operation.
+        catch(Exception ex) {
+            log.severe("Error retrieving: " + ex.getMessage());
+        }
     }
 }

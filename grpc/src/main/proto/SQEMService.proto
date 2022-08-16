@@ -128,6 +128,10 @@ message ContextServiceRequest
     repeated string params = 2;
 }
 
+message ContextServiceId {
+    string id = 1;
+}
+
 message EntityTypeRequest
 {
     string name = 1;
@@ -225,6 +229,7 @@ service SQEMService {
     rpc updateContextServiceStatus (UpdateContextServiceStatusRequest) returns (SQEMResponse);
     rpc discoverMatchingServices (ContextServiceRequest) returns (SQEMResponse);
     rpc getAllContextServices (Empty) returns (SQEMResponse);
+    rpc getContextServiceInfo (ContextServiceId) returns (SQEMResponse);
 
     rpc getAllSituations (Empty) returns (SQEMResponse);
     rpc getAllSubscriptions (Empty) returns (SQEMResponse);

@@ -43,10 +43,10 @@ public class RefreshScheduler {
     public void scheduleRefresh(RefreshContext query) throws SchedulerException {
         JobDetail job = JobBuilder.newJob(QueryJob.class)
                 .withIdentity(query.getContextId(), "refreshGroup")
-                .usingJobData("contextId", query.getContextId())
+                .usingJobData(query.getJobDataMap())
                 .build();
 
-        LocalDateTime exe_time = LocalDateTime.now().plus(query.getRefreshInterval(), ChronoUnit.MILLIS);
+        LocalDateTime exe_time = LocalDateTime.now().plus(query.getInitInterval(), ChronoUnit.MILLIS);
         Date triggerTime = new Date(
                 exe_time.getYear(),
                 exe_time.getMonthValue(),
@@ -56,9 +56,12 @@ public class RefreshScheduler {
                 exe_time.getSecond()
                 );
 
-        SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
+        SimpleTrigger trigger = TriggerBuilder.newTrigger()
                 .withIdentity(query.getContextId(), "refreshGroup")
                 .startAt(triggerTime)
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                        .withIntervalInMilliseconds(query.getRefreshInterval())
+                        .repeatForever())
                 .build();
 
         scheduler.scheduleJob(job, trigger);

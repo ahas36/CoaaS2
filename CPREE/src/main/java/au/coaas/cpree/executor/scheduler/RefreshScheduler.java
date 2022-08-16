@@ -1,6 +1,7 @@
 package au.coaas.cpree.executor.scheduler;
 
 import au.coaas.cpree.executor.scheduler.jobs.QueryJob;
+import au.coaas.cpree.executor.scheduler.jobs.RegisterClearJob;
 import au.coaas.cpree.utils.PubSub.Event;
 import org.quartz.*;
 
@@ -26,6 +27,9 @@ public class RefreshScheduler {
         }
         Event.operation.subscribe("cq-sim", subscriber);
         scheduler.start();
+
+        // Starting routines
+        scheduleRegisterClearance();
     }
 
     public static RefreshScheduler getInstance(){
@@ -61,6 +65,51 @@ public class RefreshScheduler {
                 .startAt(triggerTime)
                 .withSchedule(SimpleScheduleBuilder.simpleSchedule()
                         .withIntervalInMilliseconds(query.getRefreshInterval())
+                        .repeatForever())
+                .build();
+
+        scheduler.scheduleJob(job, trigger);
+    }
+
+    public void stopRefreshing(String jobId) throws SchedulerException {
+        JobKey jobkey = new JobKey(jobId,"refreshGroup");
+        TriggerKey triggerKey = TriggerKey.triggerKey(jobId, "refreshGroup");
+        Trigger trigger = scheduler.getTrigger(triggerKey);
+        if(trigger != null){
+            scheduler.unscheduleJob(triggerKey);
+            if(scheduler.getJobDetail(jobkey) != null){
+                scheduler.interrupt(jobkey);
+                scheduler.deleteJob(jobkey);
+            }
+        }
+    }
+
+    public void updateRefreshing(RefreshContext query) throws SchedulerException {
+        JobKey jobkey = new JobKey(query.getContextId(),"refreshGroup");
+        TriggerKey triggerKey = TriggerKey.triggerKey(query.getContextId(), "refreshGroup");
+
+        Trigger trigger = scheduler.getTrigger(triggerKey);
+        if(trigger != null){
+            scheduler.unscheduleJob(triggerKey);
+            if(scheduler.getJobDetail(jobkey) != null){
+                scheduler.interrupt(jobkey);
+                scheduler.deleteJob(jobkey);
+            }
+            scheduleRefresh(query);
+        }
+    }
+
+    public void scheduleRegisterClearance() throws SchedulerException {
+        JobDetail job = JobBuilder.newJob(RegisterClearJob.class)
+                .withIdentity("registerClear", "routineGroup")
+                .storeDurably()
+                .build();
+
+        SimpleTrigger trigger = TriggerBuilder.newTrigger()
+                .withIdentity("registerClear", "routineGroup")
+                .startNow()
+                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                        .withIntervalInMinutes(1)
                         .repeatForever())
                 .build();
 

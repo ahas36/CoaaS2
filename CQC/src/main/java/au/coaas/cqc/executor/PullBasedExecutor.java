@@ -4,6 +4,7 @@ import au.coaas.base.proto.ListOfString;
 
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.CacheSelectionRequest;
+import au.coaas.cpree.proto.ContextRefreshRequest;
 import au.coaas.cqc.utils.enums.CacheLevels;
 import au.coaas.cre.proto.*;
 import au.coaas.cqc.utils.Utilities;
@@ -1270,7 +1271,7 @@ public class PullBasedExecutor {
                     // (1) The data are streamed
                     // (2) The sensor is sampling at a certain rate
                     if(data.getStatus().equals("400") && data.getMeta().equals("proactive_shift")
-                        && slaObj.getJSONObject("updateFrequency").getDouble("value") == 0)
+                        && slaObj.getJSONObject("updateFrequency").getDouble("value") > 0)
                         continue;
 
                     // Fetching from the same context provider OR it's stream otherwise
@@ -1279,7 +1280,8 @@ public class PullBasedExecutor {
                             RetrievalManager.executeStreamRead(conSer.toString(), params);
 
                     Executors.newCachedThreadPool().execute(()
-                            -> refreshOrCacheContext(slaObj, Integer.getInteger(data.getStatus()), lookup, retEntity));
+                            -> refreshOrCacheContext(slaObj, Integer.getInteger(data.getStatus()), lookup,
+                                    retEntity, data.getMeta()));
                     return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
                             consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
@@ -1301,22 +1303,23 @@ public class PullBasedExecutor {
     }
 
     private static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
-                                              String retEntity){
+                                              String retEntity, String currRefPolicy){
+        CPREEServiceGrpc.CPREEServiceFutureStub asynStub
+                = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+
         if(cacheStatus == 400){
             // 400 means the cache missed due to invalidity
             // The cached context needs to be refreshed.
-            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-            asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
+            asynStub.refreshContext(ContextRefreshRequest.newBuilder()
+                    .setRefreshPolicy(currRefPolicy)
+                    .setRequest(CacheRefreshRequest.newBuilder()
                             .setSla(sla.toString())
                             .setReference(lookup)
-                            .setJson(retEntity).build());
+                            .setJson(retEntity)).build());
         }
         else if(cacheStatus == 404){
             // 404 means the item is not at all cached
             // Trigger Selective Caching Evaluation
-            CPREEServiceGrpc.CPREEServiceFutureStub asynStub
-                    = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
             asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
                             .setSla(sla.toString())
                             .setContext(retEntity)

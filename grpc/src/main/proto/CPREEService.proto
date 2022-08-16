@@ -8,6 +8,8 @@ package au.coaas.cpree.proto;
 import "SQEMService.proto";
 import "CQPService.proto";
 
+message Empty {}
+
 message CPREEResponse {
   string status = 1;
   string body = 2;
@@ -34,8 +36,14 @@ message ProactiveRefreshRequest {
     au.coaas.cqp.proto.ContextEntityType et = 7;
 }
 
+message ContextRefreshRequest {
+  au.coaas.sqem.proto.CacheRefreshRequest request = 1;
+  string refreshPolicy = 2;
+}
+
 service CPREEService {
   rpc classifyQuery (ContextQueryPlan) returns (CPREEResponse);
   rpc evaluateAndCacheContext (CacheSelectionRequest) returns (CPREEResponse);
+  rpc refreshContext (ContextRefreshRequest) returns (Empty);
 }
 

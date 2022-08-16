@@ -1,5 +1,6 @@
 package au.coaas.cpree.server;
 
+import au.coaas.cpree.executor.RefreshExecutor;
 import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.executor.SelectionExecutor;
@@ -33,4 +34,17 @@ public class CPREEServiceImpl extends CPREEServiceGrpc.CPREEServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void refreshContext(au.coaas.cpree.proto.ContextRefreshRequest request,
+                                        io.grpc.stub.StreamObserver<au.coaas.cpree.proto.Empty> responseObserver){
+        try {
+            responseObserver.onNext(RefreshExecutor.refreshContext(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
+
 }

@@ -9,6 +9,7 @@ import java.util.Map;
 
 public class RefreshContext {
     private double fthr;
+    private double lifetime;
     private String contextId;
     private String refreshPolicy;
     private String contextProvider;
@@ -25,6 +26,7 @@ public class RefreshContext {
         this.etype = et;
         this.fthr = fthr;
         this.params = params;
+        this.lifetime = lifetime;
         this.contextId = contextId;
         this.refreshPolicy = refreshPolicy;
         this.contextProvider = contextProvider;
@@ -33,6 +35,7 @@ public class RefreshContext {
         this.initInterval = (long) (initResiLife * 1000 * (1 - fthr));
     }
 
+    // Getters
     public double getfthresh() { return this.fthr; }
     public String getContextId(){ return this.contextId; }
     public ContextEntityType getEtype() { return this.etype; }
@@ -52,4 +55,10 @@ public class RefreshContext {
         return new JobDataMap(jobMap);
     }
 
+    // Setters
+    public void setfthresh(double fthr, double initResiLife) {
+        this.fthr = fthr;
+        this.refreshInterval = (long) (this.lifetime * 1000 * (1 - fthr));
+        this.initInterval = (long) (initResiLife * 1000 * (1 - fthr));
+    }
 }

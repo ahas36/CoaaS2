@@ -1,14 +1,14 @@
 package au.coaas.cpree.executor;
 
+import au.coaas.cpree.proto.Empty;
+import au.coaas.cpree.utils.Utilities;
+import au.coaas.cpree.utils.enums.CacheLevels;
+import au.coaas.cpree.utils.enums.RefreshLogics;
+import au.coaas.cpree.proto.ContextRefreshRequest;
+import au.coaas.cpree.utils.enums.MeasuredProperty;
+import au.coaas.cpree.proto.ProactiveRefreshRequest;
 import au.coaas.cpree.executor.scheduler.RefreshContext;
 import au.coaas.cpree.executor.scheduler.RefreshScheduler;
-import au.coaas.cpree.proto.ContextRefreshRequest;
-import au.coaas.cpree.proto.Empty;
-import au.coaas.cpree.proto.ProactiveRefreshRequest;
-import au.coaas.cpree.utils.enums.CacheLevels;
-import au.coaas.cpree.utils.enums.MeasuredProperty;
-import au.coaas.cpree.utils.enums.RefreshLogics;
-import au.coaas.cpree.utils.Utilities;
 
 import au.coaas.sqem.proto.*;
 
@@ -56,7 +56,9 @@ public class RefreshExecutor {
                         cpInfo.getBody(),
                         refreshRequest.getEt());
 
-                prorefRegistery.put(contextId, refObject);
+                synchronized (RefreshExecutor.class){
+                    prorefRegistery.put(contextId, refObject);
+                }
                 refreshScheduler.scheduleRefresh(refObject);
             }
             throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
@@ -86,7 +88,9 @@ public class RefreshExecutor {
                         cpInfo.getBody(),
                         request.getRequest().getReference().getEt());
 
-                prorefRegistery.put(contextId, refObject);
+                synchronized (RefreshExecutor.class) {
+                    prorefRegistery.put(contextId, refObject);
+                }
                 refreshScheduler.scheduleRefresh(refObject);
             }
             throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
@@ -99,9 +103,6 @@ public class RefreshExecutor {
 
     // Refresh context for proactive refreshing with shift when automatically fetched
     public static void refreshContext(String contextId, String context){
-        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-
         RefreshContext refObj = prorefRegistery.get(contextId);
 
         JSONObject conSer = new JSONObject(refObj.getContextProvider());
@@ -113,6 +114,9 @@ public class RefreshExecutor {
                 .setEt(refObj.getEtype())
                 .setServiceId(conSer.getJSONObject("_id").getString("$oid"));
 
+        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+
         asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                 .setReference(lookup)
                 .setJson(context).build());
@@ -123,7 +127,6 @@ public class RefreshExecutor {
     public static Empty refreshContext(ContextRefreshRequest request) throws SchedulerException {
         String refPolicy = request.getRefreshPolicy();
 
-        // This should happen asynchronously
         // Get Context Provider's Profile
         String hashKey = Utilities.getHashKey(request.getRequest().getReference().getParamsMap());
         String contextId = request.getRequest().getReference().getServiceId() + "-" + hashKey;

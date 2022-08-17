@@ -13,6 +13,7 @@ import au.coaas.sqem.util.enums.PerformanceStats;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
@@ -25,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
@@ -342,50 +344,140 @@ public class PerformanceLogHandler {
     // Summarizing Context Providers profiles
     private static Runnable profileContextProviders(Document persRecord){
         ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
+
         try {
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(30);
 
-            HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
-            ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, count(fthresh) AS cnt" +
-                    "FROM coass_performance WHERE status = '200' AND method = 'cacheSearch' " +
-                    "GROUP BY identifier, fthresh;");
+            ExecutorService executor = Executors.newFixedThreadPool(2);
+            Collection<Future<?>> tasks = new LinkedList<>();
 
-            while(rs_1.next()){
-                long count = rs_1.getInt("cnt");
-                if(!res.containsKey(rs_1.getString("identifier"))){
-                    res.put(rs_1.getString("identifier"),
-                            new HashMap(){{
-                                put("count", count);
-                                put("fthresh", rs_1.getDouble("fthresh")*count);
+            tasks.add(executor.submit(() -> {
+                try {
+                    Statement statement = connection.createStatement();
+                    statement.setQueryTimeout(30);
+
+                    HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, count(fthresh) AS cnt" +
+                            "FROM coass_performance WHERE status = '200' AND method = 'cacheSearch' " +
+                            "GROUP BY identifier, fthresh;");
+
+                    while(rs_1.next()){
+                        long count = rs_1.getInt("cnt");
+                        if(!res.containsKey(rs_1.getString("identifier"))){
+                            res.put(rs_1.getString("identifier"),
+                                    new HashMap(){{
+                                        put("count", count);
+                                        put("fthresh", rs_1.getDouble("fthresh")*count);
+                                    }});
+                        }
+                        else {
+                            HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                            temp.put("count", temp.get("count") + count);
+                            temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
+
+                            res.put(rs_1.getString("identifier"), temp);
+                        }
+                    }
+
+                    res.entrySet().parallelStream().forEach((entry) -> {
+                        String csId = entry.getKey();
+                        HashMap<String,Double> temp = entry.getValue();
+
+                        Double count = temp.get("count");
+                        temp.put("fthresh", temp.get("fthresh")/count);
+
+                        if(finalres.containsKey(csId)){
+                            finalres.put(csId, new BasicDBObject(){{
+                                put("profile", temp);
                             }});
+                        }
+                        else {
+                            BasicDBObject curr = finalres.get(csId);
+                            curr.put("profile", temp);
+                            finalres.put(csId, curr);
+                        }
+                    });
                 }
-                else {
-                    HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
-
-                    temp.put("count", temp.get("count") + count);
-                    temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
-
-                    res.put(rs_1.getString("identifier"), temp);
+                catch(Exception ex){
+                    log.severe("Exception thrown when aggregating the context consumers: "
+                            + ex.getMessage());
                 }
+            }));
+
+            tasks.add(executor.submit(() -> {
+                try {
+                    Statement statement = connection.createStatement();
+                    statement.setQueryTimeout(30);
+
+                    HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
+                            "avg(response_time) AS average " +
+                            "FROM coass_performance method = 'executeFetch' " +
+                            "GROUP BY identifier, status;");
+
+                    while(rs_1.next()){
+                        long count = rs_1.getInt("cnt");
+                        String status = rs_1.getString("status");
+
+                        if(!res.containsKey(rs_1.getString("identifier"))){
+                            res.put(rs_1.getString("identifier"),
+                                    new HashMap(){{
+                                        put("count", count);
+                                        put("failed", status.equals("200") ? 0 : count);
+                                        put("success", status.equals("200") ? count : 0);
+                                        put("retLatency", rs_1.getDouble("average")*count);
+                                    }});
+                        }
+                        else {
+                            HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                            temp.put("count", temp.get("count") + count);
+
+                            if(status.equals("200")) temp.put("success", temp.get("success") + count);
+                            else temp.put("failed", temp.get("failed") + count);
+
+                            temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency")*count));
+
+                            res.put(rs_1.getString("identifier"), temp);
+                        }
+                    }
+
+                    res.entrySet().parallelStream().forEach((entry) -> {
+                        String csId = entry.getKey();
+                        HashMap<String,Double> temp = entry.getValue();
+
+                        Double count = temp.get("count");
+                        temp.put("retLatency", temp.get("retLatency")/count);
+                        temp.put("reliability", temp.get("success")/count);
+
+                        if(finalres.containsKey(csId)){
+                            finalres.put(csId, new BasicDBObject(){{
+                                put("reliability", temp);
+                            }});
+                        }
+                        else {
+                            BasicDBObject curr = finalres.get(csId);
+                            curr.put("reliability", temp);
+                            finalres.put(csId, curr);
+                        }
+                    });
+                }
+                catch(Exception ex){
+                    log.severe("Exception thrown when aggregating the context consumers: "
+                            + ex.getMessage());
+                }
+            }));
+
+            for (Future<?> currTask : tasks) {
+                currTask.get();
             }
 
-            res.entrySet().parallelStream().forEach((entry) -> {
-                String csId = entry.getKey();
-                HashMap<String,Double> temp = entry.getValue();
-
-                Double count = temp.get("count");
-                temp.put("fthresh", temp.get("fthresh")/count);
-
-                finalres.put(csId, new BasicDBObject(temp));
-            });
+            persRecord.put("rawContext", new HashMap<>(finalres));
         }
         catch (Exception ex){
             log.severe("Exception thrown when aggregating the context consumers: "
                     + ex.getMessage());
         }
-
-        persRecord.put("rawContext", finalres);
         return null;
     }
 
@@ -840,6 +932,8 @@ public class PerformanceLogHandler {
         }
     }
 
+    static ExecutorService estimation_executor = Executors.newFixedThreadPool(3);
+
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
     public static ContextProviderProfile getContextProviderProfile(String cpId, String hashKey){
@@ -853,25 +947,53 @@ public class PerformanceLogHandler {
             sort.put("_id",-1);
 
             Document project = new Document();
-            project.put("rawContext."+cpId+".fthresh",1);
+            project.put("rawContext."+cpId,1);
 
             Document filter = new Document();
             filter.put("rawContext."+cpId, new Document(){{ put("$exists", true); }});
 
+            // Search the performance DB
+            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(10);
+
+
             int index = 0;
             double[][] dataset = new double[max_history][2];
-            collection.find(filter).projection(project)
-                    .sort(sort).limit(10).forEach((Block<Document>) document -> {
-                        dataset[index][0] = index;
-                        dataset[index][1] = document.getDouble("rawContext."+cpId+".fthresh");
+            double[][] dataset_2 = new double[max_history][2];
+            double[][] dataset_3 = new double[max_history][2];
+
+            result.forEach((Block<Document>) document -> {
+                dataset[index][0] = index;
+                dataset_2[index][0] = index;
+                dataset_3[index][0] = index;
+
+                // Expected freshness threshold, reliability, and retrieval latency
+                Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
+                Document rel = cp.get("reliability", Document.class);
+
+                dataset[index][1] = cp.get("profile", Document.class).getDouble("fthresh");
+                dataset_2[index][1] = rel.getDouble("reliability");
+                dataset_3[index][1] = rel.getDouble("retLatency");
+
             });
 
+            AtomicReference<Double> exp_fthr = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_retLatency = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_reliability = new AtomicReference<>(Double.NaN);
+
             // The list is inverted, so, estimating from x=-1.
-            double exp_fthr = index == 0 ? Double.NaN : predictExpectedValue(dataset, -1);
-            // TODO: Relaibility and Expected E[RL] calculation
+            if(index != 0){
+                estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
+                estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_2, -1)); });
+                estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_3, -1)); });
+            }
+
+            // TODO: Reliability and Expected E[RL] calculation
             return ContextProviderProfile.newBuilder().setStatus("200")
-                    .setExpFthr(Double.isNaN(exp_fthr) ? "NaN" : (exp_fthr < 0 || exp_fthr > 1 ?
-                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr)))
+                    .setExpFthr(Double.isNaN(exp_fthr.get()) ? "NaN" : (exp_fthr.get() < 0 || exp_fthr.get() > 1 ?
+                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr.get())))
+                    .setRelaibility(Double.isNaN(exp_retLatency.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
+                            exp_retLatency.get() > 1 ? "1" : Double.toString(exp_retLatency.get()))
+                    .setExpRetLatency(Double.toString(exp_reliability.get()))
                     .setLastRetLatency(getLastRetrievalTime(cpId, hashKey))
                     .build();
         }

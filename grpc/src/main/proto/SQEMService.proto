@@ -51,8 +51,8 @@ message ContextProfileRequest {
 message ContextProviderProfile {
     string expFthr = 1;
     double lastRetLatency = 2;
-    double relaibility = 3;
-    double expRetLatency = 4;
+    string relaibility = 3;
+    string expRetLatency = 4;
     string status = 5;
 }
 

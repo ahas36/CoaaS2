@@ -1279,6 +1279,10 @@ public class PullBasedExecutor {
                             RetrievalManager.executeFetch(conSer.toString(), params) :
                             RetrievalManager.executeStreamRead(conSer.toString(), params);
 
+                    // There is problem with the current context provider which makes it unsuitable for retrieving now.
+                    // Therefore, has to move to the next context provider
+                    if(retEntity == null) continue;
+
                     Executors.newCachedThreadPool().execute(()
                             -> refreshOrCacheContext(slaObj, Integer.getInteger(data.getStatus()), lookup,
                                     retEntity, data.getMeta()));
@@ -1297,6 +1301,8 @@ public class PullBasedExecutor {
             if(retEntity != null)
                 return new AbstractMap.SimpleEntry(retEntity,
                         qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+            else continue; // Moving to the next context provider since it is currently unavailable.
+
         }
 
         return null;

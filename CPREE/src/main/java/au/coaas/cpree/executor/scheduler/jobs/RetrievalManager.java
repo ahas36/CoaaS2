@@ -16,21 +16,38 @@ import org.json.JSONObject;
 import java.util.HashMap;
 
 public class RetrievalManager {
-
+    
+    private static final int retrys = 20;
     // Retrieval from non-streaming Context Providers
     public static String executeFetch(String contextService, HashMap<String,String> params) {
-        long startTime = System.currentTimeMillis();
-
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
+
+        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         final ContextServiceInvokerRequest.Builder fetchRequest = ContextServiceInvokerRequest.newBuilder();
         fetchRequest.putAllParams(params);
 
         final ContextService cs = ContextService.newBuilder().setJson(contextService).build();
         fetchRequest.setContextService(cs);
-        CSIResponse fetch = csiStub.fetch(fetchRequest.build());
-
+        
+        CSIResponse fetch = null;
+        long startTime = 0;
+        
+        for(int i=0; i < retrys; i++){
+            startTime = System.currentTimeMillis();
+            fetch = csiStub.fetch(fetchRequest.build());
+            if(fetch.getStatus().equals("200")) break;
+            else {
+                long int_endTime = System.currentTimeMillis();
+                asyncStub.logPerformanceData(Statistic.newBuilder()
+                        .setMethod("executeFetch").setStatus(fetch.getStatus())
+                        .setTime(int_endTime-startTime).setCs(fetchRequest).setAge(0)
+                        .setCost(!fetch.getStatus().equals("500")? fetch.getSummary().getPrice() : 0).build());
+            }
+        }
+        
         long endTime = System.currentTimeMillis();
 
         long age = 0;
@@ -54,8 +71,7 @@ public class RetrievalManager {
             }
         }
 
-        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        
         asyncStub.logPerformanceData(Statistic.newBuilder()
                 .setMethod("executeFetch").setStatus(fetch.getStatus())
                 .setTime(endTime-startTime).setCs(fetchRequest).setAge(age)

@@ -43,30 +43,34 @@ public class SelectionExecutor {
                         request.getReference().getServiceId(), hashKey, profile.getExpFthr());
 
                 // Evaluate and Cache if selected
-                int result = evaluateAndCache(request.getContext(), request.getReference(), ref_type.toString().toLowerCase());
+                boolean result = evaluateAndCache(request.getContext(), request.getReference(), ref_type.toString().toLowerCase());
+                if(result){
+                    // Configuring refreshing
+                    executor.execute(() -> {
+                        if (ref_type.equals(RefreshLogics.PROACTIVE_SHIFT)) {
+                            JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
+                            double fthresh = !profile.getExpFthr().equals("NaN") ?
+                                    Double.valueOf(profile.getExpFthr()) :
+                                    freshReq.getDouble("fthresh");
 
-                // Configuring refreshing
-                executor.execute(() -> {
-                    if (ref_type.equals(RefreshLogics.PROACTIVE_SHIFT)) {
-                        JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
-                        double fthresh = !profile.getExpFthr().equals("NaN") ?
-                                Double.valueOf(profile.getExpFthr()) :
-                                freshReq.getDouble("fthresh");
-
-                        double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
-                        RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
-                                .setEt(request.getReference().getEt())
-                                .setRequest(request).setFthreh(fthresh)
-                                .setLifetime(freshReq.getDouble("value"))
-                                .setResiLifetime(res_life)
-                                .setHashKey(hashKey)
-                                .setRefreshPolicy(ref_type.toString().toLowerCase())
-                                .build());
-                    }
-                });
-
-                return CPREEResponse.newBuilder().setStatus("200").build();
+                            double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+                            RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
+                                    .setEt(request.getReference().getEt())
+                                    .setRequest(request).setFthreh(fthresh)
+                                    .setLifetime(freshReq.getDouble("value"))
+                                    .setResiLifetime(res_life)
+                                    .setHashKey(hashKey)
+                                    .setRefreshPolicy(ref_type.toString().toLowerCase())
+                                    .build());
+                        }
+                    });
+                    // Using 200 considering the creation of the hashkey and successfully caching.
+                    return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
+                }
+                // Returning 204 (No Response) to indicate no has key to return since not cached.
+                return CPREEResponse.newBuilder().setStatus("204").setBody("Not Cached").build();
             } else
+                // Returning any other errors.
                 return CPREEResponse.newBuilder().setStatus(profile.getStatus())
                         .setBody("Failed to fetch context provider profile.").build();
         }
@@ -78,7 +82,7 @@ public class SelectionExecutor {
         }
     }
 
-    private static int evaluateAndCache(String context, CacheLookUp lookup, String refPolicy) {
+    private static boolean evaluateAndCache(String context, CacheLookUp lookup, String refPolicy) {
         try {
             // TODO:
             // Evaluate the context item for caching.
@@ -93,11 +97,11 @@ public class SelectionExecutor {
                     .setCachelife(600)
                     .setReference(lookup).build());
 
-            return response.getStatus().equals("200") ? 0 : 1;
+            return response.getStatus().equals("200") ? true : false;
         }
         catch(Exception ex){
             log.severe("Context Caching failed due to: " + ex.getMessage());
-            return 1;
+            return false;
         }
     }
 }

@@ -1,7 +1,7 @@
 package au.coaas.cpree.executor;
 
-import au.coaas.cpree.proto.Empty;
 import au.coaas.cpree.utils.Utilities;
+import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.utils.enums.CacheLevels;
 import au.coaas.cpree.utils.enums.RefreshLogics;
 import au.coaas.cpree.proto.ContextRefreshRequest;
@@ -15,7 +15,6 @@ import au.coaas.sqem.proto.*;
 import au.coaas.grpc.client.SQEMChannel;
 
 import org.json.JSONObject;
-import org.quartz.SchedulerException;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -124,96 +123,109 @@ public class RefreshExecutor {
 
     // Refresh context for both Reactive refreshing and when forcing a Shift in proactive retrieval
     // Toggling the refresh policy
-    public static Empty refreshContext(ContextRefreshRequest request) throws SchedulerException {
-        String refPolicy = request.getRefreshPolicy();
+    public static CPREEResponse refreshContext(ContextRefreshRequest request) {
+        try {
+            String refPolicy = request.getRefreshPolicy();
 
-        // Get Context Provider's Profile
-        String hashKey = Utilities.getHashKey(request.getRequest().getReference().getParamsMap());
-        String contextId = request.getRequest().getReference().getServiceId() + "-" + hashKey;
+            // Get Context Provider's Profile
+            String hashKey = Utilities.getHashKey(request.getRequest().getReference().getParamsMap());
+            String contextId = request.getRequest().getReference().getServiceId() + "-" + hashKey;
 
-        if(attemptRegistery.contains(contextId))
-            return null;
+            if(attemptRegistery.contains(contextId))
+                return null;
 
-        SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        SQEMResponse profile = blockingStub.getContextProviderProfile(ContextProfileRequest.newBuilder()
-                .setPrimaryKey(request.getRequest().getReference().getServiceId())
-                .setHashKey(hashKey)
-                .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
-                .build());
+            ContextProviderProfile profile = blockingStub.getContextProviderProfile(ContextProfileRequest.newBuilder()
+                    .setPrimaryKey(request.getRequest().getReference().getServiceId())
+                    .setHashKey(hashKey)
+                    .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
+                    .build());
 
-        RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(
-                new JSONObject(request.getRequest().getSla()),
-                request.getRequest().getReference().getServiceId(),
-                hashKey, profile.getBody());
+            if(profile.getStatus().equals("200")){
+                RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(
+                        new JSONObject(request.getRequest().getSla()),
+                        request.getRequest().getReference().getServiceId(),
+                        hashKey, profile.getExpFthr());
 
-        if(refPolicy.equals("proactive_shift")){
-            // Configuring refreshing
-            if(!ref_type.toString().toLowerCase().equals(refPolicy)){
-                // Shift to the reactive policy
-                synchronized (RefreshExecutor.class){
-                    // Remove the context item from the registry
-                    prorefRegistery.remove(contextId);
-                    // Stop the scheduler from running
-                    refreshScheduler.stopRefreshing(contextId);
-                    // Toggle the refresh policy in the Hashtable in SQEM
-                    blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
-                            .setLookup(request.getRequest().getReference()).setRefreshLogic("reactive")
-                            .build());
+                if(refPolicy.equals("proactive_shift")){
+                    // Configuring refreshing
+                    if(!ref_type.toString().toLowerCase().equals(refPolicy)){
+                        // Shift to the reactive policy
+                        synchronized (RefreshExecutor.class){
+                            // Remove the context item from the registry
+                            prorefRegistery.remove(contextId);
+                            // Stop the scheduler from running
+                            refreshScheduler.stopRefreshing(contextId);
+                            // Toggle the refresh policy in the Hashtable in SQEM
+                            blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
+                                    .setLookup(request.getRequest().getReference()).setRefreshLogic("reactive")
+                                    .build());
+                        }
+                    }
+                    else {
+                        RefreshContext config = prorefRegistery.get(contextId);
+
+                        double proffthr = profile.getExpFthr() != "NaN" ?
+                                Double.valueOf(profile.getExpFthr()) : config.getfthresh();
+                        if(config.getfthresh() != proffthr){
+                            JSONObject freshReq = (new JSONObject(request.getRequest().getSla())).getJSONObject("freshness");
+                            double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+                            // Reset the scheduler with the next lifetime
+                            synchronized (RefreshExecutor.class){
+                                // Update the context item from the registry
+                                RefreshContext regiItem = prorefRegistery.get(contextId);
+                                regiItem.setfthresh(proffthr, res_life);
+                                prorefRegistery.put(contextId,regiItem);
+                                // Update the scheduler in running
+                                refreshScheduler.updateRefreshing(regiItem);
+                            }
+                        }
+                    }
+
+                    // TODO: Updating the scheduler trigger when lifetime changes
+                    // Need to update the trigger when the lifetime expected for the context item
+                    // is different to that has been used to configure the proactive refreshing.
+
                 }
-            }
-            else {
-                RefreshContext config = prorefRegistery.get(contextId);
-
-                double proffthr = profile.getBody() != "NaN" ?
-                        Double.valueOf(profile.getBody()) : config.getfthresh();
-                if(config.getfthresh() != proffthr){
-                    JSONObject freshReq = (new JSONObject(request.getRequest().getSla())).getJSONObject("freshness");
-                    double res_life = freshReq.getDouble("value") - Double.valueOf(profile.getMeta());
-                    // Reset the scheduler with the next lifetime
-                    synchronized (RefreshExecutor.class){
-                        // Update the context item from the registry
-                        RefreshContext regiItem = prorefRegistery.get(contextId);
-                        regiItem.setfthresh(proffthr, res_life);
-                        prorefRegistery.put(contextId,regiItem);
-                        // Update the scheduler in running
-                        refreshScheduler.updateRefreshing(regiItem);
+                else {
+                    // If the current policy is reactive
+                    if(!ref_type.toString().toLowerCase().equals(refPolicy)){
+                        // Shift to the reactive policy
+                        synchronized (RefreshExecutor.class){
+                            // Setup proactive refreshing
+                            JSONObject sla = new JSONObject(request.getRequest().getSla());
+                            double fthr = profile.getExpFthr() != "NaN" ?
+                                    Double.valueOf(profile.getExpFthr()) :
+                                    sla.getJSONObject("freshness").getDouble("fthresh");
+                            double res_life = sla.getJSONObject("freshness").getDouble("value") - profile.getLastRetLatency();
+                            double lifetime = sla.getJSONObject("freshness").getDouble("value");
+                            setProactiveRefreshing(request, hashKey, fthr, res_life, lifetime);
+                            // Toggle the refresh policy in the Hashtable in SQEM
+                            blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
+                                    .setLookup(request.getRequest().getReference()).setRefreshLogic("proactive_shift")
+                                    .build());
+                        }
                     }
                 }
+
+                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                asyncStub.refreshContextEntity(request.getRequest());
+
+                return CPREEResponse.newBuilder().setStatus("200").build();
             }
-
-            // TODO: Updating the scheduler trigger when lifetime changes
-            // Need to update the trigger when the lifetime expected for the context item
-            // is different to that has been used to configure the proactive refreshing.
-
+            else
+                return CPREEResponse.newBuilder().setStatus(profile.getStatus())
+                        .setBody("Failed to fetch context provider profile.").build();
         }
-        else {
-            // If the current policy is reactive
-            if(!ref_type.toString().toLowerCase().equals(refPolicy)){
-                // Shift to the reactive policy
-                synchronized (RefreshExecutor.class){
-                    // Setup proactive refreshing
-                    JSONObject sla = new JSONObject(request.getRequest().getSla());
-                    double fthr = profile.getBody() != "NaN" ?
-                            Double.valueOf(profile.getBody()) :
-                            sla.getJSONObject("freshness").getDouble("fthresh");
-                    double res_life = sla.getJSONObject("freshness").getDouble("value") - Double.valueOf(profile.getMeta());
-                    double lifetime = sla.getJSONObject("freshness").getDouble("value");
-                    setProactiveRefreshing(request, hashKey, fthr, res_life, lifetime);
-                    // Toggle the refresh policy in the Hashtable in SQEM
-                    blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
-                            .setLookup(request.getRequest().getReference()).setRefreshLogic("proactive_shift")
-                            .build());
-                }
-            }
+        catch (Exception ex) {
+            log.severe("Could not refresh context!");
+            log.info("Cause: " + ex.getMessage());
+            return CPREEResponse.newBuilder().setStatus("500")
+                    .setBody(ex.getMessage()).build();
         }
-
-        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-        asyncStub.refreshContextEntity(request.getRequest());
-
-        return null;
     }
 
     /** Refreshing Utility */

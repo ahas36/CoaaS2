@@ -23,47 +23,59 @@ public class SelectionExecutor {
 
     private static ExecutorService executor = Executors.newScheduledThreadPool(20);
 
-    public static CPREEResponse execute(CacheSelectionRequest request){
-        // Get Context Identifier
-        String hashKey = Utilities.getHashKey(request.getReference().getParamsMap());
+    public static CPREEResponse execute(CacheSelectionRequest request) {
+        try {
+            // Get Context Identifier
+            String hashKey = Utilities.getHashKey(request.getReference().getParamsMap());
 
-        // Get Context Provider's Profile
-        SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            // Get Context Provider's Profile
+            SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        SQEMResponse profile = blockingStub.getContextProviderProfile(ContextProfileRequest.newBuilder()
-                        .setPrimaryKey(request.getReference().getServiceId())
-                        .setHashKey(hashKey)
-                        .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
-                        .build());
+            ContextProviderProfile profile = blockingStub.getContextProviderProfile(ContextProfileRequest.newBuilder()
+                    .setPrimaryKey(request.getReference().getServiceId())
+                    .setHashKey(hashKey)
+                    .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
+                    .build());
 
-        RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()),
-                request.getReference().getServiceId(),hashKey,profile.getBody());
+            if (profile.getStatus().equals("200")) {
+                RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()),
+                        request.getReference().getServiceId(), hashKey, profile.getExpFthr());
 
-        // Evaluate and Cache if selected
-        int result = evaluateAndCache(request.getContext(), request.getReference(), ref_type.toString().toLowerCase());
+                // Evaluate and Cache if selected
+                int result = evaluateAndCache(request.getContext(), request.getReference(), ref_type.toString().toLowerCase());
 
-        // Configuring refreshing
-        executor.execute(() -> {
-            if(ref_type.equals(RefreshLogics.PROACTIVE_SHIFT)){
-                JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
-                double fthresh = !profile.getBody().equals("NaN") ?
-                        Double.valueOf(profile.getBody()) :
-                        freshReq.getDouble("fthresh");
+                // Configuring refreshing
+                executor.execute(() -> {
+                    if (ref_type.equals(RefreshLogics.PROACTIVE_SHIFT)) {
+                        JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
+                        double fthresh = !profile.getExpFthr().equals("NaN") ?
+                                Double.valueOf(profile.getExpFthr()) :
+                                freshReq.getDouble("fthresh");
 
-                double res_life = freshReq.getDouble("value") - Double.valueOf(profile.getMeta());
-                RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
-                        .setEt(request.getReference().getEt())
-                        .setRequest(request).setFthreh(fthresh)
-                        .setLifetime(freshReq.getDouble("value"))
-                        .setResiLifetime(res_life)
-                        .setHashKey(hashKey)
-                        .setRefreshPolicy(ref_type.toString().toLowerCase())
-                        .build());
-            }
-        });
+                        double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+                        RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
+                                .setEt(request.getReference().getEt())
+                                .setRequest(request).setFthreh(fthresh)
+                                .setLifetime(freshReq.getDouble("value"))
+                                .setResiLifetime(res_life)
+                                .setHashKey(hashKey)
+                                .setRefreshPolicy(ref_type.toString().toLowerCase())
+                                .build());
+                    }
+                });
 
-        return CPREEResponse.newBuilder().setStatus("200").build();
+                return CPREEResponse.newBuilder().setStatus("200").build();
+            } else
+                return CPREEResponse.newBuilder().setStatus(profile.getStatus())
+                        .setBody("Failed to fetch context provider profile.").build();
+        }
+        catch(Exception ex){
+            log.severe("Could not refresh context!");
+            log.info("Cause: " + ex.getMessage());
+            return CPREEResponse.newBuilder().setStatus("500")
+                    .setBody(ex.getMessage()).build();
+        }
     }
 
     private static int evaluateAndCache(String context, CacheLookUp lookup, String refPolicy) {

@@ -1,5 +1,6 @@
 package au.coaas.cpree.server;
 
+import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cqc.proto.CdqlResponse;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
@@ -41,15 +42,18 @@ public class CPREEInterceptor implements ServerInterceptor {
         // Asynchronously update the performance logs
         try{
             switch(method){
-                case "classifyQuery": {
+                case "classifyQuery":
+                case "evaluateAndCacheContext":
+                case "refreshContext":
+                {
                     // Log response time
-                    CdqlResponse res = (CdqlResponse) message;
+                    CPREEResponse res = (CPREEResponse) message;
 
                     SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                             = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-                    sqemStub.logPerformanceData (Statistic.newBuilder()
+                    sqemStub.logCPREEData (Statistic.newBuilder()
                             .setMethod(method).setTime(responseTime)
-                            .setStatus(res.getStatus()).setIdentifier(res.getQueryId())
+                            .setStatus(res.getStatus())
                             .setIsDelayed(false)
                             .build());
                     break;

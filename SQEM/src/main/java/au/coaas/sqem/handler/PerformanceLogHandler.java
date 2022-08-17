@@ -2,6 +2,7 @@ package au.coaas.sqem.handler;
 
 import au.coaas.sqem.monitor.LogicalContextLevel;
 import au.coaas.sqem.mongo.ConnectionPool;
+import au.coaas.sqem.proto.ContextProviderProfile;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.Statistic;
 import au.coaas.sqem.proto.SummarySLA;
@@ -193,6 +194,27 @@ public class PerformanceLogHandler {
         }
     }
 
+    // CPREE Performance
+    public static void cpreePerformanceRecord(Statistic request) {
+        String queryString = "INSERT INTO cpree_performance(method,status,response_time,"+
+                "createdDatetime) " +
+                "VALUES('%s', '%s', %d, GETDATE());";
+        try{
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            String method = request.getMethod();
+            String formatted_string = String.format(queryString,
+                    method, // Method name
+                    request.getStatus(), // Status of the request
+                    request.getTime()); // Response time
+            statement.executeUpdate(formatted_string);
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
     /** Resetting/Refreshing Temporary Performance Records */
     // Clears older records earlier than the current window from the in-memory database
     // These records are persisted in MongoDB logs
@@ -246,7 +268,7 @@ public class PerformanceLogHandler {
                 Document records = new Document();
                 records.put("type", level);
 
-                if(level == "coass_performance" || level == "csms_performance"){
+                if(level == "coass_performance" || level == "csms_performance" || level == "cpree_performance"){
                     records.put("method", rs.getString("method"));
                     records.put("status", rs.getString("status"));
                     records.put("latency", rs.getString("response_time"));
@@ -291,10 +313,11 @@ public class PerformanceLogHandler {
         Document persRecord = new Document();
 
         try{
-            ExecutorService executor = Executors.newFixedThreadPool(12);
+            ExecutorService executor = Executors.newFixedThreadPool(14);
             Collection<Future<?>> tasks = new LinkedList<>();
 
             tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
+            tasks.add(executor.submit(() -> { getCPREEPerfromanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getLevelPerformanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getOverallPerfromanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { profileContextProviders(persRecord); }));
@@ -416,6 +439,44 @@ public class PerformanceLogHandler {
         }
 
         persRecord.put("csms", res_1);
+        return null;
+    }
+
+    // Summarizing the performance of the CPREE
+    private static Runnable getCPREEPerfromanceSummary(Document persRecord){
+        HashMap<String, BasicDBObject>  res_1= new HashMap<>();
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            ResultSet rs_1 = statement.executeQuery("SELECT method, status, count(*) AS cnt, avg(response_time) AS average " +
+                    "FROM cpree_performance GROUP BY method, status;");
+
+            while(rs_1.next()){
+                if(res_1.containsKey(rs_1.getString("method"))){
+                    res_1.put(rs_1.getString("method"),
+                            (BasicDBObject) res_1.get(rs_1.getString("method"))
+                                    .put(Utilty.getStatus(rs_1.getString("status")), new BasicDBObject(){{
+                                        put("count", rs_1.getInt("cnt"));
+                                        put("average", rs_1.getInt("average"));
+                                    }}));
+                }
+                else {
+                    res_1.put(rs_1.getString("method"), new BasicDBObject(){{
+                        put(Utilty.getStatus(rs_1.getString("status")), new BasicDBObject(){{
+                            put("count", rs_1.getInt("cnt"));
+                            put("average", rs_1.getInt("average"));
+                        }});
+                    }});
+                }
+            }
+        }
+        catch (Exception ex){
+            log.severe("Exception thrown when summarizing CPREE performance data: "
+                    + ex.getMessage());
+        }
+
+        persRecord.put("cpree", res_1);
         return null;
     }
 
@@ -781,7 +842,7 @@ public class PerformanceLogHandler {
 
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
-    public static SQEMResponse getContextProviderProfile(String cpId, String hashKey){
+    public static ContextProviderProfile getContextProviderProfile(String cpId, String hashKey){
         try{
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");
@@ -807,17 +868,18 @@ public class PerformanceLogHandler {
 
             // The list is inverted, so, estimating from x=-1.
             double exp_fthr = index == 0 ? Double.NaN : predictExpectedValue(dataset, -1);
-            return SQEMResponse.newBuilder().setStatus("200")
-                    .setBody(Double.isNaN(exp_fthr) ? "NaN" : (exp_fthr < 0 || exp_fthr > 1 ?
-                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr))) // quality expectation
-                    .setMeta(Double.toString(getLastRetrievalTime(cpId, hashKey))) // last retrieval loss (retLatency + age)
+            // TODO: Relaibility and Expected E[RL] calculation
+            return ContextProviderProfile.newBuilder().setStatus("200")
+                    .setExpFthr(Double.isNaN(exp_fthr) ? "NaN" : (exp_fthr < 0 || exp_fthr > 1 ?
+                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr)))
+                    .setLastRetLatency(getLastRetrievalTime(cpId, hashKey))
                     .build();
         }
         catch(Exception e){
             JSONObject body = new JSONObject();
             body.put("message",e.getMessage());
             body.put("cause",e.getCause().toString());
-            return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+            return ContextProviderProfile.newBuilder().setStatus("500").build();
         }
     }
 
@@ -834,6 +896,7 @@ public class PerformanceLogHandler {
         try{
             all_tables.add("coass_performance");
             all_tables.add("csms_performance");
+            all_tables.add("cpree_performance");
             all_tables.add("consumer_slas");
 
             getPerfDBConnection();
@@ -865,6 +928,14 @@ public class PerformanceLogHandler {
                     "    isDelayed BIT NOT NULL,\n" +
                     "    age BIGINT NULL,\n" +
                     "    fthresh REAL NULL)");
+
+            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cpree_performance')\n" +
+                    "CREATE TABLE cpree_performance(\n" +
+                    "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                    "    method VARCHAR(255) NOT NULL,\n" +
+                    "    status VARCHAR(5) NOT NULL,\n" +
+                    "    response_time BIGINT NULL,\n" +
+                    "    createdDatetime DATETIME NOT NULL)");
 
             for(LogicalContextLevel level : LogicalContextLevel.values()){
                 statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +

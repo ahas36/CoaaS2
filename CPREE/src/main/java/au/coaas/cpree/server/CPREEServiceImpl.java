@@ -37,7 +37,7 @@ public class CPREEServiceImpl extends CPREEServiceGrpc.CPREEServiceImplBase {
 
     @Override
     public void refreshContext(au.coaas.cpree.proto.ContextRefreshRequest request,
-                                        io.grpc.stub.StreamObserver<au.coaas.cpree.proto.Empty> responseObserver){
+                                        io.grpc.stub.StreamObserver<au.coaas.cpree.proto.CPREEResponse> responseObserver){
         try {
             responseObserver.onNext(RefreshExecutor.refreshContext(request));
         } catch (Exception ex) {
@@ -46,5 +46,4 @@ public class CPREEServiceImpl extends CPREEServiceGrpc.CPREEServiceImplBase {
         }
         responseObserver.onCompleted();
     }
-
 }

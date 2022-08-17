@@ -12,7 +12,7 @@ import java.time.temporal.ChronoUnit;
 
 public class RefreshScheduler {
 
-    private static RefreshScheduler queryScheduler;
+    private static RefreshScheduler refreshScheduler;
     private static SchedulerFactory scheFactory;
     private static Scheduler scheduler;
 
@@ -32,16 +32,20 @@ public class RefreshScheduler {
         scheduleRegisterClearance();
     }
 
+    public static void stopRefreshing() throws SchedulerException {
+        scheduler.shutdown();
+    }
+
     public static RefreshScheduler getInstance(){
         try{
-            if(queryScheduler == null){
-                queryScheduler = new RefreshScheduler();
+            if(refreshScheduler == null){
+                refreshScheduler = new RefreshScheduler();
             }
         }
         catch(Exception ex) {
             log.severe("Query generator failed to start. " + ex.getMessage());
         }
-        return queryScheduler;
+        return refreshScheduler;
     }
 
     public void scheduleRefresh(RefreshContext query) throws SchedulerException {

@@ -446,9 +446,9 @@ public class PerformanceLogHandler {
                         String csId = entry.getKey();
                         HashMap<String,Double> temp = entry.getValue();
 
-                        Double count = temp.get("count");
-                        temp.put("retLatency", temp.get("retLatency")/count);
-                        temp.put("reliability", temp.get("success")/count);
+                        Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
+                        temp.put("retLatency", temp.get("retLatency")/no_success);
+                        temp.put("reliability", no_success/temp.get("count"));
 
                         if(finalres.containsKey(csId)){
                             finalres.put(csId, new BasicDBObject(){{

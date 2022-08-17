@@ -39,8 +39,7 @@ public class SelectionExecutor {
                     .build());
 
             if (profile.getStatus().equals("200")) {
-                RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()),
-                        request.getReference().getServiceId(), hashKey, profile.getExpFthr());
+                RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()), profile);
 
                 // Evaluate and Cache if selected
                 boolean result = evaluateAndCache(request.getContext(), request.getReference(), ref_type.toString().toLowerCase());
@@ -64,7 +63,7 @@ public class SelectionExecutor {
                                     .build());
                         }
                     });
-                    // Using 200 considering the creation of the hashkey and successfully caching.
+                    // Using 200 considering the creation of the hash key and successfully caching.
                     return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
                 }
                 // Returning 204 (No Response) to indicate no has key to return since not cached.

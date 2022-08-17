@@ -145,9 +145,7 @@ public class RefreshExecutor {
 
             if(profile.getStatus().equals("200")){
                 RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(
-                        new JSONObject(request.getRequest().getSla()),
-                        request.getRequest().getReference().getServiceId(),
-                        hashKey, profile.getExpFthr());
+                        new JSONObject(request.getRequest().getSla()), profile);
 
                 if(refPolicy.equals("proactive_shift")){
                     // Configuring refreshing
@@ -230,7 +228,7 @@ public class RefreshExecutor {
 
     /** Refreshing Utility */
     // Resolving what the most efficient refreshing policy for the context item
-    public static RefreshLogics resolveRefreshLogic(JSONObject sla, String cpId, String hashKey, String profile){
+    public static RefreshLogics resolveRefreshLogic(JSONObject sla, ContextProviderProfile profile){
         // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
         boolean autoFetch = sla.getBoolean("autoFetch");
         String life_unit = sla.getJSONObject("freshness").getString("unit");
@@ -238,12 +236,12 @@ public class RefreshExecutor {
         double samplingInterval = sla.getJSONObject("updateFrequency").getDouble("value");
 
         double fthresh = 0.0;
-        if(profile.startsWith("{")){
+        if(profile.getExpFthr().startsWith("{")){
             JSONObject cp_prof = new JSONObject(profile);
             fthresh = cp_prof.getDouble("fthresh");
         }
         else
-            fthresh = !profile.equals("NaN") ? Double.valueOf(profile) :
+            fthresh = !profile.equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                     sla.getJSONObject("freshness").getDouble("fthresh");
 
         if(life_unit != sla.getJSONObject("updateFrequency").getString("unit")) {
@@ -255,9 +253,14 @@ public class RefreshExecutor {
             return RefreshLogics.PROACTIVE_SHIFT;
         }
 
+        // The residual lifetime is calculated using the expected retrieval lifetime
+        // E[RetL] = Total time spent on retrievals / Number of successful retrievals
+        // Therefore, it probabilistically incoperates the reliability/unreliability of the context provider
+        double resi_lifetime = lifetime - Double.valueOf(profile.getExpRetLatency());
+
         if(samplingInterval > 0){
             // Context need to be refreshed based on validity.
-            if(lifetime > samplingInterval) {
+            if(resi_lifetime > samplingInterval) {
                 if(samplingInterval == 0){
                     // CP samples adhoc for retrieval requests
                     // Therefore, the retrieval frequency can be best cost-optimized
@@ -265,7 +268,7 @@ public class RefreshExecutor {
                     return RefreshLogics.PROACTIVE_SHIFT;
                 }
 
-                double exp_prd = lifetime * (1-fthresh);
+                double exp_prd = resi_lifetime * (1-fthresh);
                 if(exp_prd >= samplingInterval){
                     // When expiry period is longer than the sampling interval,
                     // context can still be proactively retrieved.

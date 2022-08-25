@@ -2,10 +2,7 @@ package au.coaas.sqem.handler;
 
 import au.coaas.sqem.monitor.LogicalContextLevel;
 import au.coaas.sqem.mongo.ConnectionPool;
-import au.coaas.sqem.proto.ContextProviderProfile;
-import au.coaas.sqem.proto.SQEMResponse;
-import au.coaas.sqem.proto.Statistic;
-import au.coaas.sqem.proto.SummarySLA;
+import au.coaas.sqem.proto.*;
 import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
@@ -31,6 +28,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
+import static au.coaas.sqem.util.StatisticalUtils.getSlope;
 import static au.coaas.sqem.util.StatisticalUtils.predictExpectedValue;
 
 public class PerformanceLogHandler {
@@ -845,7 +843,7 @@ public class PerformanceLogHandler {
                     + ex.getMessage());
         }
 
-        persRecord.put("consumers", finalres);
+        persRecord.put("classes", finalres);
         return null;
     }
 
@@ -932,7 +930,7 @@ public class PerformanceLogHandler {
         }
     }
 
-    static ExecutorService estimation_executor = Executors.newFixedThreadPool(3);
+    static ExecutorService estimation_executor = Executors.newFixedThreadPool(5);
 
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
@@ -953,18 +951,19 @@ public class PerformanceLogHandler {
             filter.put("rawContext."+cpId, new Document(){{ put("$exists", true); }});
 
             // Search the performance DB
-            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(10);
-
+            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
 
             int index = 0;
             double[][] dataset = new double[max_history][2];
             double[][] dataset_2 = new double[max_history][2];
             double[][] dataset_3 = new double[max_history][2];
+            double[][] dataset_4 = new double[max_history][2];
 
             result.forEach((Block<Document>) document -> {
                 dataset[index][0] = index;
                 dataset_2[index][0] = index;
                 dataset_3[index][0] = index;
+                dataset_4[index][0] = index;
 
                 // Expected freshness threshold, reliability, and retrieval latency
                 Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
@@ -973,15 +972,20 @@ public class PerformanceLogHandler {
                 dataset[index][1] = cp.get("profile", Document.class).getDouble("fthresh");
                 dataset_2[index][1] = rel.getDouble("reliability");
                 dataset_3[index][1] = rel.getDouble("retLatency");
+                dataset_4[index][1] = rel.getInteger("count");
 
             });
 
             AtomicReference<Double> exp_fthr = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_retLatency = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_reliability = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_count = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_ar = new AtomicReference<>(Double.NaN);
 
             // The list is inverted, so, estimating from x=-1.
             if(index != 0){
+                estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); });
+                estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); });
                 estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
                 estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_2, -1)); });
                 estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_3, -1)); });
@@ -993,6 +997,8 @@ public class PerformanceLogHandler {
                             Double.toString(dataset[0][1]) : Double.toString(exp_fthr.get())))
                     .setRelaibility(Double.isNaN(exp_retLatency.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
                             exp_retLatency.get() > 1 ? "1" : Double.toString(exp_retLatency.get()))
+                    .setAccessTrend(Double.isNaN(exp_count.get()) ? "NaN" : Double.toString(exp_count.get()))
+                    .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()))
                     .setExpRetLatency(Double.toString(exp_reliability.get()))
                     .setLastRetLatency(getLastRetrievalTime(cpId, hashKey))
                     .build();
@@ -1002,6 +1008,71 @@ public class PerformanceLogHandler {
             body.put("message",e.getMessage());
             body.put("cause",e.getCause().toString());
             return ContextProviderProfile.newBuilder().setStatus("500").build();
+        }
+    }
+
+    static ExecutorService regression_executor = Executors.newFixedThreadPool(3);
+
+    public static QueryClassProfile getQueryClassProfile(String classId){
+        try{
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("performanceSummary");
+
+            Document sort = new Document();
+            sort.put("_id",-1);
+
+            Document project = new Document();
+            project.put("consumers."+classId,1);
+
+            Document filter = new Document();
+            filter.put("consumers."+classId, new Document(){{ put("$exists", true); }});
+
+            // Search the performance DB
+            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
+
+            int index = 0;
+            double[][] dataset = new double[max_history][2];
+            double[][] dataset_2 = new double[max_history][2];
+            double[][] dataset_3 = new double[max_history][2];
+
+            result.forEach((Block<Document>) document -> {
+                dataset[index][0] = index;
+                dataset_2[index][0] = index;
+                dataset_3[index][0] = index;
+
+                // Expected rtmax, earning, penalty
+                Document cqc = document.get("consumers", Document.class).get(classId, Document.class);
+
+                dataset[index][1] = cqc.getDouble("rtmax");
+                dataset_2[index][1] = cqc.getDouble("earning");
+                dataset_3[index][1] = cqc.getDouble("penalty");
+
+            });
+
+            AtomicReference<Double> exp_rtmax = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_earning = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_penalty = new AtomicReference<>(Double.NaN);
+
+            // The list is inverted, so, estimating from x=-1.
+            if(index != 0){
+                regression_executor.submit(() -> { exp_rtmax.set(predictExpectedValue(dataset, -1)); });
+                regression_executor.submit(() -> { exp_earning.set(predictExpectedValue(dataset_2, -1)); });
+                regression_executor.submit(() -> { exp_penalty.set(predictExpectedValue(dataset_3, -1)); });
+            }
+
+            return QueryClassProfile.newBuilder().setStatus("200")
+                    .setRtmax(Double.isNaN(exp_rtmax.get()) ? "NaN" : Double.toString(exp_rtmax.get()))
+                    .setEarning(Double.isNaN(exp_earning.get()) ? "NaN" : Double.toString(exp_earning.get()))
+                    .setPenalty(Double.isNaN(exp_penalty.get()) ? "NaN" : Double.toString(exp_penalty.get()))
+                    .build();
+        }
+        catch(Exception e){
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            return QueryClassProfile.newBuilder().setStatus("500").build();
         }
     }
 

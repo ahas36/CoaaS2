@@ -42,7 +42,8 @@ public class SelectionExecutor {
                 RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()), profile);
 
                 // Evaluate and Cache if selected
-                boolean result = evaluateAndCache(request.getContext(), request.getReference(), ref_type.toString().toLowerCase());
+                boolean result = evaluateAndCache(request.getContext(), request.getReference(),
+                        ref_type.toString().toLowerCase(), profile);
                 if(result){
                     // Configuring refreshing
                     executor.execute(() -> {
@@ -81,22 +82,45 @@ public class SelectionExecutor {
         }
     }
 
-    private static boolean evaluateAndCache(String context, CacheLookUp lookup, String refPolicy) {
+    private static boolean evaluateAndCache(String context, CacheLookUp lookup, String refPolicy,
+                                            ContextProviderProfile profile) {
         try {
             // TODO:
             // Evaluate the context item for caching.
+            // Since the lifetime of a context item is considered to be fixed at this phase of the implementation,
+            // I can assume that the refreshing policy is also fixed.
+            if(!profile.getAccessTrend().equals("NaN")) {
+                SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
+                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-            // Actual Caching
-            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-            SQEMResponse response = asyncStub.cacheEntity(CacheRequest.newBuilder()
-                    .setJson(context)
-                    .setRefreshLogic(refPolicy)
-                    // TODO: This cache life should be saved in the eviction registry
-                    .setCachelife(600)
-                    .setReference(lookup).build());
+                long est_cacheLife = -1;
+                double access_trend = Double.valueOf(profile.getAccessTrend());
+                if(access_trend <= 0){
+                    // Caching only for an estimated period of time until re-evaluation
+                    QueryClassProfile cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
+                            .setPrimaryKey(lookup.getQClass()).build());
+                    if(cqc_profile.getStatus().equals("200")){
+                        // Should calculate the retrieval, and cache efficiencies
+                        est_cacheLife = 600;
+                    }
+                }
+                // When the access trend is positive, the item would be cached for a longer period until evicted by
+                // the eviction algorithm.
 
-            return response.getStatus().equals("200") ? true : false;
+                // Actual Caching
+                SQEMResponse response = sqemStub.cacheEntity(CacheRequest.newBuilder()
+                        .setJson(context)
+                        .setRefreshLogic(refPolicy)
+                        // TODO: This cache life should be saved in the eviction registry
+                        .setCachelife(est_cacheLife)
+                        .setReference(lookup).build());
+
+                return response.getStatus().equals("200") ? true : false;
+            }
+            else {
+                // Look at the other metrics
+                return false;
+            }
         }
         catch(Exception ex){
             log.severe("Context Caching failed due to: " + ex.getMessage());

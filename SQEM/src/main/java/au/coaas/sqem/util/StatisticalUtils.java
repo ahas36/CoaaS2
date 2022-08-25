@@ -9,4 +9,12 @@ public class StatisticalUtils {
         simpleRegression.addData(data);
         return simpleRegression.predict(x);
     }
+
+    public static double getSlope(double[][] data) {
+        SimpleRegression simpleRegression = new SimpleRegression();
+        simpleRegression.addData(data);
+        return simpleRegression.getSlope();
+    }
+
+
 }

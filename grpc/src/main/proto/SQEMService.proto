@@ -35,6 +35,7 @@ message CacheLookUp {
     string samplingInterval = 5;
     bool checkFresh = 6;
     string key = 7;
+    string qClass = 8;
 }
 
 message RefreshUpdate {
@@ -53,7 +54,16 @@ message ContextProviderProfile {
     double lastRetLatency = 2;
     string relaibility = 3;
     string expRetLatency = 4;
-    string status = 5;
+    string accessTrend = 5;
+    string expAR = 6;
+    string status = 7;
+}
+
+message QueryClassProfile {
+    string rtmax = 1;
+    string earning = 2;
+    string penalty = 3;
+    string status = 4;
 }
 
 message CacheLookUpResponse {
@@ -252,4 +262,5 @@ service SQEMService {
     rpc getPerformanceData (Empty) returns (SQEMResponse);
     rpc logConsumerProfile (SummarySLA) returns (Empty);
     rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
+    rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
 }

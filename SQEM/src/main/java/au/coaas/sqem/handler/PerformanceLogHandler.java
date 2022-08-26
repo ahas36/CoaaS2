@@ -25,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
@@ -1121,8 +1122,46 @@ public class PerformanceLogHandler {
         }
     }
 
+    private static final int distribution_history = 1000;
+
     public static ProbDelay getProbabilityOfDelay(ProbDelayRequest request) {
-        return ProbDelay.newBuilder().setValue(0.5).build();
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("performanceSummary");
+
+            Document sort = new Document();
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
+
+            Document project = new Document();
+            project.put("rawContext." + request.getPrimaryKey() + ".reliability", 1);
+
+            Document filter = new Document();
+            filter.put("rawContext." + request.getPrimaryKey(), new Document(){{ put("$exists", true); }});
+
+            // Search the performance DB
+            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(distribution_history);
+
+            AtomicInteger count = new AtomicInteger();
+            int total = Iterables.size(result);
+            double rtmax = request.getThreshold();
+
+            result.forEach((Block<Document>) document -> {
+                Document rel = document.get("rawContext", Document.class)
+                                .get(request.getPrimaryKey(), Document.class)
+                                .get("reliability", Document.class);
+                if(rel.getDouble("retLatency") >=  rtmax)
+                    count.getAndIncrement();
+            });
+
+            return ProbDelay.newBuilder().setValue(count.get()/total).build();
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
+
+        return ProbDelay.newBuilder().setValue(0.0).build();
     }
 
     /** Initializing performance data monitoring */

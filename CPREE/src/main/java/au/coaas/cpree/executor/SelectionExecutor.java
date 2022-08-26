@@ -72,17 +72,20 @@ public class SelectionExecutor {
                     executor.execute(() -> {
                         if (ref_type.equals(RefreshLogics.PROACTIVE_SHIFT)) {
                             JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
+                            JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
                             double fthresh = !profile.getExpFthr().equals("NaN") ?
                                     Double.valueOf(profile.getExpFthr()) :
                                     freshReq.getDouble("fthresh");
 
                             double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+
                             RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                     .setEt(request.getReference().getEt())
                                     .setRequest(request).setFthreh(fthresh)
                                     .setLifetime(freshReq.getDouble("value"))
                                     .setResiLifetime(res_life)
                                     .setHashKey(hashKey)
+                                    .setSamplingInterval(sampling.getDouble("value"))
                                     .setRefreshPolicy(ref_type.toString().toLowerCase())
                                     .build());
                         }
@@ -134,7 +137,7 @@ public class SelectionExecutor {
                         JSONObject slaObj = new JSONObject(sla);
 
                         // 1. Retrieval Efficiency
-                        double ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), hashkey, profile,
+                        double ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
                                 cqc_profile, refPolicy, slaObj);
                         double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
@@ -179,7 +182,7 @@ public class SelectionExecutor {
         return 0.0;
     }
 
-    private static double getRetrievalEfficiency(String serviceId, String hashkey, ContextProviderProfile profile,
+    private static double getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
 
         /** Initializing the variables **/
@@ -206,7 +209,6 @@ public class SelectionExecutor {
             // Here too, I'm only considering exp_rtmax of a single query class (since we have only 1 for testing 1 scenario).
             ProbDelay prob_delay = sqemStub.getProbDelay(ProbDelayRequest.newBuilder()
                     .setPrimaryKey(serviceId)
-                    .setHashKey(hashkey)
                     .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
                     .setThreshold(rtmax - cacheLookupLatency.get("404"))
                     .build());
@@ -231,7 +233,6 @@ public class SelectionExecutor {
 
                 ProbDelay prob_delay = sqemStub.getProbDelay(ProbDelayRequest.newBuilder()
                         .setPrimaryKey(serviceId)
-                        .setHashKey(hashkey)
                         .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
                         .setThreshold(rtmax - cacheLookupLatency.get("400"))
                         .build());

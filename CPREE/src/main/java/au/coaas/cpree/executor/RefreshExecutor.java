@@ -241,7 +241,7 @@ public class RefreshExecutor {
             fthresh = cp_prof.getDouble("fthresh");
         }
         else
-            fthresh = !profile.equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+            fthresh = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                     sla.getJSONObject("freshness").getDouble("fthresh");
 
         if(life_unit != sla.getJSONObject("updateFrequency").getString("unit")) {
@@ -256,7 +256,9 @@ public class RefreshExecutor {
         // The residual lifetime is calculated using the expected retrieval lifetime
         // E[RetL] = Total time spent on retrievals / Number of successful retrievals
         // Therefore, it probabilistically incoperates the reliability/unreliability of the context provider
-        double resi_lifetime = lifetime - Double.valueOf(profile.getExpRetLatency());
+        double exp_retl = !profile.getExpRetLatency().equals("NaN") ?
+                    Double.valueOf(profile.getExpRetLatency()) : profile.getLastRetLatency();
+        double resi_lifetime = lifetime - exp_retl;
 
         if(samplingInterval > 0){
             // Context need to be refreshed based on validity.

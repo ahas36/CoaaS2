@@ -13,8 +13,8 @@ public class StatisticalUtils {
     public static double getSlope(double[][] data) {
         SimpleRegression simpleRegression = new SimpleRegression();
         simpleRegression.addData(data);
-        return simpleRegression.getSlope();
+        // Multiplying by -1 because the list is inverted. So, when the AR is increasing, the  resultant slope as in the
+        // dataset would actually be negative, which therefore need to be inverted and vice versa.
+        return simpleRegression.getSlope() * -1;
     }
-
-
 }

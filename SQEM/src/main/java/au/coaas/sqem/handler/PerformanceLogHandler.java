@@ -18,6 +18,7 @@ import org.bson.Document;
 import org.json.JSONObject;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -304,6 +305,7 @@ public class PerformanceLogHandler {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
         MongoDatabase db = mongoClient.getDatabase("coaas_log");
         MongoCollection<Document> collection = db.getCollection("performanceSummary");
+        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date()));
         collection.insertOne(persRecord);
     }
 
@@ -916,7 +918,7 @@ public class PerformanceLogHandler {
             MongoCollection<Document> collection = db.getCollection("performanceSummary");
 
             Document sort = new Document();
-            sort.put("_id",-1);
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
             Document data = collection.find().sort(sort).first();
 
             return SQEMResponse.newBuilder().setStatus("200")
@@ -942,7 +944,7 @@ public class PerformanceLogHandler {
             MongoCollection<Document> collection = db.getCollection("performanceSummary");
 
             Document sort = new Document();
-            sort.put("_id",-1);
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
 
             Document project = new Document();
             project.put("rawContext."+cpId,1);
@@ -1021,7 +1023,7 @@ public class PerformanceLogHandler {
             MongoCollection<Document> collection = db.getCollection("performanceSummary");
 
             Document sort = new Document();
-            sort.put("_id",-1);
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
 
             Document project = new Document();
             project.put("consumers."+classId,1);

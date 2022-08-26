@@ -94,7 +94,8 @@ public class SelectionExecutor {
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                 long est_cacheLife = -1;
-                double access_trend = Double.valueOf(profile.getAccessTrend());
+                double access_trend = profile.getAccessTrend().equals("NaN") ?
+                        0 : Double.valueOf(profile.getAccessTrend());
                 if(access_trend <= 0){
                     // Caching only for an estimated period of time until re-evaluation
                     QueryClassProfile cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()

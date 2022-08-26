@@ -7,6 +7,7 @@ import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
 import au.coaas.sqem.util.enums.PerformanceStats;
+import com.google.common.collect.Iterables;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
@@ -955,48 +956,54 @@ public class PerformanceLogHandler {
             // Search the performance DB
             FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
 
-            int index = 0;
-            double[][] dataset = new double[max_history][2];
-            double[][] dataset_2 = new double[max_history][2];
-            double[][] dataset_3 = new double[max_history][2];
-            double[][] dataset_4 = new double[max_history][2];
-
-            result.forEach((Block<Document>) document -> {
-                dataset[index][0] = index;
-                dataset_2[index][0] = index;
-                dataset_3[index][0] = index;
-                dataset_4[index][0] = index;
-
-                // Expected freshness threshold, reliability, and retrieval latency
-                Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
-                Document rel = cp.get("reliability", Document.class);
-
-                dataset[index][1] = cp.get("profile", Document.class).getDouble("fthresh");
-                dataset_2[index][1] = rel.getDouble("reliability");
-                dataset_3[index][1] = rel.getDouble("retLatency");
-                dataset_4[index][1] = rel.getInteger("count");
-
-            });
-
             AtomicReference<Double> exp_fthr = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_retLatency = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_reliability = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_count = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_ar = new AtomicReference<>(Double.NaN);
 
-            // The list is inverted, so, estimating from x=-1.
-            if(index != 0){
+            int count = Iterables.size(result);
+            double lastfthr = 0.5; // Default
+
+            if(count > 1 ) {
+                int index = 0;
+                double[][] dataset = new double[count][2];
+                double[][] dataset_2 = new double[count][2];
+                double[][] dataset_3 = new double[count][2];
+                double[][] dataset_4 = new double[count][2];
+
+                result.forEach((Block<Document>) document -> {
+                    dataset[index][0] = index;
+                    dataset_2[index][0] = index;
+                    dataset_3[index][0] = index;
+                    dataset_4[index][0] = index;
+
+                    // Expected freshness threshold, reliability, and retrieval latency
+                    Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
+                    Document rel = cp.get("reliability", Document.class);
+
+                    dataset[index][1] = cp.get("profile", Document.class).getDouble("fthresh");
+                    dataset_2[index][1] = rel.getDouble("reliability");
+                    dataset_3[index][1] = rel.getDouble("retLatency");
+                    dataset_4[index][1] = rel.getInteger("count");
+                });
+
+                // The list is inverted, so, estimating from x=-1.
                 estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); });
                 estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); });
                 estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
                 estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_2, -1)); });
                 estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_3, -1)); });
             }
+            else if (count == 1) {
+                Document cp = result.first().get("rawContext", Document.class).get(cpId, Document.class);
+                lastfthr = cp.get("profile", Document.class).getDouble("fthresh");
+            }
 
             // TODO: Reliability and Expected E[RL] calculation
             return ContextProviderProfile.newBuilder().setStatus("200")
                     .setExpFthr(Double.isNaN(exp_fthr.get()) ? "NaN" : (exp_fthr.get() < 0 || exp_fthr.get() > 1 ?
-                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr.get())))
+                            Double.toString(lastfthr) : Double.toString(exp_fthr.get())))
                     .setRelaibility(Double.isNaN(exp_retLatency.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
                             exp_retLatency.get() > 1 ? "1" : Double.toString(exp_retLatency.get()))
                     .setAccessTrend(Double.isNaN(exp_count.get()) ? "NaN" : Double.toString(exp_count.get()))
@@ -1026,39 +1033,41 @@ public class PerformanceLogHandler {
             sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
 
             Document project = new Document();
-            project.put("consumers."+classId,1);
+            project.put("classes."+classId,1);
 
             Document filter = new Document();
-            filter.put("consumers."+classId, new Document(){{ put("$exists", true); }});
+            filter.put("classes."+classId, new Document(){{ put("$exists", true); }});
 
             // Search the performance DB
             FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
-
-            int index = 0;
-            double[][] dataset = new double[max_history][2];
-            double[][] dataset_2 = new double[max_history][2];
-            double[][] dataset_3 = new double[max_history][2];
-
-            result.forEach((Block<Document>) document -> {
-                dataset[index][0] = index;
-                dataset_2[index][0] = index;
-                dataset_3[index][0] = index;
-
-                // Expected rtmax, earning, penalty
-                Document cqc = document.get("consumers", Document.class).get(classId, Document.class);
-
-                dataset[index][1] = cqc.getDouble("rtmax");
-                dataset_2[index][1] = cqc.getDouble("earning");
-                dataset_3[index][1] = cqc.getDouble("penalty");
-
-            });
 
             AtomicReference<Double> exp_rtmax = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_earning = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_penalty = new AtomicReference<>(Double.NaN);
 
-            // The list is inverted, so, estimating from x=-1.
-            if(index != 0){
+            int count = Iterables.size(result);
+
+            if(count > 1){
+                int index = 0;
+                double[][] dataset = new double[max_history][2];
+                double[][] dataset_2 = new double[max_history][2];
+                double[][] dataset_3 = new double[max_history][2];
+
+                result.forEach((Block<Document>) document -> {
+                    dataset[index][0] = index;
+                    dataset_2[index][0] = index;
+                    dataset_3[index][0] = index;
+
+                    // Expected rtmax, earning, penalty
+                    Document cqc = document.get("classes", Document.class).get(classId, Document.class);
+
+                    dataset[index][1] = cqc.getDouble("rtmax");
+                    dataset_2[index][1] = cqc.getDouble("earning");
+                    dataset_3[index][1] = cqc.getDouble("penalty");
+
+                });
+
+                // The list is inverted, so, estimating from x=-1.
                 regression_executor.submit(() -> { exp_rtmax.set(predictExpectedValue(dataset, -1)); });
                 regression_executor.submit(() -> { exp_earning.set(predictExpectedValue(dataset_2, -1)); });
                 regression_executor.submit(() -> { exp_penalty.set(predictExpectedValue(dataset_3, -1)); });

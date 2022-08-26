@@ -98,6 +98,13 @@ public class SelectionExecutor {
                         0 : Double.valueOf(profile.getAccessTrend());
                 if(access_trend <= 0){
                     // Caching only for an estimated period of time until re-evaluation
+
+                    // TODO: IMPORTANT!
+                    // In the next line, it is assumed that there is only one class of context queries because, the
+                    // implementation is only being tested for a single scenario (all queries are of the same class.)
+                    // So, it is retrieving the stats from the performance summary for the query class of the "current query".
+                    // This shouldn't be the case. I should rather retrieve the expected value considering all of CQ classes which the item is used
+                    // from the context query class network.
                     QueryClassProfile cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
                             .setPrimaryKey(lookup.getQClass()).build());
                     if(cqc_profile.getStatus().equals("200")){

@@ -25,6 +25,7 @@ import java.time.format.DateTimeFormatter;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -179,7 +180,7 @@ public class PerformanceLogHandler {
                     String formatted_string = String.format(queryString,
                             method, // Method name
                             request.getStatus(), // Status of the request
-                            "NULL", // Response time
+                            request.getTime(), // Response time
                             "NULL", // Earnings from the query
                             "NULL", // Cost from query
                             request.getIdentifier(), // Context Service Identifier
@@ -346,6 +347,14 @@ public class PerformanceLogHandler {
     private static Runnable profileContextProviders(Document persRecord){
         ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
 
+        AtomicLong missTime = new AtomicLong();
+        AtomicLong succsessTime = new AtomicLong();
+        AtomicLong partialMissTime = new AtomicLong();
+
+        AtomicLong missCnt = new AtomicLong();
+        AtomicLong successCnt = new AtomicLong();
+        AtomicLong partialMissCnt = new AtomicLong();
+
         try {
 
             ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -357,28 +366,47 @@ public class PerformanceLogHandler {
                     statement.setQueryTimeout(30);
 
                     HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
-                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, count(fthresh) AS cnt" +
-                            "FROM coass_performance WHERE status = '200' AND method = 'cacheSearch' " +
-                            "GROUP BY identifier, fthresh;");
+                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, status, " +
+                            "count(fthresh) AS cnt, avg(response_time) as rt " +
+                            "FROM coass_performance WHERE method = 'cacheSearch' " +
+                            "GROUP BY identifier, fthresh, status;");
 
                     while(rs_1.next()){
-                        long count = rs_1.getInt("cnt");
-                        if(!res.containsKey(rs_1.getString("identifier"))){
-                            res.put(rs_1.getString("identifier"),
-                                    new HashMap(){{
-                                        put("count", count);
-                                        put("fthresh", rs_1.getDouble("fthresh")*count);
-                                    }});
+                        if(rs_1.getString("status").equals("200")){
+                            long count = rs_1.getInt("cnt");
+                            if(!res.containsKey(rs_1.getString("identifier"))){
+                                res.put(rs_1.getString("identifier"),
+                                        new HashMap(){{
+                                            put("count", count);
+                                            put("fthresh", rs_1.getDouble("fthresh")*count);
+                                        }});
+                            }
+                            else {
+                                HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                                temp.put("count", temp.get("count") + count);
+                                temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
+
+                                res.put(rs_1.getString("identifier"), temp);
+                            }
+                            succsessTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                            successCnt.addAndGet(rs_1.getLong("cnt"));
                         }
                         else {
-                            HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
-
-                            temp.put("count", temp.get("count") + count);
-                            temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
-
-                            res.put(rs_1.getString("identifier"), temp);
+                            if(rs_1.getString("status").equals("400")){
+                                partialMissTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                                partialMissCnt.addAndGet(rs_1.getLong("cnt"));
+                            }
+                            else {
+                                missTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                                missCnt.addAndGet(rs_1.getLong("cnt"));
+                            }
                         }
                     }
+
+                    ContextCacheHandler.updatePerfRegister(succsessTime.get()/successCnt.get(),
+                            partialMissTime.get()/partialMissCnt.get(),
+                            missTime.get()/missCnt.get());
 
                     res.entrySet().parallelStream().forEach((entry) -> {
                         String csId = entry.getKey();
@@ -412,7 +440,7 @@ public class PerformanceLogHandler {
 
                     HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
                     ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
-                            "avg(response_time) AS average " +
+                            "avg(response_time) AS rt_avg, avg(cost) AS cost " +
                             "FROM coass_performance method = 'executeFetch' " +
                             "GROUP BY identifier, status;");
 
@@ -426,7 +454,8 @@ public class PerformanceLogHandler {
                                         put("count", count);
                                         put("failed", status.equals("200") ? 0 : count);
                                         put("success", status.equals("200") ? count : 0);
-                                        put("retLatency", rs_1.getDouble("average")*count);
+                                        put("retLatency", rs_1.getDouble("rt_avg")*count);
+                                        put("cost", rs_1.getDouble("cost"));
                                     }});
                         }
                         else {
@@ -933,7 +962,7 @@ public class PerformanceLogHandler {
         }
     }
 
-    static ExecutorService estimation_executor = Executors.newFixedThreadPool(5);
+    static ExecutorService estimation_executor = Executors.newFixedThreadPool(6);
 
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
@@ -956,11 +985,12 @@ public class PerformanceLogHandler {
             // Search the performance DB
             FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
 
+            AtomicReference<Double> exp_ar = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_fthr = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_cost = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_count = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_retLatency = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_reliability = new AtomicReference<>(Double.NaN);
-            AtomicReference<Double> exp_count = new AtomicReference<>(Double.NaN);
-            AtomicReference<Double> exp_ar = new AtomicReference<>(Double.NaN);
 
             int count = Iterables.size(result);
             double lastfthr = 0.5; // Default
@@ -971,12 +1001,14 @@ public class PerformanceLogHandler {
                 double[][] dataset_2 = new double[count][2];
                 double[][] dataset_3 = new double[count][2];
                 double[][] dataset_4 = new double[count][2];
+                double[][] dataset_5 = new double[count][2];
 
                 result.forEach((Block<Document>) document -> {
                     dataset[index][0] = index;
                     dataset_2[index][0] = index;
                     dataset_3[index][0] = index;
                     dataset_4[index][0] = index;
+                    dataset_5[index][0] = index;
 
                     // Expected freshness threshold, reliability, and retrieval latency
                     Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
@@ -986,12 +1018,14 @@ public class PerformanceLogHandler {
                     dataset_2[index][1] = rel.getDouble("reliability");
                     dataset_3[index][1] = rel.getDouble("retLatency");
                     dataset_4[index][1] = rel.getInteger("count");
+                    dataset_5[index][1] = rel.getInteger("cost");
                 });
 
                 // The list is inverted, so, estimating from x=-1.
                 estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); });
                 estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); });
                 estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
+                estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); });
                 estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_2, -1)); });
                 estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_3, -1)); });
             }
@@ -1000,13 +1034,13 @@ public class PerformanceLogHandler {
                 lastfthr = cp.get("profile", Document.class).getDouble("fthresh");
             }
 
-            // TODO: Reliability and Expected E[RL] calculation
             return ContextProviderProfile.newBuilder().setStatus("200")
                     .setExpFthr(Double.isNaN(exp_fthr.get()) ? "NaN" : (exp_fthr.get() < 0 || exp_fthr.get() > 1 ?
                             Double.toString(lastfthr) : Double.toString(exp_fthr.get())))
                     .setRelaibility(Double.isNaN(exp_retLatency.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
                             exp_retLatency.get() > 1 ? "1" : Double.toString(exp_retLatency.get()))
                     .setAccessTrend(Double.isNaN(exp_count.get()) ? "NaN" : Double.toString(exp_count.get()))
+                    .setExpCost(Double.isNaN(exp_cost.get()) ? "NaN" : Double.toString(exp_cost.get()))
                     .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()))
                     .setExpRetLatency(Double.toString(exp_reliability.get()))
                     .setLastRetLatency(getLastRetrievalTime(cpId, hashKey))
@@ -1085,6 +1119,10 @@ public class PerformanceLogHandler {
             body.put("cause",e.getCause().toString());
             return QueryClassProfile.newBuilder().setStatus("500").build();
         }
+    }
+
+    public static ProbDelay getProbabilityOfDelay(ProbDelayRequest request) {
+        return ProbDelay.newBuilder().setValue(0.5).build();
     }
 
     /** Initializing performance data monitoring */

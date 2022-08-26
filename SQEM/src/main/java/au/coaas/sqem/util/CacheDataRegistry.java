@@ -183,8 +183,9 @@ public final class CacheDataRegistry{
                                         LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
                                         LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
 
-                                        expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
-                                                : sampledTime.plusSeconds(samplingInterval);
+                                        expiryTime = sampledTime.plusSeconds(samplingInterval);
+                                        // expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
+                                        //         : sampledTime.plusSeconds(samplingInterval);
                                         staleTime = expiryTime;
                                     }
                                 }

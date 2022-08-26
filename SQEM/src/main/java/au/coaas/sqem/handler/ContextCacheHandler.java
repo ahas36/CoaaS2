@@ -14,6 +14,7 @@ import org.redisson.api.*;
 
 import java.util.Map;
 import java.time.Instant;
+import java.util.Hashtable;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
 
@@ -24,6 +25,14 @@ public class ContextCacheHandler {
     private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
     private static CacheDataRegistry registry = CacheDataRegistry.getInstance();
     private static final String regex = "^[\\d\\.]*[BGKM%]{0,1}$";
+    private static Hashtable<String, Long> currentPerf;
+
+    public static void updatePerfRegister(double success, double par_miss, double miss) {
+        if(currentPerf == null) currentPerf = new Hashtable<>();
+        currentPerf.put("200", Math.round(success));
+        currentPerf.put("400", Math.round(par_miss));
+        currentPerf.put("404", Math.round(miss));
+    }
 
     // Caches all context under an entity
     public static SQEMResponse cacheEntity(CacheRequest registerRequest) {
@@ -141,6 +150,7 @@ public class ContextCacheHandler {
 
     // Retrieve entity context from cache
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
+        long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpRegistry(request);
 
         if(!result.getHashkey().equals("") && result.getIsCached() && result.getIsValid()){
@@ -154,8 +164,10 @@ public class ContextCacheHandler {
                 Document entityContext = ent.get();
                 lock.unlockAsync();
 
+                long endTime = System.currentTimeMillis();
+
                 Executors.newCachedThreadPool().execute(()
-                        -> logCacheSearch("200", request.getServiceId(), request.getUniformFreshness()));
+                        -> logCacheSearch("200", request.getServiceId(), request.getUniformFreshness(), endTime - startTime));
                 return SQEMResponse.newBuilder().setStatus("200")
                         .setBody(entityContext.toJson())
                         .setMeta(result.getRefreshLogic())
@@ -166,22 +178,24 @@ public class ContextCacheHandler {
             }
         }
         else if(!result.getHashkey().equals("") && result.getIsCached() && !result.getIsValid()){
+            long endTime = System.currentTimeMillis();
             Executors.newCachedThreadPool().execute(()
-                    -> logCacheSearch("400", request.getServiceId(), request.getUniformFreshness()));
+                    -> logCacheSearch("400", request.getServiceId(), request.getUniformFreshness(), endTime - startTime));
             return SQEMResponse.newBuilder().setStatus("400")
                     .setMeta(result.getRefreshLogic())
                     .setHashKey(result.getHashkey()).build();
         }
 
+        long endTime = System.currentTimeMillis();
         Executors.newCachedThreadPool().execute(()
-                -> logCacheSearch("404", request.getServiceId(), request.getUniformFreshness()));
+                -> logCacheSearch("404", request.getServiceId(), request.getUniformFreshness(), endTime - startTime));
         return SQEMResponse.newBuilder().setStatus("404")
                 .setHashKey(result.getHashkey()).build();
     }
 
-    private static void logCacheSearch(String status, String csId, String freshness){
+    private static void logCacheSearch(String status, String csId, String freshness, long responseTime){
         JSONObject frsh = new JSONObject(freshness);
-        Statistic stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status)
+        Statistic stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status).setTime(responseTime)
                 .setIdentifier(csId).setEarning(frsh.getDouble("fthresh")).build();
         PerformanceLogHandler.coassPerformanceRecord(stat);
     }
@@ -263,6 +277,18 @@ public class ContextCacheHandler {
             log.info(e.getMessage());
             return null;
         }
+    }
+
+    public static CachePerformance getCachePerformance(){
+        if(currentPerf != null){
+            // All values returned are in Seconds
+            return CachePerformance.newBuilder()
+                    .setHitLatency(currentPerf.get("200")/1000)
+                    .setPartialMissLatency(currentPerf.get("400")/1000)
+                    .setMissLatency(currentPerf.get("404")/1000)
+                    .setStatus("200").build();
+        }
+        else return CachePerformance.newBuilder().setStatus("404").build();
     }
 
     private static String convertToUnit(char unit) {

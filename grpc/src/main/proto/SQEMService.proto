@@ -43,10 +43,22 @@ message RefreshUpdate {
     string refreshLogic = 2;
 }
 
+message ProbDelay {
+    double value = 1;
+}
+
 message ContextProfileRequest {
     string primaryKey = 1;
     string hashKey = 2;
     string level = 3;
+    string meta = 4;
+}
+
+message ProbDelayRequest {
+    string primaryKey = 1;
+    string hashKey = 2;
+    string level = 3;
+    double threshold = 4;
 }
 
 message ContextProviderProfile {
@@ -57,6 +69,7 @@ message ContextProviderProfile {
     string accessTrend = 5;
     string expAR = 6;
     string status = 7;
+    string expCost = 8;
 }
 
 message QueryClassProfile {
@@ -77,6 +90,13 @@ message CacheLookUpResponse {
 message ScheduleTask {
     CacheLookUp lookup = 1;
     string hashkey = 2;
+}
+
+message CachePerformance {
+    double hitLatency = 1;
+    double partialMissLatency = 2;
+    double missLatency = 3;
+    string status = 4;
 }
 
 message CacheRequest
@@ -231,6 +251,7 @@ service SQEMService {
     rpc clearCache (Empty) returns (SQEMResponse);
     rpc toggleRefreshLogic(RefreshUpdate) returns (Empty);
     rpc cacheEntity (CacheRequest) returns (SQEMResponse);
+    rpc getcachePerformance(Empty) returns (CachePerformance);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
@@ -263,4 +284,5 @@ service SQEMService {
     rpc logConsumerProfile (SummarySLA) returns (Empty);
     rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
     rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
+    rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
 }

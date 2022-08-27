@@ -921,7 +921,7 @@ public class PerformanceLogHandler {
             if(!rs.next()) {
                 SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead", PerformanceStats.perf_stats);
                 if(avg_latency.getStatus().equals("200"))
-                    return Double.valueOf(avg_latency.getBody());
+                    return Double.valueOf(avg_latency.getBody())/1000;
 
                 return 0;
             }
@@ -929,6 +929,7 @@ public class PerformanceLogHandler {
             double retrieval_latency = rs.getDouble("response_time")/1000;
             long age = rs.getLong("age");
 
+            // This is in seconds
             return retrieval_latency+age;
         }
         catch(SQLException ex){
@@ -1042,9 +1043,9 @@ public class PerformanceLogHandler {
                             exp_retLatency.get() > 1 ? "1" : Double.toString(exp_retLatency.get()))
                     .setAccessTrend(Double.isNaN(exp_count.get()) ? "NaN" : Double.toString(exp_count.get()))
                     .setExpCost(Double.isNaN(exp_cost.get()) ? "NaN" : Double.toString(exp_cost.get()))
-                    .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()))
-                    .setExpRetLatency(Double.toString(exp_reliability.get()))
-                    .setLastRetLatency(getLastRetrievalTime(cpId, hashKey))
+                    .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()/60)) // This is because the window is 60s
+                    .setExpRetLatency(Double.toString(exp_reliability.get()/1000))
+                    .setLastRetLatency(getLastRetrievalTime(cpId, hashKey)) // In seconds already
                     .build();
         }
         catch(Exception e){
@@ -1109,7 +1110,7 @@ public class PerformanceLogHandler {
             }
 
             return QueryClassProfile.newBuilder().setStatus("200")
-                    .setRtmax(Double.isNaN(exp_rtmax.get()) ? "NaN" : Double.toString(exp_rtmax.get()))
+                    .setRtmax(Double.isNaN(exp_rtmax.get()) ? "NaN" : Double.toString(exp_rtmax.get()/1000))
                     .setEarning(Double.isNaN(exp_earning.get()) ? "NaN" : Double.toString(exp_earning.get()))
                     .setPenalty(Double.isNaN(exp_penalty.get()) ? "NaN" : Double.toString(exp_penalty.get()))
                     .build();
@@ -1145,7 +1146,7 @@ public class PerformanceLogHandler {
 
             AtomicInteger count = new AtomicInteger();
             int total = Iterables.size(result);
-            double rtmax = request.getThreshold();
+            double rtmax = request.getThreshold() * 1000; // Converting to miliseconds
 
             result.forEach((Block<Document>) document -> {
                 Document rel = document.get("rawContext", Document.class)

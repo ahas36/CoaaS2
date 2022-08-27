@@ -82,10 +82,10 @@ public class SelectionExecutor {
                             RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                     .setEt(request.getReference().getEt())
                                     .setRequest(request).setFthreh(fthresh)
-                                    .setLifetime(freshReq.getDouble("value"))
-                                    .setResiLifetime(res_life)
+                                    .setLifetime(freshReq.getDouble("value")) // seconds
+                                    .setResiLifetime(res_life) // seconds
                                     .setHashKey(hashKey)
-                                    .setSamplingInterval(sampling.getDouble("value"))
+                                    .setSamplingInterval(sampling.getDouble("value")) // seconds
                                     .setRefreshPolicy(ref_type.toString().toLowerCase())
                                     .build());
                         }
@@ -151,8 +151,11 @@ public class SelectionExecutor {
                         }
                     }
                 }
-                // When the access trend is positive, the item would be cached for a longer period until evicted by
-                // the eviction algorithm.
+                else {
+                    // When the access trend is positive, the item would be cached for a longer period until evicted by
+                    // the eviction algorithm.
+                    cache = true;
+                }
 
                 // Actual Caching
                 if(cache) {
@@ -187,13 +190,13 @@ public class SelectionExecutor {
 
         /** Initializing the variables **/
         double fthr = Double.valueOf(profile.getExpFthr());
-        double lambda = Double.valueOf(profile.getExpAR());
-        double rtmax = Double.valueOf(cqc_profile.getRtmax());
+        double lambda = Double.valueOf(profile.getExpAR()); // per second
+        double rtmax = Double.valueOf(cqc_profile.getRtmax()); // seconds
         double retCost = Double.valueOf(profile.getExpCost());
         double penalty = Double.valueOf(cqc_profile.getPenalty());
-        double retlatency = Double.valueOf(profile.getExpRetLatency());
-        double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
-        double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
+        double retlatency = Double.valueOf(profile.getExpRetLatency()); // seconds
+        double lifetime = slaObj.getJSONObject("freshness").getDouble("value"); // seconds
+        double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value"); // seconds
 
         /** Redirector Mode **/
         // Total cost of retrieval
@@ -210,7 +213,7 @@ public class SelectionExecutor {
             ProbDelay prob_delay = sqemStub.getProbDelay(ProbDelayRequest.newBuilder()
                     .setPrimaryKey(serviceId)
                     .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
-                    .setThreshold(rtmax - cacheLookupLatency.get("404"))
+                    .setThreshold(rtmax - cacheLookupLatency.get("404")) // in seconds
                     .build());
             // TODO:
             // Should also consider the retrieval latencies of other entities in the context query class as well.
@@ -234,7 +237,7 @@ public class SelectionExecutor {
                 ProbDelay prob_delay = sqemStub.getProbDelay(ProbDelayRequest.newBuilder()
                         .setPrimaryKey(serviceId)
                         .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
-                        .setThreshold(rtmax - cacheLookupLatency.get("400"))
+                        .setThreshold(rtmax - cacheLookupLatency.get("400")) // in seconds
                         .build());
 
                 if(sampleInterval == 0) {

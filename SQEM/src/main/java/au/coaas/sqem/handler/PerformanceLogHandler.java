@@ -1,11 +1,16 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cpree.proto.LearnedWeights;
+import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.sqem.monitor.LogicalContextLevel;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.*;
+import au.coaas.sqem.util.HttpClient;
 import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
+import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
 import com.google.common.collect.Iterables;
 import com.mongodb.Block;
@@ -16,8 +21,10 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
 import org.bson.Document;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.print.attribute.standard.JobSheets;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -334,7 +341,43 @@ public class PerformanceLogHandler {
                 currTask.get();
             }
 
+            // Backing up the perfromance data
             executor.submit(() -> { persistPerformanceSummary(persRecord); });
+            // Updating the reinforcement learning model
+            executor.submit(() -> {
+                JSONObject body = new JSONObject();
+                Document summary = persRecord.get("summary", Document.class);
+                ArrayList<Double> vector = new ArrayList(){{
+                    add((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
+                    add(summary.getDouble("retrieval_cost")); // Retrieval Cost
+                    add(summary.getDouble("earning")); // Earnings
+                    add(summary.getDouble("penalty_cost")); // Penalties
+                    add(summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries")); // Probability of Delay
+                    add((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
+                    add((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
+                    add(600); // Average Cache Lifetime
+                    add(60); // Average Delay Time
+                }};
+
+                body.put("vector", new JSONArray(vector));
+                body.put("reward", summary.getDouble("avg_gain"));
+                String result = HttpClient.call("http://localhost:9494/selections", HttpRequests.POST, new JSONObject());
+                if(result != null){
+                    JSONObject actions = new JSONObject(result);
+                    JSONArray weights = actions.getJSONArray("actions");
+                    LearnedWeights request = LearnedWeights.newBuilder()
+                            .setThreshold(weights.getDouble(0))
+                            .setKappa(weights.getDouble(1))
+                            .setMu(weights.getDouble(2))
+                            .setPi(weights.getDouble(3))
+                            .setDelta(weights.getDouble(4))
+                            .setRow(weights.getDouble(5)).build();
+
+                    CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
+                            = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+                    asyncStub.updateWeights(request);
+                }
+            });
         }
         catch(Exception ex){
             log.severe(ex.getMessage());

@@ -46,4 +46,16 @@ public class CPREEServiceImpl extends CPREEServiceGrpc.CPREEServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void updateWeights(au.coaas.cpree.proto.LearnedWeights request,
+                               io.grpc.stub.StreamObserver<au.coaas.cpree.proto.Empty> responseObserver){
+        try {
+            responseObserver.onNext(SelectionExecutor.updateWeights(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
 }

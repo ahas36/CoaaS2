@@ -1,5 +1,7 @@
 package au.coaas.cpree.executor;
 
+import au.coaas.cpree.proto.LearnedWeights;
+import au.coaas.cpree.utils.LimitedQueue;
 import au.coaas.cpree.utils.Utilities;
 import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.utils.enums.CacheLevels;
@@ -10,12 +12,12 @@ import au.coaas.cpree.proto.ProactiveRefreshRequest;
 import au.coaas.sqem.proto.*;
 
 import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.cpree.proto.Empty;
 
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
 import java.util.AbstractMap;
-import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
@@ -26,19 +28,39 @@ public class SelectionExecutor {
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
 
     // Static Registries
-    private static Hashtable<String, Double> weightThresholds = new Hashtable<>();
+    private static Hashtable<String, Double> weightThresholds = new Hashtable(){{
+        // Starting with equal weights for all the weights
+        weightThresholds.put("kappa", 0.2);
+        weightThresholds.put("mu", 0.2);
+        weightThresholds.put("pi", 0.2);
+        weightThresholds.put("delta", 0.2);
+        weightThresholds.put("row", 0.2);
+        weightThresholds.put("threshold", 1.0);
+    }};
     private static Hashtable<String, Double> cachePerfStats = new Hashtable<>();
 
     // Dynamic Registries
     private static Hashtable<String, LocalDateTime> delayRegistry = new Hashtable<>();
     private static Hashtable<String, Double> cacheLookupLatency;
+    private static LimitedQueue<Double> valueHistory = new LimitedQueue<>(1000);
 
     private static ExecutorService executor = Executors.newScheduledThreadPool(20);
+
+    public static Empty updateWeights(LearnedWeights request){
+        weightThresholds.put("kappa", request.getKappa());
+        weightThresholds.put("mu", request.getMu());
+        weightThresholds.put("pi", request.getPi());
+        weightThresholds.put("delta", request.getDelta());
+        weightThresholds.put("row", request.getRow());
+        weightThresholds.put("threshold", request.getThreshold() * valueHistory.average());
+
+        return null;
+    }
 
     public static void updateCacheRecord(){
         SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-        CachePerformance result = blockingStub.getcachePerformance(Empty.newBuilder().build());
+        CachePerformance result = blockingStub.getcachePerformance(au.coaas.sqem.proto.Empty.newBuilder().build());
 
         if(cacheLookupLatency == null) {
             cacheLookupLatency = new Hashtable() {{
@@ -182,6 +204,8 @@ public class SelectionExecutor {
                                 (weightThresholds.get("delta") * reliability) +
                                 (weightThresholds.get("row") * query_complexity);
 
+                        valueHistory.add(cacheConfidence);
+
                         if(cacheConfidence < weightThresholds.get("threshold")){
                             cache = true;
                             est_cacheLife = 600;
@@ -243,8 +267,6 @@ public class SelectionExecutor {
         double retlatency = Double.valueOf(profile.getExpRetLatency()); // seconds
         double lifetime = slaObj.getJSONObject("freshness").getDouble("value"); // seconds
         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value"); // seconds
-
-        ArrayList<Double> stats = new ArrayList();
 
         /** Redirector Mode **/
         // Total cost of retrieval

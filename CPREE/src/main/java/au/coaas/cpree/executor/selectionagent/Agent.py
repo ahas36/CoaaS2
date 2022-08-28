@@ -54,10 +54,18 @@ class Agent:
         actions, _ = self.actor.sample_normal(state, reparameterize=False)
 
         return actions[0]
+
+    # Checking if the buffer is empty
+    def isBufferEmpty(self):
+        return self.memory.mem_cntr > 0
     
     # Storing in the Replay Buffer
-    def remember(self, state, action, new_state, reward, done):
-        self.memory.store_transition(state, action, new_state, reward, done)
+    def remember(self, new_state, reward, action):
+        self.memory.store_transition(new_state, reward, action)
+    
+    # String the first Replay buffer record
+    def init_remember(self, state, actions):
+        self.memory.store_first_transition(state, actions)
 
     # Soft updating the target network parameters
     def update_network_params(self, tau=None):
@@ -92,7 +100,7 @@ class Agent:
     def learn(self):
         if self.memory.mem_cntr < self.batch_size:
             return
-        s_states, s_actions, s_new_states, s_rewards, s_terminals = self.memory.sample_buffer(self.batch_size)
+        s_states, s_actions, s_new_states, s_rewards = self.memory.sample_buffer(self.batch_size)
         
         states = tf.convert_to_tensor(s_states, dtype=tf.float32)
         new_states = tf.convert_to_tensor(s_new_states, dtype=tf.float32)
@@ -130,7 +138,7 @@ class Agent:
 
         # Critic Loss
         with tf.GradientTape(persistent=True) as tape:
-            q_hat = self.scale * s_rewards + self.gamma * new_value * (1 - s_terminals)
+            q_hat = self.scale * s_rewards + self.gamma * new_value
             q1_old_policy = tf.squeeze(self.critic_1(s_states, s_actions), 1)
             q2_old_policy = tf.squeeze(self.critic_2(s_states, s_actions), 1)
             critic_1_loss = 0.5 * keras.losses.MSE(q1_old_policy, q_hat)

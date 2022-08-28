@@ -97,6 +97,10 @@ message CachePerformance {
     double partialMissLatency = 2;
     double missLatency = 3;
     string status = 4;
+    double costPerByte = 5;
+    double processCost = 6;
+    double cacheCost = 7;
+    double cacheUtility = 8;
 }
 
 message CacheRequest

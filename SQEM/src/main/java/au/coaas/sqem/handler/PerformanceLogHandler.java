@@ -603,6 +603,15 @@ public class PerformanceLogHandler {
         return null;
     }
 
+    // Get the processing cost per window
+    private static double getProcessingCostPerSecond(long totalQueries){
+        // TODO:
+        // This method should make a request to the ClodProvider and request the cost of computing for the last window.
+        // This cost correlated to the number of queries executed during the window.
+        // So, I'm temporarily using that to estimate the cost of processing (this param to the function should be removed)
+        return (0.2 * totalQueries)/60;
+    }
+
     // Summarizing the performance of COAAS Overall
     private static Runnable getOverallPerfromanceSummary(Document persRecord){
         HashMap<String, BasicDBObject> res_2 = new HashMap<>();
@@ -676,10 +685,18 @@ public class PerformanceLogHandler {
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
 
-            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
+            double proc_cost = getProcessingCostPerSecond(totalQueries);
+            ContextCacheHandler.updatePerfRegister("processCost", proc_cost);
+            double cacheCost = (double) ContextCacheHandler.getCachePerfStat("cacheCost");
+
+            // TODO: Should include any other storage costs and other services costs
+            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - proc_cost*60 - cacheCost;
+
             dbo.put("gain", monetaryGain);
             dbo.put("avg_gain", totalQueries > 0 ? monetaryGain / totalQueries : 0);
             dbo.put("earning", totalEarning);
+            dbo.put("cache_cost", cacheCost);
+            dbo.put("processing_cost", proc_cost);
             dbo.put("penalty_cost", totalPenalties);
             dbo.put("retrieval_cost", totalRetrievalCost);
 

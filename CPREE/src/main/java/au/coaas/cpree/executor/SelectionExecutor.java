@@ -13,6 +13,9 @@ import au.coaas.grpc.client.SQEMChannel;
 
 import org.json.JSONObject;
 
+import java.time.LocalDateTime;
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
@@ -21,6 +24,13 @@ import java.util.concurrent.ExecutorService;
 public class SelectionExecutor {
 
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
+
+    // Static Registries
+    private static Hashtable<String, Double> weightThresholds = new Hashtable<>();
+    private static Hashtable<String, Double> cachePerfStats = new Hashtable<>();
+
+    // Dynamic Registries
+    private static Hashtable<String, LocalDateTime> delayRegistry = new Hashtable<>();
     private static Hashtable<String, Double> cacheLookupLatency;
 
     private static ExecutorService executor = Executors.newScheduledThreadPool(20);
@@ -32,17 +42,24 @@ public class SelectionExecutor {
 
         if(cacheLookupLatency == null) {
             cacheLookupLatency = new Hashtable() {{
-                cacheLookupLatency.put("200", 0.0);
-                cacheLookupLatency.put("404", 0.0);
-                cacheLookupLatency.put("400", 0.0);
+                put("200", 0.0);
+                put("404", 0.0);
+                put("400", 0.0);
             }};
         }
 
-        // These values are in Seconds
+        // These time related values are in Seconds, and monetary in AUD
         if(result.getStatus().equals("200")){
+            // Cache performance latency registry update
             cacheLookupLatency.put("200", result.getHitLatency());
             cacheLookupLatency.put("404", result.getMissLatency());
             cacheLookupLatency.put("400", result.getPartialMissLatency());
+
+            // Other performances
+            cachePerfStats.put("cacheCost", result.getProcessCost());
+            cachePerfStats.put("costPerByte", result.getCostPerByte());
+            cachePerfStats.put("processCost", result.getProcessCost());
+            cachePerfStats.put("cacheUtility", result.getProcessCost());
         }
     }
 
@@ -112,11 +129,16 @@ public class SelectionExecutor {
                                             ContextProviderProfile profile, String hashkey) {
         try {
             boolean cache = false;
+            String contextId = lookup.getServiceId() + "-" + hashkey;
+            LocalDateTime curr = LocalDateTime.now();
+
             // TODO:
             // Evaluate the context item for caching.
             // Since the lifetime of a context item is considered to be fixed at this phase of the implementation,
             // I can assume that the refreshing policy is also fixed.
-            if(!profile.getAccessTrend().equals("NaN")) {
+            if(!profile.getAccessTrend().equals("NaN") &&
+                    (!delayRegistry.containsKey(contextId) ||
+                            (delayRegistry.containsKey(contextId) && delayRegistry.get(contextId).isAfter(curr)))) {
                 SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -135,19 +157,38 @@ public class SelectionExecutor {
 
                     if(cqc_profile.getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
-
                         // 1. Retrieval Efficiency
-                        double ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
-                                cqc_profile, refPolicy, slaObj);
+                        AbstractMap.SimpleEntry<Double,Double> ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
+                                                                                    cqc_profile, refPolicy, slaObj);
+                        // 2. Reliability of retrieval
                         double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
-                        // 2. Caching Efficiency
-                        double caching_efficiency = getCacheEfficiency();
+                        // 3. Access Rate Trend
+                        double access_rate_trend = profile.getAccessTrend().equals("NaN") ?
+                                0.0 : Double.valueOf(profile.getAccessTrend());
+                        // 4. Caching Efficiency
+                        int contextSize = context.getBytes().length;
+                        double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getValue(),
+                                profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
+                                        Double.valueOf(profile.getExpRetLatency()));
+                        // 5. Query Complexity
+                        // TODO: Need to calculate using the parse query tree
+                        // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
+                        double query_complexity = 3.5;
 
-                        // This is temporary
-                        if(ret_effficiency < 1){
+                        double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getKey()) +
+                                (weightThresholds.get("mu") * caching_efficiency) +
+                                (weightThresholds.get("kappa") * access_rate_trend) +
+                                (weightThresholds.get("delta") * reliability) +
+                                (weightThresholds.get("row") * query_complexity);
+
+                        if(cacheConfidence < weightThresholds.get("threshold")){
                             cache = true;
                             est_cacheLife = 600;
+                        }
+                        else {
+                            // This is to evaluate an item only once per window
+                            delayRegistry.put(contextId, curr.plusSeconds(60));
                         }
                     }
                 }
@@ -163,8 +204,8 @@ public class SelectionExecutor {
                             .setJson(context)
                             .setRefreshLogic(refPolicy)
                             // TODO: This cache life should be saved in the eviction registry
-                            .setCachelife(est_cacheLife)
-                            .setReference(lookup).build()); // This is in miliseconds
+                            .setCachelife(est_cacheLife) // This is in miliseconds
+                            .setReference(lookup).build());
                     return response.getStatus().equals("200") ? true : false;
                 }
             }
@@ -181,11 +222,16 @@ public class SelectionExecutor {
         }
     }
 
-    private static double getCacheEfficiency() {
-        return 0.0;
+    private static double getCacheEfficiency(int size, double missRate, double retLatency) {
+        double cacheCost = (size * cachePerfStats.get("costPerByte"))
+                + cachePerfStats.get("processCost") * (((retLatency + cacheLookupLatency.get("400")) * missRate)
+                + (cacheLookupLatency.get("200") * (1 - missRate)));
+        double redirCost = cachePerfStats.get("processCost") * (retLatency + cacheLookupLatency.get("404"));
+
+        return cacheCost / redirCost;
     }
 
-    private static double getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
+    private static AbstractMap.SimpleEntry<Double,Double> getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
 
         /** Initializing the variables **/
@@ -197,6 +243,8 @@ public class SelectionExecutor {
         double retlatency = Double.valueOf(profile.getExpRetLatency()); // seconds
         double lifetime = slaObj.getJSONObject("freshness").getDouble("value"); // seconds
         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value"); // seconds
+
+        ArrayList<Double> stats = new ArrayList();
 
         /** Redirector Mode **/
         // Total cost of retrieval
@@ -225,6 +273,9 @@ public class SelectionExecutor {
 
         /** Retrieval costs if cached **/
         double cache_cost = 0;
+        double hits = 0;
+        double exp_mr = 0;
+
         switch(refPolicy){
             case "proactive_shift":
             case "reactive": {
@@ -242,8 +293,8 @@ public class SelectionExecutor {
 
                 if(sampleInterval == 0) {
                     double exp_prd = (lifetime - retlatency) * fthr;
-                    double hits = exp_prd * lambda;
-                    double exp_mr = 1/(hits + 1);
+                    hits = exp_prd * lambda;
+                    exp_mr = 1/(hits + 1);
 
                     // Penalties when needing to refresh
                     if(retlatency >= rtmax) cache_penalties = penalty;
@@ -256,12 +307,17 @@ public class SelectionExecutor {
                         // Refreshing at a slightly lower rate than the sampling
                         double exp_prd = sampleInterval + ((lifetime - sampleInterval) * fthr);
                         double ref_rate = 1 / exp_prd;
+
                         cache_cost = (retCost + cache_penalties) * ref_rate;
+                        hits = exp_prd * lambda;
+                        exp_mr = 1/(hits + 1);
 
                     }
                     else {
                         // Refreshing almost at the sampling rate
                         cache_cost = (retCost + cache_penalties) * (1/sampleInterval);
+                        hits = sampleInterval * lambda;
+                        exp_mr = 1/(hits + 1);
                     }
                 }
                 break;
@@ -270,6 +326,6 @@ public class SelectionExecutor {
 
         // Retrieval efficiency is the ratio between the cost of totally retrieving from the CPs in an adhoc manner
         // called the redirector mode, and the cost of serving from a cache
-        return cache_cost / red_cost;
+        return new AbstractMap.SimpleEntry(cache_cost / red_cost, exp_mr);
     }
 }

@@ -25,13 +25,26 @@ public class ContextCacheHandler {
     private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
     private static CacheDataRegistry registry = CacheDataRegistry.getInstance();
     private static final String regex = "^[\\d\\.]*[BGKM%]{0,1}$";
-    private static Hashtable<String, Long> currentPerf;
+    private static Hashtable<String, Object> currentPerf;
+
+    // Considering a free tier node is used
+    private static final double cache_node_cost = 0.0;
+    private static final double cache_cost_per_gb = 0.3; // In AWS
 
     public static void updatePerfRegister(double success, double par_miss, double miss) {
         if(currentPerf == null) currentPerf = new Hashtable<>();
         currentPerf.put("200", Math.round(success));
         currentPerf.put("400", Math.round(par_miss));
         currentPerf.put("404", Math.round(miss));
+    }
+
+    public static void updatePerfRegister(String key, double value) {
+        if(currentPerf == null) currentPerf = new Hashtable<>();
+        currentPerf.put(key,value);
+    }
+
+    public static Object getCachePerfStat(String key){
+        return currentPerf.containsKey(key) ? currentPerf.get(key) : 0;
     }
 
     // Caches all context under an entity
@@ -267,6 +280,16 @@ public class ContextCacheHandler {
                     setValue.put("value", value.contains(".") ? Double.parseDouble(value) : Long.parseLong(value));
                     setValue.put("unit", unit);
 
+                    if(keyval[0].equals("used_memory_dataset")){
+                        ContextCacheHandler.updatePerfRegister("cacheUtility", Long.parseLong(value)); // Bytes
+                        double cacheCost = (cache_node_cost/60);
+                        if(Long.parseLong(value) > 354334802){
+                            cacheCost += (Long.parseLong(value) * (cache_cost_per_gb / Math.pow(1024,3))) ;
+                        }
+                        ContextCacheHandler.updatePerfRegister("cacheCost", cacheCost);
+                        ContextCacheHandler.updatePerfRegister("costPerByte", 0);
+                    }
+
                     cachestats.put(keyval[0],setValue);
                 }
             }
@@ -283,10 +306,14 @@ public class ContextCacheHandler {
         if(currentPerf != null){
             // All values returned are in Seconds
             return CachePerformance.newBuilder()
-                    .setHitLatency(currentPerf.get("200")/1000)
-                    .setPartialMissLatency(currentPerf.get("400")/1000)
-                    .setMissLatency(currentPerf.get("404")/1000)
-                    .setStatus("200").build();
+                    .setStatus("200")
+                    .setHitLatency((long)currentPerf.get("200")/1000)
+                    .setMissLatency((long)currentPerf.get("404")/1000)
+                    .setPartialMissLatency((long)currentPerf.get("400")/1000)
+                    .setCacheCost((double)currentPerf.get("cacheCost"))
+                    .setCostPerByte((double)currentPerf.get("costPerByte"))
+                    .setProcessCost((double)currentPerf.get("processCost"))
+                    .setCacheUtility((double)currentPerf.get("cacheUtility")).build();
         }
         else return CachePerformance.newBuilder().setStatus("404").build();
     }

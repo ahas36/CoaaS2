@@ -210,3 +210,30 @@ export class SimpleModel{
     this.timeTicks = new Queue<number>();
   }
 }
+
+@Injectable()
+export class LearningModel{
+  public threshold: Queue<number>;
+  public kappa: Queue<number>;
+  public mu: Queue<number>;
+  public pi: Queue<number>;
+  public delta: Queue<number>;
+  public row: Queue<number>;
+  public avg_cachelife: Queue<number>;
+  public avg_delaytime: Queue<number>;
+  public avg_reward: Queue<number>;
+  public timeTicks: Queue<number>;
+
+  constructor(){
+    this.threshold = new Queue<number>();
+    this.kappa = new Queue<number>();
+    this.mu = new Queue<number>();
+    this.pi = new Queue<number>();
+    this.delta = new Queue<number>();
+    this.row = new Queue<number>();
+    this.avg_cachelife = new Queue<number>();
+    this.avg_delaytime = new Queue<number>();
+    this.avg_reward = new Queue<number>();
+    this.timeTicks = new Queue<number>();
+  }
+}

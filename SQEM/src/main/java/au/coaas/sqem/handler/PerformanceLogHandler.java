@@ -13,6 +13,7 @@ import au.coaas.sqem.util.Utilty;
 import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
 import com.google.common.collect.Iterables;
+import com.google.gson.Gson;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
@@ -319,6 +320,30 @@ public class PerformanceLogHandler {
         collection.insertOne(persRecord);
     }
 
+    // Persisting the current state of the adadptive context caching decision model
+    private static void persistModelState(LearnedWeights weights, double cachelife, double delaytime, double avg_gain){
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas_log");
+        MongoCollection<Document> collection = db.getCollection("modelState");
+
+        Document persRecord = new Document();
+
+        persRecord.put("threshold", weights.getThreshold());
+        persRecord.put("kappa", weights.getKappa());
+        persRecord.put("mu", weights.getMu());
+        persRecord.put("pi", weights.getPi());
+        persRecord.put("delta", weights.getDelta());
+        persRecord.put("row", weights.getRow());
+
+        persRecord.put("avg_cachelife", cachelife);
+        persRecord.put("avg_delaytime", delaytime);
+        persRecord.put("avg_reward", avg_gain);
+
+        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date()));
+        collection.insertOne(persRecord);
+    }
+
+
     /** Aggregation Routines */
     // Summarizes the performance data of the last window and stores in the logs.
     public static SQEMResponse summarize() {
@@ -341,7 +366,7 @@ public class PerformanceLogHandler {
                 currTask.get();
             }
 
-            // Backing up the perfromance data
+            // Backing up the performance data
             executor.submit(() -> { persistPerformanceSummary(persRecord); });
             // Updating the reinforcement learning model
             executor.submit(() -> {
@@ -355,8 +380,8 @@ public class PerformanceLogHandler {
                     add(summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries")); // Probability of Delay
                     add((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
                     add((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
-                    add(600); // Average Cache Lifetime
-                    add(60); // Average Delay Time
+                    add(600); // Average Cache Lifetime (in miliseconds)
+                    add(60); // Average Delay Time (in miliseconds)
                 }};
 
                 body.put("vector", new JSONArray(vector));
@@ -376,6 +401,8 @@ public class PerformanceLogHandler {
                     CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
                             = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
                     asyncStub.updateWeights(request);
+
+                    persistModelState(request, 600, 60, summary.getDouble("avg_gain"));
                 }
             });
         }
@@ -1015,6 +1042,31 @@ public class PerformanceLogHandler {
 
             return SQEMResponse.newBuilder().setStatus("200")
                     .setBody(data.toJson()).build();
+        }
+        catch(Exception e){
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+        }
+    }
+
+    // Retrieves the variation of the model state
+    public static SQEMResponse getModelStateVariation(){
+        try{
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("modelState");
+
+            Document sort = new Document();
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
+            ArrayList<String> data = collection.find().sort(sort).limit(100)
+                    .map(Document::toJson).into(new ArrayList<>());
+
+            Gson gson = new Gson();
+            return SQEMResponse.newBuilder().setStatus("200")
+                    .setBody(gson.toJson(data)).build();
         }
         catch(Exception e){
             JSONObject body = new JSONObject();

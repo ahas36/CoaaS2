@@ -118,4 +118,17 @@ export class Queue<T> {
     public lng: number;
   }
 
+  @Injectable()
+  export class ModelState{
+    public threshold: number;
+    public kappa: number;
+    public mu: number;
+    public pi: number;
+    public delta: number;
+    public row: number;
+    public avg_cachelife: number;
+    public avg_delaytime: number;
+    public avg_reward: number;
+  }
+
 

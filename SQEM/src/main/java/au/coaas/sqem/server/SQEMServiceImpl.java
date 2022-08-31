@@ -385,6 +385,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void getModelState(au.coaas.sqem.proto.Empty request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getModelStateVariation());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void getContextProviderProfile(au.coaas.sqem.proto.ContextProfileRequest request,
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.ContextProviderProfile> responseObserver) {
         try {

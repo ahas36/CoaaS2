@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { PerfData, QueryStats, Queue } from './service-classes';
-import { CSMSModel, LevelsModel, SummaryModel, SimpleModel } from './service-view-models';
+import { PerfData, QueryStats, ModelState, Queue } from './service-classes';
+import { CSMSModel, LevelsModel, SummaryModel, SimpleModel, LearningModel } from './service-view-models';
 import { config } from '../config';
 
 const divisor = 1073741824;
@@ -14,22 +14,26 @@ export class ApiServiceService {
 
   apiData;
   queryLocs;
+  modelState;
 
   csmsData;
   levelsData;
   summaryData;
   currentCosts;
   queryData;
+  modelData;
 
   summaryInit = false;
   levelsInit = false;
   csmsInit = false;
   queryInit = false;
+  modelInit = false;
 
   summaryV;
   levelsV;
   csmsV;
   queryV;
+  modelV;
 
   carParkData;
   placesData;
@@ -43,16 +47,19 @@ export class ApiServiceService {
     this.csmsData = new CSMSModel();
     this.levelsData = new LevelsModel();
     this.queryData = new SimpleModel();
+    this.modelData = new LearningModel();
 
     this.summaryInit = true;
     this.levelsInit = true;
     this.csmsInit = true;
     this.queryInit = true;
+    this.modelInit = true;
   }
 
   retrievePerformanceData(){
     this.apiData = this.http.get<PerfData>(config.uri);
     this.queryLocs = this.http.get<[QueryStats]>(config.querystaturi);
+    this.modelState = this.http.get<[ModelState]>(config.model_uri);
     this.counter += 1;
     this.timeTicks.push(this.counter);
   }
@@ -72,7 +79,30 @@ export class ApiServiceService {
       "perf": this.queryData,
       "query": this.queryLocs
     }
+  }
 
+  getModelVariation (){
+    if(this.counter != this.modelV || this.modelInit){
+      this.modelState.subscribe(res => {
+        this.modelData.threshold.push(res.threshold);
+        this.modelData.kappa.push(res.kappa);
+        this.modelData.mu.push(res.mu);
+        this.modelData.pi.push(res.pi);
+        this.modelData.delta.push(res.delta);
+        this.modelData.row.push(res.row);
+        this.modelData.avg_cachelife.push(res.avg_cachelife);
+        this.modelData.avg_delaytime.push(res.avg_delaytime);
+        this.modelData.avg_reward.push(res.avg_reward);
+        this.modelData.timeTicks.push(this.counter);
+      });
+    }
+
+    this.modelV = this.counter;
+    this.modelInit = false;
+
+    return {
+      "model": this.modelData
+    }
   }
 
   getPerformanceSummary() {

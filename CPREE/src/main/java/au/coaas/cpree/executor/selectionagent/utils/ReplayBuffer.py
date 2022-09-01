@@ -1,6 +1,10 @@
 import numpy as np
+from utils.mongoclient import MongoClient 
 
 class ReplayBuffer:
+    # Connecting to a monogo DB instance 
+    __db = MongoClient('mongodb://localhost:27017', 'coaas_log')
+
     def __init__(self, max_size, input_shape, n_actions = 6):
         # Initializing 
         self.mem_size = max_size
@@ -19,9 +23,19 @@ class ReplayBuffer:
         # This is becuase the buffer memory is limited in size.
         prev_index = self.mem_cntr - 1
         prev_index %= self.mem_size
-        self.new_state_memory[index] = new_state
-        self.reward_memory[index] = reward
-        
+        self.new_state_memory[prev_index] = new_state
+        self.reward_memory[prev_index] = reward
+
+        if(prev_index > self.mem_size):
+            # Persist the trasitions 
+            self.__db.insert_one('decisionHistory',
+                {
+                    'state': self.state_memory[prev_index],
+                    'action': self.action_memory[prev_index],
+                    'new_state': self.new_state_memory[prev_index],
+                    'reward': self.reward_memory[prev_index]
+                })
+
         index = self.mem_cntr % self.mem_size
 
         # Setting values to the buffer

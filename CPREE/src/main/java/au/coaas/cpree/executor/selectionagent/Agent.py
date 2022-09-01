@@ -3,15 +3,14 @@ import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras.optimizers import Adam
 
-from ReplayBuffer import ReplayBuffer
-from ValueNetwork import ValueNetwork
-from ActorNetwork import ActorNetwork
-from CriticNetwork import CriticNetwork
-
+from utils.ReplayBuffer import ReplayBuffer
+from networks.ValueNetwork import ValueNetwork
+from networks.ActorNetwork import ActorNetwork
+from networks.CriticNetwork import CriticNetwork
 
 class Agent:
     __input_dims = ['size_in_cache', 'earning', 'retrieval_cost', 'penalties', 'process_cost', 'cache_cost',
-            'probability_delay', 'avg_cache_life', 'ang_delay_time']
+            'probability_delay', 'avg_cache_life', 'avg_delay_time']
 
     def __init__(self, max_action, input_dims = [len(__input_dims)], alpha=0.001, beta=0.002, gamma=0.9, n_actions=2, max_size=1000000,
             tau=0.005, batch_size=128, reward_scale=1, ):

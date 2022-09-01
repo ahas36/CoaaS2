@@ -103,15 +103,13 @@ public class SelectionExecutor {
                     .build());
 
             if (profile.getStatus().equals("200")) {
-                RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()), profile);
-
                 // Evaluate and Cache if selected
-                boolean result = evaluateAndCache(request.getContext(), request.getReference(), request.getSla(),
-                        ref_type.toString().toLowerCase(), profile, hashKey);
-                if(result){
+                AbstractMap.SimpleEntry<Boolean, RefreshLogics> result = evaluateAndCache(request.getContext(),
+                        request.getReference(), request.getSla(),profile, hashKey);
+                if(result.getKey()){
                     // Configuring refreshing
                     executor.execute(() -> {
-                        if (ref_type.equals(RefreshLogics.PROACTIVE_SHIFT)) {
+                        if (result.getValue().equals(RefreshLogics.PROACTIVE_SHIFT)) {
                             JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
                             JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
                             double fthresh = !profile.getExpFthr().equals("NaN") ?
@@ -127,7 +125,7 @@ public class SelectionExecutor {
                                     .setResiLifetime(res_life) // seconds
                                     .setHashKey(hashKey)
                                     .setSamplingInterval(sampling.getDouble("value")) // seconds
-                                    .setRefreshPolicy(ref_type.toString().toLowerCase())
+                                    .setRefreshPolicy(result.getValue().toString().toLowerCase())
                                     .build());
                         }
                     });
@@ -149,10 +147,11 @@ public class SelectionExecutor {
         }
     }
 
-    private static boolean evaluateAndCache(String context, CacheLookUp lookup, String refPolicy, String sla,
-                                            ContextProviderProfile profile, String hashkey) {
+    private static AbstractMap.SimpleEntry<Boolean, RefreshLogics> evaluateAndCache(String context, CacheLookUp lookup, String sla,
+                             ContextProviderProfile profile, String hashkey) {
         try {
             boolean cache = false;
+            RefreshLogics ref_type;
             String contextId = lookup.getServiceId() + "-" + hashkey;
             LocalDateTime curr = LocalDateTime.now();
 
@@ -165,6 +164,8 @@ public class SelectionExecutor {
                             (delayRegistry.containsKey(contextId) && delayRegistry.get(contextId).isAfter(curr)))) {
                 SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+               ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile);
 
                 long est_cacheLife = -1;
                 long est_delayTime = 0;
@@ -193,7 +194,7 @@ public class SelectionExecutor {
                         if(exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda)) {
                             // 1. Retrieval Efficiency
                             AbstractMap.SimpleEntry<Double,Double> ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
-                                    cqc_profile, refPolicy, slaObj);
+                                    cqc_profile, ref_type.toString().toLowerCase(), slaObj);
                             // 2. Reliability of retrieval
                             double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
@@ -251,11 +252,12 @@ public class SelectionExecutor {
                     // Check available cache memory before caching
                     SQEMResponse response = sqemStub.cacheEntity(CacheRequest.newBuilder()
                             .setJson(context)
-                            .setRefreshLogic(refPolicy)
+                            .setRefreshLogic(ref_type.toString().toLowerCase())
                             // TODO: This cache life should be saved in the eviction registry
                             .setCachelife(est_cacheLife) // This is in miliseconds
                             .setReference(lookup).build());
-                    return response.getStatus().equals("200") ? true : false;
+                    return new AbstractMap.SimpleEntry<>(response.getStatus().equals("200") ? true : false,
+                            ref_type);
                 }
 
                 // TODO:
@@ -268,13 +270,12 @@ public class SelectionExecutor {
             // else {
                 // Look at the other metrics
             // }
-
-            return false;
         }
         catch(Exception ex){
             log.severe("Context Caching failed due to: " + ex.getMessage());
-            return false;
         }
+
+        return new AbstractMap.SimpleEntry<>(false, null);
     }
 
     private static double getCacheEfficiency(int size, double missRate, double retLatency) {

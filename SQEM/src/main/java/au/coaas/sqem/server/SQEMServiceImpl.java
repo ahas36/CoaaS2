@@ -129,6 +129,28 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void logDecisionLatency(au.coaas.sqem.proto.DecisionLog request,
+                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.logCacheDecisionLatency(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getCacheLatenciesSummary(au.coaas.sqem.proto.Empty request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getCacheLifeSummary());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
     ///// Context Entity /////
 
     @Override

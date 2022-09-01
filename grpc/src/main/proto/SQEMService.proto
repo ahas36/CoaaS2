@@ -244,6 +244,11 @@ message SummarySLA
     string queryId = 7;
 }
 
+message DecisionLog {
+    int64 latency = 1;
+    string type = 2;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -290,4 +295,6 @@ service SQEMService {
     rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
     rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
     rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
+    rpc logDecisionLatency(DecisionLog) returns (Empty);
+    rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
 }

@@ -25,7 +25,6 @@ import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.print.attribute.standard.JobSheets;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
@@ -227,6 +226,19 @@ public class PerformanceLogHandler {
         }
     }
 
+    // Persist the decision history of the reinforcement agent
+    public static void logDecisionLatency(String type, long latency){
+        try{
+            String queryString = "INSERT INTO cacheHistoryRegistry(type,latency,createdDatetime) VALUES('%s', %d, GETDATE());";
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            statement.executeUpdate(String.format(queryString, type, latency));
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
     /** Resetting/Refreshing Temporary Performance Records */
     // Clears older records earlier than the current window from the in-memory database
     // These records are persisted in MongoDB logs
@@ -370,39 +382,47 @@ public class PerformanceLogHandler {
             executor.submit(() -> { persistPerformanceSummary(persRecord); });
             // Updating the reinforcement learning model
             executor.submit(() -> {
-                JSONObject body = new JSONObject();
-                Document summary = persRecord.get("summary", Document.class);
-                ArrayList<Double> vector = new ArrayList(){{
-                    add((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
-                    add(summary.getDouble("retrieval_cost")); // Retrieval Cost
-                    add(summary.getDouble("earning")); // Earnings
-                    add(summary.getDouble("penalty_cost")); // Penalties
-                    add(summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries")); // Probability of Delay
-                    add((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
-                    add((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
-                    add(600); // Average Cache Lifetime (in miliseconds)
-                    add(60); // Average Delay Time (in miliseconds)
-                }};
+                try {
+                    JSONObject body = new JSONObject();
+                    JSONObject cachingSummary = getCacheLives();
+                    Document summary = persRecord.get("summary", Document.class);
 
-                body.put("vector", new JSONArray(vector));
-                body.put("reward", summary.getDouble("avg_gain"));
-                String result = HttpClient.call("http://localhost:9494/selections", HttpRequests.POST, new JSONObject());
-                if(result != null){
-                    JSONObject actions = new JSONObject(result);
-                    JSONArray weights = actions.getJSONArray("actions");
-                    LearnedWeights request = LearnedWeights.newBuilder()
-                            .setThreshold(weights.getDouble(0))
-                            .setKappa(weights.getDouble(1))
-                            .setMu(weights.getDouble(2))
-                            .setPi(weights.getDouble(3))
-                            .setDelta(weights.getDouble(4))
-                            .setRow(weights.getDouble(5)).build();
+                    ArrayList<Double> vector = new ArrayList(){{
+                        add((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
+                        add(summary.getDouble("retrieval_cost")); // Retrieval Cost
+                        add(summary.getDouble("earning")); // Earnings
+                        add(summary.getDouble("penalty_cost")); // Penalties
+                        add(summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries")); // Probability of Delay
+                        add((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
+                        add((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
+                        add(cachingSummary.getDouble("cachelife")); // Average Cache Lifetime (in miliseconds)
+                        add(cachingSummary.getDouble("delay")); // Average Delay Time (in miliseconds)
+                    }};
 
-                    CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
-                            = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
-                    asyncStub.updateWeights(request);
+                    body.put("vector", new JSONArray(vector));
+                    body.put("reward", summary.getDouble("avg_gain"));
+                    String result = HttpClient.call("http://localhost:9494/selections", HttpRequests.POST, new JSONObject());
+                    if(result != null){
+                        JSONObject actions = new JSONObject(result);
+                        JSONArray weights = actions.getJSONArray("actions");
+                        LearnedWeights request = LearnedWeights.newBuilder()
+                                .setThreshold(weights.getDouble(0))
+                                .setKappa(weights.getDouble(1))
+                                .setMu(weights.getDouble(2))
+                                .setPi(weights.getDouble(3))
+                                .setDelta(weights.getDouble(4))
+                                .setRow(weights.getDouble(5)).build();
 
-                    persistModelState(request, 600, 60, summary.getDouble("avg_gain"));
+                        CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
+                                = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+                        asyncStub.updateWeights(request);
+
+                        persistModelState(request, cachingSummary.getDouble("cachelife"),
+                                cachingSummary.getDouble("delay"), summary.getDouble("avg_gain"));
+                    }
+                }
+                catch(Exception ex){
+                    log.info("Error occured when attempting to re-learn the model: " + ex.getMessage());
                 }
             });
         }
@@ -1277,6 +1297,48 @@ public class PerformanceLogHandler {
         return ProbDelay.newBuilder().setValue(0.0).build();
     }
 
+    // Retrieve the decision history of the estimated life and delay times
+    private static JSONObject getCacheLives() throws Exception{
+        String queryString = "SELECT type, avg(latency) as avg_lat " +
+                "FROM cacheHistoryRegistry " +
+                "WHERE createdDatetime >= CAST('%s' AS DATETIME2) AND createdDatetime < CAST('%s' AS DATETIME2) " +
+                "GROUP BY type;";
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(30);
+
+        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime start = end.minusSeconds(60);
+
+        ResultSet rs = statement.executeQuery(String.format(queryString,
+                start.format(formatter), end.format(formatter)));
+
+        JSONObject body = new JSONObject();
+
+        while(rs.next()){
+            double avg_lat = rs.getDouble("avg_lat");
+            body.put(rs.getString("type"), avg_lat);
+        }
+
+        return body;
+    }
+
+    public static SQEMResponse getCacheLifeSummary(){
+
+        try{
+            JSONObject result = getCacheLives();
+            return SQEMResponse.newBuilder().setStatus("200")
+                    .setBody(result.toString()).build();
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+            JSONObject body = new JSONObject();
+            body.put("message",ex.getMessage());
+            body.put("cause",ex.getCause().toString());
+            return SQEMResponse.newBuilder().setStatus("500")
+                    .setBody(body.toString()).build();
+        }
+    }
+
     /** Initializing performance data monitoring */
     // Setting up the databases to store and persist the performance logs
     private static void getPerfDBConnection() throws Exception {
@@ -1299,6 +1361,14 @@ public class PerformanceLogHandler {
             statement.setQueryTimeout(30);
 
             // Create the database tables if not existing
+            statement.execute(
+                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cacheHistoryRegistry')\n" +
+                            "CREATE TABLE cacheHistoryRegistry(\n" +
+                            "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                            "    type VARCHAR(15) NOT NULL,\n" +
+                            "    latency BIGINT NOT NULL,\n" +
+                            "    createdDatetime DATETIME NOT NULL)");
+
             statement.execute(
                     "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +
                             "CREATE TABLE csms_performance(\n" +

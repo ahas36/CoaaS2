@@ -60,6 +60,8 @@ public class ContextCacheHandler {
                 ent.set (entityJson);
             }
 
+            PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife());
+
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
@@ -316,6 +318,11 @@ public class ContextCacheHandler {
                     .setCacheUtility((double)currentPerf.get("cacheUtility")).build();
         }
         else return CachePerformance.newBuilder().setStatus("404").build();
+    }
+
+    public static Empty logCacheDecisionLatency(DecisionLog request){
+        PerformanceLogHandler.logDecisionLatency(request.getType(), request.getLatency());
+        return null;
     }
 
     private static String convertToUnit(char unit) {

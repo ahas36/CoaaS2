@@ -17,6 +17,8 @@ import au.coaas.cpree.proto.Empty;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
 import java.util.AbstractMap;
 import java.util.Hashtable;
 import java.util.logging.Logger;
@@ -165,8 +167,13 @@ public class SelectionExecutor {
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                 long est_cacheLife = -1;
+                long est_delayTime = 0;
                 double access_trend = profile.getAccessTrend().equals("NaN") ?
                         0 : Double.valueOf(profile.getAccessTrend());
+
+                QueryClassProfile cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
+                        .setPrimaryKey(lookup.getQClass()).build());
+
                 if(access_trend <= 0){
                     // TODO: IMPORTANT!
                     // In the next line, it is assumed that there is only one class of context queries because, the
@@ -174,56 +181,74 @@ public class SelectionExecutor {
                     // So, it is retrieving the stats from the performance summary for the query class of the "current query".
                     // This shouldn't be the case. I should rather retrieve the expected value considering all of CQ classes which the item is used
                     // from the context query class network.
-                    QueryClassProfile cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
-                            .setPrimaryKey(lookup.getQClass()).build());
 
                     if(cqc_profile.getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
-                        // 1. Retrieval Efficiency
-                        AbstractMap.SimpleEntry<Double,Double> ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
-                                                                                    cqc_profile, refPolicy, slaObj);
-                        // 2. Reliability of retrieval
-                        double reliability = profile.getRelaibility().equals("NaN") ?
+                        double fthr = Double.valueOf(profile.getExpFthr());
+                        double lambda = Double.valueOf(profile.getExpAR()); // per second
+                        double exp_prd = slaObj.getJSONObject("freshness").getDouble("value") * (1 - fthr);
+
+                        // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
+                        // The expiry period should also be greter than the time between 2 access to the item in order to at least have > 0 chance of a hit.
+                        if(exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda)) {
+                            // 1. Retrieval Efficiency
+                            AbstractMap.SimpleEntry<Double,Double> ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
+                                    cqc_profile, refPolicy, slaObj);
+                            // 2. Reliability of retrieval
+                            double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
-                        // 3. Access Rate Trend
-                        double access_rate_trend = profile.getAccessTrend().equals("NaN") ?
-                                0.0 : Double.valueOf(profile.getAccessTrend());
-                        // 4. Caching Efficiency
-                        int contextSize = context.getBytes().length;
-                        double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getValue(),
-                                profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
-                                        Double.valueOf(profile.getExpRetLatency()));
-                        // 5. Query Complexity
-                        // TODO: Need to calculate using the parse query tree
-                        // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
-                        double query_complexity = 3.5;
+                            // 3. Access Rate Trend
+                            double access_rate_trend = profile.getAccessTrend().equals("NaN") ?
+                                    0.0 : Double.valueOf(profile.getAccessTrend());
+                            // 4. Caching Efficiency
+                            int contextSize = context.getBytes().length;
+                            double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getValue(),
+                                    profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
+                                            Double.valueOf(profile.getExpRetLatency()));
+                            // 5. Query Complexity
+                            // TODO: Need to calculate using the parse query tree
+                            // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
+                            double query_complexity = 3.5;
 
-                        double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getKey()) +
-                                (weightThresholds.get("mu") * caching_efficiency) +
-                                (weightThresholds.get("kappa") * access_rate_trend) +
-                                (weightThresholds.get("delta") * reliability) +
-                                (weightThresholds.get("row") * query_complexity);
+                            double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getKey()) +
+                                    (weightThresholds.get("mu") * caching_efficiency) +
+                                    (weightThresholds.get("kappa") * access_rate_trend) +
+                                    (weightThresholds.get("delta") * reliability) +
+                                    (weightThresholds.get("row") * query_complexity);
 
-                        valueHistory.add(cacheConfidence);
+                            valueHistory.add(cacheConfidence);
 
-                        if(cacheConfidence < weightThresholds.get("threshold")){
-                            cache = true;
-                            est_cacheLife = 600;
-                        }
-                        else {
-                            // This is to evaluate an item only once per window
-                            delayRegistry.put(contextId, curr.plusSeconds(60));
+                            if(cacheConfidence < weightThresholds.get("threshold")){
+                                cache = true;
+                                est_cacheLife = 600000; // miliseconds
+                            }
+                            else {
+                                // This is to evaluate an item only once per window
+                                est_delayTime = 60000;
+                                delayRegistry.put(contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                            }
                         }
                     }
                 }
                 else {
                     // When the access trend is positive, the item would be cached for a longer period until evicted by
                     // the eviction algorithm.
-                    cache = true;
+                    if(cqc_profile.getStatus().equals("200")) {
+                        JSONObject slaObj = new JSONObject(sla);
+                        double fthr = Double.valueOf(profile.getExpFthr());
+                        double lambda = Double.valueOf(profile.getExpAR()); // per second
+                        double exp_prd = slaObj.getJSONObject("freshness").getDouble("value") * (1 - fthr);
+
+                        // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
+                        // The expiry period should also be greter than the time between 2 access to the item in order to at least have > 0 chance of a hit.
+                        if(exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda))
+                            cache = true;
+                    }
                 }
 
                 // Actual Caching
                 if(cache) {
+                    // Check available cache memory before caching
                     SQEMResponse response = sqemStub.cacheEntity(CacheRequest.newBuilder()
                             .setJson(context)
                             .setRefreshLogic(refPolicy)
@@ -232,6 +257,12 @@ public class SelectionExecutor {
                             .setReference(lookup).build());
                     return response.getStatus().equals("200") ? true : false;
                 }
+
+                // TODO:
+                // Estimate the delay  (What is the lifetime is 0 or less than RetL?
+                // Logging the delay time
+                sqemStub.logDecisionLatency(DecisionLog.newBuilder()
+                        .setLatency(est_cacheLife).setType("delay").build());
             }
             // TODO:
             // else {

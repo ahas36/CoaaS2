@@ -151,6 +151,8 @@ public class SelectionExecutor {
                              ContextProviderProfile profile, String hashkey) {
         try {
             boolean cache = false;
+            boolean forcedDirector = true;
+
             RefreshLogics ref_type;
             String contextId = lookup.getServiceId() + "-" + hashkey;
             LocalDateTime curr = LocalDateTime.now();
@@ -165,7 +167,7 @@ public class SelectionExecutor {
                 SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-               ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile);
+               ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile, lookup.getServiceId());
 
                 long est_cacheLife = -1;
                 long est_delayTime = 0;
@@ -186,12 +188,16 @@ public class SelectionExecutor {
                     if(cqc_profile.getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
                         double fthr = Double.valueOf(profile.getExpFthr());
+                        double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
+                        double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double lambda = Double.valueOf(profile.getExpAR()); // per second
-                        double exp_prd = slaObj.getJSONObject("freshness").getDouble("value") * (1 - fthr);
+                        double exp_prd = lifetime * (1 - fthr);
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
-                        // The expiry period should also be greter than the time between 2 access to the item in order to at least have > 0 chance of a hit.
-                        if(exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda)) {
+                        // The expiry period should also be greater than the time between 2 access to the item in order to at least have > 0 chance of a hit.
+                        if((sampleInterval == 0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda)) ||
+                                (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
+                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda))))) {
                             // 1. Retrieval Efficiency
                             AbstractMap.SimpleEntry<Double,Double> ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
                                     cqc_profile, ref_type.toString().toLowerCase(), slaObj);
@@ -226,6 +232,7 @@ public class SelectionExecutor {
                             else {
                                 // This is to evaluate an item only once per window
                                 est_delayTime = 60000;
+                                forcedDirector = false;
                                 delayRegistry.put(contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
                             }
                         }
@@ -238,11 +245,15 @@ public class SelectionExecutor {
                         JSONObject slaObj = new JSONObject(sla);
                         double fthr = Double.valueOf(profile.getExpFthr());
                         double lambda = Double.valueOf(profile.getExpAR()); // per second
-                        double exp_prd = slaObj.getJSONObject("freshness").getDouble("value") * (1 - fthr);
+                        double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
+                        double exp_prd = lifetime * (1 - fthr);
+                        double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
-                        // The expiry period should also be greter than the time between 2 access to the item in order to at least have > 0 chance of a hit.
-                        if(exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda))
+                        // The expiry period should also be greater than the time between 2 access to the item in order to at least have > 0 chance of a hit.
+                        if((sampleInterval == 0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda)) ||
+                                (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
+                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda)))))
                             cache = true;
                     }
                 }
@@ -261,15 +272,11 @@ public class SelectionExecutor {
                 }
 
                 // TODO:
-                // Estimate the delay  (What is the lifetime is 0 or less than RetL?
+                // Estimate the delay  (What is the lifetime is 0 or less than RetL? <-- check forcedRedirector)
                 // Logging the delay time
                 sqemStub.logDecisionLatency(DecisionLog.newBuilder()
                         .setLatency(est_cacheLife).setType("delay").build());
             }
-            // TODO:
-            // else {
-                // Look at the other metrics
-            // }
         }
         catch(Exception ex){
             log.severe("Context Caching failed due to: " + ex.getMessage());

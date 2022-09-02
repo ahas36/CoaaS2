@@ -145,11 +145,13 @@ public class RefreshExecutor {
 
             if(profile.getStatus().equals("200")){
                 RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(
-                        new JSONObject(request.getRequest().getSla()), profile);
+                        new JSONObject(request.getRequest().getSla()), profile, request.getRequest().getReference().getServiceId());
+
+                boolean isChanged = !ref_type.toString().toLowerCase().equals(refPolicy);
 
                 if(refPolicy.equals("proactive_shift")){
                     // Configuring refreshing
-                    if(!ref_type.toString().toLowerCase().equals(refPolicy)){
+                    if(isChanged){
                         // Shift to the reactive policy
                         synchronized (RefreshExecutor.class){
                             // Remove the context item from the registry
@@ -189,7 +191,7 @@ public class RefreshExecutor {
                 }
                 else {
                     // If the current policy is reactive
-                    if(!ref_type.toString().toLowerCase().equals(refPolicy)){
+                    if(isChanged){
                         // Shift to the reactive policy
                         synchronized (RefreshExecutor.class){
                             // Setup proactive refreshing
@@ -228,16 +230,17 @@ public class RefreshExecutor {
 
     /** Refreshing Utility */
     // Resolving what the most efficient refreshing policy for the context item
-    public static RefreshLogics resolveRefreshLogic(JSONObject sla, ContextProviderProfile profile){
+    public static RefreshLogics resolveRefreshLogic(JSONObject sla, ContextProviderProfile profile, String serviceId){
         // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
         boolean autoFetch = sla.getBoolean("autoFetch");
         String life_unit = sla.getJSONObject("freshness").getString("unit");
         double lifetime = sla.getJSONObject("freshness").getDouble("value");
         double samplingInterval = sla.getJSONObject("updateFrequency").getDouble("value");
+        double reliability = !profile.getRelaibility().equals("NaN") ? Double.valueOf(profile.getRelaibility()) : 0.5;
 
         double fthresh = 0.0;
         if(profile.getExpFthr().startsWith("{")){
-            JSONObject cp_prof = new JSONObject(profile);
+            JSONObject cp_prof = new JSONObject(profile.getExpFthr());
             fthresh = cp_prof.getDouble("fthresh");
         }
         else
@@ -249,7 +252,8 @@ public class RefreshExecutor {
                     sla.getJSONObject("updateFrequency").getString("unit"), life_unit, samplingInterval);
         }
 
-        if(autoFetch && samplingInterval == 0){
+        // TODO: There should be a better logic to resolve the reliability threshold
+        if((autoFetch && samplingInterval == 0) || reliability < 0.2){
             return RefreshLogics.PROACTIVE_SHIFT;
         }
 

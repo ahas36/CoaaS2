@@ -32,4 +32,26 @@ public class StatisticalUtils {
             return Double.NaN;
         }
     }
+
+    public static double getVariance(double[] data){
+        if(data.length > 0){
+            double sum = 0;
+            for (int i = 0; i < data.length; i++)
+                sum += data[i];
+            double mean = (double) sum / data.length;
+
+            double sqDiff = 0;
+            for (int i = 0; i < data.length; i++)
+                sqDiff += (data[i] - mean) * (data[i] - mean);
+
+            return (double)sqDiff / data.length;
+        }
+
+        return 0;
+    }
+
+    static double getStandardDeviation(double arr[])
+    {
+        return Math.sqrt(getVariance(arr));
+    }
 }

@@ -39,8 +39,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
-import static au.coaas.sqem.util.StatisticalUtils.getSlope;
-import static au.coaas.sqem.util.StatisticalUtils.predictExpectedValue;
+import static au.coaas.sqem.util.StatisticalUtils.*;
 
 public class PerformanceLogHandler {
 
@@ -1096,7 +1095,7 @@ public class PerformanceLogHandler {
         }
     }
 
-    static ExecutorService estimation_executor = Executors.newFixedThreadPool(6);
+    static ExecutorService estimation_executor = Executors.newFixedThreadPool(8);
 
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
@@ -1124,6 +1123,7 @@ public class PerformanceLogHandler {
             AtomicReference<Double> exp_cost = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_count = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_retLatency = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> var_ratLatency = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_reliability = new AtomicReference<>(Double.NaN);
 
             int count = Iterables.size(result);
@@ -1137,7 +1137,9 @@ public class PerformanceLogHandler {
                 double[][] dataset_4 = new double[count][2];
                 double[][] dataset_5 = new double[count][2];
 
-                result.forEach((Block<Document>) document -> {
+                double[] retLatList = new double[count];
+
+                for(Document document : result){
                     dataset[index][0] = index;
                     dataset_2[index][0] = index;
                     dataset_3[index][0] = index;
@@ -1151,12 +1153,16 @@ public class PerformanceLogHandler {
                     dataset[index][1] = cp.get("profile", Document.class).getDouble("fthresh");
                     dataset_2[index][1] = rel.getDouble("reliability");
                     dataset_3[index][1] = rel.getDouble("retLatency");
+                    retLatList[index] = rel.getDouble("retLatency");
                     dataset_4[index][1] = rel.getInteger("count");
                     dataset_5[index][1] = rel.getInteger("cost");
-                });
+
+                    index ++;
+                }
 
                 // The list is inverted, so, estimating from x=-1.
                 estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); });
+                estimation_executor.submit(() -> { var_ratLatency.set(getVariance(retLatList)); });
                 estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); });
                 estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
                 estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); });
@@ -1177,6 +1183,7 @@ public class PerformanceLogHandler {
                     .setExpCost(Double.isNaN(exp_cost.get()) ? "NaN" : Double.toString(exp_cost.get()))
                     .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()/60)) // This is because the window is 60s
                     .setExpRetLatency(Double.toString(exp_reliability.get()/1000))
+                    .setRetVariance(var_ratLatency.get())
                     .setLastRetLatency(getLastRetrievalTime(cpId, hashKey)) // In seconds already
                     .build();
         }

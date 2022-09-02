@@ -7,6 +7,14 @@ export class PerfData{
   public levels: Level;
   public summary: Summary;
   public cachememory: CacheStat;
+  public expectedSLA: ExpSLA;
+}
+
+export class ExpSLA{
+  public exp_pen: number;
+  public exp_fth: number;
+  public exp_earn: number;
+  public exp_rtmax: number;
 }
 
 export class CSMS{
@@ -65,8 +73,10 @@ export class Summary{
   public avg_network_overhead: number;
   public avg_processing_overhead: number;
   public earning:  number;
+  public cache_cost: number;
   public penalty_cost: number;
   public retrieval_cost: number;
+  public processing_cost: number;
 }
 
 export class Method {

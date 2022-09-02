@@ -13,7 +13,6 @@ import au.coaas.sqem.util.Utilty;
 import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
 import com.google.common.collect.Iterables;
-import com.google.gson.Gson;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
@@ -350,7 +349,7 @@ public class PerformanceLogHandler {
         persRecord.put("avg_delaytime", delaytime);
         persRecord.put("avg_reward", avg_gain);
 
-        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date()));
+        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss").format(new java.util.Date()));
         collection.insertOne(persRecord);
     }
 
@@ -505,7 +504,7 @@ public class PerformanceLogHandler {
                         Double count = temp.get("count");
                         temp.put("fthresh", temp.get("fthresh")/count);
 
-                        if(finalres.containsKey(csId)){
+                        if(!finalres.containsKey(csId)){
                             finalres.put(csId, new BasicDBObject(){{
                                 put("profile", temp);
                             }});
@@ -570,7 +569,7 @@ public class PerformanceLogHandler {
                         temp.put("retLatency", temp.get("retLatency")/no_success);
                         temp.put("reliability", no_success/temp.get("count"));
 
-                        if(finalres.containsKey(csId)){
+                        if(!finalres.containsKey(csId)){
                             finalres.put(csId, new BasicDBObject(){{
                                 put("reliability", temp);
                             }});
@@ -1080,12 +1079,10 @@ public class PerformanceLogHandler {
 
             Document sort = new Document();
             sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
-            ArrayList<String> data = collection.find().sort(sort).limit(100)
-                    .map(Document::toJson).into(new ArrayList<>());
+            String data = collection.find().sort(sort).first().toJson();
 
-            Gson gson = new Gson();
             return SQEMResponse.newBuilder().setStatus("200")
-                    .setBody(gson.toJson(data)).build();
+                    .setBody(data).build();
         }
         catch(Exception e){
             JSONObject body = new JSONObject();

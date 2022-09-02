@@ -59,7 +59,7 @@ export class ApiServiceService {
   retrievePerformanceData(){
     this.apiData = this.http.get<PerfData>(config.uri);
     this.queryLocs = this.http.get<[QueryStats]>(config.querystaturi);
-    this.modelState = this.http.get<[ModelState]>(config.model_uri);
+    this.modelState = this.http.get<ModelState>(config.model_uri);
     this.counter += 1;
     this.timeTicks.push(this.counter);
   }
@@ -114,8 +114,11 @@ export class ApiServiceService {
         this.summaryData.earning.push(res.summary.earning);
         this.summaryData.penalty_cost.push(res.summary.penalty_cost);
         this.summaryData.retrieval_cost.push(res.summary.retrieval_cost);
+        this.summaryData.cache_cost.push(res.summary.cache_cost);
+        this.summaryData.processing_cost.push(res.summary.processing_cost);
 
-        let ratio = (res.summary.earning/(res.summary.penalty_cost + res.summary.retrieval_cost)).toFixed(2);
+        let ratio = (res.summary.earning/(res.summary.penalty_cost + res.summary.retrieval_cost 
+          + res.summary.cache_cost + res.summary.processing_cost)).toFixed(2);
         this.summaryData.costearningratio.push(ratio);
 
         this.summaryData.no_of_queries.push(res.summary.no_of_queries);
@@ -136,6 +139,8 @@ export class ApiServiceService {
         this.summaryData.currentCosts.push(res.summary.earning);
         this.summaryData.currentCosts.push(res.summary.retrieval_cost);
         this.summaryData.currentCosts.push(res.summary.penalty_cost);
+        this.summaryData.currentCosts.push(res.summary.processing_cost);
+        this.summaryData.currentCosts.push(res.summary.cache_cost);
 
         let pod = res.summary.delayed_queries/res.summary.no_of_queries;
 
@@ -165,7 +170,11 @@ export class ApiServiceService {
         this.summaryData.cache_occupancy.push(unoccu_perc.toFixed(2));
         this.summaryData.cache_occupancy.push(data_perc.toFixed(2));
         this.summaryData.cache_occupancy.push(oh_perc.toFixed(2));
-        
+
+        this.summaryData.exp_earn.push(res.expectedSLA.exp_earn);
+        this.summaryData.exp_fth.push(res.expectedSLA.exp_fth);
+        this.summaryData.exp_pen.push(res.expectedSLA.exp_pen);
+        this.summaryData.exp_rtmax.push(res.expectedSLA.exp_rtmax);
       });
     }
 

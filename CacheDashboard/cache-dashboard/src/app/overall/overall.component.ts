@@ -18,6 +18,8 @@ export class OverallComponent implements OnInit {
   earning;
   penalty_cost;
   retrieval_cost;
+  processing_cost;
+  cache_cost;
 
   costearningratio;
 
@@ -32,6 +34,11 @@ export class OverallComponent implements OnInit {
   total_cache;
   occupied_cache;
   data_occupied_cache;
+
+  exp_pen;
+  exp_fthr;
+  exp_earn;
+  exp_rtmax;
 
   query_latency;
 
@@ -49,6 +56,7 @@ export class OverallComponent implements OnInit {
   public line3ChartData: ChartDataSets[] = [];
   public line4ChartData: ChartDataSets[] = [];
   public line5ChartData: ChartDataSets[] = [];
+  public line6ChartData: ChartDataSets[] = [];
 
   public pieChartData: SingleDataSet; 
   public pie2ChartData: SingleDataSet; 
@@ -151,6 +159,27 @@ export class OverallComponent implements OnInit {
         scaleLabel: {
           display: true,
           labelString: 'Ratio'
+        },
+        ticks: {
+          beginAtZero: true 
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Window Index'
+        }
+      }]
+    }
+  };
+
+  public line6ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Freshness Threshold'
         },
         ticks: {
           beginAtZero: true 
@@ -288,6 +317,16 @@ export class OverallComponent implements OnInit {
       this.lineChartData.push({ data: this.retrieval_cost, label: 'Retrieval Cost' });
       this.penalty_cost = data.penalty_cost.get();
       this.lineChartData.push({ data: this.penalty_cost, label: 'Penalties' });
+      this.processing_cost = data.processing_cost.get();
+      this.lineChartData.push({ data: this.processing_cost, label: 'Process Cost' });
+      this.cache_cost = data.cache_cost.get();
+      this.lineChartData.push({ data: this.cache_cost, label: 'Cache Cost' });
+
+      // 4th Line
+      this.exp_pen = data.exp_pen.get();
+      this.exp_fthr = data.exp_fth.get();
+      this.exp_earn = data.exp_earn.get();
+      this.exp_rtmax = data.exp_rtmax.get();
 
       // 3rd - Right
       // + current earning
@@ -298,6 +337,7 @@ export class OverallComponent implements OnInit {
 
       this.costearningratio = data.costearningratio.get();
       this.line4ChartData.push({ data: this.costearningratio, label: 'Cost to Earning Ration' }); 
+      this.line6ChartData.push({ data: this.exp_fthr, label: 'Freshness Threshold' }); 
 
       // 4th 
       this.avg_query_overhead = data.avg_query_overhead.get();

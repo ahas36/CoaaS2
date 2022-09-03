@@ -236,6 +236,10 @@ export class LearningModel{
   public avg_reward: Queue<number>;
   public timeTicks: Queue<number>;
 
+  public reward_th;
+  public cl_th;
+  public dt_th;
+
   constructor(){
     this.threshold = new Queue<number>();
     this.kappa = new Queue<number>();
@@ -247,5 +251,9 @@ export class LearningModel{
     this.avg_delaytime = new Queue<number>();
     this.avg_reward = new Queue<number>();
     this.timeTicks = new Queue<number>();
+
+    this.reward_th = [];
+    this.cl_th = [];
+    this.dt_th = [];
   }
 }

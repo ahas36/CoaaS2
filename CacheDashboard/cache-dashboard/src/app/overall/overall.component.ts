@@ -14,6 +14,7 @@ export class OverallComponent implements OnInit {
   gain;
   avg_gain;
   cache;
+  model;
 
   earning;
   penalty_cost;
@@ -40,6 +41,15 @@ export class OverallComponent implements OnInit {
   exp_earn;
   exp_rtmax;
 
+  kappa;
+  mu;
+  pi;
+  delta;
+  row;
+  threshold;
+
+  reward;
+
   query_latency;
 
   timeTicks;
@@ -57,6 +67,8 @@ export class OverallComponent implements OnInit {
   public line4ChartData: ChartDataSets[] = [];
   public line5ChartData: ChartDataSets[] = [];
   public line6ChartData: ChartDataSets[] = [];
+  public line7ChartData: ChartDataSets[] = [];
+  public line8ChartData: ChartDataSets[] = [];
 
   public pieChartData: SingleDataSet; 
   public pie2ChartData: SingleDataSet; 
@@ -70,19 +82,38 @@ export class OverallComponent implements OnInit {
     'data': [],
     'label': 'Network Overhead - Delay Rate',
     'pointRadius': 5 
-  };;
+  };
   public scatter3Data = {
     'data': [],
     'label': 'Processing Overhead - Delay Rate',
     'pointRadius': 5 
-  };;
+  };
+
+  public scatter4Data = {
+    'data': [],
+    'label': 'Threshold - Reward',
+    'pointRadius': 5 
+  };
+  public scatter5Data = {
+    'data': [],
+    'label': 'Threshold - Cache Life',
+    'pointRadius': 5 
+  };
+  public scatter6Data = {
+    'data': [],
+    'label': 'Threshold - Delay Time',
+    'pointRadius': 5 
+  };
 
   public scatter1ChartData: ChartDataSets[] = [];
   public scatter2ChartData: ChartDataSets[] = [];
   public scatter3ChartData: ChartDataSets[] = [];
+  public scatter4ChartData: ChartDataSets[] = [];
+  public scatter5ChartData: ChartDataSets[] = [];
+  public scatter6ChartData: ChartDataSets[] = [];
   
   public pieChartLegend = true;
-  public pieChartLabels: Label[] = ['Earning', 'Retrieval Cost', 'Penalty Cost'];
+  public pieChartLabels: Label[] = ['Earning', 'Retrieval Cost', 'Penalty Cost', 'Process Cost', 'Cache Cost'];
   public pie2ChartLabels: Label[] = ['Unoccupied','Data Occupied', 'Overhead Occupied'];
   public pieChartOptions: ChartOptions = {
     responsive: true,
@@ -90,10 +121,6 @@ export class OverallComponent implements OnInit {
   public pieChartPlugins = [];
 
   public ChartColors: Color[] = [
-    {
-      borderColor: 'rgba(255,0,0,0.8)', // Red
-      backgroundColor: 'rgba(255,0,0,0.1)',
-    },
     {
       borderColor: 'rgb(0, 194, 255, 0.8)', // Blue
       backgroundColor: 'rgb(0, 194, 255, 0.1)', // Blue
@@ -106,11 +133,24 @@ export class OverallComponent implements OnInit {
       borderColor: 'rgb(234, 196, 1, 0.8)', // Yellow
       backgroundColor: 'rgb(234, 196, 1, 0.1)', // Yellow
     },
+    {
+      borderColor: 'rgba(255,0,0,0.8)', // Red
+      backgroundColor: 'rgba(248, 5, 50, 0.1)',
+    },
+    {
+      borderColor: 'rgba(134, 17, 192, 0.8)', // Purple
+      backgroundColor: 'rgba(134, 17, 192, 0.1)',
+    },
+    {
+      borderColor: 'rgba(245, 137, 14, 0.8)', // Orange
+      backgroundColor: 'rgba(245, 137, 14, 0.1)',
+    }
   ];
 
   public pieChartColors: Color[] = [
     {
-      backgroundColor: ['rgb(0, 194, 255, 0.6)', 'rgb(17, 192, 45, 0.6)', 'rgb(234, 196, 1, 0.6)']
+      backgroundColor: ['rgb(0, 194, 255, 0.6)', 'rgb(17, 192, 45, 0.6)', 'rgb(234, 196, 1, 0.6)',
+      'rgba(248, 5, 50, 0.6)', 'rgba(134, 17, 192, 0.6)', 'rgba(245, 137, 14, 0.6)']
     }
   ];
 
@@ -173,6 +213,27 @@ export class OverallComponent implements OnInit {
     }
   };
 
+  public line5ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Size (GB)'
+        },
+        ticks: {
+          beginAtZero: true 
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Window Index'
+        }
+      }]
+    }
+  };
+
   public line6ChartOptions: (ChartOptions) = {
     responsive: true,
     scales: {
@@ -194,13 +255,34 @@ export class OverallComponent implements OnInit {
     }
   };
 
-  public line5ChartOptions: (ChartOptions) = {
+  public line7ChartOptions: (ChartOptions) = {
     responsive: true,
     scales: {
       yAxes: [{
         scaleLabel: {
           display: true,
-          labelString: 'Size (GB)'
+          labelString: 'Parameter Value'
+        },
+        ticks: {
+          beginAtZero: true 
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Window Index'
+        }
+      }]
+    }
+  };
+
+  public line8ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Reward (AUD)'
         },
         ticks: {
           beginAtZero: true 
@@ -278,6 +360,78 @@ export class OverallComponent implements OnInit {
     }
   };
 
+  public scatter4ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Reward (AUD)'
+        },
+        ticks: {
+          beginAtZero: false 
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Cache Threshold'
+        },
+        ticks: {
+          beginAtZero: true 
+        }
+      }]
+    }
+  };
+
+  public scatter5ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Cache Life (ms)'
+        },
+        ticks: {
+          beginAtZero: false 
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Cache Threshold'
+        },
+        ticks: {
+          beginAtZero: true 
+        }
+      }]
+    }
+  };
+
+  public scatter6ChartOptions: (ChartOptions) = {
+    responsive: true,
+    scales: {
+      yAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Delay Time (ms)'
+        },
+        ticks: {
+          beginAtZero: false 
+        }
+      }],
+      xAxes: [{
+        scaleLabel: {
+          display: true,
+          labelString: 'Cache Threshold'
+        },
+        ticks: {
+          beginAtZero: true 
+        }
+      }]
+    }
+  };
+
   public lineChartLegend = true;
   public lineChartPlugins = [];
 
@@ -297,6 +451,7 @@ export class OverallComponent implements OnInit {
 
   initializeData(){
     let data = this.serviceAPI.getPerformanceSummary(); 
+    let model = this.serviceAPI.getModelVariation();
 
     try{
       // Top bar
@@ -378,6 +533,33 @@ export class OverallComponent implements OnInit {
 
       this.pie2ChartData = data.cache_occupancy;
 
+      // 7th
+      this.kappa = model.kappa.get();
+      this.line7ChartData.push({ data: this.kappa, label: 'Kappa' }); 
+      this.mu = model.mu.get();
+      this.line7ChartData.push({ data: this.mu, label: 'Mu' }); 
+      this.pi = model.pi.get();
+      this.line7ChartData.push({ data: this.pi, label: 'Pi' }); 
+      this.delta = model.delta.get();
+      this.line7ChartData.push({ data: this.delta, label: 'Delta' }); 
+      this.row = model.row.get();
+      this.line7ChartData.push({ data: this.row, label: 'Row' }); 
+      this.threshold = model.threshold.get();
+      this.line7ChartData.push({ data: this.threshold, label: 'Threshold' }); 
+
+      this.reward = model.avg_reward.get();
+      this.line8ChartData.push({ data: this.reward, label: 'Average Gain (Reward)' }); 
+
+      //9th 
+      this.scatter4Data.data = model.reward_th;
+      this.scatter4ChartData.push(this.scatter4Data);
+
+      this.scatter5Data.data = model.cl_th;
+      this.scatter5ChartData.push(this.scatter5Data);
+
+      this.scatter6Data.data = model.dt_th;
+      this.scatter6ChartData.push(this.scatter6Data);
+
       // General
       this.timeTicks = data.timeTicks.get();
 
@@ -391,6 +573,7 @@ export class OverallComponent implements OnInit {
   updateData() {
     try{
       let data = this.serviceAPI.getPerformanceSummary(); 
+      let model = this.serviceAPI.getModelVariation();
 
       // Top bar
       this.gain = data.gain.get();
@@ -407,11 +590,25 @@ export class OverallComponent implements OnInit {
 
       this.retrieval_cost = data.retrieval_cost.get();
       this.lineChartData[2].data = this.retrieval_cost;
+
       this.penalty_cost = data.penalty_cost.get();
       this.lineChartData[3].data = this.penalty_cost;
 
+      this.processing_cost = data.processing_cost.get();
+      this.lineChartData[4].data = this.processing_cost;
+
+      this.cache_cost = data.cache_cost.get();
+      this.lineChartData[5].data = this.cache_cost;
+
       this.costearningratio = data.costearningratio.get();
       this.line4ChartData[0].data = this.costearningratio; 
+
+      // 4th Line
+      this.exp_pen = data.exp_pen.get();
+      this.exp_fthr = data.exp_fth.get();
+      this.exp_earn = data.exp_earn.get();
+      this.exp_rtmax = data.exp_rtmax.get();
+      this.line6ChartData[0].data = this.exp_fthr; 
 
       // 4th 
       this.avg_query_overhead = data.avg_query_overhead.get();
@@ -446,7 +643,7 @@ export class OverallComponent implements OnInit {
       this.scatter3ChartData.push(this.scatter3Data);
 
       // 6th
-      this.cache = data.cachememory;
+      this.cache = data.cache;
 
       this.total_cache = data.total_cache.get();
       this.line5ChartData[0].data = this.total_cache; 
@@ -458,6 +655,38 @@ export class OverallComponent implements OnInit {
       this.line5ChartData[2].data = this.data_occupied_cache; 
 
       this.pie2ChartData = data.cache_occupancy;
+
+      //7th
+      this.kappa = model.kappa.get();
+      this.line7ChartData[0].data = this.kappa; 
+
+      this.mu = model.mu.get();
+      this.line7ChartData[1].data = this.mu;
+
+      this.pi = model.pi.get();
+      this.line7ChartData[2].data = this.pi; 
+
+      this.delta = model.delta.get();
+      this.line7ChartData[3].data = this.delta; 
+
+      this.row = model.row.get();
+      this.line7ChartData[4].data = this.row; 
+
+      this.threshold = model.threshold.get();
+      this.line7ChartData[5].data = this.threshold; 
+
+      this.reward = model.avg_reward.get();
+      this.line8ChartData[0].data = this.reward; 
+
+      //9th
+      this.scatter4Data.data = model.reward_th;
+      this.scatter4ChartData.push(this.scatter4Data);
+
+      this.scatter5Data.data = model.cl_th;
+      this.scatter5ChartData.push(this.scatter5Data);
+
+      this.scatter6Data.data = model.dt_th;
+      this.scatter6ChartData.push(this.scatter6Data);
 
     }
     catch(ex){

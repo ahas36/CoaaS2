@@ -84,38 +84,40 @@ export class ApiServiceService {
   getModelVariation (){
     if(this.counter != this.modelV || this.modelInit){
       this.modelState.subscribe(res => {
-        this.modelData.threshold.push(res.threshold);
-        this.modelData.kappa.push(res.kappa);
-        this.modelData.mu.push(res.mu);
-        this.modelData.pi.push(res.pi);
-        this.modelData.delta.push(res.delta);
-        this.modelData.row.push(res.row);
+        this.modelData.threshold.push(res.threshold.toFixed(2));
+        this.modelData.kappa.push(res.kappa.toFixed(2));
+        this.modelData.mu.push(res.mu.toFixed(2));
+        this.modelData.pi.push(res.pi.toFixed(2));
+        this.modelData.delta.push(res.delta.toFixed(2));
+        this.modelData.row.push(res.row.toFixed(2));
         this.modelData.avg_cachelife.push(res.avg_cachelife);
         this.modelData.avg_delaytime.push(res.avg_delaytime);
-        this.modelData.avg_reward.push(res.avg_reward);
+        this.modelData.avg_reward.push(res.avg_reward.toFixed(2));
         this.modelData.timeTicks.push(this.counter);
+
+        this.modelData.reward_th.push({'x':res.threshold.toFixed(2), 'y':res.avg_reward.toFixed(2)});
+        this.modelData.cl_th.push({'x':res.threshold.toFixed(2), 'y': res.avg_cachelife});
+        this.modelData.dt_th.push({'x':res.threshold.toFixed(2), 'y': res.avg_delaytime});
       });
     }
 
     this.modelV = this.counter;
     this.modelInit = false;
 
-    return {
-      "model": this.modelData
-    }
+    return this.modelData
   }
 
   getPerformanceSummary() {
     if(this.counter != this.summaryV || this.summaryInit){
       this.apiData.subscribe(res => {
         // Overall perfromance summary
-        this.summaryData.avg_gain.push(res.summary.avg_gain);
-        this.summaryData.gain.push(res.summary.gain);
-        this.summaryData.earning.push(res.summary.earning);
-        this.summaryData.penalty_cost.push(res.summary.penalty_cost);
-        this.summaryData.retrieval_cost.push(res.summary.retrieval_cost);
-        this.summaryData.cache_cost.push(res.summary.cache_cost);
-        this.summaryData.processing_cost.push(res.summary.processing_cost);
+        this.summaryData.avg_gain.push(res.summary.avg_gain.toFixed(2));
+        this.summaryData.gain.push(res.summary.gain.toFixed(2));
+        this.summaryData.earning.push(res.summary.earning.toFixed(2));
+        this.summaryData.penalty_cost.push(res.summary.penalty_cost.toFixed(2));
+        this.summaryData.retrieval_cost.push(res.summary.retrieval_cost.toFixed(2));
+        this.summaryData.cache_cost.push(res.summary.cache_cost.toFixed(2));
+        this.summaryData.processing_cost.push(res.summary.processing_cost.toFixed(2));
 
         let ratio = (res.summary.earning/(res.summary.penalty_cost + res.summary.retrieval_cost 
           + res.summary.cache_cost + res.summary.processing_cost)).toFixed(2);
@@ -123,9 +125,9 @@ export class ApiServiceService {
 
         this.summaryData.no_of_queries.push(res.summary.no_of_queries);
         this.summaryData.no_of_retrievals.push(res.summary.no_of_retrievals);
-        this.summaryData.avg_query_overhead.push(res.summary.avg_query_overhead);
-        this.summaryData.avg_network_overhead.push(res.summary.avg_network_overhead);
-        this.summaryData.avg_processing_overhead.push(res.summary.avg_processing_overhead);
+        this.summaryData.avg_query_overhead.push((res.summary.avg_query_overhead/1000).toFixed(2));
+        this.summaryData.avg_network_overhead.push(res.summary.avg_network_overhead.toFixed(2));
+        this.summaryData.avg_processing_overhead.push(res.summary.avg_processing_overhead.toFixed(2));
 
         let oh_1_ratio = (res.summary.avg_processing_overhead/res.summary.avg_query_overhead).toFixed(2);
         this.summaryData.processing_overhead_ratio.push(oh_1_ratio) ;
@@ -136,24 +138,24 @@ export class ApiServiceService {
         this.summaryData.timeTicks.push(this.counter);
 
         this.summaryData.currentCosts.splice(0, this.summaryData.currentCosts.length);
-        this.summaryData.currentCosts.push(res.summary.earning);
-        this.summaryData.currentCosts.push(res.summary.retrieval_cost);
-        this.summaryData.currentCosts.push(res.summary.penalty_cost);
-        this.summaryData.currentCosts.push(res.summary.processing_cost);
-        this.summaryData.currentCosts.push(res.summary.cache_cost);
+        this.summaryData.currentCosts.push(res.summary.earning.toFixed(2));
+        this.summaryData.currentCosts.push(res.summary.retrieval_cost.toFixed(2));
+        this.summaryData.currentCosts.push(res.summary.penalty_cost.toFixed(2));
+        this.summaryData.currentCosts.push(res.summary.processing_cost.toFixed(2));
+        this.summaryData.currentCosts.push(res.summary.cache_cost.toFixed(2));
 
-        let pod = res.summary.delayed_queries/res.summary.no_of_queries;
+        let pod = (res.summary.delayed_queries/res.summary.no_of_queries).toFixed(2);
 
-        this.summaryData.rt_pod.push({'x': res.summary.avg_query_overhead, 'y': pod});
-        this.summaryData.noh_pod.push({'x': res.summary.avg_network_overhead, 'y': pod});
-        this.summaryData.poh_pod.push({'x': res.summary.avg_processing_overhead, 'y': pod});
+        this.summaryData.rt_pod.push({'x': res.summary.avg_query_overhead.toFixed(2), 'y': pod});
+        this.summaryData.noh_pod.push({'x': res.summary.avg_network_overhead.toFixed(2), 'y': pod});
+        this.summaryData.poh_pod.push({'x': res.summary.avg_processing_overhead.toFixed(2), 'y': pod});
 
         let cachestats = res.cachememory;
         this.summaryData.cache.used_memory = (cachestats.used_memory.value/divisor).toFixed(2);
         this.summaryData.cache.used_memory_dataset = (cachestats.used_memory_dataset.value/divisor).toFixed(2);
         this.summaryData.cache.total_system_memory = (cachestats.total_system_memory.value/divisor).toFixed(2);
-        this.summaryData.cache.used_memory_dataset_perc = cachestats.used_memory_dataset_perc.value;
-        this.summaryData.cache.used_memory_peak_perc = cachestats.used_memory_peak_perc.value;
+        this.summaryData.cache.used_memory_dataset_perc = cachestats.used_memory_dataset_perc.value.toFixed(2);
+        this.summaryData.cache.used_memory_peak_perc = cachestats.used_memory_peak_perc.value.toFixed(2);
 
         this.summaryData.total_cache.push(this.summaryData.cache.total_system_memory);
         this.summaryData.occupied_cache.push(this.summaryData.cache.used_memory);
@@ -171,10 +173,10 @@ export class ApiServiceService {
         this.summaryData.cache_occupancy.push(data_perc.toFixed(2));
         this.summaryData.cache_occupancy.push(oh_perc.toFixed(2));
 
-        this.summaryData.exp_earn.push(res.expectedSLA.exp_earn);
-        this.summaryData.exp_fth.push(res.expectedSLA.exp_fth);
-        this.summaryData.exp_pen.push(res.expectedSLA.exp_pen);
-        this.summaryData.exp_rtmax.push(res.expectedSLA.exp_rtmax);
+        this.summaryData.exp_earn.push(res.expectedSLA.exp_earn.toFixed(2));
+        this.summaryData.exp_fth.push(res.expectedSLA.exp_fth.toFixed(2));
+        this.summaryData.exp_pen.push(res.expectedSLA.exp_pen.toFixed(2));
+        this.summaryData.exp_rtmax.push((res.expectedSLA.exp_rtmax/1000).toFixed(2));
       });
     }
 

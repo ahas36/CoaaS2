@@ -39,7 +39,7 @@ import { AgmCoreModule } from '@agm/core';
     MatTabsModule,
     ChartsModule,
     AgmCoreModule.forRoot({
-      apiKey: 'AIzaSyDbQyw3NVus6k_21insLPHI5Uoq0LUdmqw'
+      apiKey: 'AIzaSyDFIBI_XyMjT02iy6PsGYAQiIZzZgRVdEg'
     })
   ],
   providers: [ThemeService, ApiServiceService, RefreshService],

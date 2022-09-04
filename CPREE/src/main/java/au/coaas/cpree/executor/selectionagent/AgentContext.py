@@ -14,9 +14,9 @@ class AgentContext(Resource):
     def post(self):
         try:         
             # Retriving the measurement
-            req_body = request.form.get('body')
-            new_state = req_body.get('vector')
-            utility = req_body.get('reward')
+            req_body = request.get_json()
+            new_state = req_body['body']['vector']
+            utility = req_body['body']['reward']
 
             actions = self.__agent.choose_action(new_state)
 
@@ -25,8 +25,8 @@ class AgentContext(Resource):
                 self.__agent.remember(new_state, utility, actions)
             else:
                 self.__agent.init_remember(new_state, actions)
-            
-            result = { 'actions': actions }
+        
+            result = { 'actions': actions.numpy().tolist() }
             # Return data and 200 OK code
             return result, 200
 

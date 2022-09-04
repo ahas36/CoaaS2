@@ -12,8 +12,8 @@ class Agent:
     __input_dims = ['size_in_cache', 'earning', 'retrieval_cost', 'penalties', 'process_cost', 'cache_cost',
             'probability_delay', 'avg_cache_life', 'avg_delay_time']
 
-    def __init__(self, max_action, input_dims = [len(__input_dims)], alpha=0.001, beta=0.002, gamma=0.9, n_actions=2, max_size=1000000,
-            tau=0.005, batch_size=128, reward_scale=1, ):
+    def __init__(self, max_action, input_dims = [len(__input_dims)], alpha=0.001, beta=0.002, gamma=0.9, n_actions=6, max_size=1000000,
+            tau=0.005, batch_size=128, reward_scale=1):
         # Hyperparameters
         self.gamma = gamma
         self.tau = tau
@@ -30,7 +30,7 @@ class Agent:
         self.batch_size = batch_size
 
         # Neural Networks
-        self.actor = ActorNetwork(n_actions = self.n_actions, max_action=self.max_action)
+        self.actor = ActorNetwork(n_actions = self.n_actions, max_action=self.max_action, min_action=self.min_action)
         self.critic_1 = CriticNetwork(n_actions = self.n_actions, name='critic_1')
         self.critic_2 = CriticNetwork(n_actions = self.n_actions, name='critic_2')
         self.value = ValueNetwork()

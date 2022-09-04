@@ -5,7 +5,7 @@ import tensorflow_probability as tfp
 from tensorflow.keras.layers import Dense
 
 class ActorNetwork(keras.Model):
-    def __init__(self, max_action, n_actions = 6, fc1_dims=256, fc2_dims=256, name='actor', chkpnt_dir='tmp') -> None:
+    def __init__(self, max_action, min_action, n_actions = 6, fc1_dims=256, fc2_dims=256, name='actor', chkpnt_dir='tmp') -> None:
         super(ActorNetwork, self).__init__()
         self.fc1_dims = fc1_dims
         self.fc2_dims = fc2_dims
@@ -16,6 +16,7 @@ class ActorNetwork(keras.Model):
         self.chpnt_file = os.path.join(self.chkpnt_dir, self.model_name+'.h5')
 
         self.max_action = max_action
+        self.min_action = min_action
         self.noise = 1e-6
 
         self.fc1 = Dense(self.fc1_dims, activation='relu')
@@ -29,7 +30,7 @@ class ActorNetwork(keras.Model):
 
         mu = self.mu(action_value)
         sigma = self.sigma(action_value)
-        sigma = tf.clip_by_value(sigma, self.noise, 1)
+        sigma = tf.clip_by_value(sigma, clip_value_min=0, clip_value_max=1)
 
         return mu, sigma
     
@@ -37,9 +38,8 @@ class ActorNetwork(keras.Model):
         mu, sigma = self.call(state)
         probabilities = tfp.distributions.Normal(mu, sigma)
 
-        actions = probabilities.sample() 
-
-        action = tf.math.tanh(actions)*self.max_action
+        actions = tf.clip_by_value(probabilities.sample(), clip_value_min=0, clip_value_max=1)
+        action = actions * self.max_action
         log_prob = probabilities.log_prob(actions)
         log_prob -= tf.math.log(1 - tf.math.pow(action, 2) + self.noise)
         log_prob = tf.math.reduce_sum(log_prob, axis=1, keepdims=True)

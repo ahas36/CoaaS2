@@ -37,6 +37,7 @@ public class SelectionExecutor {
         weightThresholds.put("pi", 0.2);
         weightThresholds.put("delta", 0.2);
         weightThresholds.put("row", 0.2);
+        weightThresholds.put("teta", 1.0);
         weightThresholds.put("threshold", 1.0);
     }};
     private static Hashtable<String, Double> cachePerfStats = new Hashtable<>();
@@ -54,7 +55,8 @@ public class SelectionExecutor {
         weightThresholds.put("pi", request.getPi());
         weightThresholds.put("delta", request.getDelta());
         weightThresholds.put("row", request.getRow());
-        weightThresholds.put("threshold", request.getThreshold() * valueHistory.average());
+        weightThresholds.put("teta", request.getThreshold());
+        weightThresholds.put("threshold",  valueHistory.reverse(request.getThreshold()));
 
         return null;
     }
@@ -353,7 +355,7 @@ public class SelectionExecutor {
                         .build());
 
                 if(sampleInterval == 0) {
-                    double exp_prd = (lifetime - retlatency) * fthr;
+                    double exp_prd = (lifetime - retlatency) * (1 - fthr);
                     hits = exp_prd * lambda;
                     exp_mr = 1/(hits + 1);
 
@@ -366,7 +368,7 @@ public class SelectionExecutor {
                 else {
                     if(lifetime > sampleInterval){
                         // Refreshing at a slightly lower rate than the sampling
-                        double exp_prd = sampleInterval + ((lifetime - sampleInterval) * fthr);
+                        double exp_prd = sampleInterval + ((lifetime - sampleInterval) * (1 - fthr));
                         double ref_rate = 1 / exp_prd;
 
                         cache_cost = (retCost + cache_penalties) * ref_rate;

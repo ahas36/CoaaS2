@@ -122,4 +122,28 @@ public class Utilities {
 
         return Hashing.sha256().hashString(hashKey, StandardCharsets.UTF_8).toString();
     }
+
+    public static double getZValueForProbability(double prob) {
+        if (prob < 0.5) return -getZValueForProbability(1 - prob);
+
+        if (prob > 0.92) {
+            if (prob == 1) return Double.NaN;
+            double r = Math.sqrt(-Math.log(1-prob));
+            return (((2.3212128 * r + 4.8501413) * r - 2.2979648) * r - 2.7871893)/
+                    ((1.6370678 * r + 3.5438892) * r + 1);
+        }
+        prob -= 0.5;
+        double r = prob * prob;
+        return prob * (((-25.4410605 * r + 41.3911977) * r - 18.6150006) * r + 2.5066282)/
+                ((((3.1308291 * r - 21.0622410) * r + 23.0833674) * r - 8.4735109) * r + 1);
+    }
+
+    public static double getStandardDeviation(Object[] input_array, double mean) {
+        double standard_deviation = 0.0;
+        int array_length = input_array.length;
+        for(Object temp: input_array) {
+            standard_deviation += Math.pow(((double)temp) - mean, 2);
+        }
+        return Math.sqrt(standard_deviation/array_length);
+    }
 }

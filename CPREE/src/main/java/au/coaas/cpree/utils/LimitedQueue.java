@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class LimitedQueue<E> extends LinkedList<E> {
 
     private int limit;
+    private double mean;
+    private double stdDev;
 
     public LimitedQueue(int limit) {
         this.limit = limit;
@@ -25,6 +27,13 @@ public class LimitedQueue<E> extends LinkedList<E> {
         super.forEach(value -> {
             sum.updateAndGet(v -> new Double((v + (double) value)));
         });
-        return sum.get()/super.size();
+        mean =  sum.get()/super.size();
+        return mean;
+    }
+
+    public double reverse(double teta) {
+        stdDev = Utilities.getStandardDeviation(super.toArray(), average());
+        double zValue = Utilities.getZValueForProbability(teta);
+        return mean + (zValue * stdDev);
     }
 }

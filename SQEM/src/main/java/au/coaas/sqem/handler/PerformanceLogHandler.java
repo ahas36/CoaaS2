@@ -326,7 +326,7 @@ public class PerformanceLogHandler {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
         MongoDatabase db = mongoClient.getDatabase("coaas_log");
         MongoCollection<Document> collection = db.getCollection("performanceSummary");
-        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss").format(new java.util.Date()));
+        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss").format(new java.util.Date()));
         collection.insertOne(persRecord);
     }
 
@@ -408,12 +408,12 @@ public class PerformanceLogHandler {
                             JSONObject actions = new JSONObject(result);
                             JSONArray weights = actions.getJSONArray("actions");
                             LearnedWeights request = LearnedWeights.newBuilder()
-                                    .setThreshold(weights.getDouble(0))
-                                    .setKappa(weights.getDouble(1))
-                                    .setMu(weights.getDouble(2))
-                                    .setPi(weights.getDouble(3))
-                                    .setDelta(weights.getDouble(4))
-                                    .setRow(weights.getDouble(5)).build();
+                                    .setThreshold(weights.getDouble(5))
+                                    .setKappa(weights.getDouble(0))
+                                    .setMu(weights.getDouble(1))
+                                    .setPi(weights.getDouble(2))
+                                    .setDelta(weights.getDouble(3))
+                                    .setRow(weights.getDouble(4)).build();
 
                             CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
                                     = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());

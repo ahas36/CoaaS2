@@ -43,9 +43,7 @@ export class ApiServiceService {
   timeTicks:Queue<number> = new Queue<number>();
 
   headers = new HttpHeaders()
-    .set('Access-Control-Allow-Origin', '*')
-    .set("Access-Control-Allow-Credentials", "true")
-    .set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Allow-Origin");
+    .set('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 
   constructor(private http:HttpClient) {
     this.summaryData = new SummaryModel();

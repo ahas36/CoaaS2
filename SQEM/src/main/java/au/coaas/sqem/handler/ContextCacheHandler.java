@@ -44,7 +44,7 @@ public class ContextCacheHandler {
     }
 
     public static Object getCachePerfStat(String key){
-        return currentPerf.containsKey(key) ? currentPerf.get(key) : 0;
+        return currentPerf.containsKey(key) ? currentPerf.get(key) : 0.0;
     }
 
     // Caches all context under an entity

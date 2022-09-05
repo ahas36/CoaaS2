@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { PerfData, QueryStats, ModelState, Queue } from './service-classes';
 import { CSMSModel, LevelsModel, SummaryModel, SimpleModel, LearningModel } from './service-view-models';
 import { config } from '../config';
@@ -42,6 +42,11 @@ export class ApiServiceService {
   
   timeTicks:Queue<number> = new Queue<number>();
 
+  headers = new HttpHeaders()
+    .set('Access-Control-Allow-Origin', '*')
+    .set("Access-Control-Allow-Credentials", "true")
+    .set("Access-Control-Allow-Headers", "Access-Control-Allow-Headers, Origin,Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Access-Control-Allow-Origin");
+
   constructor(private http:HttpClient) {
     this.summaryData = new SummaryModel();
     this.csmsData = new CSMSModel();
@@ -57,9 +62,9 @@ export class ApiServiceService {
   }
 
   retrievePerformanceData(){
-    this.apiData = this.http.get<PerfData>(config.uri);
-    this.queryLocs = this.http.get<[QueryStats]>(config.querystaturi);
-    this.modelState = this.http.get<ModelState>(config.model_uri);
+    this.apiData = this.http.get<PerfData>(config.uri, {'headers':this.headers});
+    this.queryLocs = this.http.get<[QueryStats]>(config.querystaturi, {'headers':this.headers});
+    this.modelState = this.http.get<ModelState>(config.model_uri, {'headers':this.headers});
     this.counter += 1;
     this.timeTicks.push(this.counter);
   }

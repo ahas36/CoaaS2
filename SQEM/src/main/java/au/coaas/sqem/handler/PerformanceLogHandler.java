@@ -42,7 +42,7 @@ import static au.coaas.sqem.util.StatisticalUtils.*;
 
 public class PerformanceLogHandler {
 
-    private static Connection connection = null;
+    private static Connection connection;
     private static final Logger log = Logger.getLogger(LogHandler.class.getName());
     private static List<String> all_tables = Stream.of(LogicalContextLevel.values())
             .map(Enum::name)
@@ -353,6 +353,7 @@ public class PerformanceLogHandler {
         collection.insertOne(persRecord);
     }
 
+    private static long countIdx = 0;
 
     /** Aggregation Routines */
     // Summarizes the performance data of the last window and stores in the logs.
@@ -367,9 +368,11 @@ public class PerformanceLogHandler {
             tasks.add(executor.submit(() -> { getCPREEPerfromanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getLevelPerformanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getOverallPerfromanceSummary(persRecord); }));
-            tasks.add(executor.submit(() -> { profileContextProviders(persRecord); }));
-            tasks.add(executor.submit(() -> { profileConsumers(persRecord); }));
-            tasks.add(executor.submit(() -> { profileCQClasses(persRecord); }));
+            if(countIdx > 0){
+                tasks.add(executor.submit(() -> { profileContextProviders(persRecord); }));
+                tasks.add(executor.submit(() -> { profileConsumers(persRecord); }));
+                tasks.add(executor.submit(() -> { profileCQClasses(persRecord); }));
+            }
             persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
 
             for (Future<?> currTask : tasks) {
@@ -379,50 +382,53 @@ public class PerformanceLogHandler {
             // Backing up the performance data
             executor.submit(() -> { persistPerformanceSummary(persRecord); });
             // Updating the reinforcement learning model
-            executor.submit(() -> {
-                try {
-                    JSONObject body = new JSONObject();
-                    JSONObject cachingSummary = getCacheLives();
-                    Document summary = persRecord.get("summary", Document.class);
+            if(countIdx > 0){
+                executor.submit(() -> {
+                    try {
+                        JSONObject cachingSummary = getCacheLives();
+                        BasicDBObject summary = persRecord.get("summary", BasicDBObject.class);
 
-                    ArrayList<Double> vector = new ArrayList(){{
-                        add((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
-                        add(summary.getDouble("retrieval_cost")); // Retrieval Cost
-                        add(summary.getDouble("earning")); // Earnings
-                        add(summary.getDouble("penalty_cost")); // Penalties
-                        add(summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries")); // Probability of Delay
-                        add((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
-                        add((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
-                        add(cachingSummary.getDouble("cachelife")); // Average Cache Lifetime (in miliseconds)
-                        add(cachingSummary.getDouble("delay")); // Average Delay Time (in miliseconds)
-                    }};
+                        JSONArray vector = new JSONArray();
+                        vector.put((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
+                        vector.put(summary.getDouble("retrieval_cost")); // Retrieval Cost
+                        vector.put(summary.getDouble("earning")); // Earnings
+                        vector.put(summary.getDouble("penalty_cost")); // Penalties
+                        vector.put(summary.getDouble("no_of_queries") > 0 ?
+                                summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries") : 0); // Probability of Delay
+                        vector.put((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
+                        vector.put((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
+                        vector.put(cachingSummary.getDouble("cachelife")); // Average Cache Lifetime (in miliseconds)
+                        vector.put(cachingSummary.getDouble("delay")); // Average Delay Time (in miliseconds)
 
-                    body.put("vector", new JSONArray(vector));
-                    body.put("reward", summary.getDouble("avg_gain"));
-                    String result = HttpClient.call("http://localhost:9494/selections", HttpRequests.POST, new JSONObject());
-                    if(result != null){
-                        JSONObject actions = new JSONObject(result);
-                        JSONArray weights = actions.getJSONArray("actions");
-                        LearnedWeights request = LearnedWeights.newBuilder()
-                                .setThreshold(weights.getDouble(0))
-                                .setKappa(weights.getDouble(1))
-                                .setMu(weights.getDouble(2))
-                                .setPi(weights.getDouble(3))
-                                .setDelta(weights.getDouble(4))
-                                .setRow(weights.getDouble(5)).build();
+                        JSONObject learnrequest = getRequestBody(vector, summary.getDouble("avg_gain"));
 
-                        CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
-                                = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
-                        asyncStub.updateWeights(request);
+                        String result = HttpClient.call("http://localhost:9494/selections", HttpRequests.POST, learnrequest.toString());
 
-                        persistModelState(request, cachingSummary.getDouble("cachelife"),
-                                cachingSummary.getDouble("delay"), summary.getDouble("avg_gain"));
+                        if(result != null){
+                            JSONObject actions = new JSONObject(result);
+                            JSONArray weights = actions.getJSONArray("actions");
+                            LearnedWeights request = LearnedWeights.newBuilder()
+                                    .setThreshold(weights.getDouble(0))
+                                    .setKappa(weights.getDouble(1))
+                                    .setMu(weights.getDouble(2))
+                                    .setPi(weights.getDouble(3))
+                                    .setDelta(weights.getDouble(4))
+                                    .setRow(weights.getDouble(5)).build();
+
+                            CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
+                                    = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+                            asyncStub.updateWeights(request);
+
+                            persistModelState(request, cachingSummary.getDouble("cachelife"),
+                                    cachingSummary.getDouble("delay"), summary.getDouble("avg_gain"));
+                        }
                     }
-                }
-                catch(Exception ex){
-                    log.info("Error occured when attempting to re-learn the model: " + ex.getMessage());
-                }
-            });
+                    catch(Exception ex){
+                        log.info("Error occured when attempting to re-learn the model: " + ex.getMessage());
+                    }
+                });
+            }
+            countIdx++;
         }
         catch(Exception ex){
             log.severe(ex.getMessage());
@@ -430,6 +436,13 @@ public class PerformanceLogHandler {
         }
 
         return SQEMResponse.newBuilder().setStatus("200").build();
+    }
+
+    private static JSONObject getRequestBody(JSONArray vector, double avg_gain){
+        JSONObject req = new JSONObject();
+        req.put("vector", vector);
+        req.put("reward", avg_gain);
+        return req;
     }
 
     // Summarizing Context Providers profiles
@@ -493,16 +506,16 @@ public class PerformanceLogHandler {
                         }
                     }
 
-                    ContextCacheHandler.updatePerfRegister(succsessTime.get()/successCnt.get(),
-                            partialMissTime.get()/partialMissCnt.get(),
-                            missTime.get()/missCnt.get());
+                    ContextCacheHandler.updatePerfRegister(successCnt.get() > 0 ? succsessTime.get()/successCnt.get() : 0,
+                            partialMissCnt.get() > 0 ? partialMissTime.get()/partialMissCnt.get() : 0,
+                            missCnt.get() > 0 ? missTime.get()/missCnt.get() : 0);
 
                     res.entrySet().parallelStream().forEach((entry) -> {
                         String csId = entry.getKey();
                         HashMap<String,Double> temp = entry.getValue();
 
                         Double count = temp.get("count");
-                        temp.put("fthresh", temp.get("fthresh")/count);
+                        temp.put("fthresh", count > 0 ? temp.get("fthresh")/count : 0.7);
 
                         if(!finalres.containsKey(csId)){
                             finalres.put(csId, new BasicDBObject(){{
@@ -517,8 +530,9 @@ public class PerformanceLogHandler {
                     });
                 }
                 catch(Exception ex){
-                    log.severe("Exception thrown when aggregating the context consumers: "
+                    log.severe("Exception thrown when aggregating the context providers: "
                             + ex.getMessage());
+                    log.info(String.valueOf(ex.getStackTrace()));
                 }
             }));
 
@@ -529,8 +543,8 @@ public class PerformanceLogHandler {
 
                     HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
                     ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
-                            "avg(response_time) AS rt_avg, avg(cost) AS cost " +
-                            "FROM coass_performance method = 'executeFetch' " +
+                            "avg(response_time) AS rt_avg, avg(cost) AS avg_cost " +
+                            "FROM coass_performance WHERE method = 'executeFetch' " +
                             "GROUP BY identifier, status;");
 
                     while(rs_1.next()){
@@ -544,7 +558,7 @@ public class PerformanceLogHandler {
                                         put("failed", status.equals("200") ? 0 : count);
                                         put("success", status.equals("200") ? count : 0);
                                         put("retLatency", rs_1.getDouble("rt_avg")*count);
-                                        put("cost", rs_1.getDouble("cost"));
+                                        put("cost", rs_1.getDouble("avg_cost"));
                                     }});
                         }
                         else {
@@ -555,7 +569,7 @@ public class PerformanceLogHandler {
                             if(status.equals("200")) temp.put("success", temp.get("success") + count);
                             else temp.put("failed", temp.get("failed") + count);
 
-                            temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency")*count));
+                            temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency") * count));
 
                             res.put(rs_1.getString("identifier"), temp);
                         }
@@ -567,7 +581,7 @@ public class PerformanceLogHandler {
 
                         Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
                         temp.put("retLatency", temp.get("retLatency")/no_success);
-                        temp.put("reliability", no_success/temp.get("count"));
+                        temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0);
 
                         if(!finalres.containsKey(csId)){
                             finalres.put(csId, new BasicDBObject(){{
@@ -582,7 +596,7 @@ public class PerformanceLogHandler {
                     });
                 }
                 catch(Exception ex){
-                    log.severe("Exception thrown when aggregating the context consumers: "
+                    log.severe("Exception thrown when aggregating the context providers: "
                             + ex.getMessage());
                 }
             }));
@@ -594,7 +608,7 @@ public class PerformanceLogHandler {
             persRecord.put("rawContext", new HashMap<>(finalres));
         }
         catch (Exception ex){
-            log.severe("Exception thrown when aggregating the context consumers: "
+            log.severe("Exception thrown when aggregating the context providers: "
                     + ex.getMessage());
         }
         return null;
@@ -778,7 +792,7 @@ public class PerformanceLogHandler {
             double cacheCost = (double) ContextCacheHandler.getCachePerfStat("cacheCost");
 
             // TODO: Should include any other storage costs and other services costs
-            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - proc_cost*60 - cacheCost;
+            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - (proc_cost * 60) - cacheCost;
 
             dbo.put("gain", monetaryGain);
             dbo.put("avg_gain", totalQueries > 0 ? monetaryGain / totalQueries : 0);
@@ -977,7 +991,7 @@ public class PerformanceLogHandler {
             });
         }
         catch (Exception ex){
-            log.severe("Exception thrown when aggregating the context consumers: "
+            log.severe("Exception thrown when aggregating the context query classes: "
                     + ex.getMessage());
         }
 
@@ -1316,7 +1330,10 @@ public class PerformanceLogHandler {
         ResultSet rs = statement.executeQuery(String.format(queryString,
                 start.format(formatter), end.format(formatter)));
 
-        JSONObject body = new JSONObject();
+        JSONObject body = new JSONObject() {{
+            put("cachelife",0.0);
+            put("delay",0.0);
+        }};
 
         while(rs.next()){
             double avg_lat = rs.getDouble("avg_lat");

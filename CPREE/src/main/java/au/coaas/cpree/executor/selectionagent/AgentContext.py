@@ -15,8 +15,8 @@ class AgentContext(Resource):
         try:         
             # Retriving the measurement
             req_body = request.get_json()
-            new_state = req_body['body']['vector']
-            utility = req_body['body']['reward']
+            new_state = req_body['vector']
+            utility = req_body['reward']
 
             actions = self.__agent.choose_action(new_state)
 

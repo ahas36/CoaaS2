@@ -14,7 +14,7 @@ import au.coaas.sqem.util.enums.HttpRequests;
 import java.util.concurrent.ExecutionException;
 
 public class HttpClient {
-    public static String call(String serviceUrl, HttpRequests type, JSONObject body){
+    public static String call(String serviceUrl, HttpRequests type, String body){
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         builder.connectTimeout(10, TimeUnit.SECONDS);
         builder.writeTimeout(10, TimeUnit.SECONDS);
@@ -23,6 +23,7 @@ public class HttpClient {
 
         HttpResponseFuture fu_res = new HttpResponseFuture();
 
+        MediaType JSON = MediaType.parse("application/json; charset=utf-8");
         Request.Builder request = new Request.Builder()
                 .url(serviceUrl);
         switch (type){
@@ -30,11 +31,12 @@ public class HttpClient {
                 request.get();
                 break;
             case POST:
-            case PUT:
-                FormBody formBody = new FormBody.Builder()
-                        .add("body", body.toString())
-                        .build();
+                RequestBody formBody = RequestBody.create(JSON, body);
                 request.post(formBody);
+                break;
+            case PUT:
+                RequestBody jsonbody = RequestBody.create(JSON, body);
+                request.put(jsonbody);
                 break;
         }
 

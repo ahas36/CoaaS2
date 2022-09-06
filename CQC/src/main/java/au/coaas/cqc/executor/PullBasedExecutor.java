@@ -1299,7 +1299,7 @@ public class PullBasedExecutor {
                     if(retEntity == null) continue;
 
                     Executors.newCachedThreadPool().execute(()
-                            -> refreshOrCacheContext(slaObj, Integer.getInteger(data.getStatus()), lookup,
+                            -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()), lookup,
                                     retEntity, data.getMeta()));
                     return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
                             consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));

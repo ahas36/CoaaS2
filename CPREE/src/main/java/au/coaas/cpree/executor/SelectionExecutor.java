@@ -30,16 +30,7 @@ public class SelectionExecutor {
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
 
     // Static Registries
-    private static Hashtable<String, Double> weightThresholds = new Hashtable(){{
-        // Starting with equal weights for all the weights
-        weightThresholds.put("kappa", 0.2);
-        weightThresholds.put("mu", 0.2);
-        weightThresholds.put("pi", 0.2);
-        weightThresholds.put("delta", 0.2);
-        weightThresholds.put("row", 0.2);
-        weightThresholds.put("teta", 1.0);
-        weightThresholds.put("threshold", 1.0);
-    }};
+    private static Hashtable<String, Double> weightThresholds = new Hashtable();
     private static Hashtable<String, Double> cachePerfStats = new Hashtable<>();
 
     // Dynamic Registries
@@ -48,6 +39,16 @@ public class SelectionExecutor {
     private static LimitedQueue<Double> valueHistory = new LimitedQueue<>(1000);
 
     private static ExecutorService executor = Executors.newScheduledThreadPool(20);
+
+    private static void defaultWeights(){
+        weightThresholds.put("kappa", 0.2);
+        weightThresholds.put("mu", 0.2);
+        weightThresholds.put("pi", 0.2);
+        weightThresholds.put("delta", 0.2);
+        weightThresholds.put("row", 0.2);
+        weightThresholds.put("teta", 0.5);
+        weightThresholds.put("threshold",  valueHistory.reverse(0.5));
+    }
 
     public static Empty updateWeights(LearnedWeights request){
         weightThresholds.put("kappa", request.getKappa());
@@ -218,6 +219,8 @@ public class SelectionExecutor {
                             // TODO: Need to calculate using the parse query tree
                             // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
                             double query_complexity = 3.5;
+
+                            if(weightThresholds.isEmpty()) defaultWeights();
 
                             double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getKey()) +
                                     (weightThresholds.get("mu") * caching_efficiency) +

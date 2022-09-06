@@ -141,9 +141,12 @@ public class Utilities {
     public static double getStandardDeviation(Object[] input_array, double mean) {
         double standard_deviation = 0.0;
         int array_length = input_array.length;
-        for(Object temp: input_array) {
-            standard_deviation += Math.pow(((double)temp) - mean, 2);
+        if(array_length > 0){
+            for(Object temp: input_array) {
+                standard_deviation += Math.pow(((double)temp) - mean, 2);
+            }
+            return Math.sqrt(standard_deviation/array_length);
         }
-        return Math.sqrt(standard_deviation/array_length);
+        return 1;
     }
 }

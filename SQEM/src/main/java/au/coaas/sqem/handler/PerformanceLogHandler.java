@@ -450,161 +450,20 @@ public class PerformanceLogHandler {
     // Summarizing Context Providers profiles
     private static Runnable profileContextProviders(Document persRecord){
         ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
-
-        AtomicLong missTime = new AtomicLong();
-        AtomicLong succsessTime = new AtomicLong();
-        AtomicLong partialMissTime = new AtomicLong();
-
-        AtomicLong missCnt = new AtomicLong();
-        AtomicLong successCnt = new AtomicLong();
-        AtomicLong partialMissCnt = new AtomicLong();
-
         try {
-
             ExecutorService executor = Executors.newFixedThreadPool(2);
-            Collection<Future<?>> tasks = new LinkedList<>();
+            ArrayList<Future<?>> tasks = new ArrayList<>();
 
-            tasks.add(executor.submit(() -> {
-                try {
-                    Statement statement = connection.createStatement();
-                    statement.setQueryTimeout(30);
+            tasks.add(executor.submit(() -> { sumCPProfile(finalres); }));
+            tasks.add(executor.submit(() -> { sumCPReliability(finalres); }));
 
-                    HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
-                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, status, " +
-                            "count(fthresh) AS cnt, avg(response_time) as rt " +
-                            "FROM coass_performance WHERE method = 'cacheSearch' " +
-                            "GROUP BY identifier, fthresh, status;");
-
-                    while(rs_1.next()){
-                        if(rs_1.getString("status").equals("200")){
-                            Double count = rs_1.getInt("cnt") * 1.0;
-                            if(!res.containsKey(rs_1.getString("identifier"))){
-                                res.put(rs_1.getString("identifier"),
-                                        new HashMap(){{
-                                            put("count", count);
-                                            put("fthresh", rs_1.getDouble("fthresh")*count);
-                                        }});
-                            }
-                            else {
-                                HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
-
-                                temp.put("count", temp.get("count") + count);
-                                temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
-
-                                res.put(rs_1.getString("identifier"), temp);
-                            }
-                            succsessTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
-                            successCnt.addAndGet(rs_1.getLong("cnt"));
-                        }
-                        else {
-                            if(rs_1.getString("status").equals("400")){
-                                partialMissTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
-                                partialMissCnt.addAndGet(rs_1.getLong("cnt"));
-                            }
-                            else {
-                                missTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
-                                missCnt.addAndGet(rs_1.getLong("cnt"));
-                            }
-                        }
-                    }
-
-                    ContextCacheHandler.updatePerfRegister(successCnt.get() > 0 ? succsessTime.get()/successCnt.get() : 0,
-                            partialMissCnt.get() > 0 ? partialMissTime.get()/partialMissCnt.get() : 0,
-                            missCnt.get() > 0 ? missTime.get()/missCnt.get() : 0);
-
-                    res.entrySet().parallelStream().forEach((entry) -> {
-                        String csId = entry.getKey();
-                        HashMap<String,Double> temp = entry.getValue();
-
-                        Double count = temp.get("count");
-                        temp.put("fthresh", count > 0 ? temp.get("fthresh")/count : 0.7);
-
-                        if(!finalres.containsKey(csId)){
-                            finalres.put(csId, new BasicDBObject(){{
-                                put("profile", temp);
-                            }});
-                        }
-                        else {
-                            BasicDBObject curr = finalres.get(csId);
-                            curr.put("profile", temp);
-                            finalres.put(csId, curr);
-                        }
-                    });
+            int complete = 0;
+            while(!tasks.isEmpty()){
+                Future<?> curr = tasks.get(complete);
+                if(curr.isDone() || curr.isCancelled()){
+                    curr.get();
+                    tasks.remove(complete);
                 }
-                catch(Exception ex){
-                    log.severe("Exception thrown when aggregating the context providers: "
-                            + ex.getMessage());
-                    log.info(String.valueOf(ex.getStackTrace()));
-                }
-            }));
-
-            tasks.add(executor.submit(() -> {
-                try {
-                    Statement statement = connection.createStatement();
-                    statement.setQueryTimeout(30);
-
-                    HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
-                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
-                            "avg(response_time) AS rt_avg, avg(cost) AS avg_cost " +
-                            "FROM coass_performance WHERE method = 'executeFetch' " +
-                            "GROUP BY identifier, status;");
-
-                    while(rs_1.next()){
-                        Double count = rs_1.getInt("cnt") * 1.0;
-                        String status = rs_1.getString("status");
-
-                        if(!res.containsKey(rs_1.getString("identifier"))){
-                            res.put(rs_1.getString("identifier"),
-                                    new HashMap(){{
-                                        put("count", count);
-                                        put("failed", status.equals("200") ? 0 : count);
-                                        put("success", status.equals("200") ? count : 0);
-                                        put("retLatency", rs_1.getDouble("rt_avg")*count);
-                                        put("cost", rs_1.getDouble("avg_cost"));
-                                    }});
-                        }
-                        else {
-                            HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
-
-                            temp.put("count", temp.get("count") + count);
-
-                            if(status.equals("200")) temp.put("success", temp.get("success") + count);
-                            else temp.put("failed", temp.get("failed") + count);
-
-                            temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency") * count));
-
-                            res.put(rs_1.getString("identifier"), temp);
-                        }
-                    }
-
-                    res.entrySet().parallelStream().forEach((entry) -> {
-                        String csId = entry.getKey();
-                        HashMap<String,Double> temp = entry.getValue();
-
-                        Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
-                        temp.put("retLatency", temp.get("retLatency")/no_success);
-                        temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0.0);
-
-                        if(!finalres.containsKey(csId)){
-                            finalres.put(csId, new BasicDBObject(){{
-                                put("reliability", temp);
-                            }});
-                        }
-                        else {
-                            BasicDBObject curr = finalres.get(csId);
-                            curr.put("reliability", temp);
-                            finalres.put(csId, curr);
-                        }
-                    });
-                }
-                catch(Exception ex){
-                    log.severe("Exception thrown when aggregating the context providers: "
-                            + ex.getMessage());
-                }
-            }));
-
-            for (Future<?> currTask : tasks) {
-                currTask.get();
             }
 
             persRecord.put("rawContext", new HashMap<>(finalres));
@@ -615,6 +474,156 @@ public class PerformanceLogHandler {
         }
         return null;
     }
+
+    private static Runnable sumCPReliability(ConcurrentHashMap<String, BasicDBObject>  finalres){
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+            ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
+                    "avg(response_time) AS rt_avg, avg(cost) AS avg_cost " +
+                    "FROM coass_performance WHERE method = 'executeFetch' " +
+                    "GROUP BY identifier, status;");
+
+            while(rs_1.next()){
+                Double count = rs_1.getInt("cnt") * 1.0;
+                String status = rs_1.getString("status");
+
+                if(!res.containsKey(rs_1.getString("identifier"))){
+                    res.put(rs_1.getString("identifier"),
+                            new HashMap(){{
+                                put("count", count);
+                                put("failed", status.equals("200") ? 0 : count);
+                                put("success", status.equals("200") ? count : 0);
+                                put("retLatency", rs_1.getDouble("rt_avg")*count);
+                                put("cost", rs_1.getDouble("avg_cost"));
+                            }});
+                }
+                else {
+                    HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                    temp.put("count", temp.get("count") + count);
+
+                    if(status.equals("200")) temp.put("success", temp.get("success") + count);
+                    else temp.put("failed", temp.get("failed") + count);
+
+                    temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency") * count));
+
+                    res.put(rs_1.getString("identifier"), temp);
+                }
+            }
+
+            res.entrySet().parallelStream().forEach((entry) -> {
+                String csId = entry.getKey();
+                HashMap<String,Double> temp = entry.getValue();
+
+                Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
+                temp.put("retLatency", temp.get("retLatency")/no_success);
+                temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0.0);
+
+                if(!finalres.containsKey(csId)){
+                    finalres.put(csId, new BasicDBObject(){{
+                        put("reliability", temp);
+                    }});
+                }
+                else {
+                    BasicDBObject curr = finalres.get(csId);
+                    curr.put("reliability", temp);
+                    finalres.put(csId, curr);
+                }
+            });
+        }
+        catch(Exception ex){
+            log.severe("Exception thrown when aggregating the context providers: "
+                    + ex.getMessage());
+        }
+        return null;
+    }
+
+    private static Runnable sumCPProfile(ConcurrentHashMap<String, BasicDBObject>  finalres){
+        AtomicLong missTime = new AtomicLong();
+        AtomicLong succsessTime = new AtomicLong();
+        AtomicLong partialMissTime = new AtomicLong();
+
+        AtomicLong missCnt = new AtomicLong();
+        AtomicLong successCnt = new AtomicLong();
+        AtomicLong partialMissCnt = new AtomicLong();
+
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+            ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, status, " +
+                    "count(fthresh) AS cnt, avg(response_time) as rt " +
+                    "FROM coass_performance WHERE method = 'cacheSearch' " +
+                    "GROUP BY identifier, fthresh, status;");
+
+            while(rs_1.next()){
+                if(rs_1.getString("status").equals("200")){
+                    Double count = rs_1.getInt("cnt") * 1.0;
+                    if(!res.containsKey(rs_1.getString("identifier"))){
+                        res.put(rs_1.getString("identifier"),
+                                new HashMap(){{
+                                    put("count", count);
+                                    put("fthresh", rs_1.getDouble("fthresh")*count);
+                                }});
+                    }
+                    else {
+                        HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                        temp.put("count", temp.get("count") + count);
+                        temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
+
+                        res.put(rs_1.getString("identifier"), temp);
+                    }
+                    succsessTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                    successCnt.addAndGet(rs_1.getLong("cnt"));
+                }
+                else {
+                    if(rs_1.getString("status").equals("400")){
+                        partialMissTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                        partialMissCnt.addAndGet(rs_1.getLong("cnt"));
+                    }
+                    else {
+                        missTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                        missCnt.addAndGet(rs_1.getLong("cnt"));
+                    }
+                }
+            }
+
+            ContextCacheHandler.updatePerfRegister(successCnt.get() > 0 ? succsessTime.get()/successCnt.get() : 0,
+                    partialMissCnt.get() > 0 ? partialMissTime.get()/partialMissCnt.get() : 0,
+                    missCnt.get() > 0 ? missTime.get()/missCnt.get() : 0);
+
+            res.entrySet().parallelStream().forEach((entry) -> {
+                String csId = entry.getKey();
+                HashMap<String,Double> temp = entry.getValue();
+
+                Double count = temp.get("count");
+                temp.put("fthresh", count > 0 ? temp.get("fthresh")/count : 0.7);
+
+                if(!finalres.containsKey(csId)){
+                    finalres.put(csId, new BasicDBObject(){{
+                        put("profile", temp);
+                    }});
+                }
+                else {
+                    BasicDBObject curr = finalres.get(csId);
+                    curr.put("profile", temp);
+                    finalres.put(csId, curr);
+                }
+            });
+        }
+        catch(Exception ex){
+            log.severe("Exception thrown when aggregating the context providers: "
+                    + ex.getMessage());
+            log.info(String.valueOf(ex.getStackTrace()));
+        }
+        return null;
+    }
+
 
     // Summarizing the performance of each context cache level
     private static Runnable getLevelPerformanceSummary(Document persRecord){
@@ -1163,12 +1172,13 @@ public class PerformanceLogHandler {
                     Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
                     Document rel = cp.get("reliability", Document.class);
 
-                    dataset[index][1] = cp.get("profile", Document.class).getDouble("fthresh");
+                    dataset[index][1] = cp.containsKey("profile") ?
+                            cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
                     dataset_2[index][1] = rel.getDouble("reliability");
                     dataset_3[index][1] = rel.getDouble("retLatency");
                     retLatList[index] = rel.getDouble("retLatency");
-                    dataset_4[index][1] = rel.getInteger("count");
-                    dataset_5[index][1] = rel.getInteger("cost");
+                    dataset_4[index][1] = rel.getDouble("count");
+                    dataset_5[index][1] = rel.getDouble("cost");
 
                     index ++;
                 }

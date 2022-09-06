@@ -41,7 +41,7 @@ public class SQEMInterceptor implements ServerInterceptor {
     private <T> void logMessage(String type, String method, T message, long responseTime) {
         // Asynchronously update the performance logs
         try{
-            if(!message.toString().equals("")){
+            if(message != null && !message.toString().equals("")){
                 SQEMResponse res = (SQEMResponse) message;
                 switch(method){
                     case "handleContextRequest":

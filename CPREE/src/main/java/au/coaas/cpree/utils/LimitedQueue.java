@@ -23,12 +23,15 @@ public class LimitedQueue<E> extends LinkedList<E> {
     }
 
     public double average() {
-        AtomicReference<Double> sum = new AtomicReference<>((double) 0);
-        super.forEach(value -> {
-            sum.updateAndGet(v -> new Double((v + (double) value)));
-        });
-        mean =  sum.get()/super.size();
-        return mean;
+        if(super.size() > 0){
+            AtomicReference<Double> sum = new AtomicReference<>((double) 0);
+            super.forEach(value -> {
+                sum.updateAndGet(v -> new Double((v + (double) value)));
+            });
+            mean =  sum.get()/super.size();
+            return mean;
+        }
+        return 0;
     }
 
     public double reverse(double teta) {

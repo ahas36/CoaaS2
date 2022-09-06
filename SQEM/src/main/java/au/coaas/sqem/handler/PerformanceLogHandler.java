@@ -120,14 +120,15 @@ public class PerformanceLogHandler {
     // Recording for profiling context consumers
     public static void consumerRecord(SummarySLA conSummary) {
         String queryString = "INSERT INTO consumer_slas "
-                + "VALUES('%s', '%d', %d, %d, %d, %s, %d, GETDATE());";
+                + "VALUES('%s', %f, %f, %d, %f, '%s', %d, GETDATE());";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
-            statement.executeUpdate(String.format(queryString,
+            String exec_string = String.format(queryString,
                     conSummary.getCsid(), conSummary.getFthresh(), conSummary.getEarning(),
                     conSummary.getRtmax(), conSummary.getPenalty(), conSummary.getQueryId(),
-                    conSummary.getQueryClass()));
+                    conSummary.getQueryClass());
+            statement.executeUpdate(exec_string);
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -138,7 +139,12 @@ public class PerformanceLogHandler {
     public static void coassPerformanceRecord(Statistic request) {
         String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
                 "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
-                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %d);";
+                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %f);";
+        String queryString_1 = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                "cost,identifier,hashKey,createdDatetime,isDelayed,age) " +
+                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d);";
+        String queryString_2 = "INSERT INTO coass_performance(method,status,response_time,identifier,createdDatetime,"+
+                "isDelayed, fthresh) VALUES('%s', '%s', %d, '%s', GETDATE(), %d, %f);";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -147,7 +153,7 @@ public class PerformanceLogHandler {
             switch(method){
                 case "execute" :{
                     // Value at the Identifier column here is the Query ID
-                    String formatted_string = String.format(queryString,
+                    String formatted_string = String.format(queryString_1,
                             method, // Method name
                             request.getStatus(), // Status of the request
                             request.getTime(), // Response time
@@ -156,7 +162,7 @@ public class PerformanceLogHandler {
                             request.getIdentifier(), // Context Service Identifier
                             "NULL", // Hashkey of the cached item
                             request.getIsDelayed() ? 1 : 0, // is Delayed?
-                            0, "NULL"); // age, fthresh
+                            0); // age
                     statement.executeUpdate(formatted_string);
                     break;
                 }
@@ -172,7 +178,7 @@ public class PerformanceLogHandler {
                             method, // Method name
                             request.getStatus(), // Status of the retrieval
                             request.getTime(), // Response time
-                            0, // Earnings from the retrieval (which is always 0)
+                            0.0, // Earnings from the retrieval (which is always 0)
                             request.getCost(), // Cost of retrieval
                             cs_id, // Context Service Identifier
                             hashKey, // Hashkey (cached or not cached)
@@ -183,16 +189,12 @@ public class PerformanceLogHandler {
                     break;
                 }
                 case "cacheSearch": {
-                    String formatted_string = String.format(queryString,
+                    String formatted_string = String.format(queryString_2,
                             method, // Method name
                             request.getStatus(), // Status of the request
                             request.getTime(), // Response time
-                            "NULL", // Earnings from the query
-                            "NULL", // Cost from query
                             request.getIdentifier(), // Context Service Identifier
-                            "NULL", // Hashkey of the cached item
                             0, // is Delayed?
-                            "NULL",//age
                             request.getEarning()); //fthresh
                     statement.executeUpdate(formatted_string);
                 }
@@ -475,7 +477,7 @@ public class PerformanceLogHandler {
 
                     while(rs_1.next()){
                         if(rs_1.getString("status").equals("200")){
-                            long count = rs_1.getInt("cnt");
+                            Double count = rs_1.getInt("cnt") * 1.0;
                             if(!res.containsKey(rs_1.getString("identifier"))){
                                 res.put(rs_1.getString("identifier"),
                                         new HashMap(){{
@@ -548,7 +550,7 @@ public class PerformanceLogHandler {
                             "GROUP BY identifier, status;");
 
                     while(rs_1.next()){
-                        long count = rs_1.getInt("cnt");
+                        Double count = rs_1.getInt("cnt") * 1.0;
                         String status = rs_1.getString("status");
 
                         if(!res.containsKey(rs_1.getString("identifier"))){
@@ -581,7 +583,7 @@ public class PerformanceLogHandler {
 
                         Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
                         temp.put("retLatency", temp.get("retLatency")/no_success);
-                        temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0);
+                        temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0.0);
 
                         if(!finalres.containsKey(csId)){
                             finalres.put(csId, new BasicDBObject(){{
@@ -951,7 +953,7 @@ public class PerformanceLogHandler {
                     "FROM consumer_slas GROUP BY queryClass, consumerId;");
 
             while(rs_1.next()){
-                long count = rs_1.getInt("cnt");
+                Double count = rs_1.getInt("cnt") * 1.0;
                 if(!res.containsKey(rs_1.getString("queryClass"))){
                     res.put(rs_1.getString("queryClass"),
                             new HashMap(){{

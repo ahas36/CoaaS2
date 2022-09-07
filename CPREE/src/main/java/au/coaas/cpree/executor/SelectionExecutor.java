@@ -184,7 +184,8 @@ public class SelectionExecutor {
 
                     if(cqc_profile.getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
-                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) : 0.7;
+                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+                                slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double lambda = Double.valueOf(profile.getExpAR()); // per second
@@ -242,7 +243,8 @@ public class SelectionExecutor {
                     // the eviction algorithm.
                     if(cqc_profile.getStatus().equals("200")) {
                         JSONObject slaObj = new JSONObject(sla);
-                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) : 0.7;
+                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+                                slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double lambda = Double.valueOf(profile.getExpAR()); // per second
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double exp_prd = lifetime * (1 - fthr);
@@ -296,7 +298,8 @@ public class SelectionExecutor {
     private static AbstractMap.SimpleEntry<Double,Double> getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
         /** Initializing the variables **/
-        double fthr = Double.valueOf(profile.getExpFthr());
+        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+                slaObj.getJSONObject("freshness").getDouble("fthresh");
         double lambda = Double.valueOf(profile.getExpAR()); // per second
         double rtmax = Double.valueOf(cqc_profile.getRtmax()); // seconds
         double retCost = Double.valueOf(profile.getExpCost());

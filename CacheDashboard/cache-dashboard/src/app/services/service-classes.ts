@@ -19,7 +19,7 @@ export class ExpSLA{
 
 export class CSMS{
   public handleContextRequest:Method;
-  public discoverMatchingService:Method;
+  public discoverMatchingServices:Method;
   public refreshContextEntity:Method;
 }
 
@@ -29,11 +29,11 @@ export class COASS{
 }
 
 export class Level{
-  public entity:Method;
-  public situfunction:Method;
-  public aggfunction:Method;
-  public contextrequest:Method;
-  public query:Method;
+  public entity:LevelStat;
+  public situfunction:LevelStat;
+  public aggfunction:LevelStat;
+  public contextrequest:LevelStat;
+  public query:LevelStat;
 }
 
 export class CacheStat{
@@ -58,25 +58,29 @@ export class LevelStat{
 
 export class Item{
   public id: string;
-  public hits: number;
-  public misses: number;
+  public hits: longType;
+  public misses: longType;
   public hitrate: number;
 }
 
 export class Summary{
   public gain: number;
   public avg_gain: number;
-  public no_of_queries: number;
-  public delayed_queries: number;
-  public no_of_retrievals: number;
-  public avg_query_overhead: number;
-  public avg_network_overhead: number;
+  public no_of_queries: longType;
+  public delayed_queries: longType;
+  public no_of_retrievals: longType;
+  public avg_query_overhead: longType;
+  public avg_network_overhead: longType;
   public avg_processing_overhead: number;
   public earning:  number;
   public cache_cost: number;
   public penalty_cost: number;
   public retrieval_cost: number;
   public processing_cost: number;
+}
+
+export class longType {
+  public $numberLong : string;
 }
 
 export class Method {
@@ -115,10 +119,18 @@ export class Queue<T> {
       return this._store[this._store.length-1];
     }
 
+    public notEmpty(){
+      return this._store.length > 0;
+    }
+
   }
 
   @Injectable()
-  export class QueryStats{
+  export class QueryStats {
+    public queries: [QueryData];
+  }
+  
+  export class QueryData{
     public location: Location;
     public address: String;
   }

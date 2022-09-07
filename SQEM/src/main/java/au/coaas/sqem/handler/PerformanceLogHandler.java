@@ -138,14 +138,6 @@ public class PerformanceLogHandler {
 
     // COASS Performance
     public static void coassPerformanceRecord(Statistic request) {
-        String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
-                "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
-                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %f);";
-        String queryString_1 = "INSERT INTO coass_performance(method,status,response_time,earning,"+
-                "cost,identifier,hashKey,createdDatetime,isDelayed,age) " +
-                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d);";
-        String queryString_2 = "INSERT INTO coass_performance(method,status,response_time,identifier,createdDatetime,"+
-                "isDelayed, fthresh) VALUES('%s', '%s', %d, '%s', GETDATE(), %d, %f);";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -154,6 +146,9 @@ public class PerformanceLogHandler {
             switch(method){
                 case "execute" :{
                     // Value at the Identifier column here is the Query ID
+                    String queryString_1 = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                            "cost,identifier,hashKey,createdDatetime,isDelayed,age) " +
+                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d);";
                     String formatted_string = String.format(queryString_1,
                             method, // Method name
                             request.getStatus(), // Status of the request
@@ -175,6 +170,9 @@ public class PerformanceLogHandler {
                     String cs_id = cs.getJSONObject("_id").getString("$oid");
 
                     // Value at the Identifier column here is the Context Service ID
+                    String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                            "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
+                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %f);";
                     String formatted_string = String.format(queryString,
                             method, // Method name
                             request.getStatus(), // Status of the retrieval
@@ -190,6 +188,8 @@ public class PerformanceLogHandler {
                     break;
                 }
                 case "cacheSearch": {
+                    String queryString_2 = "INSERT INTO coass_performance(method,status,response_time,identifier,createdDatetime,"+
+                            "isDelayed, fthresh) VALUES('%s', '%s', %d, '%s', GETDATE(), %d, %f);";
                     String formatted_string = String.format(queryString_2,
                             method, // Method name
                             request.getStatus(), // Status of the request
@@ -365,7 +365,7 @@ public class PerformanceLogHandler {
 
         try{
             ExecutorService executor = Executors.newFixedThreadPool(14);
-            Collection<Future<?>> tasks = new LinkedList<>();
+            ArrayList<Future<?>> tasks = new ArrayList<>();
 
             tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getCPREEPerfromanceSummary(persRecord); }));
@@ -378,15 +378,19 @@ public class PerformanceLogHandler {
             }
             persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
 
-            for (Future<?> currTask : tasks) {
-                currTask.get();
+            while(!tasks.isEmpty()){
+                Future<?> currTask = tasks.get(0);
+                if(currTask.isDone() || currTask.isCancelled()){
+                    currTask.get();
+                    tasks.remove(0);
+                }
             }
 
             // Backing up the performance data
-            executor.submit(() -> { persistPerformanceSummary(persRecord); });
+            tasks.add(executor.submit(() -> { persistPerformanceSummary(persRecord); }));
             // Updating the reinforcement learning model
             if(countIdx > 0){
-                executor.submit(() -> {
+                tasks.add(executor.submit(() -> {
                     try {
                         JSONObject cachingSummary = getCacheLives();
                         BasicDBObject summary = persRecord.get("summary", BasicDBObject.class);
@@ -429,9 +433,19 @@ public class PerformanceLogHandler {
                     catch(Exception ex){
                         log.info("Error occured when attempting to re-learn the model: " + ex.getMessage());
                     }
-                });
+                }));
             }
             countIdx++;
+
+            while(!tasks.isEmpty()){
+                Future<?> currTask = tasks.get(0);
+                if(currTask.isDone() || currTask.isCancelled()){
+                    currTask.get();
+                    tasks.remove(0);
+                }
+            }
+
+            executor.shutdown();
         }
         catch(Exception ex){
             log.severe(ex.getMessage());
@@ -799,6 +813,8 @@ public class PerformanceLogHandler {
             dbo.put("no_of_retrievals", totalRetrievals);
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
+            dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / (double) totalQueries : 0.0);
+            // This is a wrong calculation. Need to get theis from the cloud provider.
 
             double proc_cost = getProcessingCostPerSecond(totalQueries);
             ContextCacheHandler.updatePerfRegister("processCost", proc_cost);
@@ -1119,12 +1135,11 @@ public class PerformanceLogHandler {
         }
     }
 
-    static ExecutorService estimation_executor = Executors.newFixedThreadPool(8);
-
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
     public static ContextProviderProfile getContextProviderProfile(String cpId, String hashKey){
         try{
+
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");
 
@@ -1187,14 +1202,26 @@ public class PerformanceLogHandler {
                     }
                 }
 
+                ExecutorService estimation_executor = Executors.newFixedThreadPool(8);
+                ArrayList<Future<?>> taskList = new ArrayList<>();
+
                 // The list is inverted, so, estimating from x=-1.
-                estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); });
-                estimation_executor.submit(() -> { var_ratLatency.set(getVariance(retLatList)); });
-                estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); });
-                estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
-                estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); });
-                estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_3, -1)); });
-                estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_2, -1)); });
+                taskList.add(estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); }));
+                taskList.add(estimation_executor.submit(() -> { var_ratLatency.set(getVariance(retLatList)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_3, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_2, -1)); }));
+
+                while(!taskList.isEmpty()){
+                    Future<?> curr = taskList.get(0);
+                    if(curr.isDone() || curr.isCancelled()){
+                        curr.get();
+                        taskList.remove(0);
+                    }
+                }
+                estimation_executor.shutdown();
             }
             else if (count == 1) {
                 Document cp = result.first().get("rawContext", Document.class).get(cpId, Document.class);
@@ -1204,12 +1231,12 @@ public class PerformanceLogHandler {
             return ContextProviderProfile.newBuilder().setStatus("200")
                     .setExpFthr(Double.isNaN(exp_fthr.get()) ? "NaN" : (exp_fthr.get() < 0 || exp_fthr.get() > 1 ?
                             Double.toString(lastfthr) : Double.toString(exp_fthr.get())))
-                    .setRelaibility(Double.isNaN(exp_retLatency.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
-                            exp_retLatency.get() > 1 ? "1" : Double.toString(exp_retLatency.get()))
+                    .setRelaibility(Double.isNaN(exp_reliability.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
+                            exp_retLatency.get() > 1 ? "1" : Double.toString(exp_reliability.get()))
+                    .setExpRetLatency(Double.toString(exp_retLatency.get()/1000)) // In seconds
                     .setAccessTrend(Double.isNaN(exp_count.get()) ? "NaN" : Double.toString(exp_count.get()))
                     .setExpCost(Double.isNaN(exp_cost.get()) ? "NaN" : Double.toString(exp_cost.get()))
                     .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()/60)) // This is because the window is 60s
-                    .setExpRetLatency(Double.toString(exp_reliability.get()/1000))
                     .setRetVariance(var_ratLatency.get())
                     .setLastRetLatency(getLastRetrievalTime(cpId, hashKey)) // In seconds already
                     .build();
@@ -1221,8 +1248,6 @@ public class PerformanceLogHandler {
             return ContextProviderProfile.newBuilder().setStatus("500").build();
         }
     }
-
-    static ExecutorService regression_executor = Executors.newFixedThreadPool(3);
 
     public static QueryClassProfile getQueryClassProfile(String classId){
         try{
@@ -1255,7 +1280,7 @@ public class PerformanceLogHandler {
                 double[][] dataset_2 = new double[max_history][2];
                 double[][] dataset_3 = new double[max_history][2];
 
-                result.forEach((Block<Document>) document -> {
+                for(Document document : result){
                     dataset[index][0] = index;
                     dataset_2[index][0] = index;
                     dataset_3[index][0] = index;
@@ -1267,12 +1292,26 @@ public class PerformanceLogHandler {
                     dataset_2[index][1] = cqc.getDouble("earning");
                     dataset_3[index][1] = cqc.getDouble("penalty");
 
-                });
+                    index++;
+                };
+
+                ExecutorService regression_executor = Executors.newFixedThreadPool(3);
+                ArrayList<Future<?>> taskList = new ArrayList<>();
 
                 // The list is inverted, so, estimating from x=-1.
-                regression_executor.submit(() -> { exp_rtmax.set(predictExpectedValue(dataset, -1)); });
-                regression_executor.submit(() -> { exp_earning.set(predictExpectedValue(dataset_2, -1)); });
-                regression_executor.submit(() -> { exp_penalty.set(predictExpectedValue(dataset_3, -1)); });
+                taskList.add(regression_executor.submit(() -> { exp_rtmax.set(predictExpectedValue(dataset, -1)); }));
+                taskList.add(regression_executor.submit(() -> { exp_earning.set(predictExpectedValue(dataset_2, -1)); }));
+                taskList.add(regression_executor.submit(() -> { exp_penalty.set(predictExpectedValue(dataset_3, -1)); }));
+
+                while(!taskList.isEmpty()){
+                    Future<?> curr = taskList.get(0);
+                    if(curr.isDone() || curr.isCancelled()){
+                        curr.get();
+                        taskList.remove(0);
+                    }
+                }
+
+                regression_executor.shutdown();
             }
 
             return QueryClassProfile.newBuilder().setStatus("200")

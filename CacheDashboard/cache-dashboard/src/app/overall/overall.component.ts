@@ -529,7 +529,7 @@ export class OverallComponent implements OnInit {
       this.line5ChartData.push({ data: this.occupied_cache, label: 'Size Occupied' }); 
 
       this.data_occupied_cache = data.data_occupied_cache.get();
-      this.line5ChartData.push({ data: this.data_occupied_cache, label: 'Sizd Data Occupied' }); 
+      this.line5ChartData.push({ data: this.data_occupied_cache, label: 'Size Data Occupied' }); 
 
       this.pie2ChartData = data.cache_occupancy;
 

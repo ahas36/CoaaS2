@@ -11,6 +11,10 @@ import { ApiServiceService } from '../services/api-service.service';
 })
 export class CSMSComponent implements OnInit {
 
+  hcr = false;
+  dms = false;
+  rce = false;
+  
   hcr_ok;
   hcr_all;
   hcr_avg;
@@ -104,33 +108,43 @@ export class CSMSComponent implements OnInit {
     let data = this.serviceAPI.getCSMSPerformanceData();
 
     try{
-      // Top bar
-      this.hcr_ok = data.hcr_ok.get();
-      this.hcr_all = data.hcr_all.get();
-      this.hcr_avg = data.hcr_avg.get();
-      this.hcr_sucess = data.hcr_sucess.get();
-      this.hcrChartData = data.cur_hcr_break;
-      this.hcrlineChartData.push({ data: this.hcr_ok, label: 'Successful' });
-      this.hcrlineChartData.push({ data: this.hcr_all, label: 'Total' });
-
+      // 1st
+      if(data.hcr_ok.notEmpty()){
+        this.hcr = true;
+        this.hcr_ok = data.hcr_ok.get();
+        this.hcr_all = data.hcr_all.get();
+        this.hcr_avg = data.hcr_avg.get();
+        this.hcr_sucess = data.hcr_sucess.get();
+        this.hcrChartData = data.cur_hcr_break;
+        this.hcrlineChartData.push({ data: this.hcr_ok, label: 'Successful' });
+        this.hcrlineChartData.push({ data: this.hcr_all, label: 'Total' });
+      }
+      
       // 2nd
-      this.dms_ok = data.dms_ok.get();
-      this.dms_all = data.dms_all.get();
-      this.dms_avg = data.dms_avg.get();
-      this.dms_sucess = data.dms_sucess.get();
-      this.dmsChartData = data.cur_dms_break;
-      this.dmslineChartData.push({ data: this.dms_ok, label: 'Successful' });
-      this.dmslineChartData.push({ data: this.dms_all, label: 'Total' });
-
+      console.log(data.dms_ok.notEmpty())
+      if(data.dms_ok.notEmpty()){
+        this.dms = true;
+        this.dms_ok = data.dms_ok.get();
+        this.dms_all = data.dms_all.get();
+        this.dms_avg = data.dms_avg.get();
+        this.dms_sucess = data.dms_sucess.get();
+        this.dmsChartData = data.cur_dms_break;
+        this.dmslineChartData.push({ data: this.dms_ok, label: 'Successful' });
+        this.dmslineChartData.push({ data: this.dms_all, label: 'Total' });
+      }
+      
       // 3rd 
-      this.rce_ok = data.rce_ok.get();
-      this.rce_all = data.rce_all.get();
-      this.rce_avg = data.rce_avg.get();
-      this.rce_sucess = data.rce_sucess.get();
-      this.rceChartData = data.cur_rce_break;
-      this.rcelineChartData.push({ data: this.rce_ok, label: 'Successful' });
-      this.rcelineChartData.push({ data: this.rce_all, label: 'Total' });
-    
+      if(data.rce_ok.notEmpty()){
+        this.rce = true;
+        this.rce_ok = data.rce_ok.get();
+        this.rce_all = data.rce_all.get();
+        this.rce_avg = data.rce_avg.get();
+        this.rce_sucess = data.rce_sucess.get();
+        this.rceChartData = data.cur_rce_break;
+        this.rcelineChartData.push({ data: this.rce_ok, label: 'Successful' });
+        this.rcelineChartData.push({ data: this.rce_all, label: 'Total' });
+      }
+      
       // General
       this.timeTicks = data.timeTicks.get();
 
@@ -146,31 +160,41 @@ export class CSMSComponent implements OnInit {
 
     try{
       // Top bar
-      this.hcr_ok = data.hcr_ok.get();
-      this.hcr_all = data.hcr_all.get();
-      this.hcr_avg = data.hcr_avg.get();
-      this.hcr_sucess = data.hcr_sucess.get();
-      this.hcrChartData = data.cur_hcr_break;
-      this.hcrlineChartData[0].data = this.hcr_ok;
-      this.hcrlineChartData[1].data = this.hcr_all;;
+      if(data.hcr_ok.notEmpty()){
+        this.hcr = true;
+        this.hcr_ok = data.hcr_ok.get();
+        this.hcr_all = data.hcr_all.get();
+        this.hcr_avg = data.hcr_avg.get();
+        this.hcr_sucess = data.hcr_sucess.get();
+        this.hcrChartData = data.cur_hcr_break;
+        this.hcrlineChartData[0].data = this.hcr_ok;
+        this.hcrlineChartData[1].data = this.hcr_all;
+      }
+      
 
       // 2nd
-      this.dms_ok = data.dms_ok.get();
-      this.dms_all = data.dms_all.get();
-      this.dms_avg = data.dms_avg.get();
-      this.dms_sucess = data.dms_sucess.get();
-      this.dmsChartData = data.cur_dms_break;
-      this.dmslineChartData[0].data = this.dms_ok;
-      this.dmslineChartData[1].data = this.dms_all;
+      if(data.dms_ok.notEmpty()){
+        this.dms = true;
+        this.dms_ok = data.dms_ok.get();
+        this.dms_all = data.dms_all.get();
+        this.dms_avg = data.dms_avg.get();
+        this.dms_sucess = data.dms_sucess.get();
+        this.dmsChartData = data.cur_dms_break;
+        this.dmslineChartData[0].data = this.dms_ok;
+        this.dmslineChartData[1].data = this.dms_all;
+      }
 
       // 3rd 
-      this.rce_ok = data.rce_ok.get();
-      this.rce_all = data.rce_all.get();
-      this.rce_avg = data.rce_avg.get();
-      this.rce_sucess = data.rce_sucess.get();
-      this.rceChartData = data.cur_rce_break;
-      this.rcelineChartData[0].data = this.rce_ok;
-      this.rcelineChartData[1].data = this.rce_all;
+      if(data.rce_ok.notEmpty()){
+        this.rce = true;
+        this.rce_ok = data.rce_ok.get();
+        this.rce_all = data.rce_all.get();
+        this.rce_avg = data.rce_avg.get();
+        this.rce_sucess = data.rce_sucess.get();
+        this.rceChartData = data.cur_rce_break;
+        this.rcelineChartData[0].data = this.rce_ok;
+        this.rcelineChartData[1].data = this.rce_all;
+      }
     
       // General
       this.timeTicks = data.timeTicks.get();

@@ -8,6 +8,8 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -56,8 +58,14 @@ public class QueryStatHandler {
                     Filters.eq("day", day)
             )).map(Document::toJson).into(new ArrayList<>());
 
-            Gson gson = new Gson();
-            return gson.toJson(queries);
+            JSONArray resList = new JSONArray();
+            queries.stream().parallel().forEach(item -> {
+                resList.put(new JSONObject(item));
+            });
+
+            JSONObject result = new JSONObject();
+            result.put("queries", resList);
+            return result.toString();
 
         } catch (Exception e) {
             log.severe(e.getMessage());

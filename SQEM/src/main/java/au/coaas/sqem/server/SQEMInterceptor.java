@@ -42,17 +42,18 @@ public class SQEMInterceptor implements ServerInterceptor {
         // Asynchronously update the performance logs
         try{
             if(message != null && !message.toString().equals("")){
-                SQEMResponse res = (SQEMResponse) message;
                 switch(method){
                     case "handleContextRequest":
                     case "discoverMatchingServices":
                     case "refreshContextEntity": {
                         // Log response time
+                        SQEMResponse res = (SQEMResponse) message;
                         PerformanceLogHandler.genericRecord(method, res.getStatus(), responseTime);
                         break;
                     }
                     case "handleContextRequestInCache": {
                         // LogicalContextLevel level, String id, Boolean isHit, long rTime
+                        SQEMResponse res = (SQEMResponse) message;
                         PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY, res.getHashKey(),
                                 res.getStatus().equals("200"), responseTime);
                         break;

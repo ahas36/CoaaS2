@@ -35,7 +35,7 @@ public class SelectionExecutor {
 
     // Dynamic Registries
     private static Hashtable<String, LocalDateTime> delayRegistry = new Hashtable<>();
-    private static Hashtable<String, Double> cacheLookupLatency;
+    private static Hashtable<String, Double> cacheLookupLatency = new Hashtable<>();
     private static LimitedQueue<Double> valueHistory = new LimitedQueue<>(1000);
 
     private static ExecutorService executor = Executors.newScheduledThreadPool(20);
@@ -66,14 +66,6 @@ public class SelectionExecutor {
         SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
         CachePerformance result = blockingStub.getcachePerformance(au.coaas.sqem.proto.Empty.newBuilder().build());
-
-        if(cacheLookupLatency == null) {
-            cacheLookupLatency = new Hashtable() {{
-                put("200", 0.0);
-                put("404", 0.0);
-                put("400", 0.0);
-            }};
-        }
 
         // These time related values are in Seconds, and monetary in AUD
         if(result.getStatus().equals("200")){
@@ -143,7 +135,7 @@ public class SelectionExecutor {
                         .setBody("Failed to fetch context provider profile.").build();
         }
         catch(Exception ex){
-            log.severe("Could not refresh context!");
+            log.severe("Error occured when evaluating to cache!");
             log.info("Cause: " + ex.getMessage());
             return CPREEResponse.newBuilder().setStatus("500")
                     .setBody(ex.getMessage()).build();
@@ -155,6 +147,8 @@ public class SelectionExecutor {
         try {
             boolean cache = false;
             boolean forcedDirector = true;
+
+            if(cacheLookupLatency.isEmpty()) updateCacheRecord();
 
             RefreshLogics ref_type;
             String contextId = lookup.getServiceId() + "-" + hashkey;
@@ -190,7 +184,7 @@ public class SelectionExecutor {
 
                     if(cqc_profile.getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
-                        double fthr = Double.valueOf(profile.getExpFthr());
+                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) : 0.7;
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double lambda = Double.valueOf(profile.getExpAR()); // per second
@@ -248,7 +242,7 @@ public class SelectionExecutor {
                     // the eviction algorithm.
                     if(cqc_profile.getStatus().equals("200")) {
                         JSONObject slaObj = new JSONObject(sla);
-                        double fthr = Double.valueOf(profile.getExpFthr());
+                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) : 0.7;
                         double lambda = Double.valueOf(profile.getExpAR()); // per second
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double exp_prd = lifetime * (1 - fthr);
@@ -301,7 +295,6 @@ public class SelectionExecutor {
 
     private static AbstractMap.SimpleEntry<Double,Double> getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
-
         /** Initializing the variables **/
         double fthr = Double.valueOf(profile.getExpFthr());
         double lambda = Double.valueOf(profile.getExpAR()); // per second

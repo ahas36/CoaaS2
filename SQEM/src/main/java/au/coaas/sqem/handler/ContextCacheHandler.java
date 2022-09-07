@@ -33,9 +33,9 @@ public class ContextCacheHandler {
 
     public static void updatePerfRegister(double success, double par_miss, double miss) {
         if(currentPerf == null) currentPerf = new Hashtable<>();
-        currentPerf.put("200", Math.round(success));
-        currentPerf.put("400", Math.round(par_miss));
-        currentPerf.put("404", Math.round(miss));
+        currentPerf.put("200", success);
+        currentPerf.put("400", par_miss);
+        currentPerf.put("404", miss);
     }
 
     public static void updatePerfRegister(String key, double value) {
@@ -309,13 +309,13 @@ public class ContextCacheHandler {
             // All values returned are in Seconds
             return CachePerformance.newBuilder()
                     .setStatus("200")
-                    .setHitLatency((long)currentPerf.get("200")/1000)
-                    .setMissLatency((long)currentPerf.get("404")/1000)
-                    .setPartialMissLatency((long)currentPerf.get("400")/1000)
-                    .setCacheCost((double)currentPerf.get("cacheCost"))
-                    .setCostPerByte((double)currentPerf.get("costPerByte"))
-                    .setProcessCost((double)currentPerf.get("processCost"))
-                    .setCacheUtility((double)currentPerf.get("cacheUtility")).build();
+                    .setHitLatency((double)currentPerf.get("200")/1000.0)
+                    .setMissLatency((double)currentPerf.get("404")/1000.0)
+                    .setPartialMissLatency((double)currentPerf.get("400")/1000.0)
+                    .setCacheCost(currentPerf.contains("cacheCost") ? (double)currentPerf.get("cacheCost") : 0.0)
+                    .setCostPerByte(currentPerf.contains("costPerByte") ? (double)currentPerf.get("costPerByte") : 0.0)
+                    .setProcessCost(currentPerf.contains("processCost") ? (double)currentPerf.get("processCost") : 0.0)
+                    .setCacheUtility(currentPerf.contains("cacheUtility") ? (double)currentPerf.get("cacheUtility") : 0.0).build();
         }
         else return CachePerformance.newBuilder().setStatus("404").build();
     }

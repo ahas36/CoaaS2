@@ -13,6 +13,7 @@ import au.coaas.sqem.util.Utilty;
 import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
 import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
@@ -467,6 +468,7 @@ public class PerformanceLogHandler {
             }
 
             persRecord.put("rawContext", new HashMap<>(finalres));
+            executor.shutdown();
         }
         catch (Exception ex){
             log.severe("Exception thrown when aggregating the context providers: "
@@ -542,9 +544,9 @@ public class PerformanceLogHandler {
     }
 
     private static Runnable sumCPProfile(ConcurrentHashMap<String, BasicDBObject>  finalres){
-        AtomicLong missTime = new AtomicLong();
-        AtomicLong succsessTime = new AtomicLong();
-        AtomicLong partialMissTime = new AtomicLong();
+        AtomicDouble missTime = new AtomicDouble();
+        AtomicDouble succsessTime = new AtomicDouble();
+        AtomicDouble partialMissTime = new AtomicDouble();
 
         AtomicLong missCnt = new AtomicLong();
         AtomicLong successCnt = new AtomicLong();
@@ -567,7 +569,7 @@ public class PerformanceLogHandler {
                         res.put(rs_1.getString("identifier"),
                                 new HashMap(){{
                                     put("count", count);
-                                    put("fthresh", rs_1.getDouble("fthresh")*count);
+                                    put("fthresh", rs_1.getDouble("fthresh") * count);
                                 }});
                     }
                     else {
@@ -578,24 +580,24 @@ public class PerformanceLogHandler {
 
                         res.put(rs_1.getString("identifier"), temp);
                     }
-                    succsessTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                    succsessTime.addAndGet(rs_1.getDouble("rt") * rs_1.getLong("cnt"));
                     successCnt.addAndGet(rs_1.getLong("cnt"));
                 }
                 else {
                     if(rs_1.getString("status").equals("400")){
-                        partialMissTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                        partialMissTime.addAndGet(rs_1.getDouble("rt") * rs_1.getLong("cnt"));
                         partialMissCnt.addAndGet(rs_1.getLong("cnt"));
                     }
                     else {
-                        missTime.addAndGet(rs_1.getLong("rt") * rs_1.getLong("cnt"));
+                        missTime.addAndGet(rs_1.getDouble("rt") * rs_1.getLong("cnt"));
                         missCnt.addAndGet(rs_1.getLong("cnt"));
                     }
                 }
             }
 
-            ContextCacheHandler.updatePerfRegister(successCnt.get() > 0 ? succsessTime.get()/successCnt.get() : 0,
-                    partialMissCnt.get() > 0 ? partialMissTime.get()/partialMissCnt.get() : 0,
-                    missCnt.get() > 0 ? missTime.get()/missCnt.get() : 0);
+            ContextCacheHandler.updatePerfRegister(successCnt.get() > 0 ? succsessTime.get()/successCnt.get() : 0.0,
+                    partialMissCnt.get() > 0 ? partialMissTime.get()/partialMissCnt.get() : 0.0,
+                    missCnt.get() > 0 ? missTime.get()/missCnt.get() : 0.0);
 
             res.entrySet().parallelStream().forEach((entry) -> {
                 String csId = entry.getKey();
@@ -1162,25 +1164,27 @@ public class PerformanceLogHandler {
                 double[] retLatList = new double[count];
 
                 for(Document document : result){
-                    dataset[index][0] = index;
-                    dataset_2[index][0] = index;
-                    dataset_3[index][0] = index;
-                    dataset_4[index][0] = index;
-                    dataset_5[index][0] = index;
-
                     // Expected freshness threshold, reliability, and retrieval latency
                     Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
                     Document rel = cp.get("reliability", Document.class);
 
-                    dataset[index][1] = cp.containsKey("profile") ?
-                            cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
-                    dataset_2[index][1] = rel.getDouble("reliability");
-                    dataset_3[index][1] = rel.getDouble("retLatency");
-                    retLatList[index] = rel.getDouble("retLatency");
-                    dataset_4[index][1] = rel.getDouble("count");
-                    dataset_5[index][1] = rel.getDouble("cost");
+                    if(rel != null){
+                        dataset[index][0] = index;
+                        dataset_2[index][0] = index;
+                        dataset_3[index][0] = index;
+                        dataset_4[index][0] = index;
+                        dataset_5[index][0] = index;
 
-                    index ++;
+                        dataset[index][1] = cp.containsKey("profile") ?
+                                cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
+                        dataset_2[index][1] = rel.getDouble("reliability");
+                        dataset_3[index][1] = rel.getDouble("retLatency");
+                        retLatList[index] = rel.getDouble("retLatency");
+                        dataset_4[index][1] = rel.getDouble("count");
+                        dataset_5[index][1] = rel.getDouble("cost");
+
+                        index ++;
+                    }
                 }
 
                 // The list is inverted, so, estimating from x=-1.
@@ -1189,8 +1193,8 @@ public class PerformanceLogHandler {
                 estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); });
                 estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
                 estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); });
-                estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_2, -1)); });
-                estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_3, -1)); });
+                estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_3, -1)); });
+                estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_2, -1)); });
             }
             else if (count == 1) {
                 Document cp = result.first().get("rawContext", Document.class).get(cpId, Document.class);
@@ -1307,18 +1311,21 @@ public class PerformanceLogHandler {
             FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(distribution_history);
 
             AtomicInteger count = new AtomicInteger();
-            int total = Iterables.size(result);
+            AtomicInteger total = new AtomicInteger(Iterables.size(result));
             double rtmax = request.getThreshold() * 1000; // Converting to miliseconds
 
             result.forEach((Block<Document>) document -> {
                 Document rel = document.get("rawContext", Document.class)
                                 .get(request.getPrimaryKey(), Document.class)
                                 .get("reliability", Document.class);
-                if(rel.getDouble("retLatency") >=  rtmax)
-                    count.getAndIncrement();
+                if(rel != null){
+                    if(rel.getDouble("retLatency") >=  rtmax)
+                        count.getAndIncrement();
+                }
+                else total.addAndGet(-1);
             });
 
-            return ProbDelay.newBuilder().setValue(count.get()/total).build();
+            return ProbDelay.newBuilder().setValue(count.get()/ total.get()).build();
         }
         catch(Exception ex){
             log.severe(ex.getMessage());

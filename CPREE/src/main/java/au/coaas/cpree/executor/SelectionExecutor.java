@@ -101,6 +101,7 @@ public class SelectionExecutor {
                 // Evaluate and Cache if selected
                 AbstractMap.SimpleEntry<Boolean, RefreshLogics> result = evaluateAndCache(request.getContext(),
                         request.getReference(), request.getSla(),profile, hashKey);
+
                 if(result.getKey()){
                     // Configuring refreshing
                     executor.execute(() -> {
@@ -124,6 +125,7 @@ public class SelectionExecutor {
                                     .build());
                         }
                     });
+
                     // Using 200 considering the creation of the hash key and successfully caching.
                     return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
                 }

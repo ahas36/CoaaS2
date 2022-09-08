@@ -44,14 +44,14 @@ public class RefreshExecutor {
             SQEMResponse cpInfo = blockingStub.getContextServiceInfo(ContextServiceId.newBuilder()
                             .setId(refreshRequest.getRequest().getReference().getServiceId()).build());
 
-            if(cpInfo.getStatus() == "200"){
+            if(cpInfo.getStatus().equals("200")){
                 String contextId = refreshRequest.getRequest().getReference().getServiceId() + "-" + refreshRequest.getHashKey();
                 RefreshContext refObject = new RefreshContext(contextId,
                         refreshRequest.getFthreh(),
                         refreshRequest.getRefreshPolicy(),
                         refreshRequest.getResiLifetime(),
                         refreshRequest.getLifetime(),
-                        (HashMap<String, String>) refreshRequest.getRequest().getReference().getParamsMap(),
+                        refreshRequest.getRequest().getReference().getParamsMap(),
                         cpInfo.getBody(),
                         refreshRequest.getEt());
 
@@ -60,7 +60,8 @@ public class RefreshExecutor {
                 }
                 refreshScheduler.scheduleRefresh(refObject);
             }
-            throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
+            else
+                throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
         }
         catch(Exception ex){
             log.severe("Could not refresh context!");
@@ -83,7 +84,7 @@ public class RefreshExecutor {
                 RefreshContext refObject = new RefreshContext(contextId,
                         fthr, request.getRefreshPolicy(),
                         resiLife, lifetime,
-                        (HashMap<String, String>) request.getRequest().getReference().getParamsMap(),
+                        request.getRequest().getReference().getParamsMap(),
                         cpInfo.getBody(),
                         request.getRequest().getReference().getEt());
 

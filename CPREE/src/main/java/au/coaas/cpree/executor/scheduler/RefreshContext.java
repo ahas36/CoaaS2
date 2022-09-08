@@ -14,7 +14,7 @@ public class RefreshContext {
     private String refreshPolicy;
     private String contextProvider;
     private ContextEntityType etype;
-    private HashMap<String, String> params;
+    private Map<String, String> params;
 
     private long initInterval;
     private long refreshInterval; // This is in miliseconds
@@ -22,7 +22,7 @@ public class RefreshContext {
     // Refresh Interval is specific to the next retrieval only because,
     // refInteral = Lifetime - age - retrievalLatency
     public RefreshContext(String contextId, double fthr, String refreshPolicy, double initResiLife,
-                          double lifetime, HashMap<String, String> params, String contextProvider, ContextEntityType et){
+                          double lifetime, Map<String, String> params, String contextProvider, ContextEntityType et){
         this.etype = et;
         this.fthr = fthr;
         this.params = params;
@@ -64,7 +64,7 @@ public class RefreshContext {
     public long getInitInterval() { return this.initInterval; }
     public String getRefreshPolicy() { return this.refreshPolicy; }
     public long getRefreshInterval() { return this.refreshInterval; }
-    public HashMap<String, String> getParams() { return this.params; }
+    public Map<String, String> getParams() { return this.params; }
     public String getContextProvider() { return this.contextProvider; }
 
     public JobDataMap getJobDataMap() {

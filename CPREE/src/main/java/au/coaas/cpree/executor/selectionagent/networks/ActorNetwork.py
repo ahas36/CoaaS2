@@ -30,7 +30,7 @@ class ActorNetwork(keras.Model):
 
         mu = self.mu(action_value)
         sigma = self.sigma(action_value)
-        sigma = tf.clip_by_value(sigma, clip_value_min=0, clip_value_max=1)
+        sigma = tf.clip_by_value(sigma, clip_value_min = self.noise, clip_value_max = 1)
 
         return mu, sigma
     

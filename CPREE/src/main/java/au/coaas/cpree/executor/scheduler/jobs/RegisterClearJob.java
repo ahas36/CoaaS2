@@ -2,6 +2,7 @@ package au.coaas.cpree.executor.scheduler.jobs;
 
 import au.coaas.cpree.executor.RefreshExecutor;
 
+import au.coaas.cpree.executor.SelectionExecutor;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 
@@ -14,6 +15,7 @@ public class RegisterClearJob implements Job {
     public void execute(JobExecutionContext context) {
         try {
             RefreshExecutor.clearAttemptRegistery();
+            SelectionExecutor.updateCacheRecord();
         }
         catch(Exception ex) {
             log.severe("Error clearing registers: " + ex.getMessage());

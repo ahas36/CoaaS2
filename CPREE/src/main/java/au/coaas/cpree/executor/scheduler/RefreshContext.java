@@ -14,7 +14,7 @@ public class RefreshContext {
     private String refreshPolicy;
     private String contextProvider;
     private ContextEntityType etype;
-    private HashMap<String, String> params;
+    private Map<String, String> params;
 
     private long initInterval;
     private long refreshInterval; // This is in miliseconds
@@ -22,7 +22,7 @@ public class RefreshContext {
     // Refresh Interval is specific to the next retrieval only because,
     // refInteral = Lifetime - age - retrievalLatency
     public RefreshContext(String contextId, double fthr, String refreshPolicy, double initResiLife,
-                          double lifetime, HashMap<String, String> params, String contextProvider, ContextEntityType et){
+                          double lifetime, Map<String, String> params, String contextProvider, ContextEntityType et){
         this.etype = et;
         this.fthr = fthr;
         this.params = params;
@@ -30,9 +30,31 @@ public class RefreshContext {
         this.contextId = contextId;
         this.refreshPolicy = refreshPolicy;
         this.contextProvider = contextProvider;
+
+        JSONObject cpObj = new JSONObject(this.contextProvider);
+        double samplingInt = cpObj.getJSONObject("sla").getJSONObject("updateFrequency").getDouble("value");
+
         // The parameter, when passed, should be set in seconds.
-        this.refreshInterval = (long) (lifetime * 1000 * (1 - fthr));
-        this.initInterval = (long) (initResiLife * 1000 * (1 - fthr));
+        double adjustment = lifetime - initResiLife;
+        if(lifetime > samplingInt){
+            this.refreshInterval = (long) (samplingInt + ((lifetime - samplingInt) * (1 - fthr))) * 1000;
+            if(adjustment < samplingInt) {
+                // If the retrieval latency + age loss is less than the sampling interval
+                this.initInterval = (long) (samplingInt + ((initResiLife - samplingInt) * (1 - fthr))) * 1000;
+            }
+            else {
+                double diff = adjustment - samplingInt;
+                double exp_prd = (lifetime - samplingInt) * (1 - fthr);
+                // Checking if the exp_prd has already elapsed that the item need immediatly be refreshed.
+                if(exp_prd < diff) this.initInterval = 0;
+                else this.initInterval = (long) (samplingInt + exp_prd) * 1000;
+            }
+        }
+        else {
+            this.refreshInterval = (long) (samplingInt) * 1000;
+            this.initInterval = (long) (initResiLife * (1 - fthr)) * 1000;
+        }
+
     }
 
     // Getters
@@ -42,7 +64,7 @@ public class RefreshContext {
     public long getInitInterval() { return this.initInterval; }
     public String getRefreshPolicy() { return this.refreshPolicy; }
     public long getRefreshInterval() { return this.refreshInterval; }
-    public HashMap<String, String> getParams() { return this.params; }
+    public Map<String, String> getParams() { return this.params; }
     public String getContextProvider() { return this.contextProvider; }
 
     public JobDataMap getJobDataMap() {

@@ -7,8 +7,10 @@ export class SummaryModel{
   public avg_gain: Queue<number>;
   
   public earning: Queue<number>;
+  public cache_cost: Queue<number>;
   public penalty_cost: Queue<number>;
   public retrieval_cost: Queue<number>;
+  public processing_cost: Queue<number>;
   public costearningratio: Queue<number>;
 
   public no_of_queries: Queue<number>;
@@ -31,14 +33,21 @@ export class SummaryModel{
   public occupied_cache: Queue<number>;
   public data_occupied_cache: Queue<number>;
   public cache_occupancy;
+
+  public exp_pen: Queue<number>;
+  public exp_fth: Queue<number>;
+  public exp_earn: Queue<number>;
+  public exp_rtmax: Queue<number>;
     
   constructor(){
     this.gain = new Queue<number>();
     this.avg_gain = new Queue<number>();
   
     this.earning = new Queue<number>();
+    this.cache_cost = new Queue<number>();
     this.penalty_cost = new Queue<number>();
     this.retrieval_cost = new Queue<number>();
+    this.processing_cost = new Queue<number>();
     this.costearningratio = new Queue<number>();
 
     this.no_of_queries = new Queue<number>();
@@ -61,6 +70,11 @@ export class SummaryModel{
     this.occupied_cache = new Queue<number>();
     this.data_occupied_cache = new Queue<number>();
     this.cache_occupancy = [];
+
+    this.exp_pen = new Queue<number>();
+    this.exp_fth = new Queue<number>();
+    this.exp_earn = new Queue<number>();
+    this.exp_rtmax = new Queue<number>();
   }   
 }
 
@@ -71,7 +85,6 @@ export class CSMSModel{
   public hcr_avg: Queue<number>;
   public hcr_sucess: Queue<number>;
   public cur_hcr_break;
-
 
   public dms_ok: Queue<number>; 
   public dms_all: Queue<number>;
@@ -122,7 +135,6 @@ export class LevelsModel{
   public entity_items_miss;
   public entity_items_hr;
   public entity_nos;
-
 
   public situfunc_hr: Queue<number>;
   public situfunc_hit_rt: Queue<number>;
@@ -208,5 +220,40 @@ export class SimpleModel{
   constructor(){
     this.query_load = new Queue<number>();
     this.timeTicks = new Queue<number>();
+  }
+}
+
+@Injectable()
+export class LearningModel{
+  public threshold: Queue<number>;
+  public kappa: Queue<number>;
+  public mu: Queue<number>;
+  public pi: Queue<number>;
+  public delta: Queue<number>;
+  public row: Queue<number>;
+  public avg_cachelife: Queue<number>;
+  public avg_delaytime: Queue<number>;
+  public avg_reward: Queue<number>;
+  public timeTicks: Queue<number>;
+
+  public reward_th;
+  public cl_th;
+  public dt_th;
+
+  constructor(){
+    this.threshold = new Queue<number>();
+    this.kappa = new Queue<number>();
+    this.mu = new Queue<number>();
+    this.pi = new Queue<number>();
+    this.delta = new Queue<number>();
+    this.row = new Queue<number>();
+    this.avg_cachelife = new Queue<number>();
+    this.avg_delaytime = new Queue<number>();
+    this.avg_reward = new Queue<number>();
+    this.timeTicks = new Queue<number>();
+
+    this.reward_th = [];
+    this.cl_th = [];
+    this.dt_th = [];
   }
 }

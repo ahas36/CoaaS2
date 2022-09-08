@@ -13,6 +13,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.logging.Logger;
@@ -154,7 +155,7 @@ public class ContextServiceHandler {
 
             MongoCollection<Document> collection = db.getCollection("contextService");
             BasicDBObject query = new BasicDBObject() {{
-                put("_id", contextProviderId);
+                put("_id", new ObjectId(contextProviderId));
             }};
 
             Document cpInfo = collection.find(query).first();

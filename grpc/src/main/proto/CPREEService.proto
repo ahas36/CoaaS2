@@ -33,7 +33,8 @@ message ProactiveRefreshRequest {
     double lifetime = 4;
     string hashKey = 5;
     string refreshPolicy = 6;
-    au.coaas.cqp.proto.ContextEntityType et = 7;
+    double samplingInterval = 7;
+    au.coaas.cqp.proto.ContextEntityType et = 8;
 }
 
 message ContextRefreshRequest {
@@ -41,9 +42,19 @@ message ContextRefreshRequest {
   string refreshPolicy = 2;
 }
 
+message LearnedWeights {
+  double threshold = 1;
+  double kappa = 2;
+  double mu = 3;
+  double pi = 4;
+  double delta = 5;
+  double row = 6;
+}
+
 service CPREEService {
   rpc classifyQuery (ContextQueryPlan) returns (CPREEResponse);
   rpc evaluateAndCacheContext (CacheSelectionRequest) returns (CPREEResponse);
   rpc refreshContext (ContextRefreshRequest) returns (CPREEResponse);
+  rpc updateWeights (LearnedWeights) returns (Empty);
 }
 

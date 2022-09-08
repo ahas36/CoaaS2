@@ -14,6 +14,7 @@ import org.redisson.api.*;
 
 import java.util.Map;
 import java.time.Instant;
+import java.util.Hashtable;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
 
@@ -24,6 +25,27 @@ public class ContextCacheHandler {
     private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
     private static CacheDataRegistry registry = CacheDataRegistry.getInstance();
     private static final String regex = "^[\\d\\.]*[BGKM%]{0,1}$";
+    private static Hashtable<String, Object> currentPerf;
+
+    // Considering a free tier node is used
+    private static final double cache_node_cost = 0.0;
+    private static final double cache_cost_per_gb = 0.3; // In AWS
+
+    public static void updatePerfRegister(double success, double par_miss, double miss) {
+        if(currentPerf == null) currentPerf = new Hashtable<>();
+        currentPerf.put("200", success);
+        currentPerf.put("400", par_miss);
+        currentPerf.put("404", miss);
+    }
+
+    public static void updatePerfRegister(String key, double value) {
+        if(currentPerf == null) currentPerf = new Hashtable<>();
+        currentPerf.put(key,value);
+    }
+
+    public static Object getCachePerfStat(String key){
+        return currentPerf.containsKey(key) ? currentPerf.get(key) : 0.0;
+    }
 
     // Caches all context under an entity
     public static SQEMResponse cacheEntity(CacheRequest registerRequest) {
@@ -37,6 +59,8 @@ public class ContextCacheHandler {
             synchronized (ContextCacheHandler.class){
                 ent.set (entityJson);
             }
+
+            PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife());
 
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
         } catch (Exception e) {
@@ -141,6 +165,7 @@ public class ContextCacheHandler {
 
     // Retrieve entity context from cache
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
+        long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpRegistry(request);
 
         if(!result.getHashkey().equals("") && result.getIsCached() && result.getIsValid()){
@@ -154,8 +179,10 @@ public class ContextCacheHandler {
                 Document entityContext = ent.get();
                 lock.unlockAsync();
 
+                long endTime = System.currentTimeMillis();
+
                 Executors.newCachedThreadPool().execute(()
-                        -> logCacheSearch("200", request.getServiceId(), request.getUniformFreshness()));
+                        -> logCacheSearch("200", request.getServiceId(), request.getUniformFreshness(), endTime - startTime));
                 return SQEMResponse.newBuilder().setStatus("200")
                         .setBody(entityContext.toJson())
                         .setMeta(result.getRefreshLogic())
@@ -166,22 +193,24 @@ public class ContextCacheHandler {
             }
         }
         else if(!result.getHashkey().equals("") && result.getIsCached() && !result.getIsValid()){
+            long endTime = System.currentTimeMillis();
             Executors.newCachedThreadPool().execute(()
-                    -> logCacheSearch("400", request.getServiceId(), request.getUniformFreshness()));
+                    -> logCacheSearch("400", request.getServiceId(), request.getUniformFreshness(), endTime - startTime));
             return SQEMResponse.newBuilder().setStatus("400")
                     .setMeta(result.getRefreshLogic())
                     .setHashKey(result.getHashkey()).build();
         }
 
+        long endTime = System.currentTimeMillis();
         Executors.newCachedThreadPool().execute(()
-                -> logCacheSearch("404", request.getServiceId(), request.getUniformFreshness()));
+                -> logCacheSearch("404", request.getServiceId(), request.getUniformFreshness(), endTime - startTime));
         return SQEMResponse.newBuilder().setStatus("404")
                 .setHashKey(result.getHashkey()).build();
     }
 
-    private static void logCacheSearch(String status, String csId, String freshness){
+    private static void logCacheSearch(String status, String csId, String freshness, long responseTime){
         JSONObject frsh = new JSONObject(freshness);
-        Statistic stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status)
+        Statistic stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status).setTime(responseTime)
                 .setIdentifier(csId).setEarning(frsh.getDouble("fthresh")).build();
         PerformanceLogHandler.coassPerformanceRecord(stat);
     }
@@ -253,6 +282,16 @@ public class ContextCacheHandler {
                     setValue.put("value", value.contains(".") ? Double.parseDouble(value) : Long.parseLong(value));
                     setValue.put("unit", unit);
 
+                    if(keyval[0].equals("used_memory_dataset")){
+                        ContextCacheHandler.updatePerfRegister("cacheUtility", Long.parseLong(value)); // Bytes
+                        double cacheCost = (cache_node_cost/60);
+                        if(Long.parseLong(value) > 354334802){
+                            cacheCost += (Long.parseLong(value) * (cache_cost_per_gb / Math.pow(1024,3))) ;
+                        }
+                        ContextCacheHandler.updatePerfRegister("cacheCost", cacheCost);
+                        ContextCacheHandler.updatePerfRegister("costPerByte", 0);
+                    }
+
                     cachestats.put(keyval[0],setValue);
                 }
             }
@@ -263,6 +302,27 @@ public class ContextCacheHandler {
             log.info(e.getMessage());
             return null;
         }
+    }
+
+    public static CachePerformance getCachePerformance(){
+        if(currentPerf != null){
+            // All values returned are in Seconds
+            return CachePerformance.newBuilder()
+                    .setStatus("200")
+                    .setHitLatency((double)currentPerf.get("200")/1000.0)
+                    .setMissLatency((double)currentPerf.get("404")/1000.0)
+                    .setPartialMissLatency((double)currentPerf.get("400")/1000.0)
+                    .setCacheCost(currentPerf.contains("cacheCost") ? (double)currentPerf.get("cacheCost") : 0.0)
+                    .setCostPerByte(currentPerf.contains("costPerByte") ? (double)currentPerf.get("costPerByte") : 0.0)
+                    .setProcessCost(currentPerf.contains("processCost") ? (double)currentPerf.get("processCost") : 0.0)
+                    .setCacheUtility(currentPerf.contains("cacheUtility") ? (double)currentPerf.get("cacheUtility") : 0.0).build();
+        }
+        else return CachePerformance.newBuilder().setStatus("404").build();
+    }
+
+    public static Empty logCacheDecisionLatency(DecisionLog request){
+        PerformanceLogHandler.logDecisionLatency(request.getType(), request.getLatency());
+        return null;
     }
 
     private static String convertToUnit(char unit) {

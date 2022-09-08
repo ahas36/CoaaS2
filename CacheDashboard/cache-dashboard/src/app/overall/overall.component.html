@@ -29,7 +29,7 @@
             <mat-card-content>
                 <div class="metric">
                     <h1>{{avg_query_overhead[avg_query_overhead.length-1]}}</h1>
-                    <h3> ms</h3>
+                    <h3> s</h3>
                     <p>Query Latency <i class="fa fa-info-circle tooltip">
                         <span class="tooltiptext">Average response time to a context query.</span>
                     </i></p>
@@ -61,26 +61,49 @@
     </div> 
     <br/>
     <div class="grid-container">
-        <mat-card class="chart-card-2" style="width:305px;">
-            <mat-card-content class="description">
-                <div>
-                    <h2>Cost Breakdown</h2>
-                    <div style="margin-left:30px">
-                        <canvas baseChart 
-                        width = 230px
-                        height = 230px
-                        [data]="pieChartData"
-                        [labels]="pieChartLabels" 
-                        [colors]="pieChartColors"
-                        [legend]="false"
-                        [options]="pieChartOptions"
-                        [plugins]="pieChartPlugins"
-                        [chartType]="pieChartType">
-                    </canvas>
+        <div style="display:inline-block; vertical-align:top;">
+            <mat-card class="chart-card-2" style="width:305px; display: block;">
+                <mat-card-content class="description">
+                    <div>
+                        <h2 style="margin-top: 2px;">Cost Breakdown</h2>
+                        <div style="margin-left:30px">
+                            <canvas baseChart 
+                            width = 230px
+                            height = 195px
+                            [data]="pieChartData"
+                            [labels]="pieChartLabels" 
+                            [colors]="pieChartColors"
+                            [legend]="false"
+                            [options]="pieChartOptions"
+                            [plugins]="pieChartPlugins"
+                            [chartType]="pieChartType">
+                        </canvas>
+                        </div>
                     </div>
-                </div>
-            </mat-card-content>
-        </mat-card>
+                </mat-card-content>
+            </mat-card>
+            <br/>
+            <mat-card class="chart-card-2" style="width:305px; display: block;">
+                <mat-card-content class="description">
+                    <div>
+                        <h2 style="margin-top: 2px;">Cost Breakdown</h2>
+                        <div style="margin-left:30px">
+                            <canvas baseChart 
+                            width = 230px
+                            height = 195px
+                            [data]="pieChartData"
+                            [labels]="pieChartLabels" 
+                            [colors]="pieChartColors"
+                            [legend]="false"
+                            [options]="pieChartOptions"
+                            [plugins]="pieChartPlugins"
+                            [chartType]="pieChartType">
+                        </canvas>
+                        </div>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+        </div>
         <div style="display:inline-block">
             <mat-card class="chart-card-2" style="width:250px; height:70px; display: block;">
                 <mat-card-content class="description">
@@ -100,7 +123,7 @@
                     </div>
                 </mat-card-content>
             </mat-card>
-            <mat-card class="chart-card-2" style="width:250px; height:80px; margin-top:10px">
+            <mat-card class="chart-card-2" style="width:250px; height:80px; display: block; margin-top:10px">
                 <mat-card-content class="description">
                     <div class="metric">
                         <h1>{{penalty_cost[penalty_cost.length-1]}}</h1>
@@ -109,28 +132,114 @@
                     </div>
                 </mat-card-content>
             </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:80px; display: block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{processing_cost[processing_cost.length-1]}}</h1>
+                        <h3> AUD</h3>
+                        <p><i class="fa fa-circle" style="color:rgba(212, 1, 65, 0.6)"></i>   Processing Cost </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:80px; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{cache_cost[cache_cost.length-1]}}</h1>
+                        <h3> AUD</h3>
+                        <p><i class="fa fa-circle" style="color:rgba(152, 1, 234, 0.6)"></i>   Cache Cost </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
         </div>
-        <mat-card class="chart-card-2" style="width:550px;">
+        <div style="display:inline-block; vertical-align:top;">
+            <mat-card class="chart-card-2" style="width:550px;">
+                <mat-card-content>
+                    <div class="chart-line" style="width:520px; height:100px !important;">
+                        <h2>Earning to Cost Ratio</h2>
+                        <canvas baseChart
+                            height = 110px
+                            [datasets]="line4ChartData"
+                            [labels]="timeTicks"
+                            [colors]="[ChartColors[3]]"
+                            [legend]="lineChartLegend"
+                            [options]="line3ChartOptions"
+                            [chartType]="lineChartType"
+                            [plugins]="lineChartPlugins">
+                        </canvas>         
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <br/><br/>
+            <mat-card class="chart-card-2" style="width:550px;">
+                <mat-card-content>
+                    <div class="chart-line" style="width:520px; height:100px !important;">
+                        <h2>Average Applicable Freshness Threshold</h2>
+                        <canvas baseChart
+                            height = 110px
+                            [datasets]="line6ChartData"
+                            [labels]="timeTicks"
+                            [colors]="[ChartColors[1]]"
+                            [legend]="lineChartLegend"
+                            [options]="line6ChartOptions"
+                            [chartType]="lineChartType"
+                            [plugins]="lineChartPlugins">
+                        </canvas>         
+                    </div>
+                </mat-card-content>
+            </mat-card>
+        </div>
+    </div>
+
+    <div class="first-card">
+        <h1>Applicable Service Level Agreement Parameters</h1>
+        <mat-card class="stat-card" style="width:263px;">
             <mat-card-content>
-                <div class="chart-line" style="width:520px; height:100px !important;">
-                    <h2>Cost to Earning Ratio</h2>
-                    <canvas baseChart
-                        height = 140px
-                        [datasets]="line4ChartData"
-                        [labels]="timeTicks"
-                        [colors]="ChartColors"
-                        [legend]="lineChartLegend"
-                        [options]="line3ChartOptions"
-                        [chartType]="lineChartType"
-                        [plugins]="lineChartPlugins">
-                    </canvas>         
+                <div class="metric">
+                    <h1>{{exp_earn[exp_earn.length-1]}}</h1>
+                    <h3> AUD</h3>
+                    <p>Expected Earning  <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">The expected value of earnings during the last window for responding to context queries.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card" style="width:263px;">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{exp_pen[exp_pen.length-1]}}</h1>
+                    <h3> AUD</h3>
+                    <p>Expected Penalty  <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">The expected value of penalties per delayed query during the last window for responding to context queries.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card" style="width:263px;">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{exp_fthr[exp_fthr.length-1]}}</h1>
+                    <p>Expected Freshness Threshold  <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">The expected value of the freshness threshold applied during the last window for responding to context queries.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card" style="width:263px;">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{exp_rtmax[exp_rtmax.length-1]}}</h1>
+                    <h3> s</h3>
+                    <p>Expected Max Accepted RT  <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">The expected value of teh maximum accepted response latency during the last window for responding to context queries.</span>
+                    </i></p>
                 </div>
             </mat-card-content>
         </mat-card>
     </div>
+
     <br/>
     <div class="grid-container">
-        <h1>Continous Performance Variation <sup><i class="fa fa-info-circle tooltip">
+        <h1>Continuous Performance Variation <sup><i class="fa fa-info-circle tooltip">
             <span class="tooltiptext">Last observation period is a rolling window of 60 seconds (1 minute), during which the statictics of the query performance are gathered.</span>
         </i></sup></h1>
         <mat-card class="chart-card">
@@ -177,7 +286,7 @@
                         height = 330px
                         [datasets]="line2ChartData"
                         [labels]="timeTicks"
-                        [colors]="ChartColors"
+                        [colors]="[ChartColors[0],ChartColors[1],ChartColors[3]]"
                         [legend]="lineChartLegend"
                         [options]="line2ChartOptions"
                         [chartType]="lineChartType"
@@ -197,7 +306,7 @@
                         height = 330px
                         [datasets]="line3ChartData"
                         [labels]="timeTicks"
-                        [colors]="ChartColors"
+                        [colors]="[ChartColors[2],ChartColors[4]]"
                         [legend]="lineChartLegend"
                         [options]="line3ChartOptions"
                         [chartType]="lineChartType"
@@ -217,7 +326,7 @@
                         width = 350px
                         height = 330px
                         [legend]="false"
-                        [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                        [colors]="ChartColors"
                         [datasets]="scatter1ChartData"
                         [chartType]="scatterChartType"
                         [options]="scatter1ChartOptions">
@@ -233,7 +342,7 @@
                         width = 350px
                         height = 330px
                         [legend]="false"
-                        [colors]="ChartColors"
+                        [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
                         [datasets]="scatter2ChartData"
                         [chartType]="scatterChartType"
                         [options]="scatter2ChartOptions">
@@ -324,7 +433,7 @@
         <mat-card class="chart-card">
             <mat-card-content>
                 <div class="chart-line">
-                    <h2>Cache Memory Occupancy</h2>
+                    <h2>Cache Memory Utility</h2>
                     <canvas baseChart
                         width = 900px
                         height = 360px
@@ -361,4 +470,160 @@
             </mat-card-content>
         </mat-card>
     </div>
+
+    <br/>
+
+
+    <div class="first-card">
+        <h1>Selective Cache Model State <sup><i class="fa fa-info-circle tooltip">
+            <span class="tooltiptext">State of the context cache selection model (reactive).</span>
+        </i></sup></h1>
+    </div> 
+    <br/>
+    <div class="grid-container">
+        <div style="display:inline-block">
+            <mat-card class="chart-card-2" style="width:250px; height:70px; display: block;">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{kappa[kappa.length-1]}}</h1>
+                        <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Access Trend Weight </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:80px; display: block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{mu[mu.length-1]}}</h1>
+                        <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Cache Efficiency Weight </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:80px; display: block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{pi[pi.length-1]}}</h1>
+                        <p><i class="fa fa-circle" style="color:rgb(234, 196, 1, 0.6)"></i>   Retrieval Efficiency Weight </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+        </div>
+        <div style="display:inline-block">
+            <mat-card class="chart-card-2" style="width:250px; height:70px; display: block;">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{delta[delta.length-1]}}</h1>
+                        <p><i class="fa fa-circle " style="color:rgba(248, 5, 50, 0.6)"></i>   Reliability Weight </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:80px; display: block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{row[row.length-1]}}</h1>
+                        <p><i class="fa fa-circle" style="color:rgba(134, 17, 192, 0.6)"></i>   Complexity Weight </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+            <mat-card class="chart-card-2" style="width:250px; height:80px; display: block; margin-top:10px">
+                <mat-card-content class="description">
+                    <div class="metric">
+                        <h1>{{threshold[threshold.length-1]}}</h1>
+                        <p><i class="fa fa-circle" style="color:rgba(245, 137, 14, 0.6)"></i>   Cache Confidence Threshold </p>
+                    </div>
+                </mat-card-content>
+            </mat-card>
+        </div>
+        <div style="display:inline-block; vertical-align:top;">
+            <mat-card class="chart-card-2" style="width:605px; height:314px">
+                <mat-card-content>
+                    <div class="chart-line" style="width:580px; height:100px !important;">
+                        <h2>Model Parameter Variation</h2>
+                        <canvas baseChart
+                            height = 130px
+                            [datasets]="line7ChartData"
+                            [labels]="timeTicks"
+                            [colors]="ChartColors"
+                            [legend]="lineChartLegend"
+                            [options]="line7ChartOptions"
+                            [chartType]="lineChartType"
+                            [plugins]="lineChartPlugins">
+                        </canvas>         
+                    </div>
+                </mat-card-content>
+            </mat-card>
+        </div>
+    </div>
+    <br/>
+    <div class="grid-container">
+        <mat-card class="chart-card" style="width:1210px">
+            <mat-card-content>
+                <div class="chart-line" style="width:1180px">
+                    <h2>Reward</h2>
+                    <canvas baseChart
+                        width = 900px
+                        height = 250px
+                        [datasets]="line8ChartData"
+                        [labels]="timeTicks"
+                        [colors]="[ChartColors[3]]"
+                        [legend]="lineChartLegend"
+                        [options]="line8ChartOptions"
+                        [chartType]="lineChartType"
+                        [plugins]="lineChartPlugins">
+                    </canvas>         
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div>
+    <br/>
+    <div class="grid-container">
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Threshold - Reward</h2>
+                    <canvas baseChart
+                        width = 350px
+                        height = 330px
+                        [legend]="false"
+                        [colors]="[{backgroundColor: 'rgb(0, 194, 255, 0.6)'}]"
+                        [datasets]="scatter4ChartData"
+                        [chartType]="scatterChartType"
+                        [options]="scatter4ChartOptions">
+                    </canvas>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Threshold - Cache Life</h2>
+                    <canvas baseChart
+                        width = 350px
+                        height = 330px
+                        [legend]="false"
+                        [colors]="ChartColors"
+                        [datasets]="scatter5ChartData"
+                        [chartType]="scatterChartType"
+                        [options]="scatter5ChartOptions">
+                    </canvas>        
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="chart-card" style="width:370px">
+            <mat-card-content>
+                <div class="chart-line" style="width:350px; height:100px !important;">
+                    <h2>Threshold - Delay Time</h2>
+                    <canvas baseChart
+                        width = 350px
+                        height = 330px
+                        [legend]="false"
+                        [colors]="[{backgroundColor: 'rgb(17, 192, 45, 0.6)'}]"
+                        [datasets]="scatter6ChartData"
+                        [chartType]="scatterChartType"
+                        [options]="scatter6ChartOptions">
+                    </canvas>      
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div>
+    <br/><br/>
 </div>

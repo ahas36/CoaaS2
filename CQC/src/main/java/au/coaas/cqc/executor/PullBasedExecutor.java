@@ -285,16 +285,31 @@ public class PullBasedExecutor {
                             executeQueryBlock(rpnConditionList, ce, entityID);
                         if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                     }
+                    else {
+                        // When the data can not be retrieved from any context providers, checking the stored data as the last resort.
+                        AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, sla);
+                        ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
+                        if(consumerQoS == null)  consumerQoS = (JSONObject) rex.getValue();
+                    }
 
                 }
                 else {
                     // Querying from registered entities. This does not guarantee "completeness" of context.
                     // Registered entities updated. But not the most fresh. So, best when the entities are static, e.g., buildings.
                     // In fact, querying from MongoDB is actually to query the "Context Service Descriptions".
-
                     // This can also be if the context service is a data stream.
 
-                    AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, authToken);
+                    if(sla == null) {
+                        SQEMResponse slaResult = slaMessage.get();
+                        if(slaResult.getStatus().equals("200")){
+                            sla = new JSONObject(slaResult.getBody());
+                            JSONObject finalSla = sla;
+                            // Profiling the context consumers
+                            Executors.newCachedThreadPool().execute(() -> profileConsumer(finalSla,queryId));
+                        }
+                    }
+
+                    AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, sla);
                     ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
                     if(consumerQoS == null)  consumerQoS = (JSONObject) rex.getValue();
                     continue;
@@ -1259,7 +1274,7 @@ public class PullBasedExecutor {
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
                         .setCheckFresh(true)
-                        .setKey(keys)
+                        .setKey(keys).setQClass("1") // TODO: Assign the correct context query class
                         .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
                         .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()); // sampling
 
@@ -1284,7 +1299,7 @@ public class PullBasedExecutor {
                     if(retEntity == null) continue;
 
                     Executors.newCachedThreadPool().execute(()
-                            -> refreshOrCacheContext(slaObj, Integer.getInteger(data.getStatus()), lookup,
+                            -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()), lookup,
                                     retEntity, data.getMeta()));
                     return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
                             consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
@@ -1468,18 +1483,12 @@ public class PullBasedExecutor {
     }
 
     private static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
-                                               Map<String, JSONObject> ce, int page, int limit, String authToken) {
-        JSONObject sla = null;
-
+                                               Map<String, JSONObject> ce, int page, int limit, JSONObject sla) {
         ContextRequest cr = generateContextRequest(targetEntity, query, ce, page, limit);
 
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setToken(authToken).build());
-        String status = slaMessage.getStatus();
-        if(status.equals("200"))
-            sla = new JSONObject(slaMessage.getBody());
         JSONObject qos = sla.getJSONObject("sla").getJSONObject("qos");
 
         Iterator<Chunk> data = sqemStub.handleContextRequest(cr);

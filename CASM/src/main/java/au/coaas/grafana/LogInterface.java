@@ -62,5 +62,20 @@ public class LogInterface {
         }
     }
 
+    @GET
+    @Path("models")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getModelState() {
+        SQEMServiceGrpc.SQEMServiceBlockingStub stub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+        SQEMResponse res = stub.getModelState(Empty.newBuilder().build());
+        if (res.getStatus().equals("200")) {
+            return Response.ok(res.getBody()).build();
+        } else {
+            return Response.status(500).entity(res.getBody()).build();
+        }
+    }
+
 
 }

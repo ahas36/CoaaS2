@@ -1,5 +1,5 @@
 <div class="content">
-    <div class="grid-container">
+    <div class="grid-container" *ngIf="hcr">
         <h1>Handle Context Requests <sup><i class="fa fa-info-circle tooltip">
             <span class="tooltiptext">Process that handle retrieving and processing context requests for an entity.</span>
         </i></sup></h1> 
@@ -28,7 +28,7 @@
         <mat-card class="chart-card-2" style="width:880px; margin-left:10px">
             <mat-card-content>
                 <div class="chart-line" style="width:865px; height:100px !important;">
-                    <h2 style="text-align:left; margin-left:20px">Variation of Number of Exectutions</h2>
+                    <h2 style="text-align:left; margin-left:20px">Variation of Number of Executions</h2>
                     <canvas baseChart
                         height = 310px
                         width = 1100px
@@ -49,7 +49,7 @@
         <div>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
+                    <div class="metric" style="margin-top: 0px;">
                         <h1>{{hcr_ok[hcr_ok.length-1]}}</h1>
                         <h3> nos</h3>
                         <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Successful </p>
@@ -58,7 +58,7 @@
             </mat-card>
             <mat-card class="chart-card-2" style="width:270px; height:70px; margin-top: 10px; display: inline-block;">
                 <mat-card-content class="description">
-                    <div class="metric">
+                    <div class="metric" style="margin-top: 0px;">
                         <h1>{{hcr_sucess[hcr_sucess.length-1]}}</h1>
                         <h3> %</h3>
                         <p>Rate of Success </p>
@@ -67,7 +67,7 @@
             </mat-card>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
+                    <div class="metric" style="margin-top: 0px;">
                         <h1>{{hcr_all[hcr_all.length-1]}}</h1>
                         <h3> nos</h3>
                         <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Total Executions </p>
@@ -76,7 +76,7 @@
             </mat-card>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
+                    <div class="metric" style="margin-top: 0px;">
                         <h1>{{hcr_avg[hcr_avg.length-1]}}</h1>
                         <h3> ms</h3>
                         <p>Average Latency </p>
@@ -84,12 +84,10 @@
                 </mat-card-content>
             </mat-card>
         </div>
-            
+        <br/>      
     </div>
     
-    <br/>
-    
-    <div class="grid-container">
+    <div class="grid-container" *ngIf="dms">
         <h1>Discover Matching Services <sup><i class="fa fa-info-circle tooltip">
             <span class="tooltiptext">Process that match and return the relevant context services to respond to a context query.</span>
         </i></sup></h1> 
@@ -138,8 +136,8 @@
         <div>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{dms_ok[hcr_ok.length-1]}}</h1>
+                    <div class="metric" style="margin-top: 0px;">
+                        <h1>{{dms_ok[dms_ok.length-1]}}</h1>
                         <h3> nos</h3>
                         <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Successful </p>
                     </div>
@@ -147,8 +145,8 @@
             </mat-card>
             <mat-card class="chart-card-2" style="width:270px; height:70px; margin-top: 10px; display: inline-block;">
                 <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{dms_sucess[hcr_sucess.length-1]}}</h1>
+                    <div class="metric" style="margin-top: 0px;">
+                        <h1>{{dms_sucess[dms_sucess.length-1]}}</h1>
                         <h3> %</h3>
                         <p>Rate of Success </p>
                     </div>
@@ -156,8 +154,8 @@
             </mat-card>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{dms_all[hcr_all.length-1]}}</h1>
+                    <div class="metric" style="margin-top: 0px;">
+                        <h1>{{dms_all[dms_all.length-1]}}</h1>
                         <h3> nos</h3>
                         <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Total Executions </p>
                     </div>
@@ -166,18 +164,17 @@
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
                     <div class="metric">
-                        <h1>{{dms_avg[hcr_avg.length-1]}}</h1>
+                        <h1>{{dms_avg[dms_avg.length-1]}}</h1>
                         <h3> ms</h3>
                         <p>Average Latency </p>
                     </div>
                 </mat-card-content>
             </mat-card>
         </div>
+        <br/>
     </div>
 
-    <br/>
-
-    <div class="grid-container">
+    <div class="grid-container" *ngIf="rce">
         <h1>Refresh Context Entities <sup><i class="fa fa-info-circle tooltip">
             <span class="tooltiptext">Process that refreshes cached entities.</span>
         </i></sup></h1>   
@@ -226,8 +223,8 @@
         <div>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{rce_ok[hcr_ok.length-1]}}</h1>
+                    <div class="metric" style="margin-top: 0px;">
+                        <h1>{{rce_ok[rce_ok.length-1]}}</h1>
                         <h3> nos</h3>
                         <p><i class="fa fa-circle " style="color:rgb(0, 194, 255, 0.6)"></i>   Successful </p>
                     </div>
@@ -236,7 +233,7 @@
             <mat-card class="chart-card-2" style="width:270px; height:70px; margin-top: 10px; display: inline-block;">
                 <mat-card-content class="description">
                     <div class="metric">
-                        <h1>{{rce_sucess[hcr_sucess.length-1]}}</h1>
+                        <h1>{{rce_sucess[rce_sucess.length-1]}}</h1>
                         <h3> %</h3>
                         <p>Rate of Success </p>
                     </div>
@@ -244,8 +241,8 @@
             </mat-card>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{rce_all[hcr_all.length-1]}}</h1>
+                    <div class="metric" style="margin-top: 0px;">
+                        <h1>{{rce_all[rce_all.length-1]}}</h1>
                         <h3> nos</h3>
                         <p><i class="fa fa-circle" style="color:rgb(17, 192, 45, 0.6)"></i>   Total Executions </p>
                     </div>
@@ -253,8 +250,8 @@
             </mat-card>
             <mat-card class="chart-card-2" style="width:270px; height:70px; display: inline-block; margin-top:10px">
                 <mat-card-content class="description">
-                    <div class="metric">
-                        <h1>{{rce_avg[hcr_avg.length-1]}}</h1>
+                    <div class="metric" style="margin-top: 0px;">
+                        <h1>{{rce_avg[rce_avg.length-1]}}</h1>
                         <h3> ms</h3>
                         <p>Average Latency </p>
                     </div>

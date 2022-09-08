@@ -35,6 +35,7 @@ message CacheLookUp {
     string samplingInterval = 5;
     bool checkFresh = 6;
     string key = 7;
+    string qClass = 8;
 }
 
 message RefreshUpdate {
@@ -42,10 +43,22 @@ message RefreshUpdate {
     string refreshLogic = 2;
 }
 
+message ProbDelay {
+    double value = 1;
+}
+
 message ContextProfileRequest {
     string primaryKey = 1;
     string hashKey = 2;
     string level = 3;
+    string meta = 4;
+}
+
+message ProbDelayRequest {
+    string primaryKey = 1;
+    string hashKey = 2;
+    string level = 3;
+    double threshold = 4;
 }
 
 message ContextProviderProfile {
@@ -53,7 +66,18 @@ message ContextProviderProfile {
     double lastRetLatency = 2;
     string relaibility = 3;
     string expRetLatency = 4;
-    string status = 5;
+    string accessTrend = 5;
+    string expAR = 6;
+    string status = 7;
+    string expCost = 8;
+    double retVariance = 9;
+}
+
+message QueryClassProfile {
+    string rtmax = 1;
+    string earning = 2;
+    string penalty = 3;
+    string status = 4;
 }
 
 message CacheLookUpResponse {
@@ -67,6 +91,17 @@ message CacheLookUpResponse {
 message ScheduleTask {
     CacheLookUp lookup = 1;
     string hashkey = 2;
+}
+
+message CachePerformance {
+    double hitLatency = 1;
+    double partialMissLatency = 2;
+    double missLatency = 3;
+    string status = 4;
+    double costPerByte = 5;
+    double processCost = 6;
+    double cacheCost = 7;
+    double cacheUtility = 8;
 }
 
 message CacheRequest
@@ -210,6 +245,11 @@ message SummarySLA
     string queryId = 7;
 }
 
+message DecisionLog {
+    int64 latency = 1;
+    string type = 2;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -221,6 +261,7 @@ service SQEMService {
     rpc clearCache (Empty) returns (SQEMResponse);
     rpc toggleRefreshLogic(RefreshUpdate) returns (Empty);
     rpc cacheEntity (CacheRequest) returns (SQEMResponse);
+    rpc getcachePerformance(Empty) returns (CachePerformance);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
@@ -250,6 +291,11 @@ service SQEMService {
     rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
     rpc logPerformanceData (Statistic) returns (Empty);
     rpc getPerformanceData (Empty) returns (SQEMResponse);
+    rpc getModelState (Empty) returns (SQEMResponse);
     rpc logConsumerProfile (SummarySLA) returns (Empty);
     rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
+    rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
+    rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
+    rpc logDecisionLatency(DecisionLog) returns (Empty);
+    rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
 }

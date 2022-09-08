@@ -44,14 +44,14 @@ public class RefreshExecutor {
             SQEMResponse cpInfo = blockingStub.getContextServiceInfo(ContextServiceId.newBuilder()
                             .setId(refreshRequest.getRequest().getReference().getServiceId()).build());
 
-            if(cpInfo.getStatus() == "200"){
+            if(cpInfo.getStatus().equals("200")){
                 String contextId = refreshRequest.getRequest().getReference().getServiceId() + "-" + refreshRequest.getHashKey();
                 RefreshContext refObject = new RefreshContext(contextId,
                         refreshRequest.getFthreh(),
                         refreshRequest.getRefreshPolicy(),
                         refreshRequest.getResiLifetime(),
                         refreshRequest.getLifetime(),
-                        (HashMap<String, String>) refreshRequest.getRequest().getReference().getParamsMap(),
+                        refreshRequest.getRequest().getReference().getParamsMap(),
                         cpInfo.getBody(),
                         refreshRequest.getEt());
 
@@ -60,7 +60,8 @@ public class RefreshExecutor {
                 }
                 refreshScheduler.scheduleRefresh(refObject);
             }
-            throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
+            else
+                throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
         }
         catch(Exception ex){
             log.severe("Could not refresh context!");
@@ -83,7 +84,7 @@ public class RefreshExecutor {
                 RefreshContext refObject = new RefreshContext(contextId,
                         fthr, request.getRefreshPolicy(),
                         resiLife, lifetime,
-                        (HashMap<String, String>) request.getRequest().getReference().getParamsMap(),
+                        request.getRequest().getReference().getParamsMap(),
                         cpInfo.getBody(),
                         request.getRequest().getReference().getEt());
 
@@ -145,11 +146,13 @@ public class RefreshExecutor {
 
             if(profile.getStatus().equals("200")){
                 RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(
-                        new JSONObject(request.getRequest().getSla()), profile);
+                        new JSONObject(request.getRequest().getSla()), profile, request.getRequest().getReference().getServiceId());
+
+                boolean isChanged = !ref_type.toString().toLowerCase().equals(refPolicy);
 
                 if(refPolicy.equals("proactive_shift")){
                     // Configuring refreshing
-                    if(!ref_type.toString().toLowerCase().equals(refPolicy)){
+                    if(isChanged){
                         // Shift to the reactive policy
                         synchronized (RefreshExecutor.class){
                             // Remove the context item from the registry
@@ -189,7 +192,7 @@ public class RefreshExecutor {
                 }
                 else {
                     // If the current policy is reactive
-                    if(!ref_type.toString().toLowerCase().equals(refPolicy)){
+                    if(isChanged){
                         // Shift to the reactive policy
                         synchronized (RefreshExecutor.class){
                             // Setup proactive refreshing
@@ -228,20 +231,21 @@ public class RefreshExecutor {
 
     /** Refreshing Utility */
     // Resolving what the most efficient refreshing policy for the context item
-    public static RefreshLogics resolveRefreshLogic(JSONObject sla, ContextProviderProfile profile){
+    public static RefreshLogics resolveRefreshLogic(JSONObject sla, ContextProviderProfile profile, String serviceId){
         // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
         boolean autoFetch = sla.getBoolean("autoFetch");
         String life_unit = sla.getJSONObject("freshness").getString("unit");
         double lifetime = sla.getJSONObject("freshness").getDouble("value");
         double samplingInterval = sla.getJSONObject("updateFrequency").getDouble("value");
+        double reliability = !profile.getRelaibility().equals("NaN") ? Double.valueOf(profile.getRelaibility()) : 0.5;
 
         double fthresh = 0.0;
         if(profile.getExpFthr().startsWith("{")){
-            JSONObject cp_prof = new JSONObject(profile);
+            JSONObject cp_prof = new JSONObject(profile.getExpFthr());
             fthresh = cp_prof.getDouble("fthresh");
         }
         else
-            fthresh = !profile.equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+            fthresh = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                     sla.getJSONObject("freshness").getDouble("fthresh");
 
         if(life_unit != sla.getJSONObject("updateFrequency").getString("unit")) {
@@ -249,14 +253,17 @@ public class RefreshExecutor {
                     sla.getJSONObject("updateFrequency").getString("unit"), life_unit, samplingInterval);
         }
 
-        if(autoFetch && samplingInterval == 0){
+        // TODO: There should be a better logic to resolve the reliability threshold
+        if((autoFetch && samplingInterval == 0) || reliability < 0.2){
             return RefreshLogics.PROACTIVE_SHIFT;
         }
 
         // The residual lifetime is calculated using the expected retrieval lifetime
         // E[RetL] = Total time spent on retrievals / Number of successful retrievals
         // Therefore, it probabilistically incoperates the reliability/unreliability of the context provider
-        double resi_lifetime = lifetime - Double.valueOf(profile.getExpRetLatency());
+        double exp_retl = !profile.getExpRetLatency().equals("NaN") ?
+                    Double.valueOf(profile.getExpRetLatency()) : profile.getLastRetLatency();
+        double resi_lifetime = lifetime - exp_retl;
 
         if(samplingInterval > 0){
             // Context need to be refreshed based on validity.

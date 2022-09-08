@@ -7,11 +7,19 @@ export class PerfData{
   public levels: Level;
   public summary: Summary;
   public cachememory: CacheStat;
+  public expectedSLA: ExpSLA;
+}
+
+export class ExpSLA{
+  public exp_pen: number;
+  public exp_fth: number;
+  public exp_earn: number;
+  public exp_rtmax: number;
 }
 
 export class CSMS{
   public handleContextRequest:Method;
-  public discoverMatchingService:Method;
+  public discoverMatchingServices:Method;
   public refreshContextEntity:Method;
 }
 
@@ -21,11 +29,11 @@ export class COASS{
 }
 
 export class Level{
-  public entity:Method;
-  public situfunction:Method;
-  public aggfunction:Method;
-  public contextrequest:Method;
-  public query:Method;
+  public entity:LevelStat;
+  public situfunction:LevelStat;
+  public aggfunction:LevelStat;
+  public contextrequest:LevelStat;
+  public query:LevelStat;
 }
 
 export class CacheStat{
@@ -50,23 +58,29 @@ export class LevelStat{
 
 export class Item{
   public id: string;
-  public hits: number;
-  public misses: number;
+  public hits: longType;
+  public misses: longType;
   public hitrate: number;
 }
 
 export class Summary{
   public gain: number;
   public avg_gain: number;
-  public no_of_queries: number;
-  public delayed_queries: number;
-  public no_of_retrievals: number;
-  public avg_query_overhead: number;
-  public avg_network_overhead: number;
+  public no_of_queries: longType;
+  public delayed_queries: longType;
+  public no_of_retrievals: longType;
+  public avg_query_overhead: longType;
+  public avg_network_overhead: longType;
   public avg_processing_overhead: number;
   public earning:  number;
+  public cache_cost: number;
   public penalty_cost: number;
   public retrieval_cost: number;
+  public processing_cost: number;
+}
+
+export class longType {
+  public $numberLong : string;
 }
 
 export class Method {
@@ -105,10 +119,18 @@ export class Queue<T> {
       return this._store[this._store.length-1];
     }
 
+    public notEmpty(){
+      return this._store.length > 0;
+    }
+
   }
 
   @Injectable()
-  export class QueryStats{
+  export class QueryStats {
+    public queries: [QueryData];
+  }
+  
+  export class QueryData{
     public location: Location;
     public address: String;
   }
@@ -116,6 +138,19 @@ export class Queue<T> {
   export class Location{
     public lat: number;
     public lng: number;
+  }
+
+  @Injectable()
+  export class ModelState{
+    public threshold: number;
+    public kappa: number;
+    public mu: number;
+    public pi: number;
+    public delta: number;
+    public row: number;
+    public avg_cachelife: number;
+    public avg_delaytime: number;
+    public avg_reward: number;
   }
 
 

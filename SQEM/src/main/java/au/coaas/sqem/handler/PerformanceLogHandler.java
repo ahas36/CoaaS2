@@ -1,15 +1,19 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cpree.proto.LearnedWeights;
+import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.sqem.monitor.LogicalContextLevel;
 import au.coaas.sqem.mongo.ConnectionPool;
-import au.coaas.sqem.proto.ContextProviderProfile;
-import au.coaas.sqem.proto.SQEMResponse;
-import au.coaas.sqem.proto.Statistic;
-import au.coaas.sqem.proto.SummarySLA;
+import au.coaas.sqem.proto.*;
+import au.coaas.sqem.util.HttpClient;
 import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
+import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
+import com.google.common.collect.Iterables;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
@@ -18,24 +22,28 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
 import org.bson.Document;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.Collectors;
 
-import static au.coaas.sqem.util.StatisticalUtils.predictExpectedValue;
+import static au.coaas.sqem.util.StatisticalUtils.*;
 
 public class PerformanceLogHandler {
 
-    private static Connection connection = null;
+    private static Connection connection;
     private static final Logger log = Logger.getLogger(LogHandler.class.getName());
     private static List<String> all_tables = Stream.of(LogicalContextLevel.values())
             .map(Enum::name)
@@ -113,14 +121,15 @@ public class PerformanceLogHandler {
     // Recording for profiling context consumers
     public static void consumerRecord(SummarySLA conSummary) {
         String queryString = "INSERT INTO consumer_slas "
-                + "VALUES('%s', '%d', %d, %d, %d, %s, %d, GETDATE());";
+                + "VALUES('%s', %f, %f, %d, %f, '%s', %d, GETDATE());";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
-            statement.executeUpdate(String.format(queryString,
+            String exec_string = String.format(queryString,
                     conSummary.getCsid(), conSummary.getFthresh(), conSummary.getEarning(),
                     conSummary.getRtmax(), conSummary.getPenalty(), conSummary.getQueryId(),
-                    conSummary.getQueryClass()));
+                    conSummary.getQueryClass());
+            statement.executeUpdate(exec_string);
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -129,9 +138,6 @@ public class PerformanceLogHandler {
 
     // COASS Performance
     public static void coassPerformanceRecord(Statistic request) {
-        String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
-                "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
-                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %d);";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -140,7 +146,10 @@ public class PerformanceLogHandler {
             switch(method){
                 case "execute" :{
                     // Value at the Identifier column here is the Query ID
-                    String formatted_string = String.format(queryString,
+                    String queryString_1 = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                            "cost,identifier,hashKey,createdDatetime,isDelayed,age) " +
+                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d);";
+                    String formatted_string = String.format(queryString_1,
                             method, // Method name
                             request.getStatus(), // Status of the request
                             request.getTime(), // Response time
@@ -149,7 +158,7 @@ public class PerformanceLogHandler {
                             request.getIdentifier(), // Context Service Identifier
                             "NULL", // Hashkey of the cached item
                             request.getIsDelayed() ? 1 : 0, // is Delayed?
-                            0, "NULL"); // age, fthresh
+                            0); // age
                     statement.executeUpdate(formatted_string);
                     break;
                 }
@@ -161,11 +170,14 @@ public class PerformanceLogHandler {
                     String cs_id = cs.getJSONObject("_id").getString("$oid");
 
                     // Value at the Identifier column here is the Context Service ID
+                    String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                            "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
+                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %f);";
                     String formatted_string = String.format(queryString,
                             method, // Method name
                             request.getStatus(), // Status of the retrieval
                             request.getTime(), // Response time
-                            0, // Earnings from the retrieval (which is always 0)
+                            0.0, // Earnings from the retrieval (which is always 0)
                             request.getCost(), // Cost of retrieval
                             cs_id, // Context Service Identifier
                             hashKey, // Hashkey (cached or not cached)
@@ -176,16 +188,14 @@ public class PerformanceLogHandler {
                     break;
                 }
                 case "cacheSearch": {
-                    String formatted_string = String.format(queryString,
+                    String queryString_2 = "INSERT INTO coass_performance(method,status,response_time,identifier,createdDatetime,"+
+                            "isDelayed, fthresh) VALUES('%s', '%s', %d, '%s', GETDATE(), %d, %f);";
+                    String formatted_string = String.format(queryString_2,
                             method, // Method name
                             request.getStatus(), // Status of the request
-                            "NULL", // Response time
-                            "NULL", // Earnings from the query
-                            "NULL", // Cost from query
+                            request.getTime(), // Response time
                             request.getIdentifier(), // Context Service Identifier
-                            "NULL", // Hashkey of the cached item
                             0, // is Delayed?
-                            "NULL",//age
                             request.getEarning()); //fthresh
                     statement.executeUpdate(formatted_string);
                 }
@@ -211,6 +221,19 @@ public class PerformanceLogHandler {
                     request.getStatus(), // Status of the request
                     request.getTime()); // Response time
             statement.executeUpdate(formatted_string);
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
+    // Persist the decision history of the reinforcement agent
+    public static void logDecisionLatency(String type, long latency){
+        try{
+            String queryString = "INSERT INTO cacheHistoryRegistry(type,latency,createdDatetime) VALUES('%s', %d, GETDATE());";
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            statement.executeUpdate(String.format(queryString, type, latency));
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -306,8 +329,34 @@ public class PerformanceLogHandler {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
         MongoDatabase db = mongoClient.getDatabase("coaas_log");
         MongoCollection<Document> collection = db.getCollection("performanceSummary");
+        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss").format(new java.util.Date()));
         collection.insertOne(persRecord);
     }
+
+    // Persisting the current state of the adadptive context caching decision model
+    private static void persistModelState(LearnedWeights weights, double cachelife, double delaytime, double avg_gain){
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas_log");
+        MongoCollection<Document> collection = db.getCollection("modelState");
+
+        Document persRecord = new Document();
+
+        persRecord.put("threshold", weights.getThreshold());
+        persRecord.put("kappa", weights.getKappa());
+        persRecord.put("mu", weights.getMu());
+        persRecord.put("pi", weights.getPi());
+        persRecord.put("delta", weights.getDelta());
+        persRecord.put("row", weights.getRow());
+
+        persRecord.put("avg_cachelife", cachelife);
+        persRecord.put("avg_delaytime", delaytime);
+        persRecord.put("avg_reward", avg_gain);
+
+        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss").format(new java.util.Date()));
+        collection.insertOne(persRecord);
+    }
+
+    private static long countIdx = 0;
 
     /** Aggregation Routines */
     // Summarizes the performance data of the last window and stores in the logs.
@@ -316,22 +365,87 @@ public class PerformanceLogHandler {
 
         try{
             ExecutorService executor = Executors.newFixedThreadPool(14);
-            Collection<Future<?>> tasks = new LinkedList<>();
+            ArrayList<Future<?>> tasks = new ArrayList<>();
 
             tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getCPREEPerfromanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getLevelPerformanceSummary(persRecord); }));
             tasks.add(executor.submit(() -> { getOverallPerfromanceSummary(persRecord); }));
-            tasks.add(executor.submit(() -> { profileContextProviders(persRecord); }));
-            tasks.add(executor.submit(() -> { profileConsumers(persRecord); }));
-            tasks.add(executor.submit(() -> { profileCQClasses(persRecord); }));
+            if(countIdx > 0){
+                tasks.add(executor.submit(() -> { profileContextProviders(persRecord); }));
+                tasks.add(executor.submit(() -> { profileConsumers(persRecord); }));
+                tasks.add(executor.submit(() -> { profileCQClasses(persRecord); }));
+            }
             persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
 
-            for (Future<?> currTask : tasks) {
-                currTask.get();
+            while(!tasks.isEmpty()){
+                Future<?> currTask = tasks.get(0);
+                if(currTask.isDone() || currTask.isCancelled()){
+                    currTask.get();
+                    tasks.remove(0);
+                }
             }
 
-            executor.submit(() -> { persistPerformanceSummary(persRecord); });
+            // Backing up the performance data
+            tasks.add(executor.submit(() -> { persistPerformanceSummary(persRecord); }));
+            // Updating the reinforcement learning model
+            if(countIdx > 0){
+                tasks.add(executor.submit(() -> {
+                    try {
+                        JSONObject cachingSummary = getCacheLives();
+                        BasicDBObject summary = persRecord.get("summary", BasicDBObject.class);
+
+                        JSONArray vector = new JSONArray();
+                        vector.put((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
+                        vector.put(summary.getDouble("retrieval_cost")); // Retrieval Cost
+                        vector.put(summary.getDouble("earning")); // Earnings
+                        vector.put(summary.getDouble("penalty_cost")); // Penalties
+                        vector.put(summary.getDouble("no_of_queries") > 0 ?
+                                summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries") : 0); // Probability of Delay
+                        vector.put((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
+                        vector.put((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
+                        vector.put(cachingSummary.getDouble("cachelife")); // Average Cache Lifetime (in miliseconds)
+                        vector.put(cachingSummary.getDouble("delay")); // Average Delay Time (in miliseconds)
+
+                        JSONObject learnrequest = getRequestBody(vector, summary.getDouble("avg_gain"));
+
+                        String result = HttpClient.call("http://localhost:9494/selections", HttpRequests.POST, learnrequest.toString());
+
+                        if(result != null){
+                            JSONObject actions = new JSONObject(result);
+                            JSONArray weights = actions.getJSONArray("actions");
+                            LearnedWeights request = LearnedWeights.newBuilder()
+                                    .setThreshold(weights.getDouble(5))
+                                    .setKappa(weights.getDouble(0))
+                                    .setMu(weights.getDouble(1))
+                                    .setPi(weights.getDouble(2))
+                                    .setDelta(weights.getDouble(3))
+                                    .setRow(weights.getDouble(4)).build();
+
+                            CPREEServiceGrpc.CPREEServiceFutureStub asyncStub
+                                    = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+                            asyncStub.updateWeights(request);
+
+                            persistModelState(request, cachingSummary.getDouble("cachelife"),
+                                    cachingSummary.getDouble("delay"), summary.getDouble("avg_gain"));
+                        }
+                    }
+                    catch(Exception ex){
+                        log.info("Error occured when attempting to re-learn the model: " + ex.getMessage());
+                    }
+                }));
+            }
+            countIdx++;
+
+            while(!tasks.isEmpty()){
+                Future<?> currTask = tasks.get(0);
+                if(currTask.isDone() || currTask.isCancelled()){
+                    currTask.get();
+                    tasks.remove(0);
+                }
+            }
+
+            executor.shutdown();
         }
         catch(Exception ex){
             log.severe(ex.getMessage());
@@ -341,145 +455,191 @@ public class PerformanceLogHandler {
         return SQEMResponse.newBuilder().setStatus("200").build();
     }
 
+    private static JSONObject getRequestBody(JSONArray vector, double avg_gain){
+        JSONObject req = new JSONObject();
+        req.put("vector", vector);
+        req.put("reward", avg_gain);
+        return req;
+    }
+
     // Summarizing Context Providers profiles
     private static Runnable profileContextProviders(Document persRecord){
         ConcurrentHashMap<String, BasicDBObject>  finalres = new ConcurrentHashMap<>();
-
         try {
-
             ExecutorService executor = Executors.newFixedThreadPool(2);
-            Collection<Future<?>> tasks = new LinkedList<>();
+            ArrayList<Future<?>> tasks = new ArrayList<>();
 
-            tasks.add(executor.submit(() -> {
-                try {
-                    Statement statement = connection.createStatement();
-                    statement.setQueryTimeout(30);
+            tasks.add(executor.submit(() -> { sumCPProfile(finalres); }));
+            tasks.add(executor.submit(() -> { sumCPReliability(finalres); }));
 
-                    HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
-                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, count(fthresh) AS cnt" +
-                            "FROM coass_performance WHERE status = '200' AND method = 'cacheSearch' " +
-                            "GROUP BY identifier, fthresh;");
-
-                    while(rs_1.next()){
-                        long count = rs_1.getInt("cnt");
-                        if(!res.containsKey(rs_1.getString("identifier"))){
-                            res.put(rs_1.getString("identifier"),
-                                    new HashMap(){{
-                                        put("count", count);
-                                        put("fthresh", rs_1.getDouble("fthresh")*count);
-                                    }});
-                        }
-                        else {
-                            HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
-
-                            temp.put("count", temp.get("count") + count);
-                            temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
-
-                            res.put(rs_1.getString("identifier"), temp);
-                        }
-                    }
-
-                    res.entrySet().parallelStream().forEach((entry) -> {
-                        String csId = entry.getKey();
-                        HashMap<String,Double> temp = entry.getValue();
-
-                        Double count = temp.get("count");
-                        temp.put("fthresh", temp.get("fthresh")/count);
-
-                        if(finalres.containsKey(csId)){
-                            finalres.put(csId, new BasicDBObject(){{
-                                put("profile", temp);
-                            }});
-                        }
-                        else {
-                            BasicDBObject curr = finalres.get(csId);
-                            curr.put("profile", temp);
-                            finalres.put(csId, curr);
-                        }
-                    });
+            int complete = 0;
+            while(!tasks.isEmpty()){
+                Future<?> curr = tasks.get(complete);
+                if(curr.isDone() || curr.isCancelled()){
+                    curr.get();
+                    tasks.remove(complete);
                 }
-                catch(Exception ex){
-                    log.severe("Exception thrown when aggregating the context consumers: "
-                            + ex.getMessage());
-                }
-            }));
-
-            tasks.add(executor.submit(() -> {
-                try {
-                    Statement statement = connection.createStatement();
-                    statement.setQueryTimeout(30);
-
-                    HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
-                    ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
-                            "avg(response_time) AS average " +
-                            "FROM coass_performance method = 'executeFetch' " +
-                            "GROUP BY identifier, status;");
-
-                    while(rs_1.next()){
-                        long count = rs_1.getInt("cnt");
-                        String status = rs_1.getString("status");
-
-                        if(!res.containsKey(rs_1.getString("identifier"))){
-                            res.put(rs_1.getString("identifier"),
-                                    new HashMap(){{
-                                        put("count", count);
-                                        put("failed", status.equals("200") ? 0 : count);
-                                        put("success", status.equals("200") ? count : 0);
-                                        put("retLatency", rs_1.getDouble("average")*count);
-                                    }});
-                        }
-                        else {
-                            HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
-
-                            temp.put("count", temp.get("count") + count);
-
-                            if(status.equals("200")) temp.put("success", temp.get("success") + count);
-                            else temp.put("failed", temp.get("failed") + count);
-
-                            temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency")*count));
-
-                            res.put(rs_1.getString("identifier"), temp);
-                        }
-                    }
-
-                    res.entrySet().parallelStream().forEach((entry) -> {
-                        String csId = entry.getKey();
-                        HashMap<String,Double> temp = entry.getValue();
-
-                        Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
-                        temp.put("retLatency", temp.get("retLatency")/no_success);
-                        temp.put("reliability", no_success/temp.get("count"));
-
-                        if(finalres.containsKey(csId)){
-                            finalres.put(csId, new BasicDBObject(){{
-                                put("reliability", temp);
-                            }});
-                        }
-                        else {
-                            BasicDBObject curr = finalres.get(csId);
-                            curr.put("reliability", temp);
-                            finalres.put(csId, curr);
-                        }
-                    });
-                }
-                catch(Exception ex){
-                    log.severe("Exception thrown when aggregating the context consumers: "
-                            + ex.getMessage());
-                }
-            }));
-
-            for (Future<?> currTask : tasks) {
-                currTask.get();
             }
 
             persRecord.put("rawContext", new HashMap<>(finalres));
+            executor.shutdown();
         }
         catch (Exception ex){
-            log.severe("Exception thrown when aggregating the context consumers: "
+            log.severe("Exception thrown when aggregating the context providers: "
                     + ex.getMessage());
         }
         return null;
     }
+
+    private static Runnable sumCPReliability(ConcurrentHashMap<String, BasicDBObject>  finalres){
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+            ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
+                    "avg(response_time) AS rt_avg, avg(cost) AS avg_cost " +
+                    "FROM coass_performance WHERE method = 'executeFetch' " +
+                    "GROUP BY identifier, status;");
+
+            while(rs_1.next()){
+                Double count = rs_1.getInt("cnt") * 1.0;
+                String status = rs_1.getString("status");
+
+                if(!res.containsKey(rs_1.getString("identifier"))){
+                    res.put(rs_1.getString("identifier"),
+                            new HashMap(){{
+                                put("count", count);
+                                put("failed", status.equals("200") ? 0 : count);
+                                put("success", status.equals("200") ? count : 0);
+                                put("retLatency", rs_1.getDouble("rt_avg")*count);
+                                put("cost", rs_1.getDouble("avg_cost"));
+                            }});
+                }
+                else {
+                    HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                    temp.put("count", temp.get("count") + count);
+
+                    if(status.equals("200")) temp.put("success", temp.get("success") + count);
+                    else temp.put("failed", temp.get("failed") + count);
+
+                    temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency") * count));
+
+                    res.put(rs_1.getString("identifier"), temp);
+                }
+            }
+
+            res.entrySet().parallelStream().forEach((entry) -> {
+                String csId = entry.getKey();
+                HashMap<String,Double> temp = entry.getValue();
+
+                Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
+                temp.put("retLatency", temp.get("retLatency")/no_success);
+                temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0.0);
+
+                if(!finalres.containsKey(csId)){
+                    finalres.put(csId, new BasicDBObject(){{
+                        put("reliability", temp);
+                    }});
+                }
+                else {
+                    BasicDBObject curr = finalres.get(csId);
+                    curr.put("reliability", temp);
+                    finalres.put(csId, curr);
+                }
+            });
+        }
+        catch(Exception ex){
+            log.severe("Exception thrown when aggregating the context providers: "
+                    + ex.getMessage());
+        }
+        return null;
+    }
+
+    private static Runnable sumCPProfile(ConcurrentHashMap<String, BasicDBObject>  finalres){
+        AtomicDouble missTime = new AtomicDouble();
+        AtomicDouble succsessTime = new AtomicDouble();
+        AtomicDouble partialMissTime = new AtomicDouble();
+
+        AtomicLong missCnt = new AtomicLong();
+        AtomicLong successCnt = new AtomicLong();
+        AtomicLong partialMissCnt = new AtomicLong();
+
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+            ResultSet rs_1 = statement.executeQuery("SELECT identifier, fthresh, status, " +
+                    "count(fthresh) AS cnt, avg(response_time) as rt " +
+                    "FROM coass_performance WHERE method = 'cacheSearch' " +
+                    "GROUP BY identifier, fthresh, status;");
+
+            while(rs_1.next()){
+                if(rs_1.getString("status").equals("200")){
+                    Double count = rs_1.getInt("cnt") * 1.0;
+                    if(!res.containsKey(rs_1.getString("identifier"))){
+                        res.put(rs_1.getString("identifier"),
+                                new HashMap(){{
+                                    put("count", count);
+                                    put("fthresh", rs_1.getDouble("fthresh") * count);
+                                }});
+                    }
+                    else {
+                        HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
+
+                        temp.put("count", temp.get("count") + count);
+                        temp.put("fthresh", temp.get("fthresh") + (rs_1.getDouble("fthresh")*count));
+
+                        res.put(rs_1.getString("identifier"), temp);
+                    }
+                    succsessTime.addAndGet(rs_1.getDouble("rt") * rs_1.getLong("cnt"));
+                    successCnt.addAndGet(rs_1.getLong("cnt"));
+                }
+                else {
+                    if(rs_1.getString("status").equals("400")){
+                        partialMissTime.addAndGet(rs_1.getDouble("rt") * rs_1.getLong("cnt"));
+                        partialMissCnt.addAndGet(rs_1.getLong("cnt"));
+                    }
+                    else {
+                        missTime.addAndGet(rs_1.getDouble("rt") * rs_1.getLong("cnt"));
+                        missCnt.addAndGet(rs_1.getLong("cnt"));
+                    }
+                }
+            }
+
+            ContextCacheHandler.updatePerfRegister(successCnt.get() > 0 ? succsessTime.get()/successCnt.get() : 0.0,
+                    partialMissCnt.get() > 0 ? partialMissTime.get()/partialMissCnt.get() : 0.0,
+                    missCnt.get() > 0 ? missTime.get()/missCnt.get() : 0.0);
+
+            res.entrySet().parallelStream().forEach((entry) -> {
+                String csId = entry.getKey();
+                HashMap<String,Double> temp = entry.getValue();
+
+                Double count = temp.get("count");
+                temp.put("fthresh", count > 0 ? temp.get("fthresh")/count : 0.7);
+
+                if(!finalres.containsKey(csId)){
+                    finalres.put(csId, new BasicDBObject(){{
+                        put("profile", temp);
+                    }});
+                }
+                else {
+                    BasicDBObject curr = finalres.get(csId);
+                    curr.put("profile", temp);
+                    finalres.put(csId, curr);
+                }
+            });
+        }
+        catch(Exception ex){
+            log.severe("Exception thrown when aggregating the context providers: "
+                    + ex.getMessage());
+            log.info(String.valueOf(ex.getStackTrace()));
+        }
+        return null;
+    }
+
 
     // Summarizing the performance of each context cache level
     private static Runnable getLevelPerformanceSummary(Document persRecord){
@@ -572,6 +732,15 @@ public class PerformanceLogHandler {
         return null;
     }
 
+    // Get the processing cost per window
+    private static double getProcessingCostPerSecond(long totalQueries){
+        // TODO:
+        // This method should make a request to the ClodProvider and request the cost of computing for the last window.
+        // This cost correlated to the number of queries executed during the window.
+        // So, I'm temporarily using that to estimate the cost of processing (this param to the function should be removed)
+        return (0.2 * totalQueries)/60;
+    }
+
     // Summarizing the performance of COAAS Overall
     private static Runnable getOverallPerfromanceSummary(Document persRecord){
         HashMap<String, BasicDBObject> res_2 = new HashMap<>();
@@ -644,11 +813,21 @@ public class PerformanceLogHandler {
             dbo.put("no_of_retrievals", totalRetrievals);
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
+            dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / (double) totalQueries : 0.0);
+            // This is a wrong calculation. Need to get theis from the cloud provider.
 
-            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost;
+            double proc_cost = getProcessingCostPerSecond(totalQueries);
+            ContextCacheHandler.updatePerfRegister("processCost", proc_cost);
+            double cacheCost = (double) ContextCacheHandler.getCachePerfStat("cacheCost");
+
+            // TODO: Should include any other storage costs and other services costs
+            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - (proc_cost * 60) - cacheCost;
+
             dbo.put("gain", monetaryGain);
             dbo.put("avg_gain", totalQueries > 0 ? monetaryGain / totalQueries : 0);
             dbo.put("earning", totalEarning);
+            dbo.put("cache_cost", cacheCost);
+            dbo.put("processing_cost", proc_cost);
             dbo.put("penalty_cost", totalPenalties);
             dbo.put("retrieval_cost", totalRetrievalCost);
 
@@ -801,7 +980,7 @@ public class PerformanceLogHandler {
                     "FROM consumer_slas GROUP BY queryClass, consumerId;");
 
             while(rs_1.next()){
-                long count = rs_1.getInt("cnt");
+                Double count = rs_1.getInt("cnt") * 1.0;
                 if(!res.containsKey(rs_1.getString("queryClass"))){
                     res.put(rs_1.getString("queryClass"),
                             new HashMap(){{
@@ -841,11 +1020,11 @@ public class PerformanceLogHandler {
             });
         }
         catch (Exception ex){
-            log.severe("Exception thrown when aggregating the context consumers: "
+            log.severe("Exception thrown when aggregating the context query classes: "
                     + ex.getMessage());
         }
 
-        persRecord.put("consumers", finalres);
+        persRecord.put("classes", finalres);
         return null;
     }
 
@@ -890,7 +1069,7 @@ public class PerformanceLogHandler {
             if(!rs.next()) {
                 SQEMResponse avg_latency = ContextCacheHandler.getPerformanceStats("avg_network_overhead", PerformanceStats.perf_stats);
                 if(avg_latency.getStatus().equals("200"))
-                    return Double.valueOf(avg_latency.getBody());
+                    return Double.valueOf(avg_latency.getBody())/1000;
 
                 return 0;
             }
@@ -898,6 +1077,7 @@ public class PerformanceLogHandler {
             double retrieval_latency = rs.getDouble("response_time")/1000;
             long age = rs.getLong("age");
 
+            // This is in seconds
             return retrieval_latency+age;
         }
         catch(SQLException ex){
@@ -918,7 +1098,7 @@ public class PerformanceLogHandler {
             MongoCollection<Document> collection = db.getCollection("performanceSummary");
 
             Document sort = new Document();
-            sort.put("_id",-1);
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
             Document data = collection.find().sort(sort).first();
 
             return SQEMResponse.newBuilder().setStatus("200")
@@ -932,19 +1112,41 @@ public class PerformanceLogHandler {
         }
     }
 
-    static ExecutorService estimation_executor = Executors.newFixedThreadPool(3);
+    // Retrieves the variation of the model state
+    public static SQEMResponse getModelStateVariation(){
+        try{
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("modelState");
+
+            Document sort = new Document();
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
+            String data = collection.find().sort(sort).first().toJson();
+
+            return SQEMResponse.newBuilder().setStatus("200")
+                    .setBody(data).build();
+        }
+        catch(Exception e){
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+        }
+    }
 
     // TODO: If the Context Provider is popular, this statistic should also be cached.
     // Retrieves the summary of context provider's access profile to cache
     public static ContextProviderProfile getContextProviderProfile(String cpId, String hashKey){
         try{
+
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");
 
             MongoCollection<Document> collection = db.getCollection("performanceSummary");
 
             Document sort = new Document();
-            sort.put("_id",-1);
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
 
             Document project = new Document();
             project.put("rawContext."+cpId,1);
@@ -953,48 +1155,90 @@ public class PerformanceLogHandler {
             filter.put("rawContext."+cpId, new Document(){{ put("$exists", true); }});
 
             // Search the performance DB
-            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(10);
+            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
 
-
-            int index = 0;
-            double[][] dataset = new double[max_history][2];
-            double[][] dataset_2 = new double[max_history][2];
-            double[][] dataset_3 = new double[max_history][2];
-
-            result.forEach((Block<Document>) document -> {
-                dataset[index][0] = index;
-                dataset_2[index][0] = index;
-                dataset_3[index][0] = index;
-
-                // Expected freshness threshold, reliability, and retrieval latency
-                Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
-                Document rel = cp.get("reliability", Document.class);
-
-                dataset[index][1] = cp.get("profile", Document.class).getDouble("fthresh");
-                dataset_2[index][1] = rel.getDouble("reliability");
-                dataset_3[index][1] = rel.getDouble("retLatency");
-
-            });
-
+            AtomicReference<Double> exp_ar = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_fthr = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_cost = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_count = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_retLatency = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> var_ratLatency = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_reliability = new AtomicReference<>(Double.NaN);
 
-            // The list is inverted, so, estimating from x=-1.
-            if(index != 0){
-                estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); });
-                estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_2, -1)); });
-                estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_3, -1)); });
+            int count = Iterables.size(result);
+            double lastfthr = 0.5; // Default
+
+            if(count > 1 ) {
+                int index = 0;
+                double[][] dataset = new double[count][2];
+                double[][] dataset_2 = new double[count][2];
+                double[][] dataset_3 = new double[count][2];
+                double[][] dataset_4 = new double[count][2];
+                double[][] dataset_5 = new double[count][2];
+
+                double[] retLatList = new double[count];
+
+                for(Document document : result){
+                    // Expected freshness threshold, reliability, and retrieval latency
+                    Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
+                    Document rel = cp.get("reliability", Document.class);
+
+                    if(rel != null){
+                        dataset[index][0] = index;
+                        dataset_2[index][0] = index;
+                        dataset_3[index][0] = index;
+                        dataset_4[index][0] = index;
+                        dataset_5[index][0] = index;
+
+                        dataset[index][1] = cp.containsKey("profile") ?
+                                cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
+                        dataset_2[index][1] = rel.getDouble("reliability");
+                        dataset_3[index][1] = rel.getDouble("retLatency");
+                        retLatList[index] = rel.getDouble("retLatency");
+                        dataset_4[index][1] = rel.getDouble("count");
+                        dataset_5[index][1] = rel.getDouble("cost");
+
+                        index ++;
+                    }
+                }
+
+                ExecutorService estimation_executor = Executors.newFixedThreadPool(8);
+                ArrayList<Future<?>> taskList = new ArrayList<>();
+
+                // The list is inverted, so, estimating from x=-1.
+                taskList.add(estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); }));
+                taskList.add(estimation_executor.submit(() -> { var_ratLatency.set(getVariance(retLatList)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_3, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_2, -1)); }));
+
+                while(!taskList.isEmpty()){
+                    Future<?> curr = taskList.get(0);
+                    if(curr.isDone() || curr.isCancelled()){
+                        curr.get();
+                        taskList.remove(0);
+                    }
+                }
+                estimation_executor.shutdown();
+            }
+            else if (count == 1) {
+                Document cp = result.first().get("rawContext", Document.class).get(cpId, Document.class);
+                lastfthr = cp.get("profile", Document.class).getDouble("fthresh");
             }
 
-            // TODO: Reliability and Expected E[RL] calculation
             return ContextProviderProfile.newBuilder().setStatus("200")
                     .setExpFthr(Double.isNaN(exp_fthr.get()) ? "NaN" : (exp_fthr.get() < 0 || exp_fthr.get() > 1 ?
-                            Double.toString(dataset[0][1]) : Double.toString(exp_fthr.get())))
-                    .setRelaibility(Double.isNaN(exp_retLatency.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
-                            exp_retLatency.get() > 1 ? "1" : Double.toString(exp_retLatency.get()))
-                    .setExpRetLatency(Double.toString(exp_reliability.get()))
-                    .setLastRetLatency(getLastRetrievalTime(cpId, hashKey))
+                            Double.toString(lastfthr) : Double.toString(exp_fthr.get())))
+                    .setRelaibility(Double.isNaN(exp_reliability.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
+                            exp_retLatency.get() > 1 ? "1" : Double.toString(exp_reliability.get()))
+                    .setExpRetLatency(Double.toString(exp_retLatency.get()/1000)) // In seconds
+                    .setAccessTrend(Double.isNaN(exp_count.get()) ? "NaN" : Double.toString(exp_count.get()))
+                    .setExpCost(Double.isNaN(exp_cost.get()) ? "NaN" : Double.toString(exp_cost.get()))
+                    .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()/60)) // This is because the window is 60s
+                    .setRetVariance(var_ratLatency.get())
+                    .setLastRetLatency(getLastRetrievalTime(cpId, hashKey)) // In seconds already
                     .build();
         }
         catch(Exception e){
@@ -1002,6 +1246,175 @@ public class PerformanceLogHandler {
             body.put("message",e.getMessage());
             body.put("cause",e.getCause().toString());
             return ContextProviderProfile.newBuilder().setStatus("500").build();
+        }
+    }
+
+    public static QueryClassProfile getQueryClassProfile(String classId){
+        try{
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("performanceSummary");
+
+            Document sort = new Document();
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
+
+            Document project = new Document();
+            project.put("classes."+classId,1);
+
+            Document filter = new Document();
+            filter.put("classes."+classId, new Document(){{ put("$exists", true); }});
+
+            // Search the performance DB
+            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
+
+            AtomicReference<Double> exp_rtmax = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_earning = new AtomicReference<>(Double.NaN);
+            AtomicReference<Double> exp_penalty = new AtomicReference<>(Double.NaN);
+
+            int count = Iterables.size(result);
+
+            if(count > 1){
+                int index = 0;
+                double[][] dataset = new double[max_history][2];
+                double[][] dataset_2 = new double[max_history][2];
+                double[][] dataset_3 = new double[max_history][2];
+
+                for(Document document : result){
+                    dataset[index][0] = index;
+                    dataset_2[index][0] = index;
+                    dataset_3[index][0] = index;
+
+                    // Expected rtmax, earning, penalty
+                    Document cqc = document.get("classes", Document.class).get(classId, Document.class);
+
+                    dataset[index][1] = cqc.getDouble("rtmax");
+                    dataset_2[index][1] = cqc.getDouble("earning");
+                    dataset_3[index][1] = cqc.getDouble("penalty");
+
+                    index++;
+                };
+
+                ExecutorService regression_executor = Executors.newFixedThreadPool(3);
+                ArrayList<Future<?>> taskList = new ArrayList<>();
+
+                // The list is inverted, so, estimating from x=-1.
+                taskList.add(regression_executor.submit(() -> { exp_rtmax.set(predictExpectedValue(dataset, -1)); }));
+                taskList.add(regression_executor.submit(() -> { exp_earning.set(predictExpectedValue(dataset_2, -1)); }));
+                taskList.add(regression_executor.submit(() -> { exp_penalty.set(predictExpectedValue(dataset_3, -1)); }));
+
+                while(!taskList.isEmpty()){
+                    Future<?> curr = taskList.get(0);
+                    if(curr.isDone() || curr.isCancelled()){
+                        curr.get();
+                        taskList.remove(0);
+                    }
+                }
+
+                regression_executor.shutdown();
+            }
+
+            return QueryClassProfile.newBuilder().setStatus("200")
+                    .setRtmax(Double.isNaN(exp_rtmax.get()) ? "NaN" : Double.toString(exp_rtmax.get()/1000))
+                    .setEarning(Double.isNaN(exp_earning.get()) ? "NaN" : Double.toString(exp_earning.get()))
+                    .setPenalty(Double.isNaN(exp_penalty.get()) ? "NaN" : Double.toString(exp_penalty.get()))
+                    .build();
+        }
+        catch(Exception e){
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            return QueryClassProfile.newBuilder().setStatus("500").build();
+        }
+    }
+
+    private static final int distribution_history = 1000;
+
+    public static ProbDelay getProbabilityOfDelay(ProbDelayRequest request) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+
+            MongoCollection<Document> collection = db.getCollection("performanceSummary");
+
+            Document sort = new Document();
+            sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
+
+            Document project = new Document();
+            project.put("rawContext." + request.getPrimaryKey() + ".reliability", 1);
+
+            Document filter = new Document();
+            filter.put("rawContext." + request.getPrimaryKey(), new Document(){{ put("$exists", true); }});
+
+            // Search the performance DB
+            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(distribution_history);
+
+            AtomicInteger count = new AtomicInteger();
+            AtomicInteger total = new AtomicInteger(Iterables.size(result));
+            double rtmax = request.getThreshold() * 1000; // Converting to miliseconds
+
+            result.forEach((Block<Document>) document -> {
+                Document rel = document.get("rawContext", Document.class)
+                                .get(request.getPrimaryKey(), Document.class)
+                                .get("reliability", Document.class);
+                if(rel != null){
+                    if(rel.getDouble("retLatency") >=  rtmax)
+                        count.getAndIncrement();
+                }
+                else total.addAndGet(-1);
+            });
+
+            return ProbDelay.newBuilder().setValue(count.get()/ total.get()).build();
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
+
+        return ProbDelay.newBuilder().setValue(0.0).build();
+    }
+
+    // Retrieve the decision history of the estimated life and delay times
+    private static JSONObject getCacheLives() throws Exception{
+        String queryString = "SELECT type, avg(latency) as avg_lat " +
+                "FROM cacheHistoryRegistry " +
+                "WHERE createdDatetime >= CAST('%s' AS DATETIME2) AND createdDatetime < CAST('%s' AS DATETIME2) " +
+                "GROUP BY type;";
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(30);
+
+        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime start = end.minusSeconds(60);
+
+        ResultSet rs = statement.executeQuery(String.format(queryString,
+                start.format(formatter), end.format(formatter)));
+
+        JSONObject body = new JSONObject() {{
+            put("cachelife",0.0);
+            put("delay",0.0);
+        }};
+
+        while(rs.next()){
+            double avg_lat = rs.getDouble("avg_lat");
+            body.put(rs.getString("type"), avg_lat);
+        }
+
+        return body;
+    }
+
+    public static SQEMResponse getCacheLifeSummary(){
+
+        try{
+            JSONObject result = getCacheLives();
+            return SQEMResponse.newBuilder().setStatus("200")
+                    .setBody(result.toString()).build();
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+            JSONObject body = new JSONObject();
+            body.put("message",ex.getMessage());
+            body.put("cause",ex.getCause().toString());
+            return SQEMResponse.newBuilder().setStatus("500")
+                    .setBody(body.toString()).build();
         }
     }
 
@@ -1027,6 +1440,14 @@ public class PerformanceLogHandler {
             statement.setQueryTimeout(30);
 
             // Create the database tables if not existing
+            statement.execute(
+                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cacheHistoryRegistry')\n" +
+                            "CREATE TABLE cacheHistoryRegistry(\n" +
+                            "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                            "    type VARCHAR(15) NOT NULL,\n" +
+                            "    latency BIGINT NOT NULL,\n" +
+                            "    createdDatetime DATETIME NOT NULL)");
+
             statement.execute(
                     "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +
                             "CREATE TABLE csms_performance(\n" +

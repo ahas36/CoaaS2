@@ -118,6 +118,39 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void getcachePerformance(au.coaas.sqem.proto.Empty request,
+                           io.grpc.stub.StreamObserver<au.coaas.sqem.proto.CachePerformance> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.getCachePerformance());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void logDecisionLatency(au.coaas.sqem.proto.DecisionLog request,
+                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver) {
+        try {
+            responseObserver.onNext(ContextCacheHandler.logCacheDecisionLatency(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getCacheLatenciesSummary(au.coaas.sqem.proto.Empty request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getCacheLifeSummary());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
     ///// Context Entity /////
 
     @Override
@@ -374,6 +407,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void getModelState(au.coaas.sqem.proto.Empty request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getModelStateVariation());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void getContextProviderProfile(au.coaas.sqem.proto.ContextProfileRequest request,
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.ContextProviderProfile> responseObserver) {
         try {
@@ -385,7 +429,28 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void getQueryClassProfile(au.coaas.sqem.proto.ContextProfileRequest request,
+                                          io.grpc.stub.StreamObserver<au.coaas.sqem.proto.QueryClassProfile> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler
+                    .getQueryClassProfile(request.getPrimaryKey()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 
+    @Override
+    public void getProbDelay(au.coaas.sqem.proto.ProbDelayRequest request,
+                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.ProbDelay> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getProbabilityOfDelay(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 
     ////////// Authentication & Context Consumers ///////////
     @Override

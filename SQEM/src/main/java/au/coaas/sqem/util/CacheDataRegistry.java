@@ -111,7 +111,7 @@ public final class CacheDataRegistry{
                         // Need to get this information rather from Himadri's lifetime profiler
                         JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
                         // This is a potential cache item. But this should be cached lineant
-                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId, hashKey.get())/1000;
+                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId, hashKey.get());
 
                         // Periodic Sampling Device Check
                         JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
@@ -183,8 +183,9 @@ public final class CacheDataRegistry{
                                         LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
                                         LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
 
-                                        expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
-                                                : sampledTime.plusSeconds(samplingInterval);
+                                        expiryTime = sampledTime.plusSeconds(samplingInterval);
+                                        // expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
+                                        //         : sampledTime.plusSeconds(samplingInterval);
                                         staleTime = expiryTime;
                                     }
                                 }

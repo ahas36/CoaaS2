@@ -35,9 +35,12 @@ public class QueryJob implements Job {
 
             if(fetchResponse != null){
                 RefreshExecutor.refreshContext(contextId, fetchResponse);
+                log.info("Refreshed " + contextId + " in context cache.");
             }
-
-            throw new RuntimeException("Couldn't retrieve the context for refreshing.");
+            else {
+                log.info("Failed to retrieve the context for " + contextId + " to refresh.");
+                throw new RuntimeException("Couldn't retrieve the context for refreshing.");
+            }
         }
         catch(Exception ex) {
             log.severe("Error retrieving: " + ex.getMessage());

@@ -79,7 +79,6 @@ public class PerformanceLogHandler {
         catch(Exception ex){
             log.info("Failed to estimate the consumer SLA: " + ex.getMessage());
         }
-
     }
 
     // Get the expected quality metrics during the next window
@@ -92,12 +91,14 @@ public class PerformanceLogHandler {
     // CSMS Performance Records
     // Inserts a new performance record
     public static void insertRecord(LogicalContextLevel level, String id, Boolean isHit, long rTime) {
-        String queryString = "INSERT INTO %s(itemId,isHit,response_time,createdDatetime) VALUES('%s', %d, %d, GETDATE());";
+        String queryString = "INSERT INTO %s(itemId,isHit,response_time,createdDatetime) VALUES('%s', %d, %d, CAST('%s' AS DATETIME2));";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
+            LocalDateTime now = LocalDateTime.now();
+
             statement.executeUpdate(String.format(queryString, level.toString().toLowerCase(),
-                    id, isHit?1:0, rTime));
+                    id, isHit?1:0, rTime, now.format(formatter)));
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -107,11 +108,13 @@ public class PerformanceLogHandler {
     // Recording teh recent performance of CSMS
     public static void genericRecord(String method, String status, long rTime) {
         String queryString = "INSERT INTO csms_performance(method,status,response_time,createdDatetime) "
-                + "VALUES('%s', '%s', %d, GETDATE());";
+                + "VALUES('%s', '%s', %d, CAST('%s' AS DATETIME2));";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
-            statement.executeUpdate(String.format(queryString, method, status, rTime));
+            LocalDateTime now = LocalDateTime.now();
+
+            statement.executeUpdate(String.format(queryString, method, status, rTime, now.format(formatter)));
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -121,14 +124,16 @@ public class PerformanceLogHandler {
     // Recording for profiling context consumers
     public static void consumerRecord(SummarySLA conSummary) {
         String queryString = "INSERT INTO consumer_slas "
-                + "VALUES('%s', %f, %f, %d, %f, '%s', %d, GETDATE());";
+                + "VALUES('%s', %f, %f, %d, %f, '%s', %d, CAST('%s' AS DATETIME2));";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
+            LocalDateTime now = LocalDateTime.now();
+
             String exec_string = String.format(queryString,
                     conSummary.getCsid(), conSummary.getFthresh(), conSummary.getEarning(),
                     conSummary.getRtmax(), conSummary.getPenalty(), conSummary.getQueryId(),
-                    conSummary.getQueryClass());
+                    conSummary.getQueryClass(), now.format(formatter));
             statement.executeUpdate(exec_string);
         }
         catch(SQLException ex){
@@ -148,7 +153,9 @@ public class PerformanceLogHandler {
                     // Value at the Identifier column here is the Query ID
                     String queryString_1 = "INSERT INTO coass_performance(method,status,response_time,earning,"+
                             "cost,identifier,hashKey,createdDatetime,isDelayed,age) " +
-                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d);";
+                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', CAST('%s' AS DATETIME2), %d, %d);";
+                    LocalDateTime now = LocalDateTime.now();
+
                     String formatted_string = String.format(queryString_1,
                             method, // Method name
                             request.getStatus(), // Status of the request
@@ -157,6 +164,7 @@ public class PerformanceLogHandler {
                             request.getCost(), // Cost from query
                             request.getIdentifier(), // Context Service Identifier
                             "NULL", // Hashkey of the cached item
+                            now.format(formatter),
                             request.getIsDelayed() ? 1 : 0, // is Delayed?
                             0); // age
                     statement.executeUpdate(formatted_string);
@@ -172,7 +180,9 @@ public class PerformanceLogHandler {
                     // Value at the Identifier column here is the Context Service ID
                     String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
                             "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
-                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', GETDATE(), %d, %d, %f);";
+                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', CAST('%s' AS DATETIME2), %d, %d, %f);";
+                    LocalDateTime now = LocalDateTime.now();
+
                     String formatted_string = String.format(queryString,
                             method, // Method name
                             request.getStatus(), // Status of the retrieval
@@ -181,6 +191,7 @@ public class PerformanceLogHandler {
                             request.getCost(), // Cost of retrieval
                             cs_id, // Context Service Identifier
                             hashKey, // Hashkey (cached or not cached)
+                            now.format(formatter),
                             0, // is Delayed?
                             request.getAge(), //age
                             cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); // fthresh
@@ -189,12 +200,15 @@ public class PerformanceLogHandler {
                 }
                 case "cacheSearch": {
                     String queryString_2 = "INSERT INTO coass_performance(method,status,response_time,identifier,createdDatetime,"+
-                            "isDelayed, fthresh) VALUES('%s', '%s', %d, '%s', GETDATE(), %d, %f);";
+                            "isDelayed, fthresh) VALUES('%s', '%s', %d, '%s', CAST('%s' AS DATETIME2), %d, %f);";
+                    LocalDateTime now = LocalDateTime.now();
+
                     String formatted_string = String.format(queryString_2,
                             method, // Method name
                             request.getStatus(), // Status of the request
                             request.getTime(), // Response time
                             request.getIdentifier(), // Context Service Identifier
+                            now.format(formatter),
                             0, // is Delayed?
                             request.getEarning()); //fthresh
                     statement.executeUpdate(formatted_string);
@@ -210,16 +224,18 @@ public class PerformanceLogHandler {
     public static void cpreePerformanceRecord(Statistic request) {
         String queryString = "INSERT INTO cpree_performance(method,status,response_time,"+
                 "createdDatetime) " +
-                "VALUES('%s', '%s', %d, GETDATE());";
+                "VALUES('%s', '%s', %d, CAST('%s' AS DATETIME2));";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
+            LocalDateTime now = LocalDateTime.now();
 
             String method = request.getMethod();
             String formatted_string = String.format(queryString,
                     method, // Method name
                     request.getStatus(), // Status of the request
-                    request.getTime()); // Response time
+                    request.getTime(), // Response time
+                    now.format(formatter));
             statement.executeUpdate(formatted_string);
         }
         catch(SQLException ex){
@@ -230,10 +246,12 @@ public class PerformanceLogHandler {
     // Persist the decision history of the reinforcement agent
     public static void logDecisionLatency(String type, long latency){
         try{
-            String queryString = "INSERT INTO cacheHistoryRegistry(type,latency,createdDatetime) VALUES('%s', %d, GETDATE());";
+            String queryString = "INSERT INTO cacheHistoryRegistry(type,latency,createdDatetime) VALUES('%s', %d, CAST('%s' AS DATETIME2));";
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
-            statement.executeUpdate(String.format(queryString, type, latency));
+
+            LocalDateTime now = LocalDateTime.now();
+            statement.executeUpdate(String.format(queryString, type, latency, now.format(formatter)));
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -397,13 +415,13 @@ public class PerformanceLogHandler {
 
                         JSONArray vector = new JSONArray();
                         vector.put((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
-                        vector.put(summary.getDouble("retrieval_cost")); // Retrieval Cost
                         vector.put(summary.getDouble("earning")); // Earnings
+                        vector.put(summary.getDouble("retrieval_cost")); // Retrieval Cost
                         vector.put(summary.getDouble("penalty_cost")); // Penalties
-                        vector.put(summary.getDouble("no_of_queries") > 0 ?
-                                summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries") : 0); // Probability of Delay
                         vector.put((double) ContextCacheHandler.getCachePerfStat("processCost") * 60); // Processing Cost
                         vector.put((double) ContextCacheHandler.getCachePerfStat("cacheCost")); // Cache Cost
+                        vector.put(summary.getDouble("no_of_queries") > 0 ?
+                                summary.getDouble("delayed_queries")/summary.getDouble("no_of_queries") : 0); // Probability of Delay
                         vector.put(cachingSummary.getDouble("cachelife")); // Average Cache Lifetime (in miliseconds)
                         vector.put(cachingSummary.getDouble("delay")); // Average Delay Time (in miliseconds)
 
@@ -1383,10 +1401,10 @@ public class PerformanceLogHandler {
         statement.setQueryTimeout(30);
 
         LocalDateTime end = LocalDateTime.now();
-        LocalDateTime start = end.minusSeconds(60);
+        LocalDateTime start = end.minusSeconds(300);
 
-        ResultSet rs = statement.executeQuery(String.format(queryString,
-                start.format(formatter), end.format(formatter)));
+        String fnlString = String.format(queryString,start.format(formatter), end.format(formatter));
+        ResultSet rs = statement.executeQuery(fnlString);
 
         JSONObject body = new JSONObject() {{
             put("cachelife",0.0);

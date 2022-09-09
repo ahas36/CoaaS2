@@ -60,8 +60,10 @@ public class RefreshExecutor {
                 }
                 refreshScheduler.scheduleRefresh(refObject);
             }
-            else
-                throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
+            else{
+                throw new RuntimeException("Couldn't find the context provider by Id: "
+                        + refreshRequest.getRequest().getReference().getServiceId());
+            }
         }
         catch(Exception ex){
             log.severe("Could not refresh context!");
@@ -93,33 +95,41 @@ public class RefreshExecutor {
                 }
                 refreshScheduler.scheduleRefresh(refObject);
             }
-            throw new RuntimeException("Couldn't find the context provider by Id: " + cpInfo.getBody());
+            else {
+                throw new RuntimeException("Couldn't find the context provider by Id: "
+                        + request.getRequest().getReference().getServiceId());
+            }
         }
         catch(Exception ex){
-            log.severe("Could not refresh context!");
+            log.severe("Could not set to proactively refresh context!");
             log.info("Cause: " + ex.getMessage());
         }
     }
 
     // Refresh context for proactive refreshing with shift when automatically fetched
     public static void refreshContext(String contextId, String context){
-        RefreshContext refObj = prorefRegistery.get(contextId);
+        try {
+            RefreshContext refObj = prorefRegistery.get(contextId);
 
-        JSONObject conSer = new JSONObject(refObj.getContextProvider());
-        conSer.getJSONObject("sla").getJSONObject("freshness").put("fthresh", refObj.getfthresh());
+            JSONObject conSer = new JSONObject(refObj.getContextProvider());
+            conSer.getJSONObject("sla").getJSONObject("freshness").put("fthresh", refObj.getfthresh());
 
-        CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
-                .putAllParams(refObj.getParams())
-                .setCheckFresh(true)
-                .setEt(refObj.getEtype())
-                .setServiceId(conSer.getJSONObject("_id").getString("$oid"));
+            CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
+                    .putAllParams(refObj.getParams())
+                    .setCheckFresh(true)
+                    .setEt(refObj.getEtype())
+                    .setServiceId(conSer.getJSONObject("_id").getString("$oid"));
 
-        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
 
-        asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
-                .setReference(lookup)
-                .setJson(context).build());
+            asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
+                    .setReference(lookup)
+                    .setJson(context).build());
+        }
+        catch(Exception ex){
+            log.severe("Error occured when refreshing: " + ex.getMessage());
+        }
     }
 
     // Refresh context for both Reactive refreshing and when forcing a Shift in proactive retrieval

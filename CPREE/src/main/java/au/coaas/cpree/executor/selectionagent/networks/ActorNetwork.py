@@ -37,9 +37,9 @@ class ActorNetwork(keras.Model):
     def sample_normal(self, state, reparameterize=True):
         mu, sigma = self.call(state)
         probabilities = tfp.distributions.Normal(mu, sigma)
-        
         actions = probabilities.sample()
-        action = abs(-1 - tf.math.tanh(actions))/2
+        action = tf.math.tanh(actions)
+        action = abs(-1 - action)/2.0
 
         log_prob = probabilities.log_prob(actions)
         log_prob -= tf.math.log(1 - tf.math.pow(action, 2) + self.noise)

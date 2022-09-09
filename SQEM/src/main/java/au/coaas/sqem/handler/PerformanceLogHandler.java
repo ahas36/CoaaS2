@@ -79,7 +79,6 @@ public class PerformanceLogHandler {
         catch(Exception ex){
             log.info("Failed to estimate the consumer SLA: " + ex.getMessage());
         }
-
     }
 
     // Get the expected quality metrics during the next window

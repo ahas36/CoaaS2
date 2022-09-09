@@ -1,5 +1,6 @@
 import sys, os
 import traceback
+import numpy as np
 
 from Agent import Agent
 sys.path.append(os.path.abspath(os.path.join('.')))
@@ -9,7 +10,7 @@ from flask import request
 
 class AgentContext(Resource):
     __agent = Agent(max_action=1)
-    score_history = []
+    __score_history = []
 
     def post(self):
         try:         
@@ -20,13 +21,20 @@ class AgentContext(Resource):
 
             actions = self.__agent.choose_action(new_state)
 
+
             if(not self.__agent.isBufferEmpty):
-                self.__agent.learn()
                 self.__agent.remember(new_state, utility, actions)
+                self.__agent.learn()
+                self.__score_history.append(utility)
             else:
                 self.__agent.init_remember(new_state, actions)
-        
-            result = { 'actions': actions.numpy().tolist() }
+
+            avg_score = np.mean(self.__score_history[-100:])
+            result = { 
+                'actions': actions.numpy().tolist(),
+                'avg_reward': avg_score
+            }
+            
             # Return data and 200 OK code
             return result, 200
 

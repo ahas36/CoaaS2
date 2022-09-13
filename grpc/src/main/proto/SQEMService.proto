@@ -71,6 +71,8 @@ message ContextProviderProfile {
     string status = 7;
     string expCost = 8;
     double retVariance = 9;
+    string arIntercept = 10;
+    string arRegression = 11;
 }
 
 message QueryClassProfile {

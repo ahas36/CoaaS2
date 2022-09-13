@@ -21,6 +21,7 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -1178,10 +1179,10 @@ public class PerformanceLogHandler {
             AtomicReference<Double> exp_ar = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_fthr = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_cost = new AtomicReference<>(Double.NaN);
-            AtomicReference<Double> exp_count = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_retLatency = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> var_ratLatency = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_reliability = new AtomicReference<>(Double.NaN);
+            AtomicReference<SimpleRegression> exp_count = new AtomicReference<>(null);
 
             int count = Iterables.size(result);
             double lastfthr = 0.5; // Default
@@ -1195,6 +1196,7 @@ public class PerformanceLogHandler {
                 double[][] dataset_5 = new double[count][2];
 
                 double[] retLatList = new double[count];
+                List<Double> counts = new ArrayList();
 
                 for(Document document : result){
                     // Expected freshness threshold, reliability, and retrieval latency
@@ -1205,7 +1207,6 @@ public class PerformanceLogHandler {
                         dataset[index][0] = index;
                         dataset_2[index][0] = index;
                         dataset_3[index][0] = index;
-                        dataset_4[index][0] = index;
                         dataset_5[index][0] = index;
 
                         dataset[index][1] = cp.containsKey("profile") ?
@@ -1213,11 +1214,18 @@ public class PerformanceLogHandler {
                         dataset_2[index][1] = rel.getDouble("reliability");
                         dataset_3[index][1] = rel.getDouble("retLatency");
                         retLatList[index] = rel.getDouble("retLatency");
-                        dataset_4[index][1] = rel.getDouble("count");
                         dataset_5[index][1] = rel.getDouble("cost");
+                        counts.add(rel.getDouble("count")/60);
 
                         index ++;
                     }
+                }
+
+                index = 0;
+                Collections.reverse(counts);
+                for(Double cnt: counts){
+                    dataset_4[index][0] = index;
+                    dataset_5[index][1] = cnt;
                 }
 
                 ExecutorService estimation_executor = Executors.newFixedThreadPool(8);
@@ -1252,7 +1260,9 @@ public class PerformanceLogHandler {
                     .setRelaibility(Double.isNaN(exp_reliability.get()) ? "NaN" : exp_retLatency.get() < 0 ? "0" :
                             exp_retLatency.get() > 1 ? "1" : Double.toString(exp_reliability.get()))
                     .setExpRetLatency(Double.toString(exp_retLatency.get()/1000)) // In seconds
-                    .setAccessTrend(Double.isNaN(exp_count.get()) ? "NaN" : Double.toString(exp_count.get()))
+                    .setAccessTrend(exp_count.get() == null ? "NaN" : Double.toString(exp_count.get().getSlope()))
+                    .setArRegression(exp_count.get() == null ? "NaN" : Double.toString(exp_count.get().getRSquare()))
+                    .setArIntercept(exp_count.get() == null ? "NaN" : Double.toString(exp_count.get().getIntercept()))
                     .setExpCost(Double.isNaN(exp_cost.get()) ? "NaN" : Double.toString(exp_cost.get()))
                     .setExpAR(Double.isNaN(exp_ar.get()) ? "NaN" : Double.toString(exp_ar.get()/60)) // This is because the window is 60s
                     .setRetVariance(var_ratLatency.get())

@@ -3,8 +3,10 @@ package au.coaas.cpree.executor;
 import au.coaas.cpree.proto.*;
 import au.coaas.cpree.proto.Empty;
 import au.coaas.cpree.utils.LimitedQueue;
+import au.coaas.cpree.utils.LookUps;
 import au.coaas.cpree.utils.Utilities;
 import au.coaas.cpree.utils.enums.CacheLevels;
+import au.coaas.cpree.utils.enums.DynamicRegistry;
 import au.coaas.cpree.utils.enums.RefreshLogics;
 
 import au.coaas.sqem.proto.*;
@@ -26,15 +28,13 @@ public class SelectionExecutor {
 
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
 
+    // Static Queue
+    private static LimitedQueue<Double> valueHistory = new LimitedQueue<>(1000);
+
     // Static Registries
     private static Hashtable<String, Double> weightThresholds = new Hashtable();
     private static Hashtable<String, Double> cachePerfStats = new Hashtable<>();
-
-    // Dynamic Registries
-    private static Hashtable<String, LocalDateTime> delayRegistry = new Hashtable<>();
-    private static Hashtable<String, Double> indefDelayRegistry = new Hashtable<>();
     private static Hashtable<String, Double> cacheLookupLatency = new Hashtable<>();
-    private static LimitedQueue<Double> valueHistory = new LimitedQueue<>(1000);
 
     private static ExecutorService executor = Executors.newScheduledThreadPool(20);
 
@@ -146,7 +146,6 @@ public class SelectionExecutor {
                              ContextProviderProfile profile, String hashkey) {
         try {
             boolean cache = false;
-            boolean forcedDirector = true;
 
             if(cacheLookupLatency.isEmpty()) updateCacheRecord();
 
@@ -161,10 +160,8 @@ public class SelectionExecutor {
             // Since the lifetime of a context item is considered to be fixed at this phase of the implementation,
             // I can assume that the refreshing policy is also fixed.
             if(!profile.getAccessTrend().equals("NaN") &&
-                    (!delayRegistry.containsKey(contextId) ||
-                            (delayRegistry.containsKey(contextId) && delayRegistry.get(contextId).isAfter(curr))) &&
-                    (!indefDelayRegistry.containsKey(contextId) ||
-                            (indefDelayRegistry.containsKey(contextId) && indefDelayRegistry.get(contextId) <= lambda))) {
+                    LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
+                    LookUps.lookup(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda)) {
                 SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -258,12 +255,11 @@ public class SelectionExecutor {
                                         lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
                                     }
                                     // Indefinite delaying until the item reach a better AR
-                                    indefDelayRegistry.put(contextId, lambda_conf);
+                                    LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda_conf);
                                 }
                                 else {
                                     est_delayTime = 60 * 1000; // default delay
-                                    forcedDirector = false;
-                                    delayRegistry.put(contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                                    LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
                                 }
                             }
                         }
@@ -345,8 +341,7 @@ public class SelectionExecutor {
                                 else {
                                     est_delayTime = 60 * 1000; // default delay
                                 }
-                                forcedDirector = false;
-                                delayRegistry.put(contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                                LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
                             }
                         }
 

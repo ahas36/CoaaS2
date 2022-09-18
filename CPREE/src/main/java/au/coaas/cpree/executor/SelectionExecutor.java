@@ -11,7 +11,6 @@ import au.coaas.sqem.proto.*;
 
 import au.coaas.grpc.client.SQEMChannel;
 
-import au.coaas.sqem.proto.Empty;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
@@ -33,6 +32,7 @@ public class SelectionExecutor {
 
     // Dynamic Registries
     private static Hashtable<String, LocalDateTime> delayRegistry = new Hashtable<>();
+    private static Hashtable<String, Double> indefDelayRegistry = new Hashtable<>();
     private static Hashtable<String, Double> cacheLookupLatency = new Hashtable<>();
     private static LimitedQueue<Double> valueHistory = new LimitedQueue<>(1000);
 
@@ -154,13 +154,17 @@ public class SelectionExecutor {
             String contextId = lookup.getServiceId() + "-" + hashkey;
             LocalDateTime curr = LocalDateTime.now();
 
+            double lambda = profile.getExpAR().equals("NaN") ? 1.0/60 : Double.valueOf(profile.getExpAR()); // per second
+
             // TODO:
             // Evaluate the context item for caching.
             // Since the lifetime of a context item is considered to be fixed at this phase of the implementation,
             // I can assume that the refreshing policy is also fixed.
             if(!profile.getAccessTrend().equals("NaN") &&
                     (!delayRegistry.containsKey(contextId) ||
-                            (delayRegistry.containsKey(contextId) && delayRegistry.get(contextId).isAfter(curr)))) {
+                            (delayRegistry.containsKey(contextId) && delayRegistry.get(contextId).isAfter(curr))) &&
+                    (!indefDelayRegistry.containsKey(contextId) ||
+                            (indefDelayRegistry.containsKey(contextId) && indefDelayRegistry.get(contextId) <= lambda))) {
                 SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -188,7 +192,6 @@ public class SelectionExecutor {
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
-                        double lambda = profile.getExpAR().equals("NaN") ? 1.0/60 : Double.valueOf(profile.getExpAR()); // per second
                         double intercept = profile.getArIntercept().equals("NaN") ? 0 : Double.valueOf(profile.getArIntercept());
                         double exp_prd = lifetime * (1 - fthr);
 
@@ -232,17 +235,36 @@ public class SelectionExecutor {
                                     // Type 1 is where lambda cancels out in the equation
                                     // If retrieval efficiency weight is not zero (if the parameter is important)
                                     double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
-                                    lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);;
+                                    lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
                                 }
                                 est_cacheLife = lambda_conf < 0 ?
                                         Math.round(((-intercept)/access_trend) * 1000) :
-                                        Math.round(((lambda_conf - intercept)/access_trend) * 1000) ;
+                                        Math.round(((lambda_conf - intercept)/access_trend) * 1000);
                             }
                             else {
                                 // Delay until the AR of the item is at least that could break-even the gain.
-                                est_delayTime = 60000;
-                                forcedDirector = false;
-                                delayRegistry.put(contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                                // Solving AR for conf(i) = 0
+                                double lambda_conf = 0;
+                                if(weightThresholds.get("pi") > 0){
+                                    if(ret_effficiency.getType() != 1){
+                                        // Type 1 is where lambda cancels out in the equation
+                                        // If retrieval efficiency weight is not zero (if the parameter is important)
+                                        double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
+                                        lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
+                                    }
+                                    else {
+                                        double top = (ret_effficiency.getCacheCost()/ret_effficiency.getExpMR()) * weightThresholds.get("pi");
+                                        double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
+                                        lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
+                                    }
+                                    // Indefinite delaying until the item reach a better AR
+                                    indefDelayRegistry.put(contextId, lambda_conf);
+                                }
+                                else {
+                                    est_delayTime = 60 * 1000; // default delay
+                                    forcedDirector = false;
+                                    delayRegistry.put(contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                                }
                             }
                         }
                     }
@@ -256,7 +278,6 @@ public class SelectionExecutor {
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
-                        double lambda = profile.getExpAR().equals("NaN") ? 1.0/60 : Double.valueOf(profile.getExpAR()); // per second
                         double intercept = profile.getArIntercept().equals("NaN") ? 0 : Double.valueOf(profile.getArIntercept());
                         double exp_prd = lifetime * (1 - fthr);
 
@@ -293,8 +314,16 @@ public class SelectionExecutor {
                             valueHistory.add(cacheConfidence);
 
                             if(cacheConfidence > weightThresholds.get("threshold")){
-                                cache = true;
                                 // No change to estimated lifetime. Using default to cache until eviction.
+                                cache = true;
+                                double lambda_conf = 0;
+                                if(weightThresholds.get("pi") > 0 && ret_effficiency.getType() != 1){
+                                    // Type 1 is where lambda cancels out in the equation
+                                    // If retrieval efficiency weight is not zero (if the parameter is important)
+                                    double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
+                                    lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
+                                }
+                                // Wait for eviction at least until the AR is below a threshold.
                             }
                             else {
                                 // Need to delay until the AR is such that it could at least break-even the cost.

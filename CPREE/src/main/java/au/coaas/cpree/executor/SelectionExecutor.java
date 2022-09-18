@@ -1,19 +1,17 @@
 package au.coaas.cpree.executor;
 
-import au.coaas.cpree.proto.LearnedWeights;
+import au.coaas.cpree.proto.*;
+import au.coaas.cpree.proto.Empty;
 import au.coaas.cpree.utils.LimitedQueue;
 import au.coaas.cpree.utils.Utilities;
-import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.utils.enums.CacheLevels;
 import au.coaas.cpree.utils.enums.RefreshLogics;
-import au.coaas.cpree.proto.CacheSelectionRequest;
-import au.coaas.cpree.proto.ProactiveRefreshRequest;
 
 import au.coaas.sqem.proto.*;
 
 import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.cpree.proto.Empty;
 
+import au.coaas.sqem.proto.Empty;
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
@@ -171,12 +169,12 @@ public class SelectionExecutor {
                 long est_cacheLife = -1;
                 long est_delayTime = 0;
                 double access_trend = profile.getAccessTrend().equals("NaN") ?
-                        0 : Double.valueOf(profile.getAccessTrend());
+                        0.0 : Double.valueOf(profile.getAccessTrend());
 
                 QueryClassProfile cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
                         .setPrimaryKey(lookup.getQClass()).build());
 
-                if(access_trend <= 0){
+                if(access_trend < 0){
                     // TODO: IMPORTANT!
                     // In the next line, it is assumed that there is only one class of context queries because, the
                     // implementation is only being tested for a single scenario (all queries are of the same class.)
@@ -200,38 +198,45 @@ public class SelectionExecutor {
                                 (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
                                         (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda))))) {
                             // 1. Retrieval Efficiency
-                            AbstractMap.SimpleEntry<Double,Double> ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
+                            RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
                                     cqc_profile, ref_type.toString().toLowerCase(), slaObj);
                             // 2. Reliability of retrieval
                             double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
-                            // 3. Access Rate Trend
-                            double access_rate_trend = profile.getAccessTrend().equals("NaN") ?
-                                    0.0 : Double.valueOf(profile.getAccessTrend());
-                            // 4. Caching Efficiency
+                            // 3. Caching Efficiency
                             int contextSize = context.getBytes().length;
-                            double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getValue(),
+                            double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getExpMR(),
                                     profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
                                             Double.valueOf(profile.getExpRetLatency()));
-                            // 5. Query Complexity
+                            // 4. Query Complexity
                             // TODO: Need to calculate using the parse query tree
                             // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
                             double query_complexity = 3.5;
 
                             if(weightThresholds.isEmpty()) defaultWeights();
 
-                            double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getKey()) +
-                                    (weightThresholds.get("mu") * caching_efficiency) +
-                                    (weightThresholds.get("kappa") * access_rate_trend) +
+                            double nonRetrievalConfidence = (weightThresholds.get("mu") * caching_efficiency) +
+                                    (weightThresholds.get("kappa") * access_trend) +
                                     (weightThresholds.get("delta") * reliability) +
                                     (weightThresholds.get("row") * query_complexity);
+                            double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getEfficiecy()) +
+                                    nonRetrievalConfidence;
 
                             valueHistory.add(cacheConfidence);
 
-                            if(cacheConfidence < weightThresholds.get("threshold")){
+                            if(cacheConfidence > weightThresholds.get("threshold")){
                                 cache = true;
-                                long life_seconds = Math.round((-intercept/lambda)*60*1000);
-                                est_cacheLife = life_seconds; // miliseconds
+                                // Solving AR for conf(i) = 0
+                                double lambda_conf = 0;
+                                if(weightThresholds.get("pi") > 0 && ret_effficiency.getType() != 1){
+                                    // Type 1 is where lambda cancels out in the equation
+                                    // If retrieval efficiency weight is not zero (if the parameter is important)
+                                    double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
+                                    lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);;
+                                }
+                                est_cacheLife = lambda_conf < 0 ?
+                                        Math.round(((-intercept)/access_trend) * 1000) :
+                                        Math.round(((lambda_conf - intercept)/access_trend) * 1000) ;
                             }
                             else {
                                 // Delay until the AR of the item is at least that could break-even the gain.
@@ -261,42 +266,56 @@ public class SelectionExecutor {
                                 (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
                                         (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda))))) {
                             // 1. Retrieval Efficiency
-                            AbstractMap.SimpleEntry<Double,Double> ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
+                            RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
                                     cqc_profile, ref_type.toString().toLowerCase(), slaObj);
                             // 2. Reliability of retrieval
                             double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
-                            // 3. Access Rate Trend
-                            double access_rate_trend = profile.getAccessTrend().equals("NaN") ?
-                                    0.0 : Double.valueOf(profile.getAccessTrend());
-                            // 4. Caching Efficiency
+                            // 3. Caching Efficiency
                             int contextSize = context.getBytes().length;
-                            double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getValue(),
+                            double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getExpMR(),
                                     profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
                                             Double.valueOf(profile.getExpRetLatency()));
-                            // 5. Query Complexity
+                            // 4. Query Complexity
                             // TODO: Need to calculate using the parse query tree
                             // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
                             double query_complexity = 3.5;
 
                             if(weightThresholds.isEmpty()) defaultWeights();
 
-                            double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getKey()) +
-                                    (weightThresholds.get("mu") * caching_efficiency) +
-                                    (weightThresholds.get("kappa") * access_rate_trend) +
+                            double nonRetrievalConfidence = (weightThresholds.get("mu") * caching_efficiency) +
+                                    (weightThresholds.get("kappa") * access_trend) +
                                     (weightThresholds.get("delta") * reliability) +
                                     (weightThresholds.get("row") * query_complexity);
+                            double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getEfficiecy()) +
+                                    nonRetrievalConfidence;
 
                             valueHistory.add(cacheConfidence);
 
-                            if(cacheConfidence < weightThresholds.get("threshold")){
+                            if(cacheConfidence > weightThresholds.get("threshold")){
                                 cache = true;
                                 // No change to estimated lifetime. Using default to cache until eviction.
                             }
                             else {
                                 // Need to delay until the AR is such that it could at least break-even the cost.
-
-                                est_delayTime = 60000;
+                                double lambda_conf = 0;
+                                if(weightThresholds.get("pi") > 0){
+                                    if(ret_effficiency.getType() != 1){
+                                        // Type 1 is where lambda cancels out in the equation
+                                        // If retrieval efficiency weight is not zero (if the parameter is important)
+                                        double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
+                                        lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
+                                    }
+                                    else {
+                                        double top = (ret_effficiency.getCacheCost()/ret_effficiency.getExpMR()) * weightThresholds.get("pi");
+                                        double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
+                                        lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
+                                    }
+                                    est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                                }
+                                else {
+                                    est_delayTime = 60 * 1000; // default delay
+                                }
                                 forcedDirector = false;
                                 delayRegistry.put(contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
                             }
@@ -347,7 +366,7 @@ public class SelectionExecutor {
         return cacheCost / redirCost;
     }
 
-    private static AbstractMap.SimpleEntry<Double,Double> getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
+    private static RetrievalEfficiency getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
         /** Initializing the variables **/
         double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
@@ -359,6 +378,8 @@ public class SelectionExecutor {
         double retlatency = Double.valueOf(profile.getExpRetLatency()); // seconds
         double lifetime = slaObj.getJSONObject("freshness").getDouble("value"); // seconds
         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value"); // seconds
+
+        RetrievalEfficiency.Builder response = RetrievalEfficiency.newBuilder();
 
         /** Redirector Mode **/
         // Total cost of retrieval
@@ -384,6 +405,7 @@ public class SelectionExecutor {
             red_penalties = prob_delay.getValue() * penalty;
         }
         double red_cost = (red_ret_cost + red_penalties) * lambda;
+        response.setRedCost(red_ret_cost + red_penalties);
 
         /** Retrieval costs if cached **/
         double cache_cost = 0;
@@ -407,6 +429,7 @@ public class SelectionExecutor {
 
                 if(sampleInterval == 0) {
                     double exp_prd = (lifetime - retlatency) * (1 - fthr);
+                    response.setExpPrd(exp_prd);
                     hits = exp_prd * lambda;
                     exp_mr = 1/(hits + 1);
 
@@ -415,6 +438,7 @@ public class SelectionExecutor {
                     else cache_penalties = (prob_delay.getValue()) * penalty;
 
                     cache_cost = (retCost + cache_penalties) * lambda * exp_mr;
+                    response.setType(1);
                 }
                 else {
                     if(lifetime > sampleInterval){
@@ -423,6 +447,7 @@ public class SelectionExecutor {
                         double ref_rate = 1 / exp_prd;
 
                         cache_cost = (retCost + cache_penalties) * ref_rate;
+                        response.setType(2);
                         hits = exp_prd * lambda;
                         exp_mr = 1/(hits + 1);
 
@@ -430,6 +455,7 @@ public class SelectionExecutor {
                     else {
                         // Refreshing almost at the sampling rate
                         cache_cost = (retCost + cache_penalties) * (1/sampleInterval);
+                        response.setType(3);
                         hits = sampleInterval * lambda;
                         exp_mr = 1/(hits + 1);
                     }
@@ -440,6 +466,6 @@ public class SelectionExecutor {
 
         // Retrieval efficiency is the ratio between the cost of totally retrieving from the CPs in an adhoc manner
         // called the redirector mode, and the cost of serving from a cache
-        return new AbstractMap.SimpleEntry(cache_cost / red_cost, exp_mr);
+        return response.setEfficiecy(cache_cost / red_cost).setCacheCost(cache_cost).setExpMR(exp_mr).build();
     }
 }

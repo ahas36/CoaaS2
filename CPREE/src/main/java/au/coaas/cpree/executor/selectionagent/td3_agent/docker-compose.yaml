@@ -1,0 +1,8 @@
+services:
+  service-simulator:
+    image: shakthiw/reactive-agent:latest
+    container_name: "reactive-agent"
+    restart: always
+    build: .
+    ports:
+      - '9494:9494'

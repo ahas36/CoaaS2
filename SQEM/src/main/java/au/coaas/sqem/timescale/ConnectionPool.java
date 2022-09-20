@@ -40,7 +40,7 @@ public class ConnectionPool {
 
         int port = 22;
         int tunnelLocalPort = 3309;
-        int tunnelRemotePort = 6379;
+        int tunnelRemotePort = 5432;
         String tunnelRemoteHost = "localhost";
 
         JSch jsch = new JSch();

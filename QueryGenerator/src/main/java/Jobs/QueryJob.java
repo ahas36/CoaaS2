@@ -12,15 +12,21 @@ public class QueryJob implements Job {
 
     private static Logger log = Logger.getLogger(QueryJob.class.getName());
 
+    @Override
     public void execute(JobExecutionContext context) {
-        JobDataMap dataMap = context.getJobDetail().getJobDataMap();
-        String contextQuery = dataMap.getString("query");
-        String queryId = dataMap.getString("query-id");
-        String token = dataMap.getString("token");
+        try {
+            JobDataMap dataMap = context.getJobDetail().getJobDataMap();
+            String contextQuery = dataMap.getString("query");
+            String queryId = dataMap.getString("query-id");
+            String token = dataMap.getString("token");
 
-        HttpHandler.makeContextQuery(contextQuery, token);
+            HttpHandler.makeContextQuery(contextQuery, token);
 
-        LocalDateTime time = LocalDateTime.now();
-        log.info("Made the context query: " + queryId + " at " + time.toString());
+            LocalDateTime time = LocalDateTime.now();
+            log.info("Made the context query: " + queryId + " at " + time.toString());
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
     }
 }

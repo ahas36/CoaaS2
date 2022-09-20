@@ -165,10 +165,12 @@ public class SelectionExecutor {
                 SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-               ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile, lookup.getServiceId());
+                ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile, lookup.getServiceId());
 
-                long est_cacheLife = -1;
+                double lambda_conf = 0;
                 long est_delayTime = 0;
+                long est_cacheLife = -1;
+                boolean indefinite = false;
                 double access_trend = profile.getAccessTrend().equals("NaN") ?
                         0.0 : Double.valueOf(profile.getAccessTrend());
 
@@ -227,7 +229,6 @@ public class SelectionExecutor {
                             if(cacheConfidence > weightThresholds.get("threshold")){
                                 cache = true;
                                 // Solving AR for conf(i) = 0
-                                double lambda_conf = 0;
                                 if(weightThresholds.get("pi") > 0 && ret_effficiency.getType() != 1){
                                     // Type 1 is where lambda cancels out in the equation
                                     // If retrieval efficiency weight is not zero (if the parameter is important)
@@ -241,7 +242,6 @@ public class SelectionExecutor {
                             else {
                                 // Delay until the AR of the item is at least that could break-even the gain.
                                 // Solving AR for conf(i) = 0
-                                double lambda_conf = 0;
                                 if(weightThresholds.get("pi") > 0){
                                     if(ret_effficiency.getType() != 1){
                                         // Type 1 is where lambda cancels out in the equation
@@ -255,6 +255,7 @@ public class SelectionExecutor {
                                         lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
                                     }
                                     // Indefinite delaying until the item reach a better AR
+                                    indefinite = true;
                                     LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda_conf);
                                 }
                                 else {
@@ -310,20 +311,19 @@ public class SelectionExecutor {
                             valueHistory.add(cacheConfidence);
 
                             if(cacheConfidence > weightThresholds.get("threshold")){
-                                // No change to estimated lifetime. Using default to cache until eviction.
+                                // No change to estimated lifetime.
+                                // Wait for eviction at least until the AR is below a threshold.
                                 cache = true;
-                                double lambda_conf = 0;
+                                indefinite = true;
                                 if(weightThresholds.get("pi") > 0 && ret_effficiency.getType() != 1){
                                     // Type 1 is where lambda cancels out in the equation
                                     // If retrieval efficiency weight is not zero (if the parameter is important)
                                     double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
                                     lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
                                 }
-                                // Wait for eviction at least until the AR is below a threshold.
                             }
                             else {
                                 // Need to delay until the AR is such that it could at least break-even the cost.
-                                double lambda_conf = 0;
                                 if(weightThresholds.get("pi") > 0){
                                     if(ret_effficiency.getType() != 1){
                                         // Type 1 is where lambda cancels out in the equation
@@ -362,6 +362,8 @@ public class SelectionExecutor {
                             .setRefreshLogic(ref_type.toString().toLowerCase())
                             // TODO: This cache life should be saved in the eviction registry
                             .setCachelife(est_cacheLife) // This is in miliseconds
+                            .setLambdaConf(lambda_conf)
+                            .setIndefinite(indefinite)
                             .setReference(lookup).build());
                     return new AbstractMap.SimpleEntry<>(response.getStatus().equals("200") ? true : false,
                             ref_type);
@@ -371,7 +373,9 @@ public class SelectionExecutor {
                 // Estimate the delay  (What is the lifetime is 0 or less than RetL? <-- check forcedRedirector)
                 // Logging the delay time
                 sqemStub.logDecisionLatency(DecisionLog.newBuilder()
-                        .setLatency(est_cacheLife).setType("delay").build());
+                        .setLatency(est_delayTime).setLambdaConf(lambda_conf)
+                        .setIndefinite(indefinite)
+                        .setType("delay").build());
             }
         }
         catch(Exception ex){

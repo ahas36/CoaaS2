@@ -110,8 +110,10 @@ message CacheRequest
 {
     string json = 1;
     int64 cachelife = 2;
-    string refreshLogic = 3;
-    CacheLookUp reference = 4;
+    double lambdaConf = 3;
+    string refreshLogic = 4;
+    CacheLookUp reference = 5;
+    bool indefinite = 6;
 }
 
 message CacheRefreshRequest
@@ -250,6 +252,8 @@ message SummarySLA
 message DecisionLog {
     int64 latency = 1;
     string type = 2;
+    double lambdaConf = 3;
+    bool indefinite = 4;
 }
 
 service SQEMService {

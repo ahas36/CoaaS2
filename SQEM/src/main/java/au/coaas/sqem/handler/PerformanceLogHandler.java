@@ -10,6 +10,7 @@ import au.coaas.sqem.util.HttpClient;
 import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.Utilty;
 
+import au.coaas.sqem.util.enums.DelayCacheLatency;
 import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
 import com.google.common.collect.Iterables;
@@ -52,6 +53,7 @@ public class PerformanceLogHandler {
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
     private static final int max_history = 10;
+    private static final long max_delay_cache_residence = 3600 * 1000;
 
     // TODO: the size of the queue should be adaptive to the size of the planning period
     // This is, based on the size of the planning, the queue should contain all the history up to maximum default
@@ -245,14 +247,32 @@ public class PerformanceLogHandler {
     }
 
     // Persist the decision history of the reinforcement agent
-    public static void logDecisionLatency(String type, long latency){
+    public static void logDecisionLatency(String type, long latency, DelayCacheLatency decType){
         try{
-            String queryString = "INSERT INTO cacheHistoryRegistry(type,latency,createdDatetime) VALUES('%s', %d, CAST('%s' AS DATETIME2));";
-            Statement statement = connection.createStatement();
-            statement.setQueryTimeout(30);
+                String queryString = "INSERT INTO cacheHistoryRegistry(type,latency,createdDatetime,horizon) " +
+                        "VALUES('%s', %d, CAST('%s' AS DATETIME2), '%s');";
+                Statement statement = connection.createStatement();
+                statement.setQueryTimeout(30);
 
+                LocalDateTime now = LocalDateTime.now();
+                if(decType.equals(DelayCacheLatency.INDEFINITE))
+                    latency = max_delay_cache_residence;
+                statement.executeUpdate(String.format(queryString, type, latency, now.format(formatter),
+                        decType.equals(DelayCacheLatency.DEFINITE) ? "definite" : "indefinite"));
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
+    // Context Accessing
+    public static void insertAccess(String id, String outcome) {
+        String queryString = "INSERT INTO context_access(time,context_id,outcome) VALUES(CAST('%s' AS DATETIME2),'%s', '%s');";
+        Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
+        try{
+            Statement statement = conn.createStatement();
             LocalDateTime now = LocalDateTime.now();
-            statement.executeUpdate(String.format(queryString, type, latency, now.format(formatter)));
+            statement.executeUpdate(String.format(queryString, now.format(formatter), id, outcome));
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -1170,11 +1190,12 @@ public class PerformanceLogHandler {
             Document project = new Document();
             project.put("rawContext."+cpId,1);
 
-            Document filter = new Document();
-            filter.put("rawContext."+cpId, new Document(){{ put("$exists", true); }});
+            // Document filter = new Document();
+            // filter.put("rawContext."+cpId, new Document(){{ put("$exists", true); }});
 
             // Search the performance DB
-            FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
+            // FindIterable<Document> result = collection.find(filter).projection(project).sort(sort).limit(max_history);
+            FindIterable<Document> result = collection.find().sort(sort).limit(max_history).projection(project);
 
             AtomicReference<Double> exp_ar = new AtomicReference<>(Double.NaN);
             AtomicReference<Double> exp_fthr = new AtomicReference<>(Double.NaN);
@@ -1200,45 +1221,53 @@ public class PerformanceLogHandler {
 
                 for(Document document : result){
                     // Expected freshness threshold, reliability, and retrieval latency
-                    Document cp = document.get("rawContext", Document.class).get(cpId, Document.class);
-                    Document rel = cp.get("reliability", Document.class);
+                    Document rCon = document.get("rawContext", Document.class);
+                    if(rCon.containsKey(cpId)){
+                        Document cp = rCon.get(cpId, Document.class);
+                        Document rel = cp.get("reliability", Document.class);
 
-                    if(rel != null){
-                        dataset[index][0] = index;
-                        dataset_2[index][0] = index;
-                        dataset_3[index][0] = index;
-                        dataset_5[index][0] = index;
+                        if(rel != null){
+                            dataset[index][0] = index;
+                            dataset_2[index][0] = index;
+                            dataset_3[index][0] = index;
+                            dataset_5[index][0] = index;
 
-                        dataset[index][1] = cp.containsKey("profile") ?
-                                cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
-                        dataset_2[index][1] = rel.getDouble("reliability");
-                        dataset_3[index][1] = rel.getDouble("retLatency");
-                        retLatList[index] = rel.getDouble("retLatency");
-                        dataset_5[index][1] = rel.getDouble("cost");
-                        counts.add(rel.getDouble("count")/60);
-
-                        index ++;
+                            dataset[index][1] = cp.containsKey("profile") ?
+                                    cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
+                            dataset_2[index][1] = rel.getDouble("reliability");
+                            dataset_3[index][1] = rel.getDouble("retLatency");
+                            retLatList[index] = rel.getDouble("retLatency");
+                            dataset_5[index][1] = rel.getDouble("cost");
+                            counts.add(rel.getDouble("count")/60);
+                        }
                     }
+                    else {
+                        counts.add(0.0);
+                    }
+
+                    index ++;
                 }
 
                 index = 0;
                 Collections.reverse(counts);
                 for(Double cnt: counts){
                     dataset_4[index][0] = index;
-                    dataset_5[index][1] = cnt;
+                    dataset_4[index][1] = cnt;
+                    index++;
                 }
 
                 ExecutorService estimation_executor = Executors.newFixedThreadPool(8);
                 ArrayList<Future<?>> taskList = new ArrayList<>();
 
                 // The list is inverted, so, estimating from x=-1.
+                int finalIndex = index;
                 taskList.add(estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); }));
                 taskList.add(estimation_executor.submit(() -> { var_ratLatency.set(getVariance(retLatList)); }));
-                taskList.add(estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, -1)); }));
                 taskList.add(estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); }));
                 taskList.add(estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); }));
                 taskList.add(estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_3, -1)); }));
                 taskList.add(estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_2, -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, finalIndex + 1)); }));
 
                 while(!taskList.isEmpty()){
                     Future<?> curr = taskList.get(0);
@@ -1403,10 +1432,10 @@ public class PerformanceLogHandler {
 
     // Retrieve the decision history of the estimated life and delay times
     private static JSONObject getCacheLives() throws Exception{
-        String queryString = "SELECT type, avg(latency) as avg_lat " +
+        String queryString = "SELECT type, horizon, sum(latency) as sum_lat, count(horizon) as cnt_hor " +
                 "FROM cacheHistoryRegistry " +
                 "WHERE createdDatetime >= CAST('%s' AS DATETIME2) AND createdDatetime < CAST('%s' AS DATETIME2) " +
-                "GROUP BY type;";
+                "GROUP BY type, horizon;";
         Statement statement = connection.createStatement();
         statement.setQueryTimeout(30);
 
@@ -1416,15 +1445,30 @@ public class PerformanceLogHandler {
         String fnlString = String.format(queryString,start.format(formatter), end.format(formatter));
         ResultSet rs = statement.executeQuery(fnlString);
 
-        JSONObject body = new JSONObject() {{
-            put("cachelife",0.0);
-            put("delay",0.0);
-        }};
+        long cacheSum = 0;
+        long cacheDefCount = 0;
+
+        long delaySum = 0;
+        long delayDefCount = 0;
 
         while(rs.next()){
-            double avg_lat = rs.getDouble("avg_lat");
-            body.put(rs.getString("type"), avg_lat);
+            if(rs.getString("type").equals("cachelife")){
+                cacheSum += rs.getLong("sum_lat");
+                if(rs.getString("horizon").equals("definite")){
+                    cacheDefCount += rs.getLong("cnt_hor");
+                }
+            }
+            else {
+                delaySum += rs.getLong("sum_lat");
+                if(rs.getString("horizon").equals("definite")){
+                    delayDefCount += rs.getLong("cnt_hor");
+                }
+            }
         }
+
+        JSONObject body = new JSONObject();
+        body.put("cachelife", cacheDefCount > 0 ? cacheSum/cacheDefCount : 0.0);
+        body.put("delay", delayDefCount > 0 ? delaySum/delayDefCount : 0.0);
 
         return body;
     }
@@ -1474,7 +1518,8 @@ public class PerformanceLogHandler {
                             "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
                             "    type VARCHAR(15) NOT NULL,\n" +
                             "    latency BIGINT NOT NULL,\n" +
-                            "    createdDatetime DATETIME NOT NULL)");
+                            "    createdDatetime DATETIME NOT NULL,\n" +
+                            "    horizon VARCHAR(10) NOT NULL)");
 
             statement.execute(
                     "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +
@@ -1529,6 +1574,21 @@ public class PerformanceLogHandler {
                     "    queryId VARCHAR(40) NULL,\n" +
                     "    queryClass BIGINT NOT NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL)");
+        }
+        catch(Exception ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
+    public static void seed_timeseries_db(){
+        try{
+            Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
+            Statement statement = conn.createStatement();
+            statement.execute("CREATE TABLE context_access(\n" +
+                    "    time TIMESTAMPTZ NOT NULL," +
+                    "    context_id TEXT," +
+                    "    outcome VARCHAR(10))");
+            statement.execute("SELECT create_hypertable('context_access', 'time');");
         }
         catch(Exception ex){
             log.severe(ex.getMessage());

@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class CacheDataRegistry{
@@ -94,8 +95,8 @@ public final class CacheDataRegistry{
 
         if(this.root.containsKey(lookup.getEt().getType())){
             Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).child;
-
             String serId = lookup.getServiceId();
+
             if(serId.startsWith("{")){
                 JSONObject obj = new JSONObject(serId);
                 serId = obj.getString("$oid");
@@ -193,6 +194,9 @@ public final class CacheDataRegistry{
                         }
 
                         if(now.isAfter(expiryTime)){
+                            // Store cache access in Time Series DB
+                            Executors.newCachedThreadPool().execute(()
+                                    -> PerformanceLogHandler.insertAccess(lookup.getServiceId()+"-"+hashKey.get(),"p_miss"));
                             return res.setHashkey(hashKey.get())
                                     .setIsValid(false)
                                     .setIsCached(true)
@@ -203,6 +207,9 @@ public final class CacheDataRegistry{
                         remainingLife = ChronoUnit.SECONDS.between(LocalDateTime.now(), staleTime);
                     }
 
+                    // Store cache access in Time Series DB
+                    Executors.newCachedThreadPool().execute(()
+                            -> PerformanceLogHandler.insertAccess(lookup.getServiceId()+"-"+hashKey.get(),"hit"));
                     return res.setHashkey(hashKey.get())
                             .setIsValid(true)
                             .setIsCached(true)
@@ -218,6 +225,9 @@ public final class CacheDataRegistry{
         if(hashKey.get() != null)
             res.setHashkey(hashKey.get());
 
+        // Store cache access in Time Series DB
+        Executors.newCachedThreadPool().execute(()
+                -> PerformanceLogHandler.insertAccess(lookup.getServiceId()+"-"+hashKey.get(),"miss"));
         return res.build();
     }
 

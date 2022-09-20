@@ -197,6 +197,16 @@ services:
         ports:
             - 5433:5432
 
+    timescale:
+      image: timescale/timescaledb-ha:pg14-latest
+      container_name: "timescale"
+      environment:
+        - POSTGRES_USER=coaas
+        - POSTGRES_DB=coaas
+        - POSTGRES_HOST_AUTH_METHOD=trust
+      ports:
+        - 5436:5432
+
     zookeeper:
       image: confluentinc/cp-zookeeper:latest
       environment:

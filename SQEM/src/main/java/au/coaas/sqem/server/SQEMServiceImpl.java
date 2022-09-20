@@ -430,6 +430,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void getContextProfile(au.coaas.sqem.proto.ContextProfileRequest request,
+                                          io.grpc.stub.StreamObserver<au.coaas.sqem.proto.ContextProfile> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler
+                    .getContextProfile(request.getPrimaryKey(), request.getLimit()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void getQueryClassProfile(au.coaas.sqem.proto.ContextProfileRequest request,
                                           io.grpc.stub.StreamObserver<au.coaas.sqem.proto.QueryClassProfile> responseObserver) {
         try {

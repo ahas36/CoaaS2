@@ -52,6 +52,7 @@ message ContextProfileRequest {
     string hashKey = 2;
     string level = 3;
     string meta = 4;
+    int32 limit = 5;
 }
 
 message ProbDelayRequest {
@@ -73,6 +74,14 @@ message ContextProviderProfile {
     double retVariance = 9;
     string arIntercept = 10;
     string arRegression = 11;
+}
+
+message ContextProfile {
+    repeated int32 access = 1;
+    string status = 2;
+    string trend = 3;
+    string intercept = 4;
+    string expAR = 5;
 }
 
 message QueryClassProfile {
@@ -304,4 +313,5 @@ service SQEMService {
     rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
     rpc logDecisionLatency(DecisionLog) returns (Empty);
     rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
+    rpc getContextProfile(ContextProfileRequest) returns (ContextProfile);
 }

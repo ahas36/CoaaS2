@@ -24,6 +24,8 @@ import java.util.logging.Logger;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 
+import com.google.common.util.concurrent.ListenableFuture;
+
 public class SelectionExecutor {
 
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
@@ -153,7 +155,13 @@ public class SelectionExecutor {
             String contextId = lookup.getServiceId() + "-" + hashkey;
             LocalDateTime curr = LocalDateTime.now();
 
-            double lambda = profile.getExpAR().equals("NaN") ? 1.0/60 : Double.valueOf(profile.getExpAR()); // per second
+            SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+
+            ListenableFuture<ContextProfile> c_profile = sqemStub.getContextProfile(ContextProfileRequest.newBuilder()
+                    .setPrimaryKey(contextId).build());
+
+            double lambda = c_profile.get().getExpAR().equals("NaN") ? 1.0/60 : Double.valueOf(c_profile.get().getExpAR()); // per second
 
             // TODO:
             // Evaluate the context item for caching.
@@ -162,8 +170,6 @@ public class SelectionExecutor {
             if(!profile.getAccessTrend().equals("NaN") &&
                     LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
                     LookUps.lookup(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda)) {
-                SQEMServiceGrpc.SQEMServiceBlockingStub  sqemStub
-                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                 ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile, lookup.getServiceId());
 
@@ -171,11 +177,12 @@ public class SelectionExecutor {
                 long est_delayTime = 0;
                 long est_cacheLife = -1;
                 boolean indefinite = false;
-                double access_trend = profile.getAccessTrend().equals("NaN") ?
-                        0.0 : Double.valueOf(profile.getAccessTrend());
 
-                QueryClassProfile cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
+                ListenableFuture<QueryClassProfile> cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
                         .setPrimaryKey(lookup.getQClass()).build());
+
+                double access_trend = c_profile.get().getTrend().equals("NaN") ?
+                        0.0 : Double.valueOf(c_profile.get().getTrend());
 
                 if(access_trend < 0){
                     // TODO: IMPORTANT!
@@ -185,13 +192,13 @@ public class SelectionExecutor {
                     // This shouldn't be the case. I should rather retrieve the expected value considering all of CQ classes which the item is used
                     // from the context query class network.
 
-                    if(cqc_profile.getStatus().equals("200")){
+                    if(cqc_profile.get().getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
                         double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
-                        double intercept = profile.getArIntercept().equals("NaN") ? 0 : Double.valueOf(profile.getArIntercept());
+                        double intercept = c_profile.get().getIntercept().equals("NaN") ? 0 : Double.valueOf(c_profile.get().getIntercept());
                         double exp_prd = lifetime * (1 - fthr);
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
@@ -200,8 +207,8 @@ public class SelectionExecutor {
                                 (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
                                         (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda))))) {
                             // 1. Retrieval Efficiency
-                            RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
-                                    cqc_profile, ref_type.toString().toLowerCase(), slaObj);
+                            RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
+                                    cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
                             // 2. Reliability of retrieval
                             double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
@@ -269,7 +276,7 @@ public class SelectionExecutor {
                 else {
                     // When the access trend is positive, the item would be cached for a longer period until evicted by
                     // the eviction algorithm.
-                    if(cqc_profile.getStatus().equals("200")) {
+                    if(cqc_profile.get().getStatus().equals("200")) {
                         JSONObject slaObj = new JSONObject(sla);
                         double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
@@ -284,8 +291,8 @@ public class SelectionExecutor {
                                 (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
                                         (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda))))) {
                             // 1. Retrieval Efficiency
-                            RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile,
-                                    cqc_profile, ref_type.toString().toLowerCase(), slaObj);
+                            RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
+                                    cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
                             // 2. Reliability of retrieval
                             double reliability = profile.getRelaibility().equals("NaN") ?
                                     0.0 : Double.valueOf(profile.getRelaibility());
@@ -357,7 +364,7 @@ public class SelectionExecutor {
                 // Actual Caching
                 if(cache) {
                     // Check available cache memory before caching
-                    SQEMResponse response = sqemStub.cacheEntity(CacheRequest.newBuilder()
+                    ListenableFuture<SQEMResponse> response = sqemStub.cacheEntity(CacheRequest.newBuilder()
                             .setJson(context)
                             .setRefreshLogic(ref_type.toString().toLowerCase())
                             // TODO: This cache life should be saved in the eviction registry
@@ -365,7 +372,7 @@ public class SelectionExecutor {
                             .setLambdaConf(lambda_conf)
                             .setIndefinite(indefinite)
                             .setReference(lookup).build());
-                    return new AbstractMap.SimpleEntry<>(response.getStatus().equals("200") ? true : false,
+                    return new AbstractMap.SimpleEntry<>(response.get().getStatus().equals("200") ? true : false,
                             ref_type);
                 }
 
@@ -394,12 +401,12 @@ public class SelectionExecutor {
         return cacheCost / redirCost;
     }
 
-    private static RetrievalEfficiency getRetrievalEfficiency(String serviceId, ContextProviderProfile profile,
+    private static RetrievalEfficiency getRetrievalEfficiency(String serviceId, ContextProviderProfile profile, double expLambda,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
         /** Initializing the variables **/
         double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                 slaObj.getJSONObject("freshness").getDouble("fthresh");
-        double lambda = Double.valueOf(profile.getExpAR()); // per second
+        double lambda = expLambda; // per second
         double rtmax = Double.valueOf(cqc_profile.getRtmax()); // seconds
         double retCost = Double.valueOf(profile.getExpCost());
         double penalty = Double.valueOf(cqc_profile.getPenalty());

@@ -1306,6 +1306,49 @@ public class PerformanceLogHandler {
         }
     }
 
+    public static ContextProfile getContextProfile(String contextId, int limit) {
+        String queryString = "SELECT time_bucket('1 minute', time) time AS bucket, COUNT(context_id) AS cnt\n " +
+                " FROM context_access\n" +
+                " WHERE context_id = '%s'\n" +
+                " GROUP BY bucket \n" +
+                " ORDER BY bucket LIMIT %d";
+        Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
+        try{
+            Statement statement = conn.createStatement();
+            int fixedLimit = limit <= 0 ? 10 : limit;
+            ResultSet rs = statement.executeQuery(String.format(queryString, contextId, fixedLimit));
+            ContextProfile.Builder accesses = ContextProfile.newBuilder();
+
+            int index = 0;
+            double[][] dataset = new double[fixedLimit][2];
+            
+            while(rs.next()){
+                int accessCnt = rs.getInt("cnt")/60;
+                accesses.addAccess(accessCnt);
+                dataset[index][0] = index;
+                dataset[index][1] = accessCnt;
+                index++;
+            }
+
+            SimpleRegression result = getSlope(dataset);
+            if(result != null){
+                return accesses.setTrend(String.valueOf(result.getSlope()))
+                        .setIntercept(String.valueOf(result.getIntercept()))
+                        .setExpAR(String.valueOf(result.predict(index)))
+                        .setStatus("200").build();
+            }
+            return ContextProfile.newBuilder()
+                    .setTrend("NaN").setIntercept("NaN").setExpAR("NaN")
+                    .setStatus("500").build();
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+            return ContextProfile.newBuilder()
+                    .setTrend("NaN").setIntercept("NaN").setExpAR("NaN")
+                    .setStatus("500").build();
+        }
+    }
+
     public static QueryClassProfile getQueryClassProfile(String classId){
         try{
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();

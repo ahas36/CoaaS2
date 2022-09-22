@@ -4,6 +4,7 @@ import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
 
 import au.coaas.sqem.util.CacheDataRegistry;
+import au.coaas.sqem.util.enums.DelayCacheLatency;
 import au.coaas.sqem.util.enums.PerformanceStats;
 import au.coaas.sqem.util.enums.ScheduleTasks;
 import au.coaas.sqem.util.Utilty;
@@ -60,7 +61,13 @@ public class ContextCacheHandler {
                 ent.set (entityJson);
             }
 
-            PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife());
+            // TODO: Set Eviction Time use that in the eviction logic
+            if(!registerRequest.getIndefinite()){
+                PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife(), DelayCacheLatency.DEFINITE);
+            }
+            else {
+                PerformanceLogHandler.logDecisionLatency("cachelife", Long.MAX_VALUE, DelayCacheLatency.INDEFINITE);
+            }
 
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
         } catch (Exception e) {
@@ -321,7 +328,8 @@ public class ContextCacheHandler {
     }
 
     public static Empty logCacheDecisionLatency(DecisionLog request){
-        PerformanceLogHandler.logDecisionLatency(request.getType(), request.getLatency());
+        PerformanceLogHandler.logDecisionLatency(request.getType(), request.getLatency(),
+                request.getIndefinite()? DelayCacheLatency.INDEFINITE : DelayCacheLatency.DEFINITE);
         return null;
     }
 

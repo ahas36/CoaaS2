@@ -7,10 +7,15 @@ public class QueryGeneratingServer {
 
     static public void main (String [] args) throws SchedulerException {
 
-        log.info("Starting Query Generation");
-        QueryScheduler queryScheduler = QueryScheduler.getInstance();
-        queryScheduler.fetchSchedule();
-        log.info("Context Query Simulator Started!");
-
+        try {
+            log.info("Starting Query Generation");
+            QueryScheduler queryScheduler = QueryScheduler.getInstance();
+            queryScheduler.fetchSchedule();
+            log.info("Context Query Simulator Started!");
+        }
+        catch(Exception ex){
+            log.severe("Error occured: " + ex.getMessage());
+            log.info(String.valueOf(ex.getStackTrace()));
+        }
     }
 }

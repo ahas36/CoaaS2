@@ -8,3 +8,5 @@ Docker push shakthiw/csi:latest
 Docker push shakthiw/cqg:latest
 Docker push shakthiw/acoca:latest
 Docker push shakthiw/cpree:latest
+Docker push shakthiw/reactive-agent:latest
+Docker push shakthiw/service-simulator:latest

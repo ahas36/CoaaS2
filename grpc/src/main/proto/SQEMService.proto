@@ -52,6 +52,7 @@ message ContextProfileRequest {
     string hashKey = 2;
     string level = 3;
     string meta = 4;
+    int32 limit = 5;
 }
 
 message ProbDelayRequest {
@@ -71,6 +72,16 @@ message ContextProviderProfile {
     string status = 7;
     string expCost = 8;
     double retVariance = 9;
+    string arIntercept = 10;
+    string arRegression = 11;
+}
+
+message ContextProfile {
+    repeated int32 access = 1;
+    string status = 2;
+    string trend = 3;
+    string intercept = 4;
+    string expAR = 5;
 }
 
 message QueryClassProfile {
@@ -108,8 +119,10 @@ message CacheRequest
 {
     string json = 1;
     int64 cachelife = 2;
-    string refreshLogic = 3;
-    CacheLookUp reference = 4;
+    double lambdaConf = 3;
+    string refreshLogic = 4;
+    CacheLookUp reference = 5;
+    bool indefinite = 6;
 }
 
 message CacheRefreshRequest
@@ -248,6 +261,8 @@ message SummarySLA
 message DecisionLog {
     int64 latency = 1;
     string type = 2;
+    double lambdaConf = 3;
+    bool indefinite = 4;
 }
 
 service SQEMService {
@@ -298,4 +313,5 @@ service SQEMService {
     rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
     rpc logDecisionLatency(DecisionLog) returns (Empty);
     rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
+    rpc getContextProfile(ContextProfileRequest) returns (ContextProfile);
 }

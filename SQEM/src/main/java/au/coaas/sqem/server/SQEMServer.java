@@ -42,6 +42,7 @@ public class SQEMServer {
         log.info("Server started on port 8686");
 
         PerformanceLogHandler.seed_performance_db();
+        PerformanceLogHandler.seed_timeseries_db();
         monitorManager.start();
 
         monitorManager.registerRoutine(Routine.STAT, StorageRoutine.newBuilder()

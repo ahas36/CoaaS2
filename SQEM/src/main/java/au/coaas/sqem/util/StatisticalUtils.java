@@ -19,17 +19,17 @@ public class StatisticalUtils {
         }
     }
 
-    public static double getSlope(double[][] data) {
+    public static SimpleRegression getSlope(double[][] data) {
         try {
             SimpleRegression simpleRegression = new SimpleRegression();
             simpleRegression.addData(data);
             // Multiplying by -1 because the list is inverted. So, when the AR is increasing, the  resultant slope as in the
             // dataset would actually be negative, which therefore need to be inverted and vice versa.
-            return simpleRegression.getSlope() * -1;
+            return simpleRegression;
         }
         catch(Exception ex){
             log.info("Could not perform regression due to error: " + ex.getMessage());
-            return Double.NaN;
+            return null;
         }
     }
 

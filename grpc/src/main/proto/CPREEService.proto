@@ -51,6 +51,15 @@ message LearnedWeights {
   double row = 6;
 }
 
+message RetrievalEfficiency {
+  double efficiecy = 1;
+  double expMR = 2;
+  int32 type = 3;
+  double cacheCost = 4;
+  double redCost = 5;
+  double expPrd = 6;
+}
+
 service CPREEService {
   rpc classifyQuery (ContextQueryPlan) returns (CPREEResponse);
   rpc evaluateAndCacheContext (CacheSelectionRequest) returns (CPREEResponse);

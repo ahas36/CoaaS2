@@ -44,6 +44,4 @@ public class CQCChannel {
     public ManagedChannel getChannel() {
         return channel;
     }
-    
-    
 }

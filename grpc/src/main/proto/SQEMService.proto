@@ -36,6 +36,7 @@ message CacheLookUp {
     bool checkFresh = 6;
     string key = 7;
     string qClass = 8;
+    string hashKey = 9;
 }
 
 message RefreshUpdate {

@@ -367,7 +367,6 @@ public class SelectionExecutor {
                     ListenableFuture<SQEMResponse> response = sqemStub.cacheEntity(CacheRequest.newBuilder()
                             .setJson(context)
                             .setRefreshLogic(ref_type.toString().toLowerCase())
-                            // TODO: This cache life should be saved in the eviction registry
                             .setCachelife(est_cacheLife) // This is in miliseconds
                             .setLambdaConf(lambda_conf)
                             .setIndefinite(indefinite)

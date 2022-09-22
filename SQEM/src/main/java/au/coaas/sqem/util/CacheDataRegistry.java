@@ -43,11 +43,11 @@ public final class CacheDataRegistry{
             this.child.put(serId, new ContextItem(hashKey, refreshLogic));
         }
 
-        ContextItem(Map<String,String> params){
+        ContextItem(Map<String,String> params, String refreshLogic){
             this.createdTime = LocalDateTime.now();
             this.updatedTime = LocalDateTime.now();
             this.child = new HashMap<>();
-            this.child.put(Utilty.getHashKey(params), new ContextItem());
+            this.child.put(Utilty.getHashKey(params), new ContextItem(refreshLogic));
         }
 
         ContextItem(String hashKey, String refreshLogic){
@@ -204,7 +204,7 @@ public final class CacheDataRegistry{
                                     .setRemainingLife(remainingLife).build();
                         }
 
-                        remainingLife = ChronoUnit.SECONDS.between(LocalDateTime.now(), staleTime);
+                        remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
                     }
 
                     // Store cache access in Time Series DB
@@ -264,11 +264,15 @@ public final class CacheDataRegistry{
                                 // Add a new entity by hash key if not available.
                                 hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
                                 if(!stat.child.containsKey(hashKey.get()))
-                                    stat.child.put(hashKey.get(),new ContextItem());
+                                    stat.child.put(hashKey.get(),
+                                            refreshLogic != null ? new ContextItem(refreshLogic) : new ContextItem());
                                 else {
                                     stat.child.compute(hashKey.get(), (k1,v1) -> {
-                                        if(v1!=null)
+                                        if(v1!=null){
                                             v1.updatedTime = LocalDateTime.now();
+                                            if(refreshLogic != null)
+                                                v1.refreshLogic = refreshLogic;
+                                        }
                                         return v1;
                                     });
                                 }
@@ -277,7 +281,7 @@ public final class CacheDataRegistry{
                         });
                     }
                     else {
-                        v.child.put(serId,new ContextItem(lookup.getParamsMap()));
+                        v.child.put(serId,new ContextItem(lookup.getParamsMap(), refreshLogic));
                     }
                 }
                 return v;
@@ -319,7 +323,8 @@ public final class CacheDataRegistry{
                         });
                     }
                     else {
-                        v.child.put(serId,new ContextItem(lookup.getLookup().getParamsMap()));
+                        v.child.put(serId,
+                                new ContextItem(lookup.getLookup().getParamsMap(), lookup.getRefreshLogic()));
                     }
                 }
                 return v;
@@ -364,6 +369,38 @@ public final class CacheDataRegistry{
         }
 
         return hashKey;
+    }
+
+    public void removeFromRegistry(String serviceId, String hashKey, String entityType){
+        if(this.root.containsKey(entityType)){
+            this.root.compute(entityType, (k,v) -> {
+                String serId = serviceId;
+                if(serId.startsWith("{")){
+                    JSONObject obj = new JSONObject(serId);
+                    serId = obj.getString("$oid");
+                }
+
+                if(v.child.containsKey(serId)){
+                    v.child.compute(serId, (id,stat) -> {
+                        if(stat.child.containsKey(hashKey)){
+                            stat.child.remove(hashKey);
+                        }
+
+                        return stat;
+                    });
+
+                    if(v.child.get(serId).child.isEmpty()){
+                        v.child.remove(serId);
+                    }
+                }
+
+                return v;
+            });
+
+            if(this.root.get(entityType).child.isEmpty()){
+                this.root.remove(entityType);
+            }
+        }
     }
 }
 

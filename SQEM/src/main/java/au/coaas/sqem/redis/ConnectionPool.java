@@ -1,21 +1,17 @@
 package au.coaas.sqem.redis;
 
+import au.coaas.sqem.handler.ContextCacheHandler;
+
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 
 import org.redisson.Redisson;
 import org.redisson.config.Config;
 import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
+import org.redisson.api.listener.PatternMessageListener;
 import org.redisson.spring.cache.RedissonSpringCacheManager;
 
-import javax.cache.Cache;
-import javax.cache.CacheManager;
-import javax.cache.Caching;
-import javax.cache.configuration.Configuration;
-import javax.cache.configuration.MutableConfiguration;
-
-import java.io.File;
-import java.io.IOException;
 import java.util.logging.Logger;
 
 /* @author: Shakthi */
@@ -49,10 +45,18 @@ public class ConnectionPool {
             // The following lines are only for local testing purposes.
             Config config = new Config();
             config.useSingleServer()
-                    .setAddress("redis://host.docker.internal:6379");
+                    .setAddress("redis://localhost:6379");
             // Test lines, end here.
 
             redisClient = Redisson.create(config);
+            redisClient.getPatternTopic("__keyevent@*__:expired", StringCodec.INSTANCE)
+                    .addListener(String.class, new PatternMessageListener<String>() {
+                        @Override
+                        public void onMessage(CharSequence pattern, CharSequence channel, String key) {
+                            log.info(key + "expired in cache. Starting to evict item.");
+                            ContextCacheHandler.evictEntity(key);
+                        }
+                    });
 
             // TODO:
             // Cache Manager

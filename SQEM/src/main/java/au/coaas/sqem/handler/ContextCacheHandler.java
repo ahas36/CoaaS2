@@ -381,6 +381,11 @@ public class ContextCacheHandler {
         return null;
     }
 
+    public static Empty logCacheDecision(ContextCacheDecision json){
+        PerformanceLogHandler.logCacheDecision(new JSONObject(json.getJson()), json.getLevel());
+        return null;
+    }
+
     private static String convertToUnit(char unit) {
         switch (unit) {
             case '%':

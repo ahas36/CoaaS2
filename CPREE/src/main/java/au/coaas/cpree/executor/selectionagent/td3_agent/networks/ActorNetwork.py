@@ -22,10 +22,12 @@ class ActorNetwork(keras.Model):
         self.fc1 = Dense(self.fc1_dims, activation='relu')
         self.fc2 = Dense(self.fc2_dims, activation='relu')
         self.mu = Dense(self.n_actions, activation='tanh')
+        self.sigma = Dense(self.n_actions, activation='tanh')
 
     def call(self, state):
         action_value = self.fc1(state)
         action_value = self.fc2(action_value)
         mu = self.mu(action_value)
+        sigma = self.sigma(action_value)
 
-        return mu
+        return mu, sigma

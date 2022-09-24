@@ -265,6 +265,44 @@ public class PerformanceLogHandler {
         }
     }
 
+    // Persist the caching decisions of context
+    public static void logCacheDecision(JSONObject decision, String level){
+        try{
+            String finalString;
+            String queryString = "INSERT INTO cacheDecisionHistory(retEff, cacheEff, reliability, complexity, accessTrend, " +
+                    "kappa, mu, delta, row, pi, threshold, isDefinite, level, decision, latency, decisionTime) " +
+                    "VALUES(%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, '%s', '%s', %f, CAST('%s' AS DATETIME2));";
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            LocalDateTime now = LocalDateTime.now();
+
+            if(decision.getBoolean("definite")){
+                String decs = decision.getString("label");
+                finalString = String.format(queryString,
+                        decision.getDouble("retEff"), decision.getDouble("cacheEff"), decision.getDouble("reli"),
+                        decision.getDouble("complexity"), decision.getDouble("ar"),
+                        decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
+                        decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
+                        true, level, decs, decs.startsWith("cache") ? decision.getDouble("cache_life") : decision.getDouble("delay_time"),
+                        now.format(formatter));
+            }
+            else {
+                finalString = String.format(queryString,
+                        decision.getDouble("retEff"), decision.getDouble("cacheEff"), decision.getDouble("reli"),
+                        decision.getDouble("complexity"), decision.getDouble("ar"),
+                        decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
+                        decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
+                        false, level, decision.getString("label"), decision.getDouble("lambda_conf"),
+                        now.format(formatter));
+            }
+            statement.executeUpdate(finalString);
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
     // Context Accessing
     public static void insertAccess(String id, String outcome) {
         String queryString = "INSERT INTO context_access(time,context_id,outcome) VALUES(CAST('%s' AS DATETIME2),'%s', '%s');";
@@ -1617,6 +1655,26 @@ public class PerformanceLogHandler {
                     "    queryId VARCHAR(40) NULL,\n" +
                     "    queryClass BIGINT NOT NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL)");
+
+            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cacheDecisionHistory')\n" +
+                    "CREATE TABLE cacheDecisionHistory(" +
+                    "   id INT NOT NULL IDENTITY(1,1) PRIMARY KEY\n" +
+                    "   retEff REAL NOT NULL,\n" +
+                    "   cacheEff REAL NOT NULL,\n" +
+                    "   reliability REAL NOT NULL,\n" +
+                    "   complexity REAL NOT NULL,\n" +
+                    "   accessTrend REAL NOT NULL,\n" +
+                    "   kappa REAL NOT NULL,\n" +
+                    "   mu REAL NOT NULL,\n" +
+                    "   delta REAL NOT NULL,\n" +
+                    "   row REAL NOT NULL,\n" +
+                    "   pi REAL NOT NULL,\n" +
+                    "   threshold REAL NOT NULL,\n" +
+                    "   isDefinite BIT NOT NULL,\n" +
+                    "   level VARCHAR(15) NOT NULL,\n" +
+                    "   decision VARCHAR(15) NOT NULL,\n" +
+                    "   latency REAL NOT NULL,\n" +
+                    "   decisionTime DATETIME NOT NULL)");
         }
         catch(Exception ex){
             log.severe(ex.getMessage());

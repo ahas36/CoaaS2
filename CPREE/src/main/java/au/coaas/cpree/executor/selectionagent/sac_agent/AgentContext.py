@@ -22,7 +22,7 @@ class AgentContext(Resource):
             actions = self.__agent.choose_action(new_state)
 
 
-            if(not self.__agent.isBufferEmpty):
+            if(not self.__agent.isBufferEmpty()):
                 self.__agent.remember(new_state, utility, actions)
                 self.__agent.learn()
                 self.__score_history.append(utility)

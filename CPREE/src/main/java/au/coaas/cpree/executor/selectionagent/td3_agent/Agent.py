@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow.keras as keras
+import tensorflow_probability as tfp
 from tensorflow.keras.optimizers import Adam
 
 from utils.ReplayBuffer import ReplayBuffer
@@ -12,7 +13,7 @@ class Agent:
             'probability_delay', 'avg_cache_life', 'avg_delay_time']
 
     def __init__(self, max_action = 1, input_dims = [len(__input_dims)], alpha=0.001, beta=0.002, gamma=0.9, n_actions=6, max_size=60,
-            tau=0.005, batch_size=10, warmup=10, update_actor_interval=1, noise=0.05):
+            tau=0.005, batch_size=10, warmup=10, update_actor_interval=1, noise=0.5):
         # Hyperparameters
         self.gamma = gamma
         self.tau = tau
@@ -57,22 +58,44 @@ class Agent:
         # Hard copying the paramters for a soft update
         self.update_network_params(tau=1)
 
+    def update_exploration(self, diff):
+        if(self.time_step > self.warmup):
+            if(abs(diff) < 1):
+                self.noise = self.noise - 0.05
+                if(self.noise <= 0): 
+                    self.noise = 0
+            else:
+                self.noise = self.noise + 0.05
+                if(self.noise >= 0.5): 
+                    self.noise = 0.5
+
     def choose_action(self, observation):
         if(self.time_step < self.warmup):
             mu = np.random.normal(scale=self.noise, size=(self.n_actions,))
+            mu_prime = mu + np.random.normal(scale=self.noise)
+            mu_prime = tf.clip_by_value(mu_prime, self.min_action, self.max_action)
         else:
             state = tf.convert_to_tensor([observation], dtype=tf.float32)
-            mu = self.actor(state)[0]
+            mu, sigma = self.actor(state) 
+
+            probabilities = tfp.distributions.Normal(mu, sigma)
+            exp_noise = probabilities.sample()
+            exp_noise = abs(-1 - tf.math.tanh(exp_noise))/2.0 
+
+            mu = abs(-1 - mu[0])/2.0
+
+            # mu_prime = mu 
+            mu_prime = mu + np.random.normal(scale=self.noise)
+            # mu_prime = (mu + exp_noise)/2
+            mu_prime = tf.clip_by_value(mu_prime, self.min_action, self.max_action)
         
-        mu_prime = mu + np.random.normal(scale=self.noise)
-        mu_prime = tf.clip_by_value(mu_prime, self.min_action, self.max_action)
         self.time_step += 1
 
         return mu_prime
 
     # Checking if the buffer is empty
     def isBufferEmpty(self):
-        return self.memory.mem_cntr > 0
+        return self.memory.mem_cntr == 0
     
     # Storing in the Replay Buffer
     def remember(self, new_state, reward, action):
@@ -142,9 +165,8 @@ class Agent:
             new_states = tf.convert_to_tensor(s_new_states, dtype=tf.float32)
 
             with tf.GradientTape(persistent=True) as tape:
-                target_actions = self.target_actor(new_states)
-                target_actions = target_actions + \
-                    tf.clip_by_value(np.random.normal(scale=0.2), -0.5, 0.5)
+                target_actions,_ = self.target_actor(new_states)
+                target_actions = target_actions + tf.clip_by_value(np.random.normal(scale=0.5), -1.0, 1.0)
 
                 target_actions = tf.clip_by_value(target_actions, self.min_action,
                                                 self.max_action)
@@ -180,7 +202,7 @@ class Agent:
                 return
 
             with tf.GradientTape() as tape:
-                new_actions = self.actor(states)
+                new_actions,_ = self.actor(states)
                 critic_1_value = self.critic_1(states, new_actions)
                 actor_loss = -tf.math.reduce_mean(critic_1_value)
 

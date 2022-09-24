@@ -41,8 +41,6 @@ class ReplayBuffer:
         # Setting values to the buffer
         self.state_memory[index] = new_state
         self.action_memory[index] = action
-        self.new_state_memory[index] = None
-        self.reward_memory[index] = None
 
         # Updating the point
         self.mem_cntr += 1
@@ -52,8 +50,6 @@ class ReplayBuffer:
 
         self.state_memory[index] = state
         self.action_memory[index] = action
-        self.new_state_memory[index] = None
-        self.reward_memory[index] = None
 
         # Updating the point
         self.mem_cntr += 1

@@ -56,7 +56,7 @@ class Agent:
 
     # Checking if the buffer is empty
     def isBufferEmpty(self):
-        return self.memory.mem_cntr > 0
+        return self.memory.mem_cntr == 0
     
     # Storing in the Replay Buffer
     def remember(self, new_state, reward, action):

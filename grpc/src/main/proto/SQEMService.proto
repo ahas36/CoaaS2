@@ -159,6 +159,12 @@ message RegisterContextConsumerRequest
     string json = 1;
 }
 
+message ContextCacheDecision
+{
+    string json = 1;
+    string level = 2;
+}
+
 message Chunk
 {
     bytes data = 1;
@@ -303,6 +309,7 @@ service SQEMService {
 
     rpc logCPREEData (Statistic) returns (Empty);
     rpc logQuery (CDQLLog) returns (SQEMResponse);
+    rpc logCacheDecision (ContextCacheDecision) returns (Empty);
     rpc getAllQueryLogs (Empty) returns (SQEMResponse);
     rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
     rpc logPerformanceData (Statistic) returns (Empty);

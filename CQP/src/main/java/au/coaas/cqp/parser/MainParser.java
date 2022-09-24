@@ -25,9 +25,13 @@ import org.antlr.v4.gui.TreeViewer;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.ANTLRInputStream;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.xpath.XPath;
 
 import java.util.*;
 import javax.swing.*;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
@@ -37,14 +41,14 @@ import static au.coaas.cqp.util.ASTCoversion.gsonBuilder;
 
 /**
  *
- * @author ali
+ * @author ali & shakthi
  */
 
 public class MainParser {
 
     private static Logger log = Logger.getLogger(MainParser.class.getName());
 
-    public static CDQLConstruct parse(String stringQuery, String queryId) throws CDQLSyntaxtErrorException {
+    public static CDQLConstruct parse(String stringQuery, String queryId) throws CDQLSyntaxtErrorException, ExecutionException, InterruptedException {
 
         CDQLConstruct.Builder cdqlConstructBuilder = CDQLConstruct.newBuilder();
         StringBuilder res = new StringBuilder();
@@ -74,7 +78,9 @@ public class MainParser {
         }
 
         // Logging the parsed query tree for collaborative filtering
-        Executors.newCachedThreadPool().execute(() -> logParsedQueryTree(Arrays.asList(parser.getRuleNames()), tree,queryId));
+        Executors.newCachedThreadPool().execute(() -> logParsedQueryTree(Arrays.asList(parser.getRuleNames()), tree, queryId));
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Future<Double> complexity = executorService.submit(() -> measureComplexity(tree, parser));
 
         CdqlVisitorImpl stringCDQLBaseVisitor = new CdqlVisitorImpl();
         // Walk the tree created during the parse, trigger callbacks
@@ -100,15 +106,62 @@ public class MainParser {
             }
             return cdqlConstructBuilder.setType(CDQLType.QUERY)
                     .setQuery(query.build())
+                    .setComplexity(complexity.get())
                     .setQueryId(queryId).build();
         }
         else if (stringCDQLBaseVisitor.getContextFunction() != null) {
             return cdqlConstructBuilder.setType(CDQLType.FUNCTION_DEF)
                     .setFunction(stringCDQLBaseVisitor.getContextFunction().build())
+                    .setComplexity(complexity.get())
                     .setQueryId(queryId).build();
         }
 
         return null;
+    }
+
+    private static Double measureComplexity(ParseTree tree, CdqlParser parser){
+        HashMap<String, Integer> operators = new HashMap<>();
+        int ops = 0;
+        int opr = 0;
+
+        String exp_ops_path = "//rule_expr_op";
+        String rel_ops_path = "//rule_relational_op";
+        String func_ops_path = "//rule_FunctionTitle";
+
+        Collection<ParseTree> exp_ops = XPath.findAll(tree, exp_ops_path, parser);
+        for(ParseTree sub : exp_ops){
+            String op = sub.getChild(0).getText();
+            if(!operators.containsKey(op)) operators.put(op, 1);
+            else operators.put(op, operators.get(op) +1);
+            ops++;
+        }
+
+        Collection<ParseTree> rel_ops = XPath.findAll(tree, rel_ops_path, parser);
+        for(ParseTree sub : rel_ops){
+            String op = sub.getChild(0).getText();
+            if(!operators.containsKey(op)) operators.put(op, 1);
+            else operators.put(op, operators.get(op) +1);
+            ops++;
+        }
+
+        Collection<ParseTree> fun_ops = XPath.findAll(tree, func_ops_path, parser);
+        for(ParseTree sub : fun_ops){
+            String op = sub.getChild(0).getText();
+            if(!operators.containsKey(op)) operators.put(op, 1);
+            else operators.put(op, operators.get(op) +1);
+            ops++;
+        }
+
+        String operands_path = "//rule_Operand";
+
+        Collection<ParseTree> opers = XPath.findAll(tree, operands_path, parser);
+        for(ParseTree sub : opers){
+            String name = sub.getChild(0).getClass().getName();
+            if(name.equals("au.coaas.cqp.parser.CdqlParser$Rule_FunctionCallContext")) continue;
+            opr++;
+        }
+
+        return (operators.size()/2.0) * (opr/ops);
     }
 
     private static void validate(CDQLQuery.Builder query) {

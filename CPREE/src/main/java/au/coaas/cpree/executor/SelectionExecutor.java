@@ -100,7 +100,7 @@ public class SelectionExecutor {
             if (profile.getStatus().equals("200")) {
                 // Evaluate and Cache if selected
                 AbstractMap.SimpleEntry<Boolean, RefreshLogics> result = evaluateAndCache(request.getContext(),
-                        request.getReference(), request.getSla(),profile, hashKey);
+                        request.getReference(), request.getSla(), profile, hashKey, request.getComplexity());
 
                 if(result.getKey()){
                     // Configuring refreshing
@@ -145,7 +145,7 @@ public class SelectionExecutor {
     }
 
     private static AbstractMap.SimpleEntry<Boolean, RefreshLogics> evaluateAndCache(String context, CacheLookUp lookup, String sla,
-                             ContextProviderProfile profile, String hashkey) {
+                             ContextProviderProfile profile, String hashkey, double complexity) {
         try {
             boolean cache = false;
 
@@ -217,17 +217,13 @@ public class SelectionExecutor {
                             double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getExpMR(),
                                     profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
                                             Double.valueOf(profile.getExpRetLatency()));
-                            // 4. Query Complexity
-                            // TODO: Need to calculate using the parse query tree
-                            // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
-                            double query_complexity = 3.5;
 
                             if(weightThresholds.isEmpty()) defaultWeights();
 
                             double nonRetrievalConfidence = (weightThresholds.get("mu") * caching_efficiency) +
                                     (weightThresholds.get("kappa") * access_trend) +
                                     (weightThresholds.get("delta") * reliability) +
-                                    (weightThresholds.get("row") * query_complexity);
+                                    (weightThresholds.get("row") * complexity);
                             double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getEfficiecy()) +
                                     nonRetrievalConfidence;
 
@@ -301,17 +297,13 @@ public class SelectionExecutor {
                             double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getExpMR(),
                                     profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
                                             Double.valueOf(profile.getExpRetLatency()));
-                            // 4. Query Complexity
-                            // TODO: Need to calculate using the parse query tree
-                            // Using 3.5 since it is the complexity of the currently tested 'Medium' complex query.
-                            double query_complexity = 3.5;
 
                             if(weightThresholds.isEmpty()) defaultWeights();
 
                             double nonRetrievalConfidence = (weightThresholds.get("mu") * caching_efficiency) +
                                     (weightThresholds.get("kappa") * access_trend) +
                                     (weightThresholds.get("delta") * reliability) +
-                                    (weightThresholds.get("row") * query_complexity);
+                                    (weightThresholds.get("row") * complexity);
                             double cacheConfidence = (weightThresholds.get("pi") * ret_effficiency.getEfficiecy()) +
                                     nonRetrievalConfidence;
 

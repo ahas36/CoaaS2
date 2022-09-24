@@ -294,6 +294,7 @@ message CDQLConstruct {
     ContextFunction function = 2;
     CDQLQuery query = 3;
     string queryId = 4;
+    double complexity = 5;
 }
 
 

@@ -28,8 +28,7 @@ public class PushBasedExecutor {
 
     private static Logger log = Logger.getLogger(PushBasedExecutor.class.getName());
 
-    public static CdqlResponse executePushBaseQuery(CDQLQuery query, String queryId) {
-
+    public static CdqlResponse executePushBaseQuery(CDQLQuery query, String queryId, double complexity) {
         return null;
     }
 

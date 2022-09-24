@@ -24,6 +24,7 @@ message CacheSelectionRequest {
   string contextLevel = 2;
   string sla = 3;
   au.coaas.sqem.proto.CacheLookUp reference = 4;
+  double complexity = 5;
 }
 
 message ProactiveRefreshRequest {

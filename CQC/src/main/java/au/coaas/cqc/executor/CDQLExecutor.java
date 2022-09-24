@@ -39,10 +39,12 @@ public class CDQLExecutor {
                 // Then execute based on whether the query is Push or Pull.
                 if(query.getQueryType().equals(QueryType.PULL_BASED))
                 {
-                    return PullBasedExecutor.executePullBaseQuery(query,request.getToken(),
-                            request.getPage(),request.getLimit(), request.getQueryid(), request.getCriticality());
+                    return PullBasedExecutor.executePullBaseQuery(query, request.getToken(),
+                            request.getPage(), request.getLimit(), request.getQueryid(),
+                            request.getCriticality(), cdqlConstruct.getComplexity());
                 }else {
-                    return PushBasedExecutor.executePushBaseQuery(query, request.getQueryid());
+                    return PushBasedExecutor.executePushBaseQuery(query, request.getQueryid(),
+                            cdqlConstruct.getComplexity());
                 }
             case FUNCTION_DEF:
                 ContextFunction cFunction = cdqlConstruct.getFunction();

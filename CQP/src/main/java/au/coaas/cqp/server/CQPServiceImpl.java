@@ -10,6 +10,7 @@ import au.coaas.cqp.parser.MainParser;
 import au.coaas.cqp.proto.CDQLConstruct;
 import au.coaas.cqp.proto.CQPServiceGrpc;
 
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 
 /**
@@ -28,6 +29,12 @@ public class CQPServiceImpl extends CQPServiceGrpc.CQPServiceImplBase {
             CDQLConstruct cdql = MainParser.parse(request.getCdql(), request.getQueryId());
             responseObserver.onNext(cdql);
         } catch (CDQLSyntaxtErrorException ex) {
+            responseObserver.onError(ex);
+        }
+        catch (ExecutionException ex){
+            responseObserver.onError(ex);
+        }
+        catch(InterruptedException ex){
             responseObserver.onError(ex);
         }
         responseObserver.onCompleted();

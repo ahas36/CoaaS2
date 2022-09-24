@@ -100,7 +100,8 @@ public class PullBasedExecutor {
     }
 
     // This method executes the query plan for pull based queries
-    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit, String queryId, String criticality) throws Exception{
+    public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit,
+                                                    String queryId, String criticality, double complexity) throws Exception{
 
         // Initialize values
         // How are the values assigned to 'ce'? I only see values assigned in the catch block.
@@ -276,7 +277,7 @@ public class PullBasedExecutor {
                     }
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,
-                                                                    criticality, sla);
+                                                                    criticality, sla, complexity);
 
                     if(cacheResult != null){
                         JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
@@ -1243,7 +1244,7 @@ public class PullBasedExecutor {
 
     private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
                                                            HashMap<String,String> params, int limit, String criticality,
-                                                           JSONObject consumerSLA) {
+                                                           JSONObject consumerSLA, double complexity) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -1300,7 +1301,7 @@ public class PullBasedExecutor {
 
                     Executors.newCachedThreadPool().execute(()
                             -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()), lookup,
-                                    retEntity, data.getMeta()));
+                                    retEntity, data.getMeta(), complexity));
                     return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
                             consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
@@ -1324,7 +1325,7 @@ public class PullBasedExecutor {
     }
 
     private static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
-                                              String retEntity, String currRefPolicy){
+                                              String retEntity, String currRefPolicy, double complexity){
         CPREEServiceGrpc.CPREEServiceFutureStub asynStub
                 = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
 
@@ -1346,6 +1347,7 @@ public class PullBasedExecutor {
                             .setContext(retEntity)
                             .setContextLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
                             .setReference(lookup)
+                            .setComplexity(complexity)
                             .build());
         }
     }

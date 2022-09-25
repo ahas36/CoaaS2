@@ -3,11 +3,6 @@ package au.coaas.sqem.handler;
 import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
 
-import au.coaas.sqem.util.CacheDataRegistry;
-import au.coaas.sqem.util.enums.DelayCacheLatency;
-import au.coaas.sqem.util.enums.PerformanceStats;
-import au.coaas.sqem.util.enums.ScheduleTasks;
-import au.coaas.sqem.util.Utilty;
 import org.bson.Document;
 
 import org.json.JSONObject;
@@ -19,6 +14,14 @@ import java.util.Hashtable;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
+
+import au.coaas.sqem.util.Utilty;
+import au.coaas.sqem.util.PubSub.Event;
+import au.coaas.sqem.util.CacheDataRegistry;
+import au.coaas.sqem.util.PubSub.Subscriber;
+import au.coaas.sqem.util.enums.ScheduleTasks;
+import au.coaas.sqem.util.enums.PerformanceStats;
+import au.coaas.sqem.util.enums.DelayCacheLatency;
 
 import static java.lang.Character.isDigit;
 
@@ -66,11 +69,15 @@ public class ContextCacheHandler {
             RBucket<Document> ent = cacheClient.getBucket(hashKey);
             synchronized (ContextCacheHandler.class){
                 if(!registerRequest.getIndefinite()){
+                    // Cached with definite lifetime
                     ent.set(entityJson, registerRequest.getCachelife(), TimeUnit.MILLISECONDS);
                     PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife(), DelayCacheLatency.DEFINITE);
                 }
                 else {
+                    // Cached with an indefinite lifetime
                     ent.set(entityJson);
+                    Subscriber subscriber = new Subscriber(hashKey, registerRequest.getLambdaConf());
+                    Event.operation.subscribe(hashKey, subscriber);
                     PerformanceLogHandler.logDecisionLatency("cachelife", Long.MAX_VALUE, DelayCacheLatency.INDEFINITE);
                 }
             }
@@ -181,7 +188,7 @@ public class ContextCacheHandler {
         return SQEMResponse.newBuilder().setStatus("404").setBody("Nothing to Evict.").build();
     }
 
-    public static SQEMResponse evictEntity(String hashkey) {
+    public static SQEMResponse evictEntity(String hashkey, boolean definite) {
         // This function assumes that the hash key is unique across all the contexts (irrespective of the context service, etc.)
         // Ideally the initial evict should push the context into ghost cache
         RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
@@ -196,6 +203,7 @@ public class ContextCacheHandler {
         synchronized (ContextCacheHandler.class){
             registry.removeFromRegistry(cacheObject.getString("serviceId"),
                     hashkey, cacheObject.getString("serviceId"));
+            if(!definite) Event.operation.deleteChannel(hashkey);
         }
 
         cacheClient.getKeys().deleteAsync(hashkey);

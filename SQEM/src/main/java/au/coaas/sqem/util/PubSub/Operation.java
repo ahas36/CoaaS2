@@ -1,17 +1,17 @@
-package Utils.PubSub;
+package au.coaas.sqem.util.PubSub;
 
-import java.util.concurrent.ConcurrentHashMap;
 import java.lang.annotation.Annotation;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Operation extends Event{
     public void subscribe(String channelName, Object subscriber) {
         if (!channels.containsKey(channelName)) {
             channels.put(channelName, new ConcurrentHashMap<>());
         }
-
         channels.get(channelName).put(subscriber.hashCode(), new WeakReference<>(subscriber));
     }
 
@@ -40,6 +40,10 @@ public class Operation extends Event{
         if (channels.containsKey(channelName)) {
             channels.remove(channelName);
         }
+    }
+
+    public boolean checkChannel(String channelName) {
+        return channels.containsKey(channelName);
     }
 
     private <T, P extends Post> boolean deliverMessage(T subscriber, Method method, Post message) {

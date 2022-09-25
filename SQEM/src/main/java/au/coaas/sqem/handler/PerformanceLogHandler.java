@@ -8,6 +8,8 @@ import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.*;
 import au.coaas.sqem.util.HttpClient;
 import au.coaas.sqem.util.LimitedQueue;
+import au.coaas.sqem.util.PubSub.Event;
+import au.coaas.sqem.util.PubSub.Message;
 import au.coaas.sqem.util.Utilty;
 
 import au.coaas.sqem.util.enums.DelayCacheLatency;
@@ -959,8 +961,16 @@ public class PerformanceLogHandler {
                     double hitRate = (curr_saved_value + curr_value) > 0 ?
                             (isHit ? Double.valueOf(curr_value) : Double.valueOf(curr_saved_value))/(curr_saved_value + curr_value) : 0;
 
-                    cur_Rec.put(isHit?"hits":"misses",curr_value);
-                    cur_Rec.put("hitrate",hitRate);
+                    double accessRate = (curr_saved_value + curr_value)/60;
+
+                    cur_Rec.put(isHit?"hits":"misses", curr_value);
+                    cur_Rec.put("hitrate", hitRate);
+                    cur_Rec.put("accessrate", accessRate);
+
+                    if(Event.operation.checkChannel(itemId)){
+                        Message message = new Message(itemId, accessRate);
+                        Event.operation.publish(itemId, message);
+                    }
 
                     res_3.put(itemId,cur_Rec);
                 }

@@ -1,6 +1,7 @@
 import sys, os
 import traceback
 import numpy as np
+from td3_agent.utils.Queue import Queue 
 
 from Agent import Agent
 sys.path.append(os.path.abspath(os.path.join('.')))
@@ -10,8 +11,8 @@ from flask import request
 
 class AgentContext(Resource):
     __agent = Agent(max_action=1)
-    __score_history = []
-    __avg_history = []
+    __score_history = Queue(100)
+    __avg_history = Queue(100)
 
     def post(self):
         try:         
@@ -25,15 +26,15 @@ class AgentContext(Resource):
             if(not self.__agent.isBufferEmpty()):
                 self.__agent.remember(new_state, utility, actions)
                 self.__agent.learn()
-                self.__score_history.append(utility)     
+                self.__score_history.push(utility)     
             else:
                 self.__agent.init_remember(new_state, actions)
 
-            avg_score = np.mean(self.__score_history[-100:])
-            self.__avg_history.append(avg_score)
+            avg_score = np.mean(self.__score_history.getlist())
+            self.__avg_history.push(avg_score)
 
-            if(not self.__agent.isBufferEmpty() and len(self.__avg_history)>1):
-                diff = avg_score - self.__avg_history[-2] 
+            if(not self.__agent.isBufferEmpty() and not self.__avg_history.isempty()):
+                diff = avg_score - self.__avg_history.get_last(2)
                 self.__agent.update_exploration(diff)  
 
             result = { 

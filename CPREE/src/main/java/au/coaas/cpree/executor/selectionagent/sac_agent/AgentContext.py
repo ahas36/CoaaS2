@@ -3,7 +3,7 @@ import traceback
 import numpy as np
 
 from Agent import Agent
-from sac_agent.utils.Queue import Queue
+from utils.Queue import Queue
 
 sys.path.append(os.path.abspath(os.path.join('.')))
 

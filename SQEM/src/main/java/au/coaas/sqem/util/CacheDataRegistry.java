@@ -196,7 +196,7 @@ public final class CacheDataRegistry{
                         if(now.isAfter(expiryTime)){
                             // Store cache access in Time Series DB
                             Executors.newCachedThreadPool().execute(()
-                                    -> PerformanceLogHandler.insertAccess(lookup.getServiceId()+"-"+hashKey.get(),"p_miss"));
+                                    -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"p_miss"));
                             return res.setHashkey(hashKey.get())
                                     .setIsValid(false)
                                     .setIsCached(true)
@@ -209,7 +209,7 @@ public final class CacheDataRegistry{
 
                     // Store cache access in Time Series DB
                     Executors.newCachedThreadPool().execute(()
-                            -> PerformanceLogHandler.insertAccess(lookup.getServiceId()+"-"+hashKey.get(),"hit"));
+                            -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"hit"));
                     return res.setHashkey(hashKey.get())
                             .setIsValid(true)
                             .setIsCached(true)
@@ -221,13 +221,14 @@ public final class CacheDataRegistry{
         // There can be 2 types of returns
         // 1. (hashkey, false) - the specific entity (by parameter combination) is not cached.
         // 2. ("", false) - either the entity type or the context service is not cached.
+        hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
         res.setIsCached(false).setIsValid(false).setRemainingLife(remainingLife).build();
         if(hashKey.get() != null)
             res.setHashkey(hashKey.get());
 
         // Store cache access in Time Series DB
         Executors.newCachedThreadPool().execute(()
-                -> PerformanceLogHandler.insertAccess(lookup.getServiceId()+"-"+hashKey.get(),"miss"));
+                -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"miss"));
         return res.build();
     }
 

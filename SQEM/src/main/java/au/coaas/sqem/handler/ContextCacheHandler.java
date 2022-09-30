@@ -372,9 +372,9 @@ public class ContextCacheHandler {
             // All values returned are in Seconds
             return CachePerformance.newBuilder()
                     .setStatus("200")
-                    .setHitLatency((double)currentPerf.get("200")/1000.0)
-                    .setMissLatency((double)currentPerf.get("404")/1000.0)
-                    .setPartialMissLatency((double)currentPerf.get("400")/1000.0)
+                    .setHitLatency(currentPerf.contains("200") ? (double)currentPerf.get("200")/1000.0 : 0.0)
+                    .setMissLatency(currentPerf.contains("404") ? (double)currentPerf.get("404")/1000.0 : 0.0)
+                    .setPartialMissLatency(currentPerf.contains("400") ? (double)currentPerf.get("400")/1000.0 : 0.0)
                     .setCacheCost(currentPerf.contains("cacheCost") ? (double)currentPerf.get("cacheCost") : 0.0)
                     .setCostPerByte(currentPerf.contains("costPerByte") ? (double)currentPerf.get("costPerByte") : 0.0)
                     .setProcessCost(currentPerf.contains("processCost") ? (double)currentPerf.get("processCost") : 0.0)

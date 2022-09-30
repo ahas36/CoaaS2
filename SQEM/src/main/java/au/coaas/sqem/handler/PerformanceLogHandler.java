@@ -11,12 +11,13 @@ import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.PubSub.Event;
 import au.coaas.sqem.util.PubSub.Message;
 import au.coaas.sqem.util.Utilty;
-
 import au.coaas.sqem.util.enums.DelayCacheLatency;
 import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
+
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.AtomicDouble;
+
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
@@ -307,12 +308,14 @@ public class PerformanceLogHandler {
 
     // Context Accessing
     public static void insertAccess(String id, String outcome) {
-        String queryString = "INSERT INTO context_access(time,context_id,outcome) VALUES(CAST('%s' AS DATETIME2),'%s', '%s');";
+        String queryString = "INSERT INTO context_access(time,context_id,outcome) VALUES('%s','%s','%s');";
         Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
         try{
             Statement statement = conn.createStatement();
             LocalDateTime now = LocalDateTime.now();
-            statement.executeUpdate(String.format(queryString, now.format(formatter), id, outcome));
+            Timestamp timestamp = Timestamp.valueOf(now);
+            String ts = timestamp.toString();
+            statement.executeUpdate(String.format(queryString, ts, id, outcome));
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -1270,7 +1273,7 @@ public class PerformanceLogHandler {
                 for(Document document : result){
                     // Expected freshness threshold, reliability, and retrieval latency
                     Document rCon = document.get("rawContext", Document.class);
-                    if(rCon.containsKey(cpId)){
+                    if(rCon != null && rCon.containsKey(cpId)){
                         Document cp = rCon.get(cpId, Document.class);
                         Document rel = cp.get("reliability", Document.class);
 
@@ -1355,32 +1358,40 @@ public class PerformanceLogHandler {
     }
 
     public static ContextProfile getContextProfile(String contextId, int limit) {
-        String queryString = "SELECT time_bucket('1 minute', time) time AS bucket, COUNT(context_id) AS cnt\n " +
+        String queryString = "SELECT time_bucket_gapfill('1 minutes', time) AS bucket, COUNT(context_id) AS cnt\n " +
                 " FROM context_access\n" +
-                " WHERE context_id = '%s'\n" +
+                " WHERE context_id = '%s' AND (time BETWEEN '%s' AND '%s')\n" +
                 " GROUP BY bucket \n" +
                 " ORDER BY bucket LIMIT %d";
         Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
         try{
             Statement statement = conn.createStatement();
             int fixedLimit = limit <= 0 ? 10 : limit;
-            ResultSet rs = statement.executeQuery(String.format(queryString, contextId, fixedLimit));
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime history = now.minusSeconds(fixedLimit * 60);
+            ResultSet rs = statement.executeQuery(String.format(queryString, contextId,
+                    Timestamp.valueOf(history).toString(), Timestamp.valueOf(now).toString(),
+                    fixedLimit));
             ContextProfile.Builder accesses = ContextProfile.newBuilder();
 
             int index = 0;
+            int accessCnt = 0;
             double[][] dataset = new double[fixedLimit][2];
             
             while(rs.next()){
-                int accessCnt = rs.getInt("cnt")/60;
-                accesses.addAccess(accessCnt);
+                String buk = rs.getString("bucket");
+                int acs = rs.getInt("cnt");
+                accessCnt += acs;
                 dataset[index][0] = index;
-                dataset[index][1] = accessCnt;
+                dataset[index][1] = acs/60.0;
                 index++;
             }
 
             SimpleRegression result = getSlope(dataset);
             if(result != null){
-                return accesses.setTrend(String.valueOf(result.getSlope()))
+                return accesses
+                        .addAccess(accessCnt)
+                        .setTrend(String.valueOf(result.getSlope()))
                         .setIntercept(String.valueOf(result.getIntercept()))
                         .setExpAR(String.valueOf(result.predict(index)))
                         .setStatus("200").build();
@@ -1668,7 +1679,7 @@ public class PerformanceLogHandler {
 
             statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cacheDecisionHistory')\n" +
                     "CREATE TABLE cacheDecisionHistory(" +
-                    "   id INT NOT NULL IDENTITY(1,1) PRIMARY KEY\n" +
+                    "   id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
                     "   retEff REAL NOT NULL,\n" +
                     "   cacheEff REAL NOT NULL,\n" +
                     "   reliability REAL NOT NULL,\n" +

@@ -29,10 +29,12 @@ public class RefreshContext {
         this.lifetime = lifetime;
         this.contextId = contextId;
         this.refreshPolicy = refreshPolicy;
-        this.contextProvider = contextProvider;
 
-        JSONObject cpObj = new JSONObject(this.contextProvider);
+        JSONObject cpObj = new JSONObject(contextProvider);
         double samplingInt = cpObj.getJSONObject("sla").getJSONObject("updateFrequency").getDouble("value");
+
+        cpObj.getJSONObject("sla").getJSONObject("freshness").put("fthresh", this.fthr);
+        this.contextProvider = cpObj.toString();
 
         // The parameter, when passed, should be set in seconds.
         double adjustment = lifetime - initResiLife;

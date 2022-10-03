@@ -92,13 +92,16 @@ public class FetchManager {
             if(cs.has("attributes")){
                 Object result = semanticMapper(cs.getJSONArray("attributes"), res, info.optString("resultTag",null));
                 // This return value should be what should be cached.
+                CSSummary.Builder summary = CSSummary.newBuilder()
+                        .setId(cs.getJSONObject("_id").getString("$oid"))
+                        .setFreshness(sla.getJSONObject("freshness").getLong("value"))
+                        .setPrice(sla.getJSONObject("cost").getDouble("value"));
+                if(sla.getJSONObject("freshness").has("fthresh"))
+                    summary.setFthresh(sla.getJSONObject("freshness").getDouble("fthresh"));
+
                 return CSIResponse.newBuilder().setStatus("200")
                         .setBody(result.toString())
-                        .setSummary(CSSummary.newBuilder()
-                                .setId(cs.getJSONObject("_id").getString("$oid"))
-                                .setFreshness(sla.getJSONObject("freshness").getLong("value"))
-                                .setFthresh(sla.getJSONObject("freshness").getDouble("fthresh"))
-                                .setPrice(sla.getJSONObject("cost").getDouble("value")).build())
+                        .setSummary(summary)
                         .build();
             }
 
@@ -124,12 +127,12 @@ public class FetchManager {
         } catch (IOException | ExecutionException | InterruptedException e) {
             e.printStackTrace();
             JSONObject error = new JSONObject();
-            error.put("message", e.getMessage());
+            error.put("Message", e.getMessage());
             StringWriter strOut = new StringWriter();
             PrintWriter writer = new PrintWriter(strOut);
             e.printStackTrace(writer);
             writer.flush();
-            error.put("stack trace", strOut.toString());
+            error.put("Stack trace", strOut.toString());
             return CSIResponse.newBuilder().setStatus("500").setBody(error.toString()).build();
         }
     }

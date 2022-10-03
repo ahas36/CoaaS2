@@ -1,7 +1,7 @@
 import sys, os
 import traceback
 import numpy as np
-from td3_agent.utils.Queue import Queue 
+from utils.Queue import Queue 
 
 from Agent import Agent
 sys.path.append(os.path.abspath(os.path.join('.')))
@@ -33,7 +33,7 @@ class AgentContext(Resource):
             avg_score = np.mean(self.__score_history.getlist())
             self.__avg_history.push(avg_score)
 
-            if(not self.__agent.isBufferEmpty() and not self.__avg_history.isempty()):
+            if(not self.__agent.isBufferEmpty() and self.__avg_history.get_queue_size()>2):
                 diff = avg_score - self.__avg_history.get_last(2)
                 self.__agent.update_exploration(diff)  
 

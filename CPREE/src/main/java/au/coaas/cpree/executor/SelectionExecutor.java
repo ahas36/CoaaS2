@@ -49,7 +49,9 @@ public class SelectionExecutor {
         weightThresholds.put("delta", 0.2);
         weightThresholds.put("row", 0.2);
         weightThresholds.put("teta", 0.5);
-        weightThresholds.put("threshold",  valueHistory.reverse(0.5));
+
+        double thresh = valueHistory.reverse(0.5);
+        weightThresholds.put("threshold", Double.isNaN(thresh)? Math.pow(2,31)-1 : thresh);
     }
 
     public static Empty updateWeights(LearnedWeights request){
@@ -61,7 +63,10 @@ public class SelectionExecutor {
         weightThresholds.put("teta", request.getThreshold());
 
         double thresh = valueHistory.reverse(request.getThreshold());
-        weightThresholds.put("threshold", Double.isNaN(thresh)? Math.pow(2,31)-1 : thresh);
+        if(weightThresholds.containsKey("threshold") && !Double.isNaN(thresh))
+            weightThresholds.put("threshold", thresh);
+        else if(!weightThresholds.containsKey("threshold"))
+            weightThresholds.put("threshold", Math.pow(2,31)-1);
 
         return null;
     }
@@ -253,8 +258,8 @@ public class SelectionExecutor {
                                     lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
                                 }
                                 est_cacheLife = lambda_conf < 0 ?
-                                        Math.round(((-intercept)/access_trend) * 1000) :
-                                        Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                                        Math.abs(Math.round(((-intercept)/access_trend) * 1000)) :
+                                        Math.abs(Math.round(((lambda_conf - intercept)/access_trend) * 1000));
                                 json.put("definite", true);
                                 json.put("cache_life", est_cacheLife);
                             }
@@ -396,7 +401,7 @@ public class SelectionExecutor {
                                         double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
                                         lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
                                     }
-                                    est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                                    est_delayTime = Math.abs(Math.round(((lambda_conf - intercept)/access_trend) * 1000));
                                 }
                                 else {
                                     est_delayTime = 60 * 1000; // default delay

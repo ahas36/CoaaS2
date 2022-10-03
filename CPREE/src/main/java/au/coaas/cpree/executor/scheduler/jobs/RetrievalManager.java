@@ -38,6 +38,7 @@ public class RetrievalManager {
         for(int i=0; i < retrys; i++){
             startTime = System.currentTimeMillis();
             fetch = csiStub.fetch(fetchRequest.build());
+
             if(fetch.getStatus().equals("200")) break;
             else {
                 long int_endTime = System.currentTimeMillis();

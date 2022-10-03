@@ -27,10 +27,11 @@ public class QueryJob implements Job {
             String fetchResponse = null;
             switch (fetchMode){
                 case "reactive":
-                    fetchResponse = RetrievalManager.executeFetch(contextProvider, params);
-                    break;
                 case "proactive_shift":
-                    fetchResponse = RetrievalManager.executeStreamRead(contextProvider, params);
+                    fetchResponse = RetrievalManager.executeFetch(contextProvider, params);
+                    // TODO: Need to refresh from the stream or the Mongo DB as well
+                    // fetchResponse = RetrievalManager.executeStreamRead(contextProvider, params);
+                    break;
             }
 
             if(fetchResponse != null){

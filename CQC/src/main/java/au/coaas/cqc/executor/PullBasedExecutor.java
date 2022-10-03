@@ -5,6 +5,7 @@ import au.coaas.base.proto.ListOfString;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.CacheSelectionRequest;
 import au.coaas.cpree.proto.ContextRefreshRequest;
+import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.enums.CacheLevels;
 import au.coaas.cre.proto.*;
 import au.coaas.cqc.utils.Utilities;
@@ -50,6 +51,7 @@ public class PullBasedExecutor {
 
     // This is the cache switch
     private static boolean cacheEnabled = true;
+    private static boolean registerState = false;
 
     private static Logger log = Logger.getLogger(PullBasedExecutor.class.getName());
     private static JsonParser parser = new JsonParser();
@@ -97,6 +99,11 @@ public class PullBasedExecutor {
             }
         }
         return result;
+    }
+
+    public static Empty updateRegistryState(boolean state){
+        registerState = state;
+        return null;
     }
 
     // This method executes the query plan for pull based queries
@@ -1339,7 +1346,7 @@ public class PullBasedExecutor {
                             .setReference(lookup)
                             .setJson(retEntity)).build());
         }
-        else if(cacheStatus == 404){
+        else if(cacheStatus == 404 && registerState){
             // 404 means the item is not at all cached
             // Trigger Selective Caching Evaluation
             asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()

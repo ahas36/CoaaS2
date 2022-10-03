@@ -8,6 +8,7 @@ package au.coaas.cqc.server;
 import au.coaas.cqc.executor.*;
 import au.coaas.cqc.proto.CQCServiceGrpc;
 import au.coaas.cqc.proto.CdqlResponse;
+import au.coaas.cqc.proto.Empty;
 
 import java.util.logging.Logger;
 
@@ -69,6 +70,17 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
                                        io.grpc.stub.StreamObserver<CdqlResponse> responseObserver) {
         try {
             responseObserver.onNext(ContextConsumerManager.registerContextConsumer(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void changeRegisterState(au.coaas.cqc.proto.RegisterState request,
+                                    io.grpc.stub.StreamObserver<Empty> responseObserver) {
+        try {
+            responseObserver.onNext(PullBasedExecutor.updateRegistryState(request.getState()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

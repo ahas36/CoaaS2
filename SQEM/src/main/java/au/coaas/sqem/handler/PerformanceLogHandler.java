@@ -2,7 +2,11 @@ package au.coaas.sqem.handler;
 
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.LearnedWeights;
+import au.coaas.cqc.proto.CQCServiceGrpc;
+import au.coaas.cqc.proto.Empty;
+import au.coaas.cqc.proto.RegisterState;
 import au.coaas.grpc.client.CPREEChannel;
+import au.coaas.grpc.client.CQCChannel;
 import au.coaas.sqem.monitor.LogicalContextLevel;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.*;
@@ -57,6 +61,7 @@ public class PerformanceLogHandler {
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
     private static final int max_history = 10;
     private static final long max_delay_cache_residence = 3600 * 1000;
+    private static boolean registriesReady = false;
 
     // TODO: the size of the queue should be adaptive to the size of the planning period
     // This is, based on the size of the planning, the queue should contain all the history up to maximum default
@@ -287,7 +292,7 @@ public class PerformanceLogHandler {
                         decision.getDouble("complexity"), decision.getDouble("ar"),
                         decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
                         decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
-                        true, level, decs, decs.startsWith("cache") ? decision.getDouble("cache_life") : decision.getDouble("delay_time"),
+                        1, level, decs, decs.startsWith("cache") ? decision.getDouble("cache_life") : decision.getDouble("delay_time"),
                         now.format(formatter));
             }
             else {
@@ -296,7 +301,7 @@ public class PerformanceLogHandler {
                         decision.getDouble("complexity"), decision.getDouble("ar"),
                         decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
                         decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
-                        false, level, decision.getString("label"), decision.getDouble("lambda_conf"),
+                        0, level, decision.getString("label"), decision.getDouble("lambda_conf"),
                         now.format(formatter));
             }
             statement.executeUpdate(finalString);
@@ -694,6 +699,11 @@ public class PerformanceLogHandler {
             ContextCacheHandler.updatePerfRegister(successCnt.get() > 0 ? succsessTime.get()/successCnt.get() : 0.0,
                     partialMissCnt.get() > 0 ? partialMissTime.get()/partialMissCnt.get() : 0.0,
                     missCnt.get() > 0 ? missTime.get()/missCnt.get() : 0.0);
+
+            registriesReady = true;
+            CQCServiceGrpc.CQCServiceFutureStub stub
+                    = CQCServiceGrpc.newFutureStub(CQCChannel.getInstance().getChannel());
+            stub.changeRegisterState(RegisterState.newBuilder().setState(registriesReady).build());
 
             res.entrySet().parallelStream().forEach((entry) -> {
                 String csId = entry.getKey();
@@ -1229,7 +1239,6 @@ public class PerformanceLogHandler {
     // Retrieves the summary of context provider's access profile to cache
     public static ContextProviderProfile getContextProviderProfile(String cpId, String hashKey){
         try{
-
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas_log");
 
@@ -1239,7 +1248,7 @@ public class PerformanceLogHandler {
             sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
 
             Document project = new Document();
-            project.put("rawContext."+cpId,1);
+            project.put("rawContext." + cpId, 1);
 
             // Document filter = new Document();
             // filter.put("rawContext."+cpId, new Document(){{ put("$exists", true); }});
@@ -1261,11 +1270,18 @@ public class PerformanceLogHandler {
 
             if(count > 1 ) {
                 int index = 0;
-                double[][] dataset = new double[count][2];
-                double[][] dataset_2 = new double[count][2];
-                double[][] dataset_3 = new double[count][2];
-                double[][] dataset_4 = new double[count][2];
-                double[][] dataset_5 = new double[count][2];
+
+                List<double[]> dataset = new ArrayList<>();
+                List<double[]> dataset_2 = new ArrayList<>();
+                List<double[]> dataset_3 = new ArrayList<>();
+                List<double[]> dataset_4 = new ArrayList<>();
+                List<double[]> dataset_5 = new ArrayList<>();
+
+//                double[][] dataset = new double[count][2];
+//                double[][] dataset_2 = new double[count][2];
+//                double[][] dataset_3 = new double[count][2];
+//                double[][] dataset_4 = new double[count][2];
+//                double[][] dataset_5 = new double[count][2];
 
                 double[] retLatList = new double[count];
                 List<Double> counts = new ArrayList();
@@ -1278,32 +1294,40 @@ public class PerformanceLogHandler {
                         Document rel = cp.get("reliability", Document.class);
 
                         if(rel != null){
-                            dataset[index][0] = index;
-                            dataset_2[index][0] = index;
-                            dataset_3[index][0] = index;
-                            dataset_5[index][0] = index;
+                            dataset.add(new double[] { index, cp.containsKey("profile") ?
+                                    cp.get("profile", Document.class).getDouble("fthresh") : 0.7 });
+                            dataset_2.add(new double[] { index, rel.getDouble("reliability") });
+                            dataset_3.add(new double[] { index, rel.getDouble("retLatency") });
+                            dataset_5.add(new double[] { index, rel.getDouble("cost") });
 
-                            dataset[index][1] = cp.containsKey("profile") ?
-                                    cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
-                            dataset_2[index][1] = rel.getDouble("reliability");
-                            dataset_3[index][1] = rel.getDouble("retLatency");
+//                            dataset[index][0] = index;
+//                            dataset_2[index][0] = index;
+//                            dataset_3[index][0] = index;
+//                            dataset_5[index][0] = index;
+//
+//                            dataset[index][1] = cp.containsKey("profile") ?
+//                                    cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
+//                            dataset_2[index][1] = rel.getDouble("reliability");
+//                            dataset_3[index][1] = rel.getDouble("retLatency");
+//                            dataset_5[index][1] = rel.getDouble("cost");
+
                             retLatList[index] = rel.getDouble("retLatency");
-                            dataset_5[index][1] = rel.getDouble("cost");
                             counts.add(rel.getDouble("count")/60);
+
+                            index ++;
                         }
                     }
                     else {
                         counts.add(0.0);
                     }
-
-                    index ++;
                 }
 
                 index = 0;
                 Collections.reverse(counts);
                 for(Double cnt: counts){
-                    dataset_4[index][0] = index;
-                    dataset_4[index][1] = cnt;
+                    dataset_4.add(new double[] { index, cnt });
+//                    dataset_4[index][0] = index;
+//                    dataset_4[index][1] = cnt;
                     index++;
                 }
 
@@ -1312,13 +1336,13 @@ public class PerformanceLogHandler {
 
                 // The list is inverted, so, estimating from x=-1.
                 int finalIndex = index;
-                taskList.add(estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_count.set(getSlope(dataset_4.stream().toArray(double[][]::new))); }));
                 taskList.add(estimation_executor.submit(() -> { var_ratLatency.set(getVariance(retLatList)); }));
-                taskList.add(estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset, -1)); }));
-                taskList.add(estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5, -1)); }));
-                taskList.add(estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_3, -1)); }));
-                taskList.add(estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_2, -1)); }));
-                taskList.add(estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4, finalIndex + 1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_fthr.set(predictExpectedValue(dataset.stream().toArray(double[][]::new), -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_cost.set(predictExpectedValue(dataset_5.stream().toArray(double[][]::new), -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_retLatency.set(predictExpectedValue(dataset_3.stream().toArray(double[][]::new), -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_reliability.set(predictExpectedValue(dataset_2.stream().toArray(double[][]::new), -1)); }));
+                taskList.add(estimation_executor.submit(() -> { exp_ar.set(predictExpectedValue(dataset_4.stream().toArray(double[][]::new), finalIndex)); }));
 
                 while(!taskList.isEmpty()){
                     Future<?> curr = taskList.get(0);
@@ -1379,7 +1403,6 @@ public class PerformanceLogHandler {
             double[][] dataset = new double[fixedLimit][2];
             
             while(rs.next()){
-                String buk = rs.getString("bucket");
                 int acs = rs.getInt("cnt");
                 accessCnt += acs;
                 dataset[index][0] = index;
@@ -1690,10 +1713,10 @@ public class PerformanceLogHandler {
                     "   delta REAL NOT NULL,\n" +
                     "   row REAL NOT NULL,\n" +
                     "   pi REAL NOT NULL,\n" +
-                    "   threshold REAL NOT NULL,\n" +
+                    "   threshold DECIMAL NOT NULL,\n" +
                     "   isDefinite BIT NOT NULL,\n" +
-                    "   level VARCHAR(15) NOT NULL,\n" +
-                    "   decision VARCHAR(15) NOT NULL,\n" +
+                    "   level VARCHAR(20) NOT NULL,\n" +
+                    "   decision VARCHAR(20) NOT NULL,\n" +
                     "   latency REAL NOT NULL,\n" +
                     "   decisionTime DATETIME NOT NULL)");
         }

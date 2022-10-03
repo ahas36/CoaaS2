@@ -7,7 +7,7 @@ import java.util.Hashtable;
 
 public class LookUps {
     // Dynamic Registries
-    private static Hashtable<String, Double> indefDelayRegistry = new Hashtable<>();
+    private static Hashtable<String, IndefRecord> indefDelayRegistry = new Hashtable<>();
     private static Hashtable<String, LocalDateTime> delayRegistry = new Hashtable<>();
 
     public static void write(DynamicRegistry registry, String key, Object value){
@@ -15,7 +15,8 @@ public class LookUps {
             case INDEFDELAYREGISTRY:
                 synchronized (LookUps.class){
                     if(!indefDelayRegistry.containsKey(key)){
-                        indefDelayRegistry.put(key,(double)value);
+                        LocalDateTime expiry = LocalDateTime.now().plusHours(1);
+                        indefDelayRegistry.put(key, new IndefRecord((double)value,expiry));
                     }
                 }
                 break;
@@ -34,7 +35,9 @@ public class LookUps {
             case INDEFDELAYREGISTRY:
                 if(!indefDelayRegistry.containsKey(key))
                     return true;
-                else if(indefDelayRegistry.containsKey(key) && indefDelayRegistry.get(key) <= (double)value) {
+                else if(indefDelayRegistry.containsKey(key) &&
+                        (indefDelayRegistry.get(key).getExpAR() <= (double)value ||
+                                indefDelayRegistry.get(key).getExpiryTime().isBefore(LocalDateTime.now()))) {
                     indefDelayRegistry.remove(key);
                     return true;
                 }
@@ -42,7 +45,7 @@ public class LookUps {
             case DELAYREGISTRY:
                 if(!delayRegistry.containsKey(key))
                     return true;
-                else if (delayRegistry.get(key).isAfter((LocalDateTime)value)){
+                else if (delayRegistry.get(key).isBefore((LocalDateTime)value)){
                     delayRegistry.remove(key);
                     return true;
                 }

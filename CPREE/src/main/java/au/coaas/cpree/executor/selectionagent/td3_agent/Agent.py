@@ -84,8 +84,8 @@ class Agent:
 
             mu = abs(-1 - mu[0])/2.0
 
-            # mu_prime = mu 
-            mu_prime = mu + np.random.normal(scale=self.noise)
+            mu_prime = mu 
+            # mu_prime = mu + np.random.normal(scale=self.noise)
             # mu_prime = (mu + exp_noise)/2
             mu_prime = tf.clip_by_value(mu_prime, self.min_action, self.max_action)
         

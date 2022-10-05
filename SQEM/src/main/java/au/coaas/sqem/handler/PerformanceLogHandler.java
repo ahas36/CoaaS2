@@ -3,7 +3,6 @@ package au.coaas.sqem.handler;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.LearnedWeights;
 import au.coaas.cqc.proto.CQCServiceGrpc;
-import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.proto.RegisterState;
 import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.grpc.client.CQCChannel;
@@ -62,6 +61,8 @@ public class PerformanceLogHandler {
     private static final int max_history = 10;
     private static final long max_delay_cache_residence = 3600 * 1000;
     private static boolean registriesReady = false;
+
+    private static boolean popularBased = false; // Should be False
 
     // TODO: the size of the queue should be adaptive to the size of the planning period
     // This is, based on the size of the planning, the queue should contain all the history up to maximum default
@@ -481,6 +482,7 @@ public class PerformanceLogHandler {
                     try {
                         JSONObject cachingSummary = getCacheLives();
                         BasicDBObject summary = persRecord.get("summary", BasicDBObject.class);
+                        BasicDBObject levelSummary = persRecord.get("levels", BasicDBObject.class);
 
                         JSONArray vector = new JSONArray();
                         vector.put((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
@@ -494,8 +496,21 @@ public class PerformanceLogHandler {
                         vector.put(cachingSummary.getDouble("cachelife")); // Average Cache Lifetime (in miliseconds)
                         vector.put(cachingSummary.getDouble("delay")); // Average Delay Time (in miliseconds)
 
-                        JSONObject learnrequest = getRequestBody(vector, summary.getDouble("avg_gain"));
+                        if(!popularBased){
+                            // TODO: This should be the average of the context cache levels
+                            BasicDBObject entitySummary = (BasicDBObject) levelSummary.get("entity");
+                            vector.put(entitySummary.getDouble("hitrate"));
+                        }
 
+                        double reward = 0.0;
+                        if(popularBased){
+                            BasicDBObject entitySummary = (BasicDBObject) levelSummary.get("entity");
+                            reward = entitySummary.getDouble("hitrate");
+                        }
+                        else
+                            reward = summary.getDouble("avg_gain");;
+
+                        JSONObject learnrequest = getRequestBody(vector, reward);
                         String result = HttpClient.call("http://localhost:9494/selections", HttpRequests.POST, learnrequest.toString());
 
                         if(result != null){

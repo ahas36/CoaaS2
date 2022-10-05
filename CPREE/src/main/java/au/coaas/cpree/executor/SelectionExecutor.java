@@ -30,6 +30,9 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 public class SelectionExecutor {
 
+    private static final boolean cacheAll = false; // Should be false
+    private static final long max_delay_cache_residence = 3600 * 1000;
+
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
 
     // Static Queue
@@ -105,6 +108,46 @@ public class SelectionExecutor {
                     .setHashKey(hashKey)
                     .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
                     .build());
+
+            if(cacheAll){
+                RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()), profile,
+                        request.getReference().getServiceId());
+
+                SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                sqemStub.cacheEntity(CacheRequest.newBuilder()
+                        .setJson(request.getContext())
+                        .setRefreshLogic(reftype.toString().toLowerCase())
+                        .setCachelife(-1) // This is in miliseconds
+                        .setLambdaConf(0) //
+                        .setIndefinite(true)
+                        .setReference(request.getReference()).build());
+
+                // Configuring refreshing
+                if(reftype == RefreshLogics.PROACTIVE_SHIFT){
+                    executor.execute(() -> {
+                        JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
+                        JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
+                        double fthresh = !profile.getExpFthr().equals("NaN") ?
+                                Double.valueOf(profile.getExpFthr()) :
+                                freshReq.getDouble("fthresh");
+
+                        double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+
+                        RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
+                                .setEt(request.getReference().getEt())
+                                .setRequest(request).setFthreh(fthresh)
+                                .setLifetime(freshReq.getDouble("value")) // seconds
+                                .setResiLifetime(res_life) // seconds
+                                .setHashKey(hashKey)
+                                .setSamplingInterval(sampling.getDouble("value")) // seconds
+                                .setRefreshPolicy(RefreshLogics.REACTIVE.toString().toLowerCase())
+                                .build());
+                    });
+                }
+
+                return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
+            }
 
             if (profile.getStatus().equals("200")) {
                 // Evaluate and Cache if selected
@@ -258,8 +301,11 @@ public class SelectionExecutor {
                                     lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
                                 }
                                 est_cacheLife = lambda_conf < 0 ?
-                                        Math.abs(Math.round(((-intercept)/access_trend) * 1000)) :
-                                        Math.abs(Math.round(((lambda_conf - intercept)/access_trend) * 1000));
+                                        Math.round(((-intercept)/access_trend) * 1000) :
+                                        Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                                if(est_cacheLife < 0)
+                                    est_cacheLife = Math.abs(est_cacheLife);
+
                                 json.put("definite", true);
                                 json.put("cache_life", est_cacheLife);
                             }
@@ -401,7 +447,11 @@ public class SelectionExecutor {
                                         double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
                                         lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
                                     }
-                                    est_delayTime = Math.abs(Math.round(((lambda_conf - intercept)/access_trend) * 1000));
+                                    est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                                    if(est_delayTime < 0)
+                                        est_delayTime = Math.abs(est_delayTime);
+                                    if(est_delayTime > max_delay_cache_residence)
+                                        est_delayTime = max_delay_cache_residence;
                                 }
                                 else {
                                     est_delayTime = 60 * 1000; // default delay
@@ -463,8 +513,6 @@ public class SelectionExecutor {
                             ref_type);
                 }
 
-                // TODO:
-                // Estimate the delay  (What is the lifetime is 0 or less than RetL? <-- check forcedRedirector)
                 // Logging the delay time
                 sqemStub.logDecisionLatency(DecisionLog.newBuilder()
                         .setLatency(est_delayTime).setLambdaConf(lambda_conf)

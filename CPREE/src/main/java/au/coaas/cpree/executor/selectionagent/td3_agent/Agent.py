@@ -10,7 +10,7 @@ from networks.CriticNetwork import CriticNetwork
 
 class Agent:
     __input_dims = ['size_in_cache', 'earning', 'retrieval_cost', 'penalties', 'process_cost', 'cache_cost',
-            'probability_delay', 'avg_cache_life', 'avg_delay_time']
+            'probability_delay', 'avg_cache_life', 'avg_delay_time', 'avg_hitrate']
 
     def __init__(self, max_action = 1, input_dims = [len(__input_dims)], alpha=0.001, beta=0.002, gamma=0.9, n_actions=6, max_size=60,
             tau=0.005, batch_size=10, warmup=10, update_actor_interval=1, noise=0.5):
@@ -40,7 +40,7 @@ class Agent:
         self.critic_1 = CriticNetwork(n_actions = self.n_actions, name='critic_1')
         self.critic_2 = CriticNetwork(n_actions = self.n_actions, name='critic_2')
 
-        self.target_actor = ActorNetwork(n_actions = self.n_actions, max_action=self.max_action, min_action=self.min_action, name='tagert_actor')
+        self.target_actor = ActorNetwork(n_actions = self.n_actions, max_action=self.max_action, min_action=self.min_action, name='target_actor')
         self.target_critic_1 = CriticNetwork(n_actions = self.n_actions, name='target_critic_1')
         self.target_critic_2 = CriticNetwork(n_actions = self.n_actions, name='target_critic_2')
 

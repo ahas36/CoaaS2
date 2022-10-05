@@ -8,7 +8,7 @@ import java.util.Hashtable;
 public class LookUps {
     // Dynamic Registries
     private static Hashtable<String, IndefRecord> indefDelayRegistry = new Hashtable<>();
-    private static Hashtable<String, LocalDateTime> delayRegistry = new Hashtable<>();
+    private static Hashtable<String, DefRecord> delayRegistry = new Hashtable<>();
 
     public static void write(DynamicRegistry registry, String key, Object value){
         switch(registry) {
@@ -23,7 +23,8 @@ public class LookUps {
             case DELAYREGISTRY:
                 synchronized (LookUps.class){
                     if(!delayRegistry.containsKey(key)){
-                        delayRegistry.put(key,(LocalDateTime)value);
+                        LocalDateTime expiry = LocalDateTime.now().plusHours(1);
+                        delayRegistry.put(key, new DefRecord((LocalDateTime)value, expiry));
                     }
                 }
                 break;
@@ -45,7 +46,9 @@ public class LookUps {
             case DELAYREGISTRY:
                 if(!delayRegistry.containsKey(key))
                     return true;
-                else if (delayRegistry.get(key).isBefore((LocalDateTime)value)){
+                else if (delayRegistry.containsKey(key) &&
+                        (delayRegistry.get(key).getDelayTime().isBefore((LocalDateTime)value) ||
+                                delayRegistry.get(key).getExpiryTime().isBefore((LocalDateTime)value))) {
                     delayRegistry.remove(key);
                     return true;
                 }

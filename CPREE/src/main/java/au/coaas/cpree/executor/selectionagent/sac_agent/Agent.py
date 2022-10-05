@@ -10,7 +10,7 @@ from networks.CriticNetwork import CriticNetwork
 
 class Agent:
     __input_dims = ['size_in_cache', 'earning', 'retrieval_cost', 'penalties', 'process_cost', 'cache_cost',
-            'probability_delay', 'avg_cache_life', 'avg_delay_time']
+            'probability_delay', 'avg_cache_life', 'avg_delay_time', 'avg_hitrate']
 
     def __init__(self, max_action, input_dims = [len(__input_dims)], alpha=0.001, beta=0.002, gamma=0.9, n_actions=6, max_size=60,
             tau=0.005, batch_size=10, reward_scale=1):

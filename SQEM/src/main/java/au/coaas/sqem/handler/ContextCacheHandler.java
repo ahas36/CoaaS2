@@ -27,6 +27,7 @@ import static java.lang.Character.isDigit;
 
 public class ContextCacheHandler {
 
+    private static final boolean traditionalCaching = false; // Should be false
     private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
     private static CacheDataRegistry registry = CacheDataRegistry.getInstance();
     private static final String regex = "^[\\d\\.]*[BGKM%]{0,1}$";
@@ -76,8 +77,10 @@ public class ContextCacheHandler {
                 else {
                     // Cached with an indefinite lifetime
                     ent.set(entityJson);
-                    Subscriber subscriber = new Subscriber(hashKey, registerRequest.getLambdaConf());
-                    Event.operation.subscribe(hashKey, subscriber);
+                    if(!traditionalCaching){ // This prevents preemptive evictions as done in context caching
+                        Subscriber subscriber = new Subscriber(hashKey, registerRequest.getLambdaConf());
+                        Event.operation.subscribe(hashKey, subscriber);
+                    }
                     PerformanceLogHandler.logDecisionLatency("cachelife", Long.MAX_VALUE, DelayCacheLatency.INDEFINITE);
                 }
             }

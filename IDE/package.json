@@ -51,7 +51,7 @@
     "mui-datatables": "^2.12.4",
     "node-fetch": "^2.6.0",
     "random-normal": "^1.0.0",
-    "rdflib": "^1.0.6",
+    "rdflib": "^2.2.20",
     "react": "^16.8.2",
     "react-ace": "^8.0.0",
     "react-dom": "^16.8.2",

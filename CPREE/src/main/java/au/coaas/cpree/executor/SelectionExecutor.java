@@ -533,7 +533,7 @@ public class SelectionExecutor {
                 + (cacheLookupLatency.get("200") * (1 - missRate)));
         double redirCost = cachePerfStats.get("processCost") * (retLatency + cacheLookupLatency.get("404"));
 
-        return redirCost > 0 ? cacheCost / redirCost : 0.0;
+        return cacheCost > 0 ? redirCost/cacheCost : Double.MAX_VALUE;
     }
 
     private static RetrievalEfficiency getRetrievalEfficiency(String serviceId, ContextProviderProfile profile, double expLambda,
@@ -636,6 +636,6 @@ public class SelectionExecutor {
 
         // Retrieval efficiency is the ratio between the cost of totally retrieving from the CPs in an adhoc manner
         // called the redirector mode, and the cost of serving from a cache
-        return response.setEfficiecy(cache_cost / red_cost).setCacheCost(cache_cost).setExpMR(exp_mr).build();
+        return response.setEfficiecy(red_cost/cache_cost).setCacheCost(cache_cost).setExpMR(exp_mr).build();
     }
 }

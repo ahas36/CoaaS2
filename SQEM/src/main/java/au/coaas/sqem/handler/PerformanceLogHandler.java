@@ -482,7 +482,7 @@ public class PerformanceLogHandler {
                     try {
                         JSONObject cachingSummary = getCacheLives();
                         BasicDBObject summary = persRecord.get("summary", BasicDBObject.class);
-                        BasicDBObject levelSummary = persRecord.get("levels", BasicDBObject.class);
+                        ConcurrentHashMap<String,BasicDBObject> levelSummary = (ConcurrentHashMap<String,BasicDBObject>) persRecord.get("levels");
 
                         JSONArray vector = new JSONArray();
                         vector.put((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
@@ -498,13 +498,13 @@ public class PerformanceLogHandler {
 
                         if(!popularBased){
                             // TODO: This should be the average of the context cache levels
-                            BasicDBObject entitySummary = (BasicDBObject) levelSummary.get("entity");
+                            BasicDBObject entitySummary = levelSummary.get("entity");
                             vector.put(entitySummary.getDouble("hitrate"));
                         }
 
                         double reward = 0.0;
                         if(popularBased){
-                            BasicDBObject entitySummary = (BasicDBObject) levelSummary.get("entity");
+                            BasicDBObject entitySummary = levelSummary.get("entity");
                             reward = entitySummary.getDouble("hitrate");
                         }
                         else
@@ -626,7 +626,7 @@ public class PerformanceLogHandler {
                     if(status.equals("200")) temp.put("success", temp.get("success") + count);
                     else temp.put("failed", temp.get("failed") + count);
 
-                    temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("retLatency") * count));
+                    temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("rt_avg") * count));
 
                     res.put(rs_1.getString("identifier"), temp);
                 }
@@ -653,7 +653,7 @@ public class PerformanceLogHandler {
             });
         }
         catch(Exception ex){
-            log.severe("Exception thrown when aggregating the context providers: "
+            log.severe("Exception thrown when measuring the reliability of context providers: "
                     + ex.getMessage());
         }
         return null;
@@ -740,7 +740,7 @@ public class PerformanceLogHandler {
             });
         }
         catch(Exception ex){
-            log.severe("Exception thrown when aggregating the context providers: "
+            log.severe("Exception thrown when summarizing the context providers: "
                     + ex.getMessage());
             log.info(String.valueOf(ex.getStackTrace()));
         }
@@ -1292,12 +1292,6 @@ public class PerformanceLogHandler {
                 List<double[]> dataset_4 = new ArrayList<>();
                 List<double[]> dataset_5 = new ArrayList<>();
 
-//                double[][] dataset = new double[count][2];
-//                double[][] dataset_2 = new double[count][2];
-//                double[][] dataset_3 = new double[count][2];
-//                double[][] dataset_4 = new double[count][2];
-//                double[][] dataset_5 = new double[count][2];
-
                 double[] retLatList = new double[count];
                 List<Double> counts = new ArrayList();
 
@@ -1314,17 +1308,6 @@ public class PerformanceLogHandler {
                             dataset_2.add(new double[] { index, rel.getDouble("reliability") });
                             dataset_3.add(new double[] { index, rel.getDouble("retLatency") });
                             dataset_5.add(new double[] { index, rel.getDouble("cost") });
-
-//                            dataset[index][0] = index;
-//                            dataset_2[index][0] = index;
-//                            dataset_3[index][0] = index;
-//                            dataset_5[index][0] = index;
-//
-//                            dataset[index][1] = cp.containsKey("profile") ?
-//                                    cp.get("profile", Document.class).getDouble("fthresh") : 0.7; // 0.7 is default
-//                            dataset_2[index][1] = rel.getDouble("reliability");
-//                            dataset_3[index][1] = rel.getDouble("retLatency");
-//                            dataset_5[index][1] = rel.getDouble("cost");
 
                             retLatList[index] = rel.getDouble("retLatency");
                             counts.add(rel.getDouble("count")/60);
@@ -1473,32 +1456,29 @@ public class PerformanceLogHandler {
 
             if(count > 1){
                 int index = 0;
-                double[][] dataset = new double[max_history][2];
-                double[][] dataset_2 = new double[max_history][2];
-                double[][] dataset_3 = new double[max_history][2];
+                List<double[]> dataset = new ArrayList<>();
+                List<double[]> dataset_2 = new ArrayList<>();
+                List<double[]> dataset_3 = new ArrayList<>();
 
                 for(Document document : result){
-                    dataset[index][0] = index;
-                    dataset_2[index][0] = index;
-                    dataset_3[index][0] = index;
-
                     // Expected rtmax, earning, penalty
                     Document cqc = document.get("classes", Document.class).get(classId, Document.class);
+                    if(cqc != null){
+                        dataset.add(new double[] { index, cqc.getDouble("rtmax") });
+                        dataset_2.add(new double[] { index, cqc.getDouble("earning") });
+                        dataset_3.add(new double[] { index, cqc.getDouble("penalty") });
 
-                    dataset[index][1] = cqc.getDouble("rtmax");
-                    dataset_2[index][1] = cqc.getDouble("earning");
-                    dataset_3[index][1] = cqc.getDouble("penalty");
-
-                    index++;
+                        index++;
+                    }
                 };
 
                 ExecutorService regression_executor = Executors.newFixedThreadPool(3);
                 ArrayList<Future<?>> taskList = new ArrayList<>();
 
                 // The list is inverted, so, estimating from x=-1.
-                taskList.add(regression_executor.submit(() -> { exp_rtmax.set(predictExpectedValue(dataset, -1)); }));
-                taskList.add(regression_executor.submit(() -> { exp_earning.set(predictExpectedValue(dataset_2, -1)); }));
-                taskList.add(regression_executor.submit(() -> { exp_penalty.set(predictExpectedValue(dataset_3, -1)); }));
+                taskList.add(regression_executor.submit(() -> { exp_rtmax.set(predictExpectedValue(dataset.stream().toArray(double[][]::new), -1)); }));
+                taskList.add(regression_executor.submit(() -> { exp_earning.set(predictExpectedValue(dataset_2.stream().toArray(double[][]::new), -1)); }));
+                taskList.add(regression_executor.submit(() -> { exp_penalty.set(predictExpectedValue(dataset_3.stream().toArray(double[][]::new), -1)); }));
 
                 while(!taskList.isEmpty()){
                     Future<?> curr = taskList.get(0);
@@ -1511,10 +1491,14 @@ public class PerformanceLogHandler {
                 regression_executor.shutdown();
             }
 
+            double rtmaxValid = exp_rtmax.get() < 0 ? 0 :  exp_rtmax.get();
+            double earnValid = exp_earning.get() < 0 ? 0 :  exp_earning.get();
+            double penaltyValid = exp_penalty.get() < 0 ? 0 :  exp_penalty.get();
+
             return QueryClassProfile.newBuilder().setStatus("200")
-                    .setRtmax(Double.isNaN(exp_rtmax.get()) ? "NaN" : Double.toString(exp_rtmax.get()/1000))
-                    .setEarning(Double.isNaN(exp_earning.get()) ? "NaN" : Double.toString(exp_earning.get()))
-                    .setPenalty(Double.isNaN(exp_penalty.get()) ? "NaN" : Double.toString(exp_penalty.get()))
+                    .setRtmax(Double.isNaN(exp_rtmax.get()) ? "NaN" : Double.toString(rtmaxValid/1000))
+                    .setEarning(Double.isNaN(exp_earning.get()) ? "NaN" : Double.toString(earnValid))
+                    .setPenalty(Double.isNaN(exp_penalty.get()) ? "NaN" : Double.toString(penaltyValid))
                     .build();
         }
         catch(Exception e){

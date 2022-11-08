@@ -66,7 +66,7 @@ public class RefreshExecutor {
             }
         }
         catch(Exception ex){
-            log.severe("Could not refresh context!");
+            log.severe("Could not set proactive refreshing for context!");
             log.info("Cause: " + ex.getMessage());
         }
     }

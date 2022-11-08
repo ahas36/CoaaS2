@@ -16,7 +16,6 @@ message CREResponse {
 
 message ReasoningResponse {
     string situationTitle = 1;
-
     double confidence = 2;
 }
 

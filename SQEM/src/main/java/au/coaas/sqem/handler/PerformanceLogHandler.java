@@ -224,6 +224,21 @@ public class PerformanceLogHandler {
                             0, // is Delayed?
                             request.getEarning()); //fthresh
                     statement.executeUpdate(formatted_string);
+                    break;
+                }
+                case "infer": {
+                    String queryString_2 = "INSERT INTO coass_performance(method,status,response_time,identifier,createdDatetime,"+
+                            "isDelayed) VALUES('%s', '%s', %d, '%s', CAST('%s' AS DATETIME2), %d);";
+                    LocalDateTime now = LocalDateTime.now();
+
+                    String formatted_string = String.format(queryString_2,
+                            method, // Method name
+                            request.getStatus(), // Status of the request
+                            request.getTime(), // Response time
+                            request.getIdentifier(), // Context Identifier
+                            now.format(formatter),
+                            0); // is Delayed?
+                    statement.executeUpdate(formatted_string);
                 }
             }
         }

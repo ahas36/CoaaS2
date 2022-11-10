@@ -60,7 +60,7 @@ class Agent:
 
     def update_exploration(self, diff):
         if(self.time_step > self.warmup):
-            if(abs(diff) < 1):
+            if(abs(diff) < 0.10):
                 self.noise = self.noise - 0.05
                 if(self.noise <= 0): 
                     self.noise = 0
@@ -84,9 +84,9 @@ class Agent:
 
             mu = abs(-1 - mu[0])/2.0
 
-            mu_prime = mu 
-            # mu_prime = mu + np.random.normal(scale=self.noise)
+            #mu_prime = mu 
             # mu_prime = (mu + exp_noise)/2
+            mu_prime = mu + np.random.normal(scale=self.noise)
             mu_prime = tf.clip_by_value(mu_prime, self.min_action, self.max_action)
         
         self.time_step += 1

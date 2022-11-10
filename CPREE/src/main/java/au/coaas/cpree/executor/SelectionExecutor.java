@@ -285,18 +285,23 @@ public class SelectionExecutor {
 
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
-                            double vec_total = caching_efficiency < min_value ? 0 : (caching_efficiency * caching_efficiency) +
-                                    access_trend < min_value ? 0 : (access_trend * access_trend) +
-                                    complexity < min_value ? 0 : (complexity * complexity) +
-                                    retEff < min_value ? 0 : (retEff * retEff);
+                            double vec_total = caching_efficiency < min_value ? 0 : Math.pow(caching_efficiency, 2) +
+                                    access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
+                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
+                                    retEff < min_value ? 0 : Math.pow(retEff, 2) +
+                                    Math.pow(reliability, 2);
                             double denom = Math.sqrt(vec_total);
 
-                            double nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
-                                    access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
-                                    reliability < min_value ? 0 : (weightThresholds.get("delta") * reliability) +
-                                    complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom));
-                            double cacheConfidence = retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom)) +
-                                    nonRetrievalConfidence;
+                            double cacheConfidence = 0;
+                            double nonRetrievalConfidence = 0;
+                            if(denom != 0){
+                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
+                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * (reliability/denom)) +
+                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom));
+                                cacheConfidence = retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom)) +
+                                        nonRetrievalConfidence;
+                            }
 
                             valueHistory.add(cacheConfidence);
 
@@ -420,18 +425,23 @@ public class SelectionExecutor {
 
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
-                            double vec_total = caching_efficiency < min_value ? 0 : (caching_efficiency * caching_efficiency) +
-                                    access_trend < min_value ? 0 : (access_trend * access_trend) +
-                                    complexity < min_value ? 0 : (complexity * complexity) +
-                                    retEff < min_value ? 0 : (retEff * retEff);
+                            double vec_total = caching_efficiency < min_value ? 0 : Math.pow(caching_efficiency, 2) +
+                                    access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
+                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
+                                    retEff < min_value ? 0 : Math.pow(retEff, 2) +
+                                    Math.pow(reliability, 2);
                             double denom = Math.sqrt(vec_total);
 
-                            double nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
-                                    access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
-                                    reliability < min_value ? 0 : (weightThresholds.get("delta") * reliability) +
-                                    complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom));
-                            double cacheConfidence = retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom)) +
-                                    nonRetrievalConfidence;
+                            double cacheConfidence = 0;
+                            double nonRetrievalConfidence = 0;
+                            if(denom != 0){
+                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
+                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * (reliability/denom)) +
+                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom));
+                                cacheConfidence = retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom)) +
+                                        nonRetrievalConfidence;
+                            }
 
                             valueHistory.add(cacheConfidence);
 

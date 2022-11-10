@@ -33,7 +33,7 @@ class AgentContext(Resource):
             avg_score = np.mean(self.__score_history.getlist())
             self.__avg_history.push(avg_score)
 
-            if(not self.__agent.isBufferEmpty() and self.__avg_history.get_queue_size()>2):
+            if(not self.__agent.isBufferEmpty() and self.__avg_history.get_queue_size()>10):
                 diff = avg_score - self.__avg_history.get_last(2)
                 self.__agent.update_exploration(diff)  
 

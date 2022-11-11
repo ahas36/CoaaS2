@@ -1,6 +1,5 @@
 package au.coaas.sqem.util;
 
-
 import okhttp3.*;
 
 import org.json.JSONObject;

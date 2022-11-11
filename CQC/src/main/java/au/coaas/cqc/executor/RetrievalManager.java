@@ -1,5 +1,6 @@
 package au.coaas.cqc.executor;
 
+import au.coaas.cqc.utils.ConQEngHelper;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
@@ -12,12 +13,14 @@ import au.coaas.sqem.proto.Statistic;
 import org.json.JSONObject;
 
 import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.Executors;
 
 public class RetrievalManager {
 
     private static final int retrys = 20;
     // Retrieval from non-streaming Context Providers
-    public static String executeFetch(String contextService, HashMap<String,String> params) {
+    public static String executeFetch(String contextService, HashMap<String,String> params, String cpId) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
@@ -68,6 +71,19 @@ public class RetrievalManager {
                 else age = Long.valueOf(response.getString("age"));
             }
         }
+
+        // Step 3
+        // Report back retrieval performance to ConQEng
+        long finalAge = age;
+        CSIResponse finalFetch = fetch;
+        Executors.newCachedThreadPool().execute(()-> {
+                JSONObject conqEngReport = new JSONObject();
+                conqEngReport.put("age", finalAge);
+                conqEngReport.put("id", cpId);
+                conqEngReport.put("Ca", new JSONObject(finalFetch.getBody()));
+                ConQEngHelper.reportPerformance(conqEngReport);
+            }
+        );
 
         asyncStub.logPerformanceData(Statistic.newBuilder()
                 .setMethod("executeFetch").setStatus(fetch.getStatus())

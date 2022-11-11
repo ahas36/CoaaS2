@@ -5,9 +5,13 @@ import au.coaas.base.proto.ListOfString;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.CacheSelectionRequest;
 import au.coaas.cpree.proto.ContextRefreshRequest;
+
 import au.coaas.cqc.proto.Empty;
+import au.coaas.cqc.utils.ConQEngHelper;
 import au.coaas.cqc.utils.enums.CacheLevels;
+
 import au.coaas.cre.proto.*;
+
 import au.coaas.cqc.utils.Utilities;
 import au.coaas.cqc.utils.enums.MeasuredProperty;
 import au.coaas.cqc.utils.exceptions.ExtendedToken;
@@ -284,7 +288,7 @@ public class PullBasedExecutor {
                     }
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,
-                                                                    criticality, sla, complexity);
+                                                                    criticality, sla, complexity, terms.keySet());
 
                     if(cacheResult != null){
                         JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
@@ -1251,83 +1255,119 @@ public class PullBasedExecutor {
 
     private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
                                                            HashMap<String,String> params, int limit, String criticality,
-                                                           JSONObject consumerSLA, double complexity) {
+                                                           JSONObject consumerSLA, double complexity, Set<String> attributes) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        JSONArray contextServices = new JSONArray(contextServicesText);
+        // Step 1
+        // Initial CR creation and lookup from ConQEng
+        JSONObject conqEngCR = new JSONObject();
 
-        // This for loop returns the context data from the first context service.
-        // Although, there may be multiple other context services, this loop assumes the context services are ordered.
-        // Therefore, the 1st SC in the list is the best match (Input from Kanaka).
-        for (int i = 0; i < contextServices.length(); i++) {
-            // Mapping context service with SLA constraints
-            JSONObject qos = consumerSLA.getJSONObject("sla").getJSONObject("qos");
-            JSONObject conSer = contextServices.getJSONObject(i);
+        conqEngCR.put("ccid", consumerSLA.getJSONObject("_id").getString("$oid"));
+        conqEngCR.put("etype", targetEntity.getType().getType());
+        conqEngCR.put("Ca", attributes);
+        conqEngCR.put("timeliness", consumerSLA.getJSONObject("sla").getJSONObject("qos")
+                .getJSONObject("rtmax").getDouble("value"));
+        // Should this be the maximum price the CMP is expecting to
+        // TODO: Currently, the maximum price the CMP is willing to pay is set equal to the earning from the query based on breakeven theory.
+        // But this should be based on the ratio CP cost in the total cost on current cost of the CMP.
+        conqEngCR.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price")
+                .getDouble("value"));
 
-            if(qos.getBoolean("staged")){
-                conSer = mapServiceWithSLA(conSer, qos, targetEntity.getType(), criticality.toLowerCase());
-            }
+        if(ConQEngHelper.createContextRequest(conqEngCR)){
+            // This list is currently unordered.
+            JSONArray contextServices = new JSONArray(contextServicesText);
 
-            if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){
-                JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
-                String keys = "";
-                for(Object k : candidate_keys)
-                    keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
+            // Step 2
+            // Get the retrieval (quality and cost) order of the CPs
+            JSONObject conqEngSort = new JSONObject();
 
-                JSONObject slaObj = conSer.getJSONObject("sla");
+            JSONObject fcp = contextServices.getJSONObject(0);
+            conqEngSort.put("pid", fcp.getJSONObject("_id").getString("$oid"));
+            conqEngSort.put("etype", targetEntity.getType().getType());
+            conqEngSort.put("cCa", attributes);
+            // These are just placeholders temporarily.
+            conqEngSort.put("clongitude", "y");
+            conqEngSort.put("clatitude", "x");
+            // The following are example SLA values given to ConQEng as reference.
+            JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
+            conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
+            conqEngSort.put("cost", cpQoS.getDouble("rate"));
+            conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
 
-                // By this line, I should have completed identifying the query class
-                CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
-                        .setEt(targetEntity.getType())
-                        .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
-                        .setCheckFresh(true)
-                        .setKey(keys).setQClass("1") // TODO: Assign the correct context query class
-                        .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
-                        .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()); // sampling
+            List<JSONObject> sortedCPs = ConQEngHelper.getCPOrder(conqEngSort, contextServices);
 
-                // Look up also considers known refreshing logics
-                SQEMResponse data = sqemStub.handleContextRequestInCache(lookup.build());
-
-                if(data.getBody().equals("") && data.getStatus() != "500"){
-                    // Need to fetch from a different Context Provider for 2 scenarios when partial misses occur when proactively refreshed, and
-                    // (1) The data are streamed
-                    // (2) The sensor is sampling at a certain rate
-                    if(data.getStatus().equals("400") && data.getMeta().equals("proactive_shift")
-                        && slaObj.getJSONObject("updateFrequency").getDouble("value") > 0)
-                        continue;
-
-                    // Fetching from the same context provider OR it's stream otherwise
-                    String retEntity = slaObj.getBoolean("autoFetch") ?
-                            RetrievalManager.executeFetch(conSer.toString(), params) :
-                            RetrievalManager.executeStreamRead(conSer.toString(), params);
-
-                    // There is problem with the current context provider which makes it unsuitable for retrieving now.
-                    // Therefore, has to move to the next context provider
-                    if(retEntity == null) continue;
-
-                    Executors.newCachedThreadPool().execute(()
-                            -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()), lookup,
-                                    retEntity, data.getMeta(), complexity));
-                    return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
-                            consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+            // This for loop returns the context data from the first context service.
+            // Although, there may be multiple other context services, this loop assumes the context services are ordered.
+            // Therefore, the 1st SC in the list is the best match (Input from Kanaka).
+            for (JSONObject conSer : sortedCPs) {
+                // Mapping context service with SLA constraints
+                JSONObject qos = consumerSLA.getJSONObject("sla").getJSONObject("qos");
+                if(qos.getBoolean("staged")){
+                    conSer = mapServiceWithSLA(conSer, qos, targetEntity.getType(), criticality.toLowerCase());
                 }
-                else {
-                    return new AbstractMap.SimpleEntry(data.getBody(),
+
+                if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){
+                    JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
+                    String keys = "";
+                    for(Object k : candidate_keys)
+                        keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
+
+                    JSONObject slaObj = conSer.getJSONObject("sla");
+
+                    // By this line, I should have completed identifying the query class
+                    CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
+                            .setEt(targetEntity.getType())
+                            .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
+                            .setCheckFresh(true)
+                            .setKey(keys).setQClass("1") // TODO: Assign the correct context query class
+                            .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
+                            .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()); // sampling
+
+                    // Look up also considers known refreshing logics
+                    SQEMResponse data = sqemStub.handleContextRequestInCache(lookup.build());
+
+                    if(data.getBody().equals("") && data.getStatus() != "500"){
+                        // Need to fetch from a different Context Provider for 2 scenarios when partial misses occur when proactively refreshed, and
+                        // (1) The data are streamed
+                        // (2) The sensor is sampling at a certain rate
+                        if(data.getStatus().equals("400") && data.getMeta().equals("proactive_shift")
+                                && slaObj.getJSONObject("updateFrequency").getDouble("value") > 0)
+                            continue;
+
+                        // Fetching from the same context provider OR it's stream otherwise
+                        String retEntity = slaObj.getBoolean("autoFetch") ?
+                                RetrievalManager.executeFetch(conSer.toString(), params, conSer.getJSONObject("_id").getString("$oid")) :
+                                RetrievalManager.executeStreamRead(conSer.toString(), params);
+
+                        // There is problem with the current context provider which makes it unsuitable for retrieving now.
+                        // Therefore, has to move to the next context provider
+                        if(retEntity == null) continue;
+
+                        Executors.newCachedThreadPool().execute(()
+                                -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()), lookup,
+                                retEntity, data.getMeta(), complexity));
+                        return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
+                                consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                    }
+                    else {
+                        return new AbstractMap.SimpleEntry(data.getBody(),
+                                qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                    }
+                }
+
+                String retEntity = conSer.getJSONObject("sla").getBoolean("autoFetch") ?
+                        RetrievalManager.executeFetch(conSer.toString(), params, conSer.getJSONObject("_id").getString("$oid")) :
+                        RetrievalManager.executeStreamRead(conSer.toString(), params);
+                if(retEntity != null)
+                    return new AbstractMap.SimpleEntry(retEntity,
                             qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
-                }
+                else continue; // Moving to the next context provider since it is currently unavailable.
+
             }
-
-            String retEntity = conSer.getJSONObject("sla").getBoolean("autoFetch") ?
-                    RetrievalManager.executeFetch(conSer.toString(), params) :
-                    RetrievalManager.executeStreamRead(conSer.toString(), params);
-            if(retEntity != null)
-                return new AbstractMap.SimpleEntry(retEntity,
-                        qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
-            else continue; // Moving to the next context provider since it is currently unavailable.
-
         }
 
+        log.severe("Runtime error during context retrieval.");
         return null;
     }
 

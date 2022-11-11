@@ -295,12 +295,16 @@ public class SelectionExecutor {
                             double cacheConfidence = 0;
                             double nonRetrievalConfidence = 0;
                             if(denom != 0){
-                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * caching_efficiency) +
+                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * access_trend) +
+                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * reliability) +
+                                        complexity < min_value ? 0 : (weightThresholds.get("row") * complexity);
+
+                                cacheConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
                                         access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
                                         reliability < min_value ? 0 : (weightThresholds.get("delta") * (reliability/denom)) +
-                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom));
-                                cacheConfidence = retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom)) +
-                                        nonRetrievalConfidence;
+                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom)) +
+                                        retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom));
                             }
 
                             valueHistory.add(cacheConfidence);
@@ -435,12 +439,16 @@ public class SelectionExecutor {
                             double cacheConfidence = 0;
                             double nonRetrievalConfidence = 0;
                             if(denom != 0){
-                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * caching_efficiency) +
+                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * access_trend) +
+                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * reliability) +
+                                        complexity < min_value ? 0 : (weightThresholds.get("row") * complexity);
+
+                                cacheConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
                                         access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
                                         reliability < min_value ? 0 : (weightThresholds.get("delta") * (reliability/denom)) +
-                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom));
-                                cacheConfidence = retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom)) +
-                                        nonRetrievalConfidence;
+                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom)) +
+                                        retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom));
                             }
 
                             valueHistory.add(cacheConfidence);

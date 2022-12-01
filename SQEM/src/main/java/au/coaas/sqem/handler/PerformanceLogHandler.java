@@ -9,6 +9,7 @@ import au.coaas.grpc.client.CQCChannel;
 import au.coaas.sqem.monitor.LogicalContextLevel;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.*;
+import au.coaas.sqem.util.HostMonitor;
 import au.coaas.sqem.util.HttpClient;
 import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.PubSub.Event;
@@ -61,6 +62,7 @@ public class PerformanceLogHandler {
     private static final int max_history = 10;
     private static final long max_delay_cache_residence = 3600 * 1000;
     private static boolean registriesReady = false;
+    private static final double processPrice = 0.00000024;
 
     private static boolean popularBased = false; // Should be False
 
@@ -863,12 +865,12 @@ public class PerformanceLogHandler {
     }
 
     // Get the processing cost per window
-    private static double getProcessingCostPerSecond(long totalQueries){
+    private static double getProcessingCostPerSecond(){
+        // Since the JVM only runs in a single machine (via the IDE), the following line gives the CPU time of the JVM used to run CoaaS.
+        return HostMonitor.getCpuUsage() * processPrice;
         // TODO:
-        // This method should make a request to the ClodProvider and request the cost of computing for the last window.
-        // This cost correlated to the number of queries executed during the window.
-        // So, I'm temporarily using that to estimate the cost of processing (this param to the function should be removed)
-        return (0.2 * totalQueries)/60;
+        // In Cloud: This method should make a request to the ClodProvider and request the cost of computing for the last window.
+        // In IaaS: When deployed in Docker using containers, this should broadcast to all the services and get their individual CPU times.
     }
 
     // Summarizing the performance of COAAS Overall
@@ -952,7 +954,7 @@ public class PerformanceLogHandler {
             dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / (double) totalQueries : 0.0);
             // This is a wrong calculation. Need to get theis from the cloud provider.
 
-            double proc_cost = getProcessingCostPerSecond(totalQueries);
+            double proc_cost = getProcessingCostPerSecond();
             ContextCacheHandler.updatePerfRegister("processCost", proc_cost);
             double cacheCost = (double) ContextCacheHandler.getCachePerfStat("cacheCost");
 

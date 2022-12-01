@@ -5,8 +5,11 @@ import { Queue } from './service-classes';
 export class SummaryModel{
   public gain: Queue<number>;
   public avg_gain: Queue<number>;
+  public total_gain: Queue<number>;
+  public avg_total_gain: Queue<number>;
   
   public earning: Queue<number>;
+  public penalty_earning: Queue<number>;
   public cache_cost: Queue<number>;
   public penalty_cost: Queue<number>;
   public retrieval_cost: Queue<number>;
@@ -42,8 +45,12 @@ export class SummaryModel{
   constructor(){
     this.gain = new Queue<number>();
     this.avg_gain = new Queue<number>();
+    this.total_gain = new Queue<number>();
+    this.avg_total_gain = new Queue<number>();
   
     this.earning = new Queue<number>();
+    this.penalty_earning = new Queue<number>();
+
     this.cache_cost = new Queue<number>();
     this.penalty_cost = new Queue<number>();
     this.retrieval_cost = new Queue<number>();

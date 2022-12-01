@@ -615,7 +615,8 @@ public class PerformanceLogHandler {
 
             HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
             ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
-                    "avg(response_time) AS rt_avg, avg(cost) AS avg_cost " +
+                    "avg(response_time) AS rt_avg, avg(cost) AS avg_cost, " +
+                    "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
                     "FROM coass_performance WHERE method = 'executeFetch' " +
                     "GROUP BY identifier, status;");
 
@@ -623,13 +624,15 @@ public class PerformanceLogHandler {
                 Double count = rs_1.getInt("cnt") * 1.0;
                 String status = rs_1.getString("status");
 
+                // If the hash map does not contain the CP currently
                 if(!res.containsKey(rs_1.getString("identifier"))){
                     res.put(rs_1.getString("identifier"),
                             new HashMap(){{
                                 put("count", count);
+                                put("delayed", status.equals("200") ? 0 : rs_1.getInt("tdelay"));
                                 put("failed", status.equals("200") ? 0 : count);
                                 put("success", status.equals("200") ? count : 0);
-                                put("retLatency", rs_1.getDouble("rt_avg")*count);
+                                put("retLatency", rs_1.getDouble("rt_avg") * count);
                                 put("cost", rs_1.getDouble("avg_cost"));
                             }});
                 }
@@ -637,8 +640,10 @@ public class PerformanceLogHandler {
                     HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
 
                     temp.put("count", temp.get("count") + count);
-
-                    if(status.equals("200")) temp.put("success", temp.get("success") + count);
+                    if(status.equals("200")) {
+                        temp.put("success", temp.get("success") + count);
+                        temp.put("delayed", temp.get("tdelay") + rs_1.getInt("tdelay"));
+                    }
                     else temp.put("failed", temp.get("failed") + count);
 
                     temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("rt_avg") * count));
@@ -652,8 +657,11 @@ public class PerformanceLogHandler {
                 HashMap<String,Double> temp = entry.getValue();
 
                 Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
+                // Using all the successful retreivals to divide the total retrieval latency.
                 temp.put("retLatency", temp.get("retLatency")/no_success);
-                temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0.0);
+                // Using only the successful AND timely retrievals to calculate reliability.
+                Double no_success_and_timely = temp.get("success") - temp.get("tdelay");
+                temp.put("reliability", temp.get("count") > 0 ? no_success_and_timely/temp.get("count") : 0.0);
 
                 if(!finalres.containsKey(csId)){
                     finalres.put(csId, new BasicDBObject(){{
@@ -881,6 +889,7 @@ public class PerformanceLogHandler {
             double totalEarning = 0;
             double totalPenalties = 0;
             double totalRetrievalCost = 0;
+            double penaltyEarning = 0;
 
             long totalQueries = 0;
             long totalRetrievals = 0;
@@ -889,6 +898,7 @@ public class PerformanceLogHandler {
             long totalNetworkOverhead = 0;
 
             long delayedResponses = 0;
+            long delayedRetrievals = 0;
 
             while(rs_2.next()){
                 String method = rs_2.getString("method");
@@ -908,7 +918,10 @@ public class PerformanceLogHandler {
                     if(status.equals("200")){
                         totalRetrievals += rs_2.getLong("cnt");
                         totalRetrievalCost += rs_2.getDouble("tcost");
+                        // penaltyEarning is a special case of an earning which is additional to the CMP.
+                        penaltyEarning += rs_2.getDouble("tearn");
                     }
+                    delayedRetrievals += rs_2.getLong("tdelay");
                     totalNetworkOverhead += (rs_2.getLong("average")*rs_2.getLong("cnt"));
                 }
 
@@ -933,6 +946,7 @@ public class PerformanceLogHandler {
             dbo.put("no_of_queries", totalQueries);
             dbo.put("delayed_queries", delayedResponses);
             dbo.put("no_of_retrievals", totalRetrievals);
+            dbo.put("no_of_delayed_retrievals", delayedRetrievals);
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
             dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / (double) totalQueries : 0.0);
@@ -944,13 +958,18 @@ public class PerformanceLogHandler {
 
             // TODO: Should include any other storage costs and other services costs
             double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - (proc_cost * 60) - cacheCost;
+            double totalGain = monetaryGain + penaltyEarning;
 
             dbo.put("gain", monetaryGain);
             dbo.put("avg_gain", totalQueries > 0 ? monetaryGain / totalQueries : 0);
+            dbo.put("total_gain", totalGain);
+            dbo.put("avg_total_gain", totalQueries > 0 ? totalGain / totalQueries : 0);
+
             dbo.put("earning", totalEarning);
             dbo.put("cache_cost", cacheCost);
             dbo.put("processing_cost", proc_cost);
             dbo.put("penalty_cost", totalPenalties);
+            dbo.put("penalty_earning", penaltyEarning);
             dbo.put("retrieval_cost", totalRetrievalCost);
 
             ContextCacheHandler.updatePerformanceStats(dbo.toMap(), PerformanceStats.perf_stats);

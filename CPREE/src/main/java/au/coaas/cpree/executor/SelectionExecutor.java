@@ -291,6 +291,7 @@ public class SelectionExecutor {
                                     retEff < min_value ? 0 : Math.pow(retEff, 2) +
                                     Math.pow(reliability, 2);
                             double denom = Math.sqrt(vec_total);
+                            json.put("normalizer", denom);
 
                             double cacheConfidence = 0;
                             double nonRetrievalConfidence = 0;
@@ -435,6 +436,7 @@ public class SelectionExecutor {
                                     retEff < min_value ? 0 : Math.pow(retEff, 2) +
                                     Math.pow(reliability, 2);
                             double denom = Math.sqrt(vec_total);
+                            json.put("normalizer", denom);
 
                             double cacheConfidence = 0;
                             double nonRetrievalConfidence = 0;

@@ -116,7 +116,11 @@ export class ApiServiceService {
         // Overall perfromance summary
         this.summaryData.avg_gain.push(res.summary.avg_gain.toFixed(2));
         this.summaryData.gain.push(res.summary.gain.toFixed(2));
+        this.summaryData.avg_total_gain.push(res.summary.avg_total_gain.toFixed(2));
+        this.summaryData.total_gain.push(res.summary.total_gain.toFixed(2));
+
         this.summaryData.earning.push(res.summary.earning.toFixed(2));
+        this.summaryData.penalty_earning.push(res.summary.penalty_earning.toFixed(2));
         this.summaryData.penalty_cost.push(res.summary.penalty_cost.toFixed(2));
         this.summaryData.retrieval_cost.push(res.summary.retrieval_cost.toFixed(2));
         this.summaryData.cache_cost.push(res.summary.cache_cost.toFixed(2));
@@ -142,6 +146,7 @@ export class ApiServiceService {
 
         this.summaryData.currentCosts.splice(0, this.summaryData.currentCosts.length);
         this.summaryData.currentCosts.push(res.summary.earning.toFixed(2));
+        this.summaryData.currentCosts.push(res.summary.penalty_earning.toFixed(2));
         this.summaryData.currentCosts.push(res.summary.retrieval_cost.toFixed(2));
         this.summaryData.currentCosts.push(res.summary.penalty_cost.toFixed(2));
         this.summaryData.currentCosts.push(res.summary.processing_cost.toFixed(2));

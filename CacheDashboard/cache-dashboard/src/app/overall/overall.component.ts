@@ -13,10 +13,13 @@ export class OverallComponent implements OnInit {
 
   gain;
   avg_gain;
+  total_gain;
+  avg_total_gain;
   cache;
   model;
 
   earning;
+  penalty_earning;
   penalty_cost;
   retrieval_cost;
   processing_cost;
@@ -144,6 +147,10 @@ export class OverallComponent implements OnInit {
     {
       borderColor: 'rgba(245, 137, 14, 0.8)', // Orange
       backgroundColor: 'rgba(245, 137, 14, 0.1)',
+    },
+    {
+      borderColor: 'rgba(144, 144, 144, 0.8)', // Grey
+      backgroundColor: 'rgba(144, 144, 144, 0.1)',
     }
   ];
 
@@ -457,17 +464,22 @@ export class OverallComponent implements OnInit {
       // Top bar
       this.gain = data.gain.get();
       this.avg_gain = data.avg_gain.get()
+      this.total_gain = data.total_gain.get();
+      this.avg_total_gain = data.avg_total_gain.get()
       this.no_of_queries = data.no_of_queries.get();
       this.no_of_retrievals = data.no_of_retrievals.get();
       // + current average query latency
 
       // 2nd
       this.lineChartData.push({ data: this.gain, label: 'Gain' });
+      this.lineChartData.push({ data: this.total_gain, label: 'Total Gain' });
       // + current gain
 
       // 3rd - Left
       this.earning = data.earning.get();
-      this.lineChartData.push({ data: this.earning, label: 'Earning' });   
+      this.lineChartData.push({ data: this.earning, label: 'Earning' }); 
+      this.penalty_earning = data.earning.get();
+      this.lineChartData.push({ data: this.penalty_earning, label: 'Penalty Earning' });    
       this.retrieval_cost = data.retrieval_cost.get();
       this.lineChartData.push({ data: this.retrieval_cost, label: 'Retrieval Cost' });
       this.penalty_cost = data.penalty_cost.get();
@@ -578,27 +590,33 @@ export class OverallComponent implements OnInit {
       // Top bar
       this.gain = data.gain.get();
       this.avg_gain = data.avg_gain.get()
+      this.total_gain = data.total_gain.get();
+      this.avg_total_gain = data.avg_total_gain.get()
       this.no_of_queries = data.no_of_queries.get();
       this.no_of_retrievals = data.no_of_retrievals.get();
 
       // 2nd
       this.lineChartData[0].data = this.gain;
+      this.lineChartData[1].data = this.total_gain;
 
       // 3rd - Left
       this.earning = data.earning.get();
-      this.lineChartData[1].data = this.earning;   
+      this.lineChartData[2].data = this.earning;  
+
+      this.penalty_earning = data.penalty_earning.get();
+      this.lineChartData[3].data = this.penalty_earning;   
 
       this.retrieval_cost = data.retrieval_cost.get();
-      this.lineChartData[2].data = this.retrieval_cost;
+      this.lineChartData[4].data = this.retrieval_cost;
 
       this.penalty_cost = data.penalty_cost.get();
-      this.lineChartData[3].data = this.penalty_cost;
+      this.lineChartData[5].data = this.penalty_cost;
 
       this.processing_cost = data.processing_cost.get();
-      this.lineChartData[4].data = this.processing_cost;
+      this.lineChartData[6].data = this.processing_cost;
 
       this.cache_cost = data.cache_cost.get();
-      this.lineChartData[5].data = this.cache_cost;
+      this.lineChartData[7].data = this.cache_cost;
 
       this.costearningratio = data.costearningratio.get();
       this.line4ChartData[0].data = this.costearningratio; 

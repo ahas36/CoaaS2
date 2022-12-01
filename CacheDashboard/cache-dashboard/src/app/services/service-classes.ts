@@ -66,6 +66,8 @@ export class Item{
 export class Summary{
   public gain: number;
   public avg_gain: number;
+  public total_gain: number;
+  public avg_total_gain: number;
   public no_of_queries: longType;
   public delayed_queries: longType;
   public no_of_retrievals: longType;
@@ -73,6 +75,7 @@ export class Summary{
   public avg_network_overhead: longType;
   public avg_processing_overhead: number;
   public earning:  number;
+  public penalty_earning:  number;
   public cache_cost: number;
   public penalty_cost: number;
   public retrieval_cost: number;

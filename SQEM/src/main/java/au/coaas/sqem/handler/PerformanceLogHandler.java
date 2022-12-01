@@ -9,6 +9,7 @@ import au.coaas.grpc.client.CQCChannel;
 import au.coaas.sqem.monitor.LogicalContextLevel;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.*;
+import au.coaas.sqem.util.HostMonitor;
 import au.coaas.sqem.util.HttpClient;
 import au.coaas.sqem.util.LimitedQueue;
 import au.coaas.sqem.util.PubSub.Event;
@@ -61,6 +62,7 @@ public class PerformanceLogHandler {
     private static final int max_history = 10;
     private static final long max_delay_cache_residence = 3600 * 1000;
     private static boolean registriesReady = false;
+    private static final double processPrice = 0.00000024;
 
     private static boolean popularBased = false; // Should be False
 
@@ -199,12 +201,12 @@ public class PerformanceLogHandler {
                             method, // Method name
                             request.getStatus(), // Status of the retrieval
                             request.getTime(), // Response time
-                            0.0, // Earnings from the retrieval (which is always 0)
+                            request.getEarning(), // Earnings from the retrieval (penalties)
                             request.getCost(), // Cost of retrieval
                             cs_id, // Context Service Identifier
                             hashKey, // Hashkey (cached or not cached)
                             now.format(formatter),
-                            0, // is Delayed?
+                            request.getIsDelayed() ? 1 : 0, // is Delayed?
                             request.getAge(), //age
                             cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); // fthresh
                     statement.executeUpdate(formatted_string);
@@ -293,9 +295,9 @@ public class PerformanceLogHandler {
     public static void logCacheDecision(JSONObject decision, String level){
         try{
             String finalString;
-            String queryString = "INSERT INTO cacheDecisionHistory(retEff, cacheEff, reliability, complexity, accessTrend, " +
+            String queryString = "INSERT INTO cacheDecisionHistory(retEff, cacheEff, reliability, complexity, accessTrend, normalizer, " +
                     "kappa, mu, delta, row, pi, threshold, isDefinite, level, decision, latency, decisionTime) " +
-                    "VALUES(%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, '%s', '%s', %f, CAST('%s' AS DATETIME2));";
+                    "VALUES(%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, '%s', '%s', %f, CAST('%s' AS DATETIME2));";
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
@@ -305,7 +307,7 @@ public class PerformanceLogHandler {
                 String decs = decision.getString("label");
                 finalString = String.format(queryString,
                         decision.getDouble("retEff"), decision.getDouble("cacheEff"), decision.getDouble("reli"),
-                        decision.getDouble("complexity"), decision.getDouble("ar"),
+                        decision.getDouble("complexity"), decision.getDouble("ar"), decision.getDouble("normalizer"),
                         decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
                         decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
                         1, level, decs, decs.startsWith("cache") ? decision.getDouble("cache_life") : decision.getDouble("delay_time"),
@@ -314,7 +316,7 @@ public class PerformanceLogHandler {
             else {
                 finalString = String.format(queryString,
                         decision.getDouble("retEff"), decision.getDouble("cacheEff"), decision.getDouble("reli"),
-                        decision.getDouble("complexity"), decision.getDouble("ar"),
+                        decision.getDouble("complexity"), decision.getDouble("ar"), decision.getDouble("normalizer"),
                         decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
                         decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
                         0, level, decision.getString("label"), decision.getDouble("lambda_conf"),
@@ -615,7 +617,8 @@ public class PerformanceLogHandler {
 
             HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
             ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
-                    "avg(response_time) AS rt_avg, avg(cost) AS avg_cost " +
+                    "avg(response_time) AS rt_avg, avg(cost) AS avg_cost, " +
+                    "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
                     "FROM coass_performance WHERE method = 'executeFetch' " +
                     "GROUP BY identifier, status;");
 
@@ -623,13 +626,15 @@ public class PerformanceLogHandler {
                 Double count = rs_1.getInt("cnt") * 1.0;
                 String status = rs_1.getString("status");
 
+                // If the hash map does not contain the CP currently
                 if(!res.containsKey(rs_1.getString("identifier"))){
                     res.put(rs_1.getString("identifier"),
                             new HashMap(){{
                                 put("count", count);
+                                put("delayed", status.equals("200") ? 0 : rs_1.getInt("tdelay"));
                                 put("failed", status.equals("200") ? 0 : count);
                                 put("success", status.equals("200") ? count : 0);
-                                put("retLatency", rs_1.getDouble("rt_avg")*count);
+                                put("retLatency", rs_1.getDouble("rt_avg") * count);
                                 put("cost", rs_1.getDouble("avg_cost"));
                             }});
                 }
@@ -637,8 +642,10 @@ public class PerformanceLogHandler {
                     HashMap<String,Double> temp = res.get(rs_1.getString("identifier"));
 
                     temp.put("count", temp.get("count") + count);
-
-                    if(status.equals("200")) temp.put("success", temp.get("success") + count);
+                    if(status.equals("200")) {
+                        temp.put("success", temp.get("success") + count);
+                        temp.put("delayed", temp.get("tdelay") + rs_1.getInt("tdelay"));
+                    }
                     else temp.put("failed", temp.get("failed") + count);
 
                     temp.put("retLatency", temp.get("retLatency") + (rs_1.getDouble("rt_avg") * count));
@@ -652,8 +659,11 @@ public class PerformanceLogHandler {
                 HashMap<String,Double> temp = entry.getValue();
 
                 Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
+                // Using all the successful retreivals to divide the total retrieval latency.
                 temp.put("retLatency", temp.get("retLatency")/no_success);
-                temp.put("reliability", temp.get("count") > 0 ? no_success/temp.get("count") : 0.0);
+                // Using only the successful AND timely retrievals to calculate reliability.
+                Double no_success_and_timely = temp.get("success") - temp.get("tdelay");
+                temp.put("reliability", temp.get("count") > 0 ? no_success_and_timely/temp.get("count") : 0.0);
 
                 if(!finalres.containsKey(csId)){
                     finalres.put(csId, new BasicDBObject(){{
@@ -855,12 +865,12 @@ public class PerformanceLogHandler {
     }
 
     // Get the processing cost per window
-    private static double getProcessingCostPerSecond(long totalQueries){
+    private static double getProcessingCostPerSecond(){
+        // Since the JVM only runs in a single machine (via the IDE), the following line gives the CPU time of the JVM used to run CoaaS.
+        return HostMonitor.getCpuUsage() * processPrice;
         // TODO:
-        // This method should make a request to the ClodProvider and request the cost of computing for the last window.
-        // This cost correlated to the number of queries executed during the window.
-        // So, I'm temporarily using that to estimate the cost of processing (this param to the function should be removed)
-        return (0.2 * totalQueries)/60;
+        // In Cloud: This method should make a request to the ClodProvider and request the cost of computing for the last window.
+        // In IaaS: When deployed in Docker using containers, this should broadcast to all the services and get their individual CPU times.
     }
 
     // Summarizing the performance of COAAS Overall
@@ -881,6 +891,7 @@ public class PerformanceLogHandler {
             double totalEarning = 0;
             double totalPenalties = 0;
             double totalRetrievalCost = 0;
+            double penaltyEarning = 0;
 
             long totalQueries = 0;
             long totalRetrievals = 0;
@@ -889,6 +900,7 @@ public class PerformanceLogHandler {
             long totalNetworkOverhead = 0;
 
             long delayedResponses = 0;
+            long delayedRetrievals = 0;
 
             while(rs_2.next()){
                 String method = rs_2.getString("method");
@@ -908,7 +920,10 @@ public class PerformanceLogHandler {
                     if(status.equals("200")){
                         totalRetrievals += rs_2.getLong("cnt");
                         totalRetrievalCost += rs_2.getDouble("tcost");
+                        // penaltyEarning is a special case of an earning which is additional to the CMP.
+                        penaltyEarning += rs_2.getDouble("tearn");
                     }
+                    delayedRetrievals += rs_2.getLong("tdelay");
                     totalNetworkOverhead += (rs_2.getLong("average")*rs_2.getLong("cnt"));
                 }
 
@@ -933,24 +948,30 @@ public class PerformanceLogHandler {
             dbo.put("no_of_queries", totalQueries);
             dbo.put("delayed_queries", delayedResponses);
             dbo.put("no_of_retrievals", totalRetrievals);
+            dbo.put("no_of_delayed_retrievals", delayedRetrievals);
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
             dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / (double) totalQueries : 0.0);
             // This is a wrong calculation. Need to get theis from the cloud provider.
 
-            double proc_cost = getProcessingCostPerSecond(totalQueries);
+            double proc_cost = getProcessingCostPerSecond();
             ContextCacheHandler.updatePerfRegister("processCost", proc_cost);
             double cacheCost = (double) ContextCacheHandler.getCachePerfStat("cacheCost");
 
             // TODO: Should include any other storage costs and other services costs
             double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - (proc_cost * 60) - cacheCost;
+            double totalGain = monetaryGain + penaltyEarning;
 
             dbo.put("gain", monetaryGain);
             dbo.put("avg_gain", totalQueries > 0 ? monetaryGain / totalQueries : 0);
+            dbo.put("total_gain", totalGain);
+            dbo.put("avg_total_gain", totalQueries > 0 ? totalGain / totalQueries : 0);
+
             dbo.put("earning", totalEarning);
             dbo.put("cache_cost", cacheCost);
             dbo.put("processing_cost", proc_cost);
             dbo.put("penalty_cost", totalPenalties);
+            dbo.put("penalty_earning", penaltyEarning);
             dbo.put("retrieval_cost", totalRetrievalCost);
 
             ContextCacheHandler.updatePerformanceStats(dbo.toMap(), PerformanceStats.perf_stats);
@@ -1722,6 +1743,7 @@ public class PerformanceLogHandler {
                     "   reliability REAL NOT NULL,\n" +
                     "   complexity REAL NOT NULL,\n" +
                     "   accessTrend REAL NOT NULL,\n" +
+                    "   normalizer REAL NOT NULL,\n" +
                     "   kappa REAL NOT NULL,\n" +
                     "   mu REAL NOT NULL,\n" +
                     "   delta REAL NOT NULL,\n" +

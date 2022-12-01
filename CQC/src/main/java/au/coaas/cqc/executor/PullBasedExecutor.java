@@ -1299,8 +1299,8 @@ public class PullBasedExecutor {
 
                     // Fetching from the same context provider OR it's stream otherwise
                     String retEntity = slaObj.getBoolean("autoFetch") ?
-                            RetrievalManager.executeFetch(conSer.toString(), params) :
-                            RetrievalManager.executeStreamRead(conSer.toString(), params);
+                            RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params) :
+                            RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params);
 
                     // There is problem with the current context provider which makes it unsuitable for retrieving now.
                     // Therefore, has to move to the next context provider
@@ -1318,9 +1318,10 @@ public class PullBasedExecutor {
                 }
             }
 
+            JSONObject slaObj = conSer.getJSONObject("sla");
             String retEntity = conSer.getJSONObject("sla").getBoolean("autoFetch") ?
-                    RetrievalManager.executeFetch(conSer.toString(), params) :
-                    RetrievalManager.executeStreamRead(conSer.toString(), params);
+                    RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params) :
+                    RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params);
             if(retEntity != null)
                 return new AbstractMap.SimpleEntry(retEntity,
                         qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));

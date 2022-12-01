@@ -171,14 +171,11 @@ class Agent:
                 target_actions = tf.clip_by_value(target_actions, self.min_action,
                                                 self.max_action)
 
-                q1_ = self.target_critic_1(new_states, target_actions)
-                q2_ = self.target_critic_2(new_states, target_actions)
+                q1_ = tf.squeeze(self.target_critic_1(new_states, target_actions),1)
+                q2_ = tf.squeeze(self.target_critic_2(new_states, target_actions),1)
 
                 q1 = tf.squeeze(self.critic_1(states, actions), 1)
                 q2 = tf.squeeze(self.critic_2(states, actions), 1)
-
-                q1_ = tf.squeeze(q1_, 1)
-                q2_ = tf.squeeze(q2_, 1)
 
                 critic_value_ = tf.math.minimum(q1_, q2_)
 

@@ -199,12 +199,12 @@ public class PerformanceLogHandler {
                             method, // Method name
                             request.getStatus(), // Status of the retrieval
                             request.getTime(), // Response time
-                            0.0, // Earnings from the retrieval (which is always 0)
+                            request.getEarning(), // Earnings from the retrieval (penalties)
                             request.getCost(), // Cost of retrieval
                             cs_id, // Context Service Identifier
                             hashKey, // Hashkey (cached or not cached)
                             now.format(formatter),
-                            0, // is Delayed?
+                            request.getIsDelayed() ? 1 : 0, // is Delayed?
                             request.getAge(), //age
                             cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); // fthresh
                     statement.executeUpdate(formatted_string);
@@ -293,9 +293,9 @@ public class PerformanceLogHandler {
     public static void logCacheDecision(JSONObject decision, String level){
         try{
             String finalString;
-            String queryString = "INSERT INTO cacheDecisionHistory(retEff, cacheEff, reliability, complexity, accessTrend, " +
+            String queryString = "INSERT INTO cacheDecisionHistory(retEff, cacheEff, reliability, complexity, accessTrend, normalizer, " +
                     "kappa, mu, delta, row, pi, threshold, isDefinite, level, decision, latency, decisionTime) " +
-                    "VALUES(%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, '%s', '%s', %f, CAST('%s' AS DATETIME2));";
+                    "VALUES(%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %d, '%s', '%s', %f, CAST('%s' AS DATETIME2));";
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
@@ -305,7 +305,7 @@ public class PerformanceLogHandler {
                 String decs = decision.getString("label");
                 finalString = String.format(queryString,
                         decision.getDouble("retEff"), decision.getDouble("cacheEff"), decision.getDouble("reli"),
-                        decision.getDouble("complexity"), decision.getDouble("ar"),
+                        decision.getDouble("complexity"), decision.getDouble("ar"), decision.getDouble("normalizer"),
                         decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
                         decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
                         1, level, decs, decs.startsWith("cache") ? decision.getDouble("cache_life") : decision.getDouble("delay_time"),
@@ -314,7 +314,7 @@ public class PerformanceLogHandler {
             else {
                 finalString = String.format(queryString,
                         decision.getDouble("retEff"), decision.getDouble("cacheEff"), decision.getDouble("reli"),
-                        decision.getDouble("complexity"), decision.getDouble("ar"),
+                        decision.getDouble("complexity"), decision.getDouble("ar"), decision.getDouble("normalizer"),
                         decision.getDouble("kappa"), decision.getDouble("mu"), decision.getDouble("delta"),
                         decision.getDouble("row"), decision.getDouble("pi"), decision.getDouble("threshold"),
                         0, level, decision.getString("label"), decision.getDouble("lambda_conf"),
@@ -1722,6 +1722,7 @@ public class PerformanceLogHandler {
                     "   reliability REAL NOT NULL,\n" +
                     "   complexity REAL NOT NULL,\n" +
                     "   accessTrend REAL NOT NULL,\n" +
+                    "   normalizer REAL NOT NULL,\n" +
                     "   kappa REAL NOT NULL,\n" +
                     "   mu REAL NOT NULL,\n" +
                     "   delta REAL NOT NULL,\n" +

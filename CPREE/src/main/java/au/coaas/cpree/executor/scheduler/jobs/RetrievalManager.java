@@ -31,8 +31,11 @@ public class RetrievalManager {
 
         final ContextService cs = ContextService.newBuilder().setJson(contextService).build();
         fetchRequest.setContextService(cs);
+
+        JSONObject qos = (new JSONObject(contextService)).getJSONObject("sla").getJSONObject("qos");
         
         CSIResponse fetch = null;
+        double penEarning = 0;
         long startTime = 0;
         
         for(int i=0; i < retrys; i++){
@@ -42,7 +45,15 @@ public class RetrievalManager {
             if(fetch.getStatus().equals("200")) break;
             else {
                 long int_endTime = System.currentTimeMillis();
+                long retLatency = int_endTime-startTime;
+                double retDiff = retLatency - qos.getDouble("rtmax");
+                if(retDiff > 0){
+                    penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
+                            * qos.getDouble("penPct") / 100;
+                }
+
                 asyncStub.logPerformanceData(Statistic.newBuilder()
+                        .setIsDelayed(retDiff>0).setEarning(penEarning)
                         .setMethod("executeFetch").setStatus(fetch.getStatus())
                         .setTime(int_endTime-startTime).setCs(fetchRequest).setAge(0)
                         .setCost(!fetch.getStatus().equals("500")? fetch.getSummary().getPrice() : 0).build());
@@ -72,10 +83,17 @@ public class RetrievalManager {
             }
         }
 
-        
+        long retLatency = endTime-startTime;
+        double retDiff = retLatency - qos.getDouble("rtmax");
+        if(retDiff > 0){
+            penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
+                    * qos.getDouble("penPct") / 100;
+        }
+
         asyncStub.logPerformanceData(Statistic.newBuilder()
+                .setIsDelayed(retDiff>0).setEarning(penEarning)
+                .setCs(fetchRequest).setAge(age).setTime(retLatency)
                 .setMethod("executeFetch").setStatus(fetch.getStatus())
-                .setTime(endTime-startTime).setCs(fetchRequest).setAge(age)
                 .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
         // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
 

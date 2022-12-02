@@ -397,6 +397,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void logConQEngCR(au.coaas.sqem.proto.ConQEngLog request,
+                         io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver) {
+        try {
+            responseObserver.onNext(LogHandler.logConQEng(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void logConsumerProfile(au.coaas.sqem.proto.SummarySLA request,
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
         try {

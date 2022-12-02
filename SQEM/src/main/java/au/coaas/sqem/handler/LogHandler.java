@@ -1,9 +1,7 @@
 package au.coaas.sqem.handler;
 
 import au.coaas.sqem.mongo.ConnectionPool;
-import au.coaas.sqem.proto.CDQLLog;
-import au.coaas.sqem.proto.RegisterSituationRequest;
-import au.coaas.sqem.proto.SQEMResponse;
+import au.coaas.sqem.proto.*;
 import com.google.protobuf.util.JsonFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
@@ -18,7 +16,7 @@ import java.util.logging.Logger;
 
 
 public class LogHandler {
-    private static final Logger LOG = Logger.getLogger(LogHandler.class.getName());
+    private static final Logger log = Logger.getLogger(LogHandler.class.getName());
 
     public static SQEMResponse getAllLogs() {
         try {
@@ -96,6 +94,29 @@ public class LogHandler {
             body.put("cause",e.getCause().toString());
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }
+    }
+
+    // Logs all the interactions with ConQEng
+    public static Empty logConQEng(ConQEngLog request) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_log");
+            MongoCollection<Document> collection = db.getCollection("external_service_log");
+
+            Document doc = new Document();
+            doc.append("service", "ConQEng");
+            doc.append("id", request.getId());
+            doc.append("cr", request.getCr());
+            doc.append("status", request.getStatus());
+            doc.append("message", request.getMessage());
+            doc.append("timestamp", System.currentTimeMillis());
+
+            collection.insertOne(doc);
+        }
+        catch (Exception e) {
+            log.severe("Exception in recording external system interaction: " + e.getMessage());
+        }
+        return null;
     }
 
     /**

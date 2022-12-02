@@ -112,6 +112,7 @@ public class SelectionExecutor {
                     .build());
 
             if(cacheAll){
+                // Block executes the traditional cache-all (leave a copy) policy if configured.
                 RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()), profile,
                         request.getReference().getServiceId());
 
@@ -217,10 +218,6 @@ public class SelectionExecutor {
 
             double lambda = c_profile.get().getExpAR().equals("NaN") ? 1.0/60 : Double.valueOf(c_profile.get().getExpAR()); // per second
 
-            // TODO:
-            // Evaluate the context item for caching.
-            // Since the lifetime of a context item is considered to be fixed at this phase of the implementation,
-            // I can assume that the refreshing policy is also fixed.
             if(!profile.getAccessTrend().equals("NaN") &&
                     LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
                     LookUps.lookup(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda)) {

@@ -1266,6 +1266,7 @@ public class PullBasedExecutor {
         conqEngCR.put("ccid", consumerSLA.getJSONObject("_id").getString("$oid"));
         conqEngCR.put("etype", targetEntity.getType().getType());
         conqEngCR.put("Ca", attributes);
+        // Following is the maximum response time accepted to retrieve context.
         conqEngCR.put("timeliness", consumerSLA.getJSONObject("sla").getJSONObject("qos")
                 .getJSONObject("rtmax").getDouble("value"));
         // Should this be the maximum price the CMP is expecting to

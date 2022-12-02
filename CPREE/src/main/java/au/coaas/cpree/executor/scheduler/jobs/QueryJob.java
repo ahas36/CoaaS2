@@ -40,6 +40,11 @@ public class QueryJob implements Job {
             }
             else {
                 log.info("Failed to retrieve the context for " + contextId + " to refresh.");
+                // At this point, the context cached seems to not be able to refresh. This means the context would remain stale if on cache.
+                // The context data in costing the CMP 'hold up costs'. Because of which,
+                // 1) The context should be evicted and all schedulers removed (for proactive refreshing).
+                // 2) ConQEng should be updated of this nature and not to OR minimize attempting to retrieving from this CP.
+
                 throw new RuntimeException("Couldn't retrieve the context for refreshing.");
             }
         }

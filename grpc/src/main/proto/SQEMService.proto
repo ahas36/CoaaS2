@@ -191,6 +191,13 @@ message ContextServiceRequest
     repeated string params = 2;
 }
 
+message ConQEngLog {
+    string id = 1;
+    string cr = 2;
+    string message = 3;
+    int32 status = 4;
+}
+
 message ContextServiceId {
     string id = 1;
 }
@@ -309,17 +316,19 @@ service SQEMService {
 
     rpc logCPREEData (Statistic) returns (Empty);
     rpc logQuery (CDQLLog) returns (SQEMResponse);
-    rpc logCacheDecision (ContextCacheDecision) returns (Empty);
-    rpc getAllQueryLogs (Empty) returns (SQEMResponse);
-    rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
-    rpc logPerformanceData (Statistic) returns (Empty);
-    rpc getPerformanceData (Empty) returns (SQEMResponse);
+    rpc logConQEngCR (ConQEngLog) returns (Empty);
     rpc getModelState (Empty) returns (SQEMResponse);
-    rpc logConsumerProfile (SummarySLA) returns (Empty);
-    rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
-    rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
-    rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
+    rpc logPerformanceData (Statistic) returns (Empty);
+    rpc getAllQueryLogs (Empty) returns (SQEMResponse);
     rpc logDecisionLatency(DecisionLog) returns (Empty);
+    rpc logConsumerProfile (SummarySLA) returns (Empty);
+    rpc getPerformanceData (Empty) returns (SQEMResponse);
+    rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
+    rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
     rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
+    rpc logCacheDecision (ContextCacheDecision) returns (Empty);
     rpc getContextProfile(ContextProfileRequest) returns (ContextProfile);
+    rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
+    rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
+
 }

@@ -1,5 +1,8 @@
 package au.coaas.cqc.utils;
 
+import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.ConQEngLog;
+import au.coaas.sqem.proto.SQEMServiceGrpc;
 import okhttp3.*;
 
 import org.json.JSONArray;
@@ -11,6 +14,7 @@ import java.io.StringWriter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import au.coaas.cqc.utils.enums.HttpRequests;
 
@@ -25,7 +29,19 @@ public class ConQEngHelper {
     public static boolean createContextRequest(JSONObject cr){
         String result = call(baseURL + "context_requests",
                 HttpRequests.POST, cr.toString());
-        if(result != null) return true;
+        if(result != null) {
+            Executors.newCachedThreadPool().execute(() -> {
+                if(result.startsWith("{")){
+                    JSONObject crRes = new JSONObject(result);
+                    String crId = crRes.getString("_id");
+                    SQEMServiceGrpc.SQEMServiceFutureStub future =
+                            SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                    future.logConQEngCR(ConQEngLog.newBuilder()
+                            .setId(crId).setCr(cr.toString()).setStatus(200).build());
+                }
+            });
+            return true;
+        }
         return false;
     }
 
@@ -83,6 +99,13 @@ public class ConQEngHelper {
             Response response = fu_res.future.get();
             if(response.isSuccessful())
                 return response.body().string().trim();
+            else {
+                SQEMServiceGrpc.SQEMServiceFutureStub future =
+                        SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                future.logConQEngCR(ConQEngLog.newBuilder()
+                                .setStatus(response.code()).setCr(body)
+                                .setMessage(response.body().string().trim()).build());
+            }
         }
         catch (IOException | ExecutionException | InterruptedException e) {
             e.printStackTrace();

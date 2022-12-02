@@ -1,5 +1,8 @@
 package au.coaas.cpree.executor.scheduler.jobs;
 
+import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.ContextServiceId;
+import au.coaas.sqem.proto.SQEMServiceGrpc;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.quartz.*;
@@ -44,6 +47,10 @@ public class QueryJob implements Job {
                 // The context data in costing the CMP 'hold up costs'. Because of which,
                 // 1) The context should be evicted and all schedulers removed (for proactive refreshing).
                 // 2) ConQEng should be updated of this nature and not to OR minimize attempting to retrieving from this CP.
+                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                String hashkey = (contextId.split("-"))[1];
+                asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(hashkey).build());
 
                 throw new RuntimeException("Couldn't retrieve the context for refreshing.");
             }

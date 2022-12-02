@@ -1,5 +1,6 @@
 package au.coaas.cpree.executor;
 
+import au.coaas.cpree.proto.Empty;
 import au.coaas.cpree.utils.Utilities;
 import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.utils.enums.CacheLevels;
@@ -15,6 +16,7 @@ import au.coaas.sqem.proto.*;
 import au.coaas.grpc.client.SQEMChannel;
 
 import org.json.JSONObject;
+import org.quartz.SchedulerException;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -165,10 +167,7 @@ public class RefreshExecutor {
                     if(isChanged){
                         // Shift to the reactive policy
                         synchronized (RefreshExecutor.class){
-                            // Remove the context item from the registry
-                            prorefRegistery.remove(contextId);
-                            // Stop the scheduler from running
-                            refreshScheduler.stopRefreshing(contextId);
+                            stopProactiveRefreshing(contextId);
                             // Toggle the refresh policy in the Hashtable in SQEM
                             blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
                                     .setLookup(request.getRequest().getReference()).setRefreshLogic("reactive")
@@ -300,5 +299,13 @@ public class RefreshExecutor {
         // For (2) and (3), the item should rather be fetched as and when needed for queries.
 
         return RefreshLogics.REACTIVE;
+    }
+
+    public static Empty stopProactiveRefreshing(String contextId) throws SchedulerException {
+        // Remove the context item from the registry
+        prorefRegistery.remove(contextId);
+        // Stop the scheduler from running
+        refreshScheduler.stopRefreshing(contextId);
+        return null;
     }
 }

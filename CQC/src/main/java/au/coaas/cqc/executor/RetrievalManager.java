@@ -43,6 +43,8 @@ public class RetrievalManager {
             if(fetch.getStatus().equals("200")) break;
             else {
                 long int_endTime = System.currentTimeMillis();
+
+                // Should penalties be earned if the CP fails to respond at all (non 200 responses, timeouts)
                 long retLatency = int_endTime-startTime;
                 double retDiff = retLatency - qos.getDouble("rtmax");
                 if(retDiff > 0){
@@ -58,6 +60,7 @@ public class RetrievalManager {
             }
         }
 
+        // Since the end_time is after the retry attempts until success, what is being reported back to ConQEng is accumilated time.
         long endTime = System.currentTimeMillis();
 
         long age = 0;
@@ -79,38 +82,37 @@ public class RetrievalManager {
                 }
                 else age = Long.valueOf(response.getString("age"));
             }
-        }
 
-        // Step 3
-        // Report back retrieval performance to ConQEng
-        long finalAge = age;
-        CSIResponse finalFetch = fetch;
-        Executors.newCachedThreadPool().execute(()-> {
-                JSONObject conqEngReport = new JSONObject();
-                conqEngReport.put("age", finalAge);
-                conqEngReport.put("id", cpId);
-                conqEngReport.put("Ca", new JSONObject(finalFetch.getBody()));
-                ConQEngHelper.reportPerformance(conqEngReport);
+            // Step 3
+            // Report back retrieval performance to ConQEng
+            long finalAge = age;
+            CSIResponse finalFetch = fetch;
+            Executors.newCachedThreadPool().execute(()-> {
+                        JSONObject conqEngReport = new JSONObject();
+                        conqEngReport.put("age", finalAge);
+                        conqEngReport.put("id", cpId);
+                        conqEngReport.put("Ca", new JSONObject(finalFetch.getBody()));
+                        ConQEngHelper.reportPerformance(conqEngReport);
+                    }
+            );
+
+            long retLatency = endTime-startTime;
+            double retDiff = retLatency - qos.getDouble("rtmax");
+            if(retDiff > 0){
+                penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
+                        * qos.getDouble("penPct") / 100;
             }
-        );
 
-        long retLatency = endTime-startTime;
-        double retDiff = retLatency - qos.getDouble("rtmax");
-        if(retDiff > 0){
-            penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
-                    * qos.getDouble("penPct") / 100;
-        }
+            asyncStub.logPerformanceData(Statistic.newBuilder()
+                    .setMethod("executeFetch").setStatus(fetch.getStatus())
+                    .setTime(retLatency).setCs(fetchRequest).setAge(age)
+                    .setIsDelayed(retDiff>0).setEarning(penEarning)
+                    .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
-        asyncStub.logPerformanceData(Statistic.newBuilder()
-                .setMethod("executeFetch").setStatus(fetch.getStatus())
-                .setTime(retLatency).setCs(fetchRequest).setAge(age)
-                .setIsDelayed(retDiff>0).setEarning(penEarning)
-                .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
-
-        if (fetch.getStatus().equals("200")) {
             return fetch.getBody();
         }
 
+        // Returning null means teh CMP failed to retrieved context from the provider despite all attempts.
         return null;
     }
 

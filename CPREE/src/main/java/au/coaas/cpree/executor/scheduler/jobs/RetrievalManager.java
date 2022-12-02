@@ -1,5 +1,6 @@
 package au.coaas.cpree.executor.scheduler.jobs;
 
+import au.coaas.cpree.utils.ConQEngHelper;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
@@ -14,6 +15,7 @@ import au.coaas.grpc.client.SQEMChannel;
 import org.json.JSONObject;
 
 import java.util.HashMap;
+import java.util.concurrent.Executors;
 
 public class RetrievalManager {
     
@@ -32,8 +34,9 @@ public class RetrievalManager {
         final ContextService cs = ContextService.newBuilder().setJson(contextService).build();
         fetchRequest.setContextService(cs);
 
-        JSONObject qos = (new JSONObject(contextService)).getJSONObject("sla").getJSONObject("qos");
-        
+        JSONObject provider = new JSONObject(contextService);
+        JSONObject qos = provider.getJSONObject("sla").getJSONObject("qos");
+
         CSIResponse fetch = null;
         double penEarning = 0;
         long startTime = 0;
@@ -45,6 +48,8 @@ public class RetrievalManager {
             if(fetch.getStatus().equals("200")) break;
             else {
                 long int_endTime = System.currentTimeMillis();
+
+                // Should penalties be earned if the CP fails to respond at all (non 200 responses, timeouts)
                 long retLatency = int_endTime-startTime;
                 double retDiff = retLatency - qos.getDouble("rtmax");
                 if(retDiff > 0){
@@ -59,7 +64,8 @@ public class RetrievalManager {
                         .setCost(!fetch.getStatus().equals("500")? fetch.getSummary().getPrice() : 0).build());
             }
         }
-        
+
+        // Since the end_time is after the retry attempts until success, what is being reported back to ConQEng is accumilated time.
         long endTime = System.currentTimeMillis();
 
         long age = 0;
@@ -81,26 +87,37 @@ public class RetrievalManager {
                 }
                 else age = Long.valueOf(response.getString("age"));
             }
-        }
 
-        long retLatency = endTime-startTime;
-        double retDiff = retLatency - qos.getDouble("rtmax");
-        if(retDiff > 0){
-            penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
-                    * qos.getDouble("penPct") / 100;
-        }
+            // Step 3
+            // Report back retrieval performance to ConQEng
+            long finalAge = age;
+            CSIResponse finalFetch = fetch;
+            Executors.newCachedThreadPool().execute(()-> {
+                        JSONObject conqEngReport = new JSONObject();
+                        conqEngReport.put("age", finalAge);
+                        conqEngReport.put("id", provider.getJSONObject("_id").getString("$oid"));
+                        conqEngReport.put("Ca", new JSONObject(finalFetch.getBody()));
+                        ConQEngHelper.reportPerformance(conqEngReport);
+                    }
+            );
 
-        asyncStub.logPerformanceData(Statistic.newBuilder()
-                .setIsDelayed(retDiff>0).setEarning(penEarning)
-                .setCs(fetchRequest).setAge(age).setTime(retLatency)
-                .setMethod("executeFetch").setStatus(fetch.getStatus())
-                .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
-        // Here, the response to fetch is not 200, there is not monetary cost, but there is an abstract cost of network latency
+            long retLatency = endTime-startTime;
+            double retDiff = retLatency - qos.getDouble("rtmax");
+            if(retDiff > 0){
+                penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
+                        * qos.getDouble("penPct") / 100;
+            }
 
-        if (fetch.getStatus().equals("200")) {
+            asyncStub.logPerformanceData(Statistic.newBuilder()
+                    .setIsDelayed(retDiff>0).setEarning(penEarning)
+                    .setCs(fetchRequest).setAge(age).setTime(retLatency)
+                    .setMethod("executeFetch").setStatus(fetch.getStatus())
+                    .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
+
             return fetch.getBody();
         }
 
+        // Returning null means teh CMP failed to retrieved context from the provider despite all attempts.
         return null;
     }
 

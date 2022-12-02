@@ -61,10 +61,15 @@ message RetrievalEfficiency {
   double expPrd = 6;
 }
 
+message Lookup {
+  string contextId = 1;
+}
+
 service CPREEService {
   rpc classifyQuery (ContextQueryPlan) returns (CPREEResponse);
   rpc evaluateAndCacheContext (CacheSelectionRequest) returns (CPREEResponse);
   rpc refreshContext (ContextRefreshRequest) returns (CPREEResponse);
   rpc updateWeights (LearnedWeights) returns (Empty);
+  rpc stopRefreshing(Lookup) returns (Empty);
 }
 

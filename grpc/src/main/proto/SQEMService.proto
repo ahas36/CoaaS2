@@ -292,6 +292,7 @@ service SQEMService {
     rpc cacheEntity (CacheRequest) returns (SQEMResponse);
     rpc getcachePerformance(Empty) returns (CachePerformance);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
+    rpc evictContextEntityByHashKey (ContextServiceId) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
 

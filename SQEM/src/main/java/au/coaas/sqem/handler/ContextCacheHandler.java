@@ -1,5 +1,9 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cpree.proto.Lookup;
+import au.coaas.grpc.client.CPREEChannel;
+import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
 
@@ -134,6 +138,12 @@ public class ContextCacheHandler {
     public static void fullyEvict(ScheduleTask request){
         // Remove from registry
         synchronized (ContextCacheHandler.class) {
+            CPREEServiceGrpc.CPREEServiceBlockingStub stub
+                    = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+            String contextId = request.getLookup().getServiceId() + "-"
+                    + Utilty.getHashKey(request.getLookup().getParamsMap());
+            stub.stopRefreshing(Lookup.newBuilder().setContextId(contextId).build());
+
             registry.removeFromRegistry(request.getLookup());
         }
         RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
@@ -167,6 +177,7 @@ public class ContextCacheHandler {
                 Instant future = Instant.now().plusSeconds(result.getRemainingLife());
                 evictStatus = cacheClient.getBucket(result.getHashkey())
                         .expireAsync(future);
+
                 Utilty.schedulTask(ScheduleTasks.EVICT,
                         ScheduleTask.newBuilder()
                                 .setLookup(request)
@@ -175,6 +186,11 @@ public class ContextCacheHandler {
             }
             else {
                 synchronized (ContextCacheHandler.class){
+                    CPREEServiceGrpc.CPREEServiceBlockingStub stub
+                            = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+                    String contextId = request.getServiceId() + "-" + Utilty.getHashKey(request.getParamsMap());
+                    stub.stopRefreshing(Lookup.newBuilder().setContextId(contextId).build());
+
                     registry.removeFromRegistry(request);
                 }
                 cacheClient.getKeys().deleteAsync(result.getHashkey());
@@ -191,6 +207,10 @@ public class ContextCacheHandler {
         return SQEMResponse.newBuilder().setStatus("404").setBody("Nothing to Evict.").build();
     }
 
+    public static SQEMResponse evictEntity(String hashkey) {
+        return evictEntity(hashkey, !Event.operation.checkChannel(hashkey));
+    }
+
     public static SQEMResponse evictEntity(String hashkey, boolean definite) {
         // This function assumes that the hash key is unique across all the contexts (irrespective of the context service, etc.)
         // Ideally the initial evict should push the context into ghost cache
@@ -204,8 +224,13 @@ public class ContextCacheHandler {
         RFuture<Boolean> evictStatus;
 
         synchronized (ContextCacheHandler.class){
+            CPREEServiceGrpc.CPREEServiceBlockingStub stub
+                    = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+            stub.stopRefreshing(Lookup.newBuilder()
+                    .setContextId(cacheObject.getString("serviceId")+"-"+hashkey).build());
+
             registry.removeFromRegistry(cacheObject.getString("serviceId"),
-                    hashkey, cacheObject.getString("serviceId"));
+                    hashkey, cacheObject.getString("entityType"));
             if(!definite) Event.operation.deleteChannel(hashkey);
         }
 

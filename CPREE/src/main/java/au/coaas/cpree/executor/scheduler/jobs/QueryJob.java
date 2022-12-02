@@ -52,7 +52,7 @@ public class QueryJob implements Job {
                 String hashkey = (contextId.split("-"))[1];
                 asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(hashkey).build());
 
-                throw new RuntimeException("Couldn't retrieve the context for refreshing.");
+                throw new RuntimeException("Couldn't retrieve the context for refreshing. Evicted the entity as a result.");
             }
         }
         catch(Exception ex) {

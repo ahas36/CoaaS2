@@ -1270,7 +1270,7 @@ public class PullBasedExecutor {
         conqEngCR.put("timeliness", consumerSLA.getJSONObject("sla").getJSONObject("qos")
                 .getJSONObject("rtmax").getDouble("value"));
         // Should this be the maximum price the CMP is expecting to
-        // TODO: Currently, the maximum price the CMP is willing to pay is set equal to the earning from the query based on breakeven theory.
+        // TODO: Currently, the maximum price the CMP is willing to pay is set equal to the earning from the query based on break-even theory.
         // But this should be based on the ratio CP cost in the total cost on current cost of the CMP.
         conqEngCR.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price")
                 .getDouble("value"));

@@ -959,7 +959,8 @@ public class PerformanceLogHandler {
             double cacheCost = (double) ContextCacheHandler.getCachePerfStat("cacheCost");
 
             // TODO: Should include any other storage costs and other services costs
-            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - proc_cost - cacheCost;
+            double total_costs = totalPenalties + totalRetrievalCost + proc_cost + cacheCost;
+            double monetaryGain = totalEarning - total_costs;
             double totalGain = monetaryGain + penaltyEarning;
 
             dbo.put("gain", monetaryGain);

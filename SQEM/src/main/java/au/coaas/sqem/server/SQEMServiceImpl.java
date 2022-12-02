@@ -50,7 +50,6 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     ///// Context Cache /////
-
     @Override
     public void cacheEntity(au.coaas.sqem.proto.CacheRequest request,
                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
@@ -162,8 +161,6 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
-
-
     @Override
     public void getCacheLatenciesSummary(au.coaas.sqem.proto.Empty request,
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
@@ -239,9 +236,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
-
     ////////// Context Service ///////////
-
     @Override
     public void getAllContextServices(au.coaas.sqem.proto.Empty request,
                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {

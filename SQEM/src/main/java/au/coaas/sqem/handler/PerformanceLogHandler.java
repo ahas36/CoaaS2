@@ -951,7 +951,7 @@ public class PerformanceLogHandler {
             dbo.put("no_of_delayed_retrievals", delayedRetrievals);
             dbo.put("avg_query_overhead", totalQueries > 0 ? queryOverhead / totalQueries : 0);
             dbo.put("avg_network_overhead", totalRetrievals > 0 ? totalNetworkOverhead / totalRetrievals : 0);
-            dbo.put("avg_processing_overhead", totalQueries > 0 ? (queryOverhead - totalNetworkOverhead) / (double) totalQueries : 0.0);
+            dbo.put("avg_processing_overhead", totalQueries > 0 ? HostMonitor.getCpuUsage() / (double) totalQueries : 0.0);
             // This is a wrong calculation. Need to get theis from the cloud provider.
 
             double proc_cost = getProcessingCostPerSecond();
@@ -959,7 +959,7 @@ public class PerformanceLogHandler {
             double cacheCost = (double) ContextCacheHandler.getCachePerfStat("cacheCost");
 
             // TODO: Should include any other storage costs and other services costs
-            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - (proc_cost * 60) - cacheCost;
+            double monetaryGain = totalEarning - totalPenalties - totalRetrievalCost - proc_cost - cacheCost;
             double totalGain = monetaryGain + penaltyEarning;
 
             dbo.put("gain", monetaryGain);

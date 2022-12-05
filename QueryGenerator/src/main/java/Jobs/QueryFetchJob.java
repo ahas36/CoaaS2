@@ -8,6 +8,7 @@ import com.mongodb.MongoClientURI;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Aggregates;
 import com.mongodb.client.model.Filters;
 
 import org.bson.Document;
@@ -79,11 +80,10 @@ public class QueryFetchJob implements Job {
             MongoDatabase db_2 = mongoClient.getDatabase("coaas");
             MongoCollection<Document> token_collection = db_2.getCollection("consumerToken");
 
-            Bson filter = Filters.eq("status", true);
-            Document sample_token = token_collection.aggregate(Arrays.asList(match(filter), sample(1))).first();
-            String token = sample_token.getString("token");
-
             for(Document doc: queries){
+                Document sample_token = token_collection.aggregate(Arrays.asList(Aggregates.sample(1))).first();
+                String token = sample_token.getString("token");
+
                 String day = doc.getString("day");
                 int hour = doc.getInteger("hour");
                 int min = doc.getInteger("minute");
@@ -91,10 +91,17 @@ public class QueryFetchJob implements Job {
                 String query = buildQuery(doc);
                 String id = doc.getObjectId("_id").toString();
 
-                ContextQuery cq = new ContextQuery(day, hour, min, second, query, id, token);
+                MongoCollection<Document> qs = db.getCollection("test-queries");
+                Document final_query = new Document();
+                final_query.put("token", token);
+                final_query.put("query", query);
+                qs.insertOne(final_query);
 
-                Message message = new Message(cq);
-                Event.operation.publish("cq-sim", message);
+                // The following 3 lines are commented out temporarily.
+                // ContextQuery cq = new ContextQuery(day, hour, min, second, query, id, token);
+
+                // Message message = new Message(cq);
+                // Event.operation.publish("cq-sim", message);
             }
 
             log.info("Context queries batch for " + time.getDayOfWeek() + " during the "
@@ -104,6 +111,9 @@ public class QueryFetchJob implements Job {
             log.severe(e.getMessage());
         }
     }
+
+    private static ArrayList<String> additionals = new ArrayList<>(Arrays.asList("height", "isOpen", "availableSlots"));
+    private static ArrayList<String> defKeys = new ArrayList<>(Arrays.asList("_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second", "expected_time"));
 
     private static String buildQuery(Document query){
         String queryString = "prefix " +
@@ -118,17 +128,15 @@ public class QueryFetchJob implements Job {
                 "where targetWeather.location=\"Melbourne,Australia\", " +
             "entity targetCarpark is from schema:ParkingFacility " +
                 "where " +
-                    "((distance(targetCarpark.location, targetLocation.location, \"walking\")<{\"value\":%d, \"unit\":\"m\"} and goodForWalking(targetWeather)>=0.6) or " +
-                    "goodForWalking(targetWeather)>=0.9) and " +
-                    "targetCarpark.maxHeight > consumerCar.height and " +
-                    "targetCarpark.isOpen = true and " +
-                    "targetCarpark.availableSlots > 0 ";
-
-        ArrayList<String> defKeys = new ArrayList<>(Arrays.asList("_id", "location", "vin", "address", "distance", "day", "hour", "minute", "second"));
+                    "distance(targetCarpark.location, targetLocation.location)<{\"value\":%d, \"unit\":\"m\"}";
 
         for(String key : query.keySet()){
             if (!defKeys.contains(key))
                 queryString += getAddOnToQuery(key, query.get(key));
+        }
+
+        for(String key : additionals){
+            queryString += getAddOnToQuery(key, Math.random());
         }
 
         String finalQuery = "";
@@ -160,17 +168,32 @@ public class QueryFetchJob implements Job {
 
     private static String getAddOnToQuery(String prop, Object value){
         switch(prop){
+            case "height": {
+                if(((double)value) > 0.8)
+                    return " and targetCarpark.maxHeight > consumerCar.height";
+                break;
+            }
+            case "isOpen": {
+                if(((double)value) > 0.7)
+                    return " and targetCarpark.isOpen = true";
+                break;
+            }
+            case "availableSlots": {
+                if(((double)value) > 0.5)
+                    return " and targetCarpark.availableSlots > 0";
+                break;
+            }
             case "price": {
-                return "and targetCarpark.price <= " + String.valueOf(value);
+                return " and targetCarpark.price <= " + String.valueOf(value);
             }
-            case "rating": return "and targetCarpark.rating >= " + String.valueOf((int) value);
-            case "expected_time": {
-                LocalDateTime time = LocalDateTime.now();
-                long minutes = Math.round((double)value*60);
-                time.plusMinutes(minutes);
-                return "and isAvailable (targetCarpark.availableSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
-                        + time.toString() + "\", \"unit\":\"datetime\"})";
-            }
+            case "rating": return " and targetCarpark.rating >= " + String.valueOf((int) value);
+//            case "expected_time": {
+//                LocalDateTime time = LocalDateTime.now();
+//                long minutes = Math.round((double)value*60);
+//                time.plusMinutes(minutes);
+//                return " and isAvailable (targetCarpark.availableSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
+//                        + time.toString() + "\", \"unit\":\"datetime\"})";
+//            }
         }
         return "";
     }

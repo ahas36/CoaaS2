@@ -41,14 +41,43 @@ class CarParkContext(Resource):
         try:            
             # Retriving the measurement
             args = request.args
+            csType = args['type']
+            chance = 0.0
+
             if len(args) > 1:
                 data = self.handler.getCarparks(args)
+                # Simulating variation of response latencies
+                if(csType == '81' or csType == '82'):
+                    time.sleep(random.uniform(float(vehicle_config['MinLatency']), float(vehicle_config['MaxLatency'])))
+                elif(csType == '71' or csType == '64' or csType == '43' or csType == '22'):
+                    time.sleep(random.uniform(0.6,1.0))
+                    chance = random.uniform(0,1.0)
+                elif(csType == '71' or csType == '63' or csType == '41' or csType == '21'):
+                    time.sleep(random.uniform(0.4,1.1))
+                elif(csType == '61' or csType == '53'):
+                    time.sleep(random.uniform(0.3,0.5))
+                elif(csType == '51'):
+                    time.sleep(random.uniform(0.2,0.45))
+                elif(csType == '62'):
+                    time.sleep(random.uniform(0.3,0.76))
+                elif(csType == '54'):
+                    time.sleep(random.uniform(0.4,0.72))
+                elif(csType == '65' or csType == '52' or csType == '32' or csType == '33' or csType == '23'):
+                    time.sleep(random.uniform(0.3,0.9))
+                elif(csType == '55' or csType == '31'):
+                    time.sleep(random.uniform(0.6,1.0))
+                elif(csType == '42'):
+                    time.sleep(random.uniform(1.0,2.5))
+                    chance = random.uniform(0,1.0)
+                elif(csType == '11'):
+                    time.sleep(random.uniform(0.8,3.0))
+                    chance = random.uniform(0,1.0)
             else:
                 data = self.handler.getAvailability(args['id'])
+                time.sleep(random.uniform(0.4,0.6))
 
-            # Simulating variation of response latencies
-            time.sleep(random.uniform(float(vehicle_config['MinLatency']), float(vehicle_config['MaxLatency'])))
-        
+            if(chance >= 0.98):
+                return parse_response({'message':'The provider faced an unexpected error.'}), 500 
             # Return data and 200 OK code
             return data[0], data[1]
 

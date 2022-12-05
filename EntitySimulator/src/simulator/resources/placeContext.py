@@ -43,8 +43,14 @@ class PlaceContext(Resource):
             args = request.args
             data = self.handler.getPlace(args['name'])
 
-            # Simulating variation of response latencies
-            time.sleep(random.uniform(float(place_config['MinLatency']), float(place_config['MaxLatency'])))
+            csType = args['type']
+
+            if(csType == "1"):
+                # Simulating variation of response latencies for 1st type
+                time.sleep(random.uniform(float(place_config['MinLatency']), float(place_config['MaxLatency'])))
+            else:
+                # Simulating variation of response latencies for 2nd type
+                time.sleep(random.uniform(0.1,0.5))
         
             # Return data and 200 OK code
             # return parse_response(data[0]), data[1]

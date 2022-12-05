@@ -1,6 +1,6 @@
 [{
   "info": {
-    "serviceURL": "http://localhost:5000/places-1?name={}",
+    "serviceURL": "http://localhost:5000/places?type=1&name={}",
     "ontClass": "<http://schema.org/Place>",
     "graph": "<http://schema.org>",
     "name": "Place",
@@ -112,7 +112,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/places-2?name={}",
+    "serviceURL": "http://localhost:5000/places?type=2&name={}",
     "ontClass": "<http://schema.org/Place>",
     "graph": "<http://schema.org>",
     "name": "Place",
@@ -224,7 +224,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/weather-1?location={}",
+    "serviceURL": "http://localhost:5000/weather?type=1&location={}",
     "ontClass": "<http://schema.org/Thing>",
     "graph": "<http://schema.org>",
     "name": "Weather",
@@ -409,7 +409,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/weather-2?location={}",
+    "serviceURL": "http://localhost:5000/weather?type=2&location={}",
     "ontClass": "<http://schema.org/Thing>",
     "graph": "<http://schema.org>",
     "name": "Weather",
@@ -594,7 +594,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/weather-3?location={}",
+    "serviceURL": "http://localhost:5000/weather?type=3&location={}",
     "ontClass": "<http://schema.org/Thing>",
     "graph": "<http://schema.org>",
     "name": "Weather",
@@ -779,7 +779,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/weather-4?location={}",
+    "serviceURL": "http://localhost:5000/weather?type=4&location={}",
     "ontClass": "<http://schema.org/Thing>",
     "graph": "<http://schema.org>",
     "name": "Weather",
@@ -964,7 +964,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-1?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=1&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -1129,7 +1129,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-2?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=2&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -1255,7 +1255,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-3?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=3&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -1380,7 +1380,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-4?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=4&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -1532,7 +1532,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-5?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=5&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -1697,7 +1697,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-6?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=6&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -1836,7 +1836,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-7?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=7&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -1947,7 +1947,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-8?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=8&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -2112,7 +2112,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-9?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=9&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -2277,7 +2277,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/vehicles-10?vin={}",
+    "serviceURL": "http://localhost:5000/vehicles?type=10&vin={}",
     "ontClass": "<http://schema.org/Vehicle>",
     "graph": "<http://schema.org>",
     "name": "Vehicle",
@@ -2416,7 +2416,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks?id={}",
+    "serviceURL": "http://localhost:5000/carparks?type=0&id={}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -2609,7 +2609,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-81?maxHeight={0}&isOpen={1}&availableSlots={2}&price={3}&rating={4}",
+    "serviceURL": "http://localhost:5000/carparks?type=81&maxHeight={0}&isOpen={1}&availableSlots={2}&price={3}&rating={4}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -2870,7 +2870,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-82?maxHeight={0}&isOpen={1}&availableSlots={2}&price={3}&rating={4}",
+    "serviceURL": "http://localhost:5000/carparks?type=82&maxHeight={0}&isOpen={1}&availableSlots={2}&price={3}&rating={4}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -3131,7 +3131,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-71?rating={0}",
+    "serviceURL": "http://localhost:5000/carparks?type=71&rating={0}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -3323,7 +3323,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-61?isOpen={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=61&isOpen={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -3531,7 +3531,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-62?isOpen={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=62&isOpen={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -3739,7 +3739,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-63?isOpen={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=63&isOpen={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -3947,7 +3947,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-64?isOpen={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=64&isOpen={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -4155,7 +4155,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-65?isOpen={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=65&isOpen={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -4363,7 +4363,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-51?isOpen={0}&availableSlots={1}&price={2}",
+    "serviceURL": "http://localhost:5000/carparks?type=51&isOpen={0}&availableSlots={1}&price={2}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -4588,7 +4588,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-52?isOpen={0}&availableSlots={1}&price={2}",
+    "serviceURL": "http://localhost:5000/carparks?type=52&isOpen={0}&availableSlots={1}&price={2}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -4813,7 +4813,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-53?isOpen={0}&availableSlots={1}&price={2}",
+    "serviceURL": "http://localhost:5000/carparks?type=53&isOpen={0}&availableSlots={1}&price={2}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -5038,7 +5038,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-54?isOpen={0}&availableSlots={1}&price={2}",
+    "serviceURL": "http://localhost:5000/carparks?type=54&isOpen={0}&availableSlots={1}&price={2}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -5263,7 +5263,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-55?isOpen={0}&availableSlots={1}&price={2}",
+    "serviceURL": "http://localhost:5000/carparks?type=55&isOpen={0}&availableSlots={1}&price={2}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -5488,7 +5488,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-41?price={0}&rating={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=41&price={0}&rating={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -5697,7 +5697,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-42?price={0}&rating={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=42&price={0}&rating={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -5906,7 +5906,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-43?price={0}&rating={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=43&price={0}&rating={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -6115,7 +6115,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-31?maxHeight={0}&price={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=31&maxHeight={0}&price={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -6324,7 +6324,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-32?maxHeight={0}&price={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=32&maxHeight={0}&price={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -6533,7 +6533,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-33?maxHeight={0}&price={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=33&maxHeight={0}&price={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -6742,7 +6742,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-21?maxHeight={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=21&maxHeight={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -6951,7 +6951,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-22?maxHeight={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=22&maxHeight={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -7160,7 +7160,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-23?maxHeight={0}&availableSlots={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=23&maxHeight={0}&availableSlots={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",
@@ -7369,7 +7369,7 @@
   ]
 },{
   "info": {
-    "serviceURL": "http://localhost:5000/carparks-11?maxHeight={0}&isOpen={1}",
+    "serviceURL": "http://localhost:5000/carparks?type=11&maxHeight={0}&isOpen={1}",
     "ontClass": "<http://schema.org/ParkingFacility>",
     "graph": "<http://schema.org>",
     "name": "Carpark",

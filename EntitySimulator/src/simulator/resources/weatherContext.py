@@ -40,13 +40,25 @@ class WeatherContext(Resource):
     def get(self):
         try:  
             args = request.args
-
+            chance = 0.0
             # Retriving the measurement
             data = self.handler.getWeather()
 
-            # Simulating variation of response latencies
-            time.sleep(random.uniform(float(weather_config['MinLatency']), float(weather_config['MaxLatency'])))
-        
+            csType = args['type']
+
+            if(csType == "1"):
+                # Simulating variation of response latencies
+                time.sleep(random.uniform(float(weather_config['MinLatency']), float(weather_config['MaxLatency'])))
+            elif(csType == "2"):
+                time.sleep(random.uniform(0.5,1.1))
+            elif(csType == "3"):
+                time.sleep(random.uniform(0.8,1.4))
+                chance = random.uniform(0,1.0)
+            else:
+                time.sleep(random.uniform(0.2, 0.7))
+
+            if(chance >= 0.98):
+                return parse_response({'message':'The provider faced an unexpected error.'}), 500 
             # Return data and 200 OK code
             return parse_response(data[0]), data[1]
 

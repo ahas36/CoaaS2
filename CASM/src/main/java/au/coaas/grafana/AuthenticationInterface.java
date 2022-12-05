@@ -87,6 +87,7 @@ public class AuthenticationInterface {
         SQEMServiceGrpc.SQEMServiceBlockingStub stub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
         stub.saveOrUpdateToken(AuthToken.newBuilder()
+                .setId(conObj.getJSONObject("_id").getString("$oid"))
                 .setUsername(conObj.getJSONObject("info").getString("username"))
                 .setToken(token).build());
 

@@ -1,20 +1,25 @@
 package au.coaas.sqem.util;
 
-import com.sun.management.OperatingSystemMXBean;
-import static sun.management.ManagementFactoryHelper.getOperatingSystemMXBean;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 
 public class HostMonitor {
     private static long lastProcessCpuTime  = 0;
 
     public static synchronized double getCpuUsage() {
         long processCpuTime = 0;
-        if (getOperatingSystemMXBean() instanceof OperatingSystemMXBean)
-            processCpuTime = ((OperatingSystemMXBean) getOperatingSystemMXBean()).getProcessCpuTime();
 
-        double cpuUsage = processCpuTime - lastProcessCpuTime;
-        lastProcessCpuTime = processCpuTime;
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        long[] allThreadIds = threadMXBean.getAllThreadIds();
+        for (long id : allThreadIds) {
+            processCpuTime += threadMXBean.getThreadCpuTime(id);
+        }
+
+        // double cpuUsage = processCpuTime - lastProcessCpuTime;
+        // lastProcessCpuTime = processCpuTime;
 
         // returns in miliseconds
-        return cpuUsage/1000;
+        // return cpuUsage/1000;
+        return processCpuTime/1000;
     }
 }

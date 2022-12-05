@@ -77,7 +77,7 @@ public class AuthenticationInterface {
         Algorithm algorithm = Algorithm.HMAC256(SECRET);
 
         Map<String, Object> payload = conObj.getJSONObject("info").toMap();
-        payload.put("scope", conObj.getJSONObject("auth").getJSONArray("scope"));
+        payload.put("scope", conObj.getJSONObject("auth").getJSONArray("scope").toString());
 
         String token = JWT.create()
                 .withIssuer("auth0")

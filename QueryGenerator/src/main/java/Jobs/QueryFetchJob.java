@@ -1,5 +1,7 @@
 package Jobs;
 
+import Utils.PubSub.Event;
+import Utils.PubSub.Message;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClientURI;
@@ -91,17 +93,17 @@ public class QueryFetchJob implements Job {
                 String query = buildQuery(doc);
                 String id = doc.getObjectId("_id").toString();
 
-                MongoCollection<Document> qs = db.getCollection("test-queries");
-                Document final_query = new Document();
-                final_query.put("token", token);
-                final_query.put("query", query);
-                qs.insertOne(final_query);
+//                MongoCollection<Document> qs = db.getCollection("test-queries");
+//                Document final_query = new Document();
+//                final_query.put("token", token);
+//                final_query.put("query", query);
+//                qs.insertOne(final_query);
 
                 // The following 3 lines are commented out temporarily.
-                // ContextQuery cq = new ContextQuery(day, hour, min, second, query, id, token);
+                ContextQuery cq = new ContextQuery(day, hour, min, second, query, id, token);
 
-                // Message message = new Message(cq);
-                // Event.operation.publish("cq-sim", message);
+                Message message = new Message(cq);
+                Event.operation.publish("cq-sim", message);
             }
 
             log.info("Context queries batch for " + time.getDayOfWeek() + " during the "
@@ -187,13 +189,13 @@ public class QueryFetchJob implements Job {
                 return " and targetCarpark.price <= " + String.valueOf(value);
             }
             case "rating": return " and targetCarpark.rating >= " + String.valueOf((int) value);
-//            case "expected_time": {
-//                LocalDateTime time = LocalDateTime.now();
-//                long minutes = Math.round((double)value*60);
-//                time.plusMinutes(minutes);
-//                return " and isAvailable (targetCarpark.availableSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
-//                        + time.toString() + "\", \"unit\":\"datetime\"})";
-//            }
+            case "expected_time": {
+                LocalDateTime time = LocalDateTime.now();
+                long minutes = Math.round((double)value*60);
+                time.plusMinutes(minutes);
+                return " and isAvailable (targetCarpark.availableSlots, {\"start_time\":now(), \"end_time\":{\"value\":\""
+                        + time.toString() + "\", \"unit\":\"datetime\"})";
+            }
         }
         return "";
     }

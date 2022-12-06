@@ -26,7 +26,6 @@ place_config = config['PLACE']
 db = MongoClient(default_config['ConnectionString'], default_config['DBName'])
 
 class PlaceContext(Resource):
-
     # current_session = db.insert_one('simulator-sessions', {
     #    'entity-type': 'vehicles',
     #    'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -44,14 +43,19 @@ class PlaceContext(Resource):
             data = self.handler.getPlace(args['name'])
 
             csType = args['type']
+            chance = 0.0
 
             if(csType == "1"):
                 # Simulating variation of response latencies for 1st type
                 time.sleep(random.uniform(float(place_config['MinLatency']), float(place_config['MaxLatency'])))
+                chance = random.uniform(0,1.0)
             else:
                 # Simulating variation of response latencies for 2nd type
                 time.sleep(random.uniform(0.1,0.5))
-        
+
+            if(chance >= 0.99):
+                return parse_response({'message':'The provider faced an unexpected error.'}), 500 
+
             # Return data and 200 OK code
             # return parse_response(data[0]), data[1]
             return data[0], data[1]

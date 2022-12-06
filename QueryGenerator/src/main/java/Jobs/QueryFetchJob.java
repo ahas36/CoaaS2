@@ -74,6 +74,7 @@ public class QueryFetchJob implements Job {
                 );
             }
 
+            // filters = Filters.eq("day", getDayOfWeek(time.getDayOfWeek().getValue()));
             FindIterable<Document> queries = collection.find(filters);
 
             MongoDatabase db_2 = mongoClient.getDatabase("coaas");

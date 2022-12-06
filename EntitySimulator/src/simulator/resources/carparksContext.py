@@ -43,6 +43,7 @@ class CarParkContext(Resource):
             args = request.args
             csType = args['type']
             chance = 0.0
+            chance_2 = 0.0
 
             if len(args) > 1:
                 data = self.handler.getCarparks(args)
@@ -54,6 +55,7 @@ class CarParkContext(Resource):
                     chance = random.uniform(0,1.0)
                 elif(csType == '71' or csType == '63' or csType == '41' or csType == '21'):
                     time.sleep(random.uniform(0.4,1.1))
+                    chance_2 = random.uniform(0,1.0)
                 elif(csType == '61' or csType == '53'):
                     time.sleep(random.uniform(0.3,0.5))
                 elif(csType == '51'):
@@ -66,6 +68,7 @@ class CarParkContext(Resource):
                     time.sleep(random.uniform(0.3,0.9))
                 elif(csType == '55' or csType == '31'):
                     time.sleep(random.uniform(0.6,1.0))
+                    chance_2 = random.uniform(0,1.0)
                 elif(csType == '42'):
                     time.sleep(random.uniform(1.0,2.5))
                     chance = random.uniform(0,1.0)
@@ -76,7 +79,7 @@ class CarParkContext(Resource):
                 data = self.handler.getAvailability(args['id'])
                 time.sleep(random.uniform(0.4,0.6))
 
-            if(chance >= 0.98):
+            if(chance >= 0.95 or chance_2 >= 0.98):
                 return parse_response({'message':'The provider faced an unexpected error.'}), 500 
             # Return data and 200 OK code
             return data[0], data[1]

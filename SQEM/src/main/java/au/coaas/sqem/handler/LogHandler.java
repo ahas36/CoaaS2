@@ -82,6 +82,7 @@ public class LogHandler {
             doc.append("query_tree", queryPlan);
             doc.append("timestamp", System.currentTimeMillis());
             doc.append("queryId", queryString.getQueryId());
+            doc.append("complexity", queryString.getComplexity());
 
             collection.insertOne(doc);
 

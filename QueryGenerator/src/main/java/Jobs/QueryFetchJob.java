@@ -50,7 +50,7 @@ public class QueryFetchJob implements Job {
 
 
             LocalDateTime time = LocalDateTime.now();
-            LocalDateTime newtime = time.plusMinutes(60);
+            LocalDateTime newtime = time.plusMinutes(10);
 
             Bson filters = null;
             if(newtime.getHour() == time.getHour()){

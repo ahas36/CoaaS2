@@ -77,8 +77,6 @@ public class MainParser {
             throw new CDQLSyntaxtErrorException(error);
         }
 
-        // Logging the parsed query tree for collaborative filtering
-        Executors.newCachedThreadPool().execute(() -> logParsedQueryTree(Arrays.asList(parser.getRuleNames()), tree, queryId));
         ExecutorService executorService = Executors.newSingleThreadExecutor();
         Future<Double> complexity = executorService.submit(() -> measureComplexity(tree, parser));
 
@@ -104,12 +102,36 @@ public class MainParser {
                 }
                 throw new CDQLSyntaxtErrorException(error);
             }
+            // Logging the parsed query tree for collaborative filtering
+            Executors.newCachedThreadPool().execute(() -> {
+                try {
+                    logParsedQueryTree(Arrays.asList(parser.getRuleNames()),
+                            tree, queryId, complexity.get());
+                } catch (InterruptedException e) {
+                    log.severe(e.getMessage());
+                } catch (ExecutionException e) {
+                    log.severe(e.getMessage());
+                }
+            });
+
             return cdqlConstructBuilder.setType(CDQLType.QUERY)
                     .setQuery(query.build())
                     .setComplexity(complexity.get())
                     .setQueryId(queryId).build();
         }
         else if (stringCDQLBaseVisitor.getContextFunction() != null) {
+            // Logging the parsed query tree for collaborative filtering
+            Executors.newCachedThreadPool().execute(() -> {
+                try {
+                    logParsedQueryTree(Arrays.asList(parser.getRuleNames()),
+                            tree, queryId, complexity.get());
+                } catch (InterruptedException e) {
+                    log.severe(e.getMessage());
+                } catch (ExecutionException e) {
+                    log.severe(e.getMessage());
+                }
+            });
+
             return cdqlConstructBuilder.setType(CDQLType.FUNCTION_DEF)
                     .setFunction(stringCDQLBaseVisitor.getContextFunction().build())
                     .setComplexity(complexity.get())
@@ -274,7 +296,7 @@ public class MainParser {
         query.putAllExecutionPlan(cdqlExecutionPlan);
     }
 
-    private static void logParsedQueryTree(List<String> rulelist, ParseTree tree, String queryId){
+    private static void logParsedQueryTree(List<String> rulelist, ParseTree tree, String queryId, double complexity){
         // These lines are for debugging (and Learning) purposes. Uncomment when neccesary.
         // Visualizes the Abstract Query Tree.
 
@@ -292,7 +314,7 @@ public class MainParser {
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         SQEMResponse response = stub.logParsedQueryTree(CDQLLog.newBuilder().setRawQuery(gsonBuilder.toJson(toMap(tree)))
-                .setQueryId(queryId).build());
+                .setQueryId(queryId).setComplexity(complexity).build());
 
         if(!response.getStatus().equals("200")){
             log.log(Level.WARNING,response.getBody());

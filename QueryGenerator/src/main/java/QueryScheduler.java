@@ -87,10 +87,10 @@ public class QueryScheduler {
                 .withIdentity("fetchTrigger", "queryGen")
                 .startNow()
                 .withSchedule(simpleSchedule()
-                        .withIntervalInMinutes(60))
+                        .withIntervalInMinutes(10))
                 .build();
 
-        log.info("Started job to fetch queries that are planned for execution during the next 5 minutes");
+        log.info("Started job to fetch queries that are planned for execution during the next 10 minutes");
         scheduler.scheduleJob(job, trigger);
     }
 }

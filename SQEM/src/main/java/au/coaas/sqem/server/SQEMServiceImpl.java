@@ -237,6 +237,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     ////////// Context Service ///////////
+
     @Override
     public void getAllContextServices(au.coaas.sqem.proto.Empty request,
                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
@@ -345,6 +346,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
 
 
     ////////// Log Functions ///////////
+
     @Override
     public void getAllQueryLogs(au.coaas.sqem.proto.Empty request,
                                  io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {

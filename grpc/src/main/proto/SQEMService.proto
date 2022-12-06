@@ -216,6 +216,7 @@ message CDQLLog
 {
     string rawQuery = 1;
     string queryId = 2;
+    double complexity = 3;
 }
 
 message Empty {}

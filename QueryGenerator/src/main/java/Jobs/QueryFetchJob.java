@@ -1,7 +1,5 @@
 package Jobs;
 
-import Utils.PubSub.Event;
-import Utils.PubSub.Message;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
 import com.mongodb.MongoClientURI;
@@ -21,7 +19,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Aggregates.sample;
@@ -34,6 +31,8 @@ public class QueryFetchJob implements Job {
     private static Logger log = Logger.getLogger(QueryFetchJob.class.getName());
 
     public void execute(JobExecutionContext arg) {
+        log.info("Setting a context queries batch.");
+
         if(mongoClient == null){
             MongoClientOptions.Builder options = MongoClientOptions.builder()
                     .connectionsPerHost(400)
@@ -49,7 +48,7 @@ public class QueryFetchJob implements Job {
 
 
             LocalDateTime time = LocalDateTime.now();
-            LocalDateTime newtime = time.plusMinutes(10);
+            LocalDateTime newtime = time.plusMinutes(60);
 
             Bson filters = null;
             if(newtime.getHour() == time.getHour()){
@@ -105,7 +104,7 @@ public class QueryFetchJob implements Job {
             }
 
             log.info("Context queries batch for " + time.getDayOfWeek() + " during the "
-                    + String.valueOf(time.getHour()) + " hour is scheduled.");
+                    + String.valueOf(time.getHour()) + "." + String.valueOf(time.getMinute())+ " hr is scheduled.");
 
         } catch (Exception e) {
             log.severe(e.getMessage());

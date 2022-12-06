@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.Timer;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -86,10 +87,10 @@ public class QueryScheduler {
                 .withIdentity("fetchTrigger", "queryGen")
                 .startNow()
                 .withSchedule(simpleSchedule()
-                        .withIntervalInMinutes(10))
+                        .withIntervalInMinutes(60))
                 .build();
 
-        log.info("Started job to fetch queries that are planned for execution during the next 10 minutes");
+        log.info("Started job to fetch queries that are planned for execution during the next 5 minutes");
         scheduler.scheduleJob(job, trigger);
     }
 }

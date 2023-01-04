@@ -1351,7 +1351,7 @@ public class PullBasedExecutor {
 
                         Executors.newCachedThreadPool().execute(()
                                 -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()), lookup,
-                                retEntity, data.getMeta(), complexity));
+                                retEntity, data.getMeta(), complexity, attributes));
                         return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
                                 consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                     }
@@ -1378,7 +1378,8 @@ public class PullBasedExecutor {
     }
 
     private static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
-                                              String retEntity, String currRefPolicy, double complexity){
+                                              String retEntity, String currRefPolicy, double complexity,
+                                              Set<String> attributes){
         CPREEServiceGrpc.CPREEServiceFutureStub asynStub
                 = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
 
@@ -1386,6 +1387,7 @@ public class PullBasedExecutor {
             // 400 means the cache missed due to invalidity
             // The cached context needs to be refreshed.
             asynStub.refreshContext(ContextRefreshRequest.newBuilder()
+                    .addAllAttributes(attributes)
                     .setRefreshPolicy(currRefPolicy)
                     .setRequest(CacheRefreshRequest.newBuilder()
                             .setSla(sla.toString())
@@ -1401,6 +1403,7 @@ public class PullBasedExecutor {
                             .setContextLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
                             .setReference(lookup)
                             .setComplexity(complexity)
+                            .addAllAttributes(attributes)
                             .build());
         }
     }

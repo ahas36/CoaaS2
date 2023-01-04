@@ -14,8 +14,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import java.util.List;
-import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutionException;
@@ -45,29 +43,25 @@ public class ConQEngHelper {
     }
 
     // Requests the ordered list of Context Providers based on Cost and Quality from ConQEng.
-    public static List<JSONObject> getCPOrder(JSONObject cpRequest, JSONArray contextServices){
+    public static boolean verifyCPOrder(JSONObject cpRequest){
         String result = call(baseURL + "context_providers",
                 HttpRequests.POST, cpRequest.toString());
-        List<JSONObject> orderdCPs = new ArrayList<>();
         if(result != null) {
             JSONArray sorted = new JSONArray(result);
-            for(Object cpid : sorted){
-                for(int i = 0; i < contextServices.length(); i++){
-                    JSONObject cp = contextServices.getJSONObject(i);
-                    if(cp.getJSONObject("_id").getString("$oid").equals((String)cpid)){
-                        orderdCPs.add(cp);
-                        contextServices.remove(i);
-                        continue;
-                    }
-                }
-            }
+            String firstCP = sorted.getString(0);
+            if(firstCP != cpRequest.getString("pid")) return false;
         }
-        return orderdCPs;
+        return true;
     }
 
     // Reports back the performance of the last context retrieval based on selection to ConQEng.
     public static void reportPerformance(JSONObject perfRequest){
         call(evalbaseURL + "context_responses", HttpRequests.POST, perfRequest.toString());
+    }
+
+    // Reports back failed context providers to ConQEng.
+    public static void reportFeedback(JSONObject perfRequest){
+        call(evalbaseURL + "feedback", HttpRequests.POST, perfRequest.toString());
     }
 
     private static String call(String serviceUrl, HttpRequests type, String body){

@@ -5,16 +5,19 @@ import org.json.JSONObject;
 import org.quartz.JobDataMap;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class RefreshContext {
     private double fthr;
+    private String csId;
     private double lifetime;
     private String contextId;
     private String refreshPolicy;
     private String contextProvider;
     private ContextEntityType etype;
     private Map<String, String> params;
+    private List<String> attributes;
 
     private long initInterval;
     private long refreshInterval; // This is in miliseconds
@@ -22,15 +25,18 @@ public class RefreshContext {
     // Refresh Interval is specific to the next retrieval only because,
     // refInteral = Lifetime - age - retrievalLatency
     public RefreshContext(String contextId, double fthr, String refreshPolicy, double initResiLife,
-                          double lifetime, Map<String, String> params, String contextProvider, ContextEntityType et){
+                          double lifetime, Map<String, String> params, String contextProvider,
+                          ContextEntityType et, List<String> attributes){
         this.etype = et;
         this.fthr = fthr;
         this.params = params;
         this.lifetime = lifetime;
         this.contextId = contextId;
+        this.attributes = attributes;
         this.refreshPolicy = refreshPolicy;
 
         JSONObject cpObj = new JSONObject(contextProvider);
+        this.csId = cpObj.getJSONObject("_id").getString("$oid");
         double samplingInt = cpObj.getJSONObject("sla").getJSONObject("updateFrequency").getDouble("value");
 
         cpObj.getJSONObject("sla").getJSONObject("freshness").put("fthresh", this.fthr);
@@ -71,10 +77,14 @@ public class RefreshContext {
 
     public JobDataMap getJobDataMap() {
         Map<String, Object> jobMap = new HashMap<>();
-        jobMap.put("params", (new JSONObject(this.params)).toString()) ;
+
+        jobMap.put("cpId", this.csId);
+        jobMap.put("attributes", attributes);
         jobMap.put("contextId", this.contextId);
         jobMap.put("fetchMode", this.refreshPolicy);
+        jobMap.put("entityType", this.etype.getType());
         jobMap.put("contextProvider", this.contextProvider);
+        jobMap.put("params", (new JSONObject(this.params)).toString());
 
         return new JobDataMap(jobMap);
     }

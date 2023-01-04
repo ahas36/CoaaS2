@@ -99,6 +99,11 @@ public class ConQEngHelper {
         call(evalbaseURL + "context_responses", HttpRequests.POST, perfRequest.toString());
     }
 
+    // Reports back failed context providers to ConQEng.
+    public static void reportFeedback(JSONObject perfRequest){
+        call(evalbaseURL + "feedback", HttpRequests.POST, perfRequest.toString());
+    }
+
     private static String call(String serviceUrl, HttpRequests type, String body){
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         builder.connectTimeout(10, TimeUnit.SECONDS);

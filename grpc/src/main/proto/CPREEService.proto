@@ -25,6 +25,7 @@ message CacheSelectionRequest {
   string sla = 3;
   au.coaas.sqem.proto.CacheLookUp reference = 4;
   double complexity = 5;
+  repeated string attributes = 6;
 }
 
 message ProactiveRefreshRequest {
@@ -41,6 +42,7 @@ message ProactiveRefreshRequest {
 message ContextRefreshRequest {
   au.coaas.sqem.proto.CacheRefreshRequest request = 1;
   string refreshPolicy = 2;
+  repeated string attributes = 3;
 }
 
 message LearnedWeights {

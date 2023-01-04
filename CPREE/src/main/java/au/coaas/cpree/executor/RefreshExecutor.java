@@ -20,6 +20,7 @@ import org.quartz.SchedulerException;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class RefreshExecutor {
@@ -55,7 +56,8 @@ public class RefreshExecutor {
                         refreshRequest.getLifetime(),
                         refreshRequest.getRequest().getReference().getParamsMap(),
                         cpInfo.getBody(),
-                        refreshRequest.getEt());
+                        refreshRequest.getEt(),
+                        refreshRequest.getRequest().getAttributesList());
 
                 synchronized (RefreshExecutor.class){
                     prorefRegistery.put(contextId, refObject);
@@ -75,7 +77,7 @@ public class RefreshExecutor {
 
     // Setting up proactive refreshing when a context item transition from reactive to proactive
     private static void setProactiveRefreshing(ContextRefreshRequest request, String hashKey, double fthr,
-                                               double resiLife, double lifetime) {
+                                               double resiLife, double lifetime, List<String> attributes) {
         try{
             SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
@@ -90,7 +92,8 @@ public class RefreshExecutor {
                         resiLife, lifetime,
                         request.getRequest().getReference().getParamsMap(),
                         cpInfo.getBody(),
-                        request.getRequest().getReference().getEt());
+                        request.getRequest().getReference().getEt(),
+                        attributes);
 
                 synchronized (RefreshExecutor.class) {
                     prorefRegistery.put(contextId, refObject);
@@ -211,7 +214,7 @@ public class RefreshExecutor {
                                     sla.getJSONObject("freshness").getDouble("fthresh");
                             double res_life = sla.getJSONObject("freshness").getDouble("value") - profile.getLastRetLatency();
                             double lifetime = sla.getJSONObject("freshness").getDouble("value");
-                            setProactiveRefreshing(request, hashKey, fthr, res_life, lifetime);
+                            setProactiveRefreshing(request, hashKey, fthr, res_life, lifetime, request.getAttributesList());
                             // Toggle the refresh policy in the Hashtable in SQEM
                             blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
                                     .setLookup(request.getRequest().getReference()).setRefreshLogic("proactive_shift")

@@ -1264,13 +1264,11 @@ public class PullBasedExecutor {
         JSONObject conqEngCR = new JSONObject();
 
         conqEngCR.put("cctype", "App");
-        conqEngCR.put("ccid", consumerSLA.getJSONObject("_id").getString("$oid"));
-        conqEngCR.put("etype", targetEntity.getType().getType());
-        conqEngCR.put("Ca", attributes);
-        // conqEngCR.put("Format_Ca", attributes);
-        // These are just placeholders temporarily.
         conqEngCR.put("latitude", "x");
         conqEngCR.put("longitude", "y");
+        conqEngCR.put("Ca", attributes);
+        conqEngCR.put("etype", targetEntity.getType().getType());
+        conqEngCR.put("ccid", consumerSLA.getJSONObject("_id").getString("$oid"));
         // Following is the maximum response time accepted to retrieve context.
         conqEngCR.put("timeliness", consumerSLA.getJSONObject("sla").getJSONObject("qos")
                 .getJSONObject("rtmax").getDouble("value"));
@@ -1280,26 +1278,26 @@ public class PullBasedExecutor {
         conqEngCR.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price")
                 .getDouble("value"));
 
-        if(ConQEngHelper.createContextRequest(conqEngCR)){
-            // This list is currently unordered.
-            JSONArray contextServices = new JSONArray(contextServicesText);
+        // This list is currently unordered.
+        JSONArray contextServices = new JSONArray(contextServicesText);
 
-            // Step 2
-            // Get the retrieval (quality and cost) order of the CPs
-            JSONObject conqEngSort = new JSONObject();
+        // Step 2
+        // Get the retrieval (quality and cost) order of the CPs
+        JSONObject conqEngSort = new JSONObject();
+        conqEngSort.put("clatitude", "x");
+        conqEngSort.put("clongitude", "y");
+        conqEngSort.put("cCa", attributes);
+        conqEngSort.put("cetype", targetEntity.getType().getType());
 
+        if(ConQEngHelper.createContextRequest(conqEngCR, contextServices, conqEngSort.toString())){
             JSONObject fcp = contextServices.getJSONObject(0);
             conqEngSort.put("pid", fcp.getJSONObject("_id").getString("$oid"));
-            conqEngSort.put("cetype", targetEntity.getType().getType());
-            conqEngSort.put("cCa", attributes);
-            // conqEngCR.put("Format_Ca", attributes);
-            // These are just placeholders temporarily.
-            conqEngSort.put("clatitude", "x");
-            conqEngSort.put("clongitude", "y");
+
             // The following are example SLA values given to ConQEng as reference.
             JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
-            conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
+
             conqEngSort.put("cost", cpQoS.getDouble("rate"));
+            conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
             conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
 
             List<JSONObject> sortedCPs = ConQEngHelper.getCPOrder(conqEngSort, contextServices);

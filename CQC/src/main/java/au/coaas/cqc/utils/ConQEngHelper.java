@@ -19,14 +19,16 @@ import java.util.concurrent.TimeUnit;
 import au.coaas.cqc.utils.enums.HttpRequests;
 
 import java.util.concurrent.ExecutionException;
-
+import java.util.logging.Logger;
 
 public class ConQEngHelper {
+    private static Logger log = Logger.getLogger(ConQEngHelper.class.getName());
+
     private static final String baseURL = "https://omega-branch-291602.ts.r.appspot.com/RRprocessor/";
     private static final String evalbaseURL = "https://omega-branch-291602.ts.r.appspot.com/QoC_CoC_Evaluator/";
 
     // Starts a Context Request in ConQEng.
-    public static boolean createContextRequest(JSONObject cr){
+    public static boolean createContextRequest(JSONObject cr, JSONArray contextServices, String sample){
         String result = call(baseURL + "context_requests",
                 HttpRequests.POST, cr.toString());
         if(result != null) {
@@ -38,6 +40,24 @@ public class ConQEngHelper {
                             SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                     future.logConQEngCR(ConQEngLog.newBuilder()
                             .setId(crId).setCr(cr.toString()).setStatus(200).build());
+
+                    contextServices.forEach(cs -> {
+                        JSONObject fcp  = (JSONObject) cs;
+                        JSONObject conqEngSort = new JSONObject(sample);
+
+                        conqEngSort.put("pid", fcp.getJSONObject("_id").getString("$oid"));
+
+                        // The following are example SLA values given to ConQEng as reference.
+                        JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
+                        conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
+                        conqEngSort.put("cost", cpQoS.getDouble("rate"));
+                        conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
+
+                        if(!registerCPs(conqEngSort)) {
+                            log.severe("Failed registering Context Providers for " + crId + ".");
+                            return;
+                        }
+                    });
                 }
             });
             return true;
@@ -64,6 +84,14 @@ public class ConQEngHelper {
             }
         }
         return orderdCPs;
+    }
+
+    // Registers context providers in ConCQEng
+    private static boolean registerCPs(JSONObject cpRequest){
+        String result = call(baseURL + "context_providers",
+                HttpRequests.POST, cpRequest.toString());
+        if(result != null) return true;
+        return false;
     }
 
     // Reports back the performance of the last context retrieval based on selection to ConQEng.

@@ -53,7 +53,7 @@ class CarParkContext(Resource):
                 elif(csType == '71' or csType == '64' or csType == '43' or csType == '22'):
                     time.sleep(random.uniform(0.6,1.0))
                     chance = random.uniform(0,1.0)
-                elif(csType == '71' or csType == '63' or csType == '41' or csType == '21'):
+                elif(csType == '63' or csType == '41' or csType == '21'):
                     time.sleep(random.uniform(0.4,1.1))
                     chance_2 = random.uniform(0,1.0)
                 elif(csType == '61' or csType == '53'):

@@ -18,7 +18,7 @@ public class ConnectionPool {
     }
 
     // Local mongo db instance
-    private final static String Mongo_Connection_STRING =  "mongodb://host.docker.internal:27017";
+    private final static String Mongo_Connection_STRING =  "mongodb://localhost:27017";
     // Containerized Mongo DB instance
     //private final static String Mongo_Connection_STRING = "mongodb://mongodb:27017";
 

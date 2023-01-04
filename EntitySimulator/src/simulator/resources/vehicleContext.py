@@ -74,7 +74,7 @@ class VehicleContext(Resource):
                 time.sleep(random.uniform(1.2,2.2))
                 chance = random.uniform(0,1.0)
         
-            if(chance >= 0.97 or chance >= 0.99):
+            if(chance >= 0.97 or chance_2 >= 0.99):
                 return parse_response({'message':'The provider faced an unexpected error.'}), 500 
             # Return data and 200 OK code
             return parse_response(data[0]), data[1]

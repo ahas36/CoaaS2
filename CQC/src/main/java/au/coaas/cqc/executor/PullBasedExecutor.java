@@ -1263,9 +1263,14 @@ public class PullBasedExecutor {
         // Initial CR creation and lookup from ConQEng
         JSONObject conqEngCR = new JSONObject();
 
+        conqEngCR.put("cctype", "App");
         conqEngCR.put("ccid", consumerSLA.getJSONObject("_id").getString("$oid"));
         conqEngCR.put("etype", targetEntity.getType().getType());
         conqEngCR.put("Ca", attributes);
+        // conqEngCR.put("Format_Ca", attributes);
+        // These are just placeholders temporarily.
+        conqEngCR.put("latitude", "x");
+        conqEngCR.put("longitude", "y");
         // Following is the maximum response time accepted to retrieve context.
         conqEngCR.put("timeliness", consumerSLA.getJSONObject("sla").getJSONObject("qos")
                 .getJSONObject("rtmax").getDouble("value"));
@@ -1285,11 +1290,12 @@ public class PullBasedExecutor {
 
             JSONObject fcp = contextServices.getJSONObject(0);
             conqEngSort.put("pid", fcp.getJSONObject("_id").getString("$oid"));
-            conqEngSort.put("etype", targetEntity.getType().getType());
+            conqEngSort.put("cetype", targetEntity.getType().getType());
             conqEngSort.put("cCa", attributes);
+            // conqEngCR.put("Format_Ca", attributes);
             // These are just placeholders temporarily.
-            conqEngSort.put("clongitude", "y");
             conqEngSort.put("clatitude", "x");
+            conqEngSort.put("clongitude", "y");
             // The following are example SLA values given to ConQEng as reference.
             JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
             conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));

@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 public class RetrievalManager {
 
     private static final int retrys = 20;
+
     // Retrieval from non-streaming Context Providers
     public static String executeFetch(String contextService, JSONObject qos, HashMap<String,String> params,
                                       String cpId, String ccId, String entType, Set<String> attributes) {

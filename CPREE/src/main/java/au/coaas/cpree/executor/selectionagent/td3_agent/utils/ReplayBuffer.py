@@ -17,6 +17,8 @@ class ReplayBuffer:
         self.new_state_memory = np.zeros((self.mem_size, *input_shape))
         # Buffer of rewards from taking a action on state to transiton to new state
         self.reward_memory = np.zeros(self.mem_size)
+        # Since, Delta Gain is used, recording the last gain.
+        self.full_reward = 0
 
     def store_transition(self, new_state, reward, action):
         # Getting the memory index to rewrite. 
@@ -24,7 +26,10 @@ class ReplayBuffer:
         prev_index = self.mem_cntr - 1
         prev_index %= self.mem_size
         self.new_state_memory[prev_index] = new_state
-        self.reward_memory[prev_index] = reward
+
+        delta_reward = reward - self.full_reward
+        self.reward_memory[prev_index] = delta_reward
+        self.full_reward = reward
 
         if(prev_index > self.mem_size):
             # Persist the trasitions 

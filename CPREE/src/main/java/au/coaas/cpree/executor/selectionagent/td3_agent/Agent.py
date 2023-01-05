@@ -60,12 +60,12 @@ class Agent:
 
     def update_exploration(self, diff):
         if(self.time_step > self.warmup):
-            if(abs(diff) < 0.10):
-                self.noise = self.noise - 0.05
+            if(abs(diff) < 0.05):
+                self.noise = self.noise - 0.01
                 if(self.noise <= 0): 
                     self.noise = 0
             else:
-                self.noise = self.noise + 0.05
+                self.noise = self.noise + 0.01
                 if(self.noise >= 0.5): 
                     self.noise = 0.5
 

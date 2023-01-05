@@ -1375,7 +1375,6 @@ public class PullBasedExecutor {
                     return new AbstractMap.SimpleEntry(retEntity,
                             qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 else continue; // Moving to the next context provider since it is currently unavailable.
-
             }
         }
 

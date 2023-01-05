@@ -14,13 +14,15 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 
 public class RetrievalManager {
 
     private static final int retrys = 20;
     // Retrieval from non-streaming Context Providers
-    public static String executeFetch(String contextService, JSONObject qos, HashMap<String,String> params, String cpId) {
+    public static String executeFetch(String contextService, JSONObject qos, HashMap<String,String> params,
+                                      String cpId, String ccId, String entType, Set<String> attributes) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
@@ -111,6 +113,25 @@ public class RetrievalManager {
 
             return fetch.getBody();
         }
+
+        // Sending feedback of unavailable CP to ConQEng
+        Executors.newCachedThreadPool().execute(() -> {
+            JSONObject conqEngFB = new JSONObject();
+            conqEngFB.put("ccid", ccId);
+            conqEngFB.put("cctype", "AC");
+            conqEngFB.put("etype", entType);
+            conqEngFB.put("Ca", attributes);
+
+            conqEngFB.put("latitude", "x");
+            conqEngFB.put("longitude", "y");
+
+            conqEngFB.put("pid", cpId);
+            conqEngFB.put("RRunit", 0);
+            conqEngFB.put("price", qos.getDouble("rate"));
+            conqEngFB.put("timeliness", qos.getDouble("rtmax"));
+
+            ConQEngHelper.reportFeedback(conqEngFB);
+        });
 
         // Returning null means the CMP failed to retrieved context from the provider despite all attempts.
         return null;

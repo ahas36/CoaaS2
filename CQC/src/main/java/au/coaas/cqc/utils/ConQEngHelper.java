@@ -73,12 +73,13 @@ public class ConQEngHelper {
         if(result != null) {
             JSONArray sorted = new JSONArray(result);
             for(Object cpid : sorted){
+                if(contextServices.length() == 0) break;
                 for(int i = 0; i < contextServices.length(); i++){
                     JSONObject cp = contextServices.getJSONObject(i);
                     if(cp.getJSONObject("_id").getString("$oid").equals((String)cpid)){
                         orderdCPs.add(cp);
                         contextServices.remove(i);
-                        continue;
+                        break;
                     }
                 }
             }

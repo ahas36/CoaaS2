@@ -1263,7 +1263,7 @@ public class PullBasedExecutor {
         // Initial CR creation and lookup from ConQEng
         JSONObject conqEngCR = new JSONObject();
 
-        conqEngCR.put("cctype", "App");
+        conqEngCR.put("cctype", "AC");
         conqEngCR.put("latitude", "x");
         conqEngCR.put("longitude", "y");
         conqEngCR.put("Ca", attributes);
@@ -1342,7 +1342,10 @@ public class PullBasedExecutor {
 
                         // Fetching from the same context provider OR it's stream otherwise
                         String retEntity = slaObj.getBoolean("autoFetch") ?
-                                RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params, conSer.getJSONObject("_id").getString("$oid")) :
+                                RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
+                                        conSer.getJSONObject("_id").getString("$oid"),
+                                        consumerSLA.getJSONObject("_id").getString("$oid"),
+                                        targetEntity.getType().getType(), attributes) :
                                 RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params);
 
                         // There is problem with the current context provider which makes it unsuitable for retrieving now.
@@ -1363,7 +1366,10 @@ public class PullBasedExecutor {
 
                 JSONObject slaObj = conSer.getJSONObject("sla");
                 String retEntity = conSer.getJSONObject("sla").getBoolean("autoFetch") ?
-                        RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params, conSer.getJSONObject("_id").getString("$oid")) :
+                        RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
+                                conSer.getJSONObject("_id").getString("$oid"),
+                                consumerSLA.getJSONObject("_id").getString("$oid"),
+                                targetEntity.getType().getType(), attributes) :
                         RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params);
                 if(retEntity != null)
                     return new AbstractMap.SimpleEntry(retEntity,

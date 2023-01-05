@@ -1,21 +1,22 @@
 package au.coaas.cpree.executor.scheduler.jobs;
 
-import au.coaas.cpree.utils.ConQEngHelper;
 import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.sqem.proto.ContextServiceId;
+import au.coaas.cpree.utils.ConQEngHelper;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
+import au.coaas.sqem.proto.ContextServiceId;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import org.json.JSONObject;
 import org.quartz.*;
+import org.json.JSONObject;
 
 import au.coaas.cpree.executor.RefreshExecutor;
 
-import java.util.HashMap;
 import java.util.List;
+import java.util.HashMap;
 import java.util.logging.Logger;
+import java.util.concurrent.Executors;
 
 public class QueryJob implements Job {
 
@@ -32,33 +33,36 @@ public class QueryJob implements Job {
                     dataMap.getString("params"),
                     new TypeToken<HashMap<String, String>>() {}.getType());
 
-            SimpleTrigger tigger = (SimpleTrigger) context.getTrigger();
+            SimpleTrigger trigger = (SimpleTrigger) context.getTrigger();
+
             // Periodically checking if priority has changed for the context provider.
-            if(tigger.getTimesTriggered() % 10 == 0){
-                JSONObject conqEngSort = new JSONObject();
-                conqEngSort.put("clatitude", "x");
-                conqEngSort.put("clongitude", "y");
-                conqEngSort.put("cetype", dataMap.getString("entityType"));
-                // Not sure whether this next line would actually work.
-                conqEngSort.put("cCa", (List<String>) dataMap.get("attributes"));
+            if(trigger.getTimesTriggered() % 10 == 0){
+                Executors.newCachedThreadPool().execute(() -> {
+                    JSONObject conqEngSort = new JSONObject();
+                    conqEngSort.put("clatitude", "x");
+                    conqEngSort.put("clongitude", "y");
+                    conqEngSort.put("cetype", dataMap.getString("entityType"));
+                    // Not sure whether this next line would actually work.
+                    conqEngSort.put("cCa", (List<String>) dataMap.get("attributes"));
 
-                conqEngSort.put("pid", dataMap.getString("cpId"));
+                    conqEngSort.put("pid", dataMap.getString("cpId"));
 
-                // The following are example SLA values given to ConQEng as reference.
-                JSONObject fcp = new JSONObject(contextProvider);
-                JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
+                    // The following are example SLA values given to ConQEng as reference.
+                    JSONObject fcp = new JSONObject(contextProvider);
+                    JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
 
-                conqEngSort.put("cost", cpQoS.getDouble("rate"));
-                conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
-                conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
+                    conqEngSort.put("cost", cpQoS.getDouble("rate"));
+                    conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
+                    conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
 
-                if(!ConQEngHelper.verifyCPOrder(conqEngSort)) {
-                    log.info("Context Provider priority has changed for " + contextId + ". Evicting for updating.");
-                    SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                            = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                    String hashkey = (contextId.split("-"))[1];
-                    asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(hashkey).build());
-                }
+                    if(!ConQEngHelper.verifyCPOrder(conqEngSort)) {
+                        log.info("Context Provider priority has changed for " + contextId + ". Evicting for updated priority.");
+                        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                        String hashkey = (contextId.split("-"))[1];
+                        asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(hashkey).build());
+                    }
+                });
             }
 
             String fetchResponse = null;
@@ -86,7 +90,29 @@ public class QueryJob implements Job {
                 String hashkey = (contextId.split("-"))[1];
                 asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(hashkey).build());
 
-                // TODO: Send feedback of unavailable CP to ConQEng
+                // Sending feedback of unavailable CP to ConQEng
+                Executors.newCachedThreadPool().execute(() -> {
+                    JSONObject conqEngFB = new JSONObject();
+                    conqEngFB.put("cctype", "AC");
+                    conqEngFB.put("latitude", "x");
+                    conqEngFB.put("longitude", "y");
+                    conqEngFB.put("ccid", (contextId.split("-"))[0]);
+                    conqEngFB.put("etype", dataMap.getString("entityType"));
+                    // Not sure whether this next line would actually work.
+                    conqEngFB.put("Ca", (List<String>) dataMap.get("attributes"));
+
+                    conqEngFB.put("pid", dataMap.getString("cpId"));
+
+                    JSONObject fcp = new JSONObject(contextProvider);
+                    JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
+
+                    conqEngFB.put("price", cpQoS.getDouble("rate"));
+                    conqEngFB.put("timeliness", cpQoS.getDouble("rtmax"));
+                    // This value indicates the CP is currently unavailable.
+                    conqEngFB.put("RRunit", 0);
+
+                    ConQEngHelper.reportFeedback(conqEngFB);
+                });
 
                 throw new RuntimeException("Couldn't retrieve the context for refreshing. Evicted the entity as a result.");
             }

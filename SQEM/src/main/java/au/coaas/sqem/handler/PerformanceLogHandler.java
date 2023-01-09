@@ -644,7 +644,7 @@ public class PerformanceLogHandler {
                     temp.put("count", temp.get("count") + count);
                     if(status.equals("200")) {
                         temp.put("success", temp.get("success") + count);
-                        temp.put("delayed", temp.get("tdelay") + rs_1.getInt("tdelay"));
+                        temp.put("delayed", temp.get("delayed") + rs_1.getInt("tdelay"));
                     }
                     else temp.put("failed", temp.get("failed") + count);
 
@@ -658,11 +658,11 @@ public class PerformanceLogHandler {
                 String csId = entry.getKey();
                 HashMap<String,Double> temp = entry.getValue();
 
-                Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success");
+                Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success")/1.0;
                 // Using all the successful retreivals to divide the total retrieval latency.
                 temp.put("retLatency", temp.get("retLatency")/no_success);
                 // Using only the successful AND timely retrievals to calculate reliability.
-                Double no_success_and_timely = temp.get("success") - temp.get("tdelay");
+                Double no_success_and_timely = (temp.get("success") - temp.get("delayed"))/1.0;
                 temp.put("reliability", temp.get("count") > 0 ? no_success_and_timely/temp.get("count") : 0.0);
 
                 if(!finalres.containsKey(csId)){
@@ -1699,8 +1699,8 @@ public class PerformanceLogHandler {
                     "    response_time BIGINT NULL,\n" +
                     "    earning REAL NULL,\n" +
                     "    cost REAL NULL,\n" +
-                    "    identifier VARCHAR(255) NOT NULL,\n" +
-                    "    hashKey VARCHAR(255) NULL,\n" +
+                    "    identifier VARCHAR(MAX) NOT NULL,\n" +
+                    "    hashKey VARCHAR(MAX) NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL,\n" +
                     "    isDelayed BIT NOT NULL,\n" +
                     "    age BIGINT NULL,\n" +
@@ -1718,7 +1718,7 @@ public class PerformanceLogHandler {
                 statement.execute(String.format("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='%s')\n" +
                                 "CREATE TABLE %s(\n" +
                                 "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                                "    itemId VARCHAR(255) NOT NULL,\n" +
+                                "    itemId VARCHAR(MAX) NOT NULL,\n" +
                                 "    isHit BIT NOT NULL,\n" +
                                 "    response_time BIGINT NOT NULL,\n" +
                                 "    createdDatetime DATETIME NOT NULL)",
@@ -1727,12 +1727,12 @@ public class PerformanceLogHandler {
 
             statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='consumer_slas')\n" +
                     "CREATE TABLE consumer_slas(\n" +
-                    "    consumerId VARCHAR(40) NOT NULL,\n" +
+                    "    consumerId VARCHAR(MAX) NOT NULL,\n" +
                     "    fthresh REAL NOT NULL,\n" +
                     "    earning REAL NOT NULL,\n" +
                     "    rtmax BIGINT NOT NULL,\n" +
                     "    penalty REAL NOT NULL,\n" +
-                    "    queryId VARCHAR(40) NULL,\n" +
+                    "    queryId VARCHAR(MAX) NULL,\n" +
                     "    queryClass BIGINT NOT NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL)");
 

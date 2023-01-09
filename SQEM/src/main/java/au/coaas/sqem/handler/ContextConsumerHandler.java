@@ -110,19 +110,24 @@ public class ContextConsumerHandler {
                     Filters.eq("token", authToken)
             )).first();
 
-            MongoCollection<Document> consumerCollection = db.getCollection("contextConsumer");
-            String id = value.getString("consumerId");
-            Document sla = consumerCollection.find(Filters.and(
-                    Filters.eq("_id", new ObjectId(id)),
-                    Filters.eq("status", true)
-            )).projection(project).first();
+            if(value != null){
+                MongoCollection<Document> consumerCollection = db.getCollection("contextConsumer");
+                String id = value.getString("consumerId");
+                Document sla = consumerCollection.find(Filters.and(
+                        Filters.eq("_id", new ObjectId(id)),
+                        Filters.eq("status", true)
+                )).projection(project).first();
 
-            return SQEMResponse.newBuilder().setStatus("200").setBody(sla.toJson()).build();
+                return SQEMResponse.newBuilder().setStatus("200").setBody(sla.toJson()).build();
+            }
+
+            return SQEMResponse.newBuilder().setStatus("404").setBody("Couldn't find an consumer by the token").build();
+
         }
         catch(Exception e){
             JSONObject body = new JSONObject();
             body.put("message",e.getMessage());
-            body.put("cause",e.getCause().toString());
+            body.put("cause",e.getCause() != null ? e.getCause().toString() : "See Cause in Message.");
 
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }

@@ -361,6 +361,11 @@ public class SelectionExecutor {
                             // Setting decision variables to 0 as they are ignored.
                             json.put("retEff", 0.0);
                             json.put("cacheEff", 0.0);
+                            double vec_total = access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
+                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
+                                    Math.pow(reliability, 2);
+                            double denom = Math.sqrt(vec_total);
+                            json.put("normalizer", denom);
 
                             if(sampleInterval == 0)
                                 lambda_conf = 1/exp_prd;
@@ -500,6 +505,11 @@ public class SelectionExecutor {
                             // Setting decision variables to 0 as they are ignored.
                             json.put("retEff", 0.0);
                             json.put("cacheEff", 0.0);
+                            double vec_total = access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
+                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
+                                    Math.pow(reliability, 2);
+                            double denom = Math.sqrt(vec_total);
+                            json.put("normalizer", denom);
 
                             if(sampleInterval == 0)
                                 lambda_conf = 1/exp_prd;

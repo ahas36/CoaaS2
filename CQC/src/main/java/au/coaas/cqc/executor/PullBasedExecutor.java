@@ -1308,9 +1308,7 @@ public class PullBasedExecutor {
             for (JSONObject conSer : sortedCPs) {
                 // Mapping context service with SLA constraints
                 JSONObject qos = consumerSLA.getJSONObject("sla").getJSONObject("qos");
-                if(qos.getBoolean("staged")){
-                    conSer = mapServiceWithSLA(conSer, qos, targetEntity.getType(), criticality.toLowerCase());
-                }
+                conSer = mapServiceWithSLA(conSer, qos, targetEntity.getType(), criticality.toLowerCase());
 
                 if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){
                     JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");

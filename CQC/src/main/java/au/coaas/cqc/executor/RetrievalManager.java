@@ -63,7 +63,8 @@ public class RetrievalManager {
             }
         }
 
-        // Since the end_time is after the retry attempts until success, what is being reported back to ConQEng is accumilated time.
+        // Since the end_time is after the retry attempts until success, what is being reported back to
+        // ConQEng is accumalated time.
         long endTime = System.currentTimeMillis();
 
         long age = 0;

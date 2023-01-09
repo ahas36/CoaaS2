@@ -631,9 +631,9 @@ public class PerformanceLogHandler {
                     res.put(rs_1.getString("identifier"),
                             new HashMap(){{
                                 put("count", count);
-                                put("delayed", status.equals("200") ? 0 : rs_1.getInt("tdelay"));
-                                put("failed", status.equals("200") ? 0 : count);
-                                put("success", status.equals("200") ? count : 0);
+                                put("delayed", status.equals("200") ? 0.0 : rs_1.getInt("tdelay") * 1.0);
+                                put("failed", status.equals("200") ? 0.0 : count);
+                                put("success", status.equals("200") ? count : 0.0);
                                 put("retLatency", rs_1.getDouble("rt_avg") * count);
                                 put("cost", rs_1.getDouble("avg_cost"));
                             }});
@@ -644,7 +644,7 @@ public class PerformanceLogHandler {
                     temp.put("count", temp.get("count") + count);
                     if(status.equals("200")) {
                         temp.put("success", temp.get("success") + count);
-                        temp.put("delayed", temp.get("delayed") + rs_1.getInt("tdelay"));
+                        temp.put("delayed", temp.get("delayed") + rs_1.getInt("tdelay")*1.0);
                     }
                     else temp.put("failed", temp.get("failed") + count);
 
@@ -1582,7 +1582,10 @@ public class PerformanceLogHandler {
                 else total.addAndGet(-1);
             });
 
-            return ProbDelay.newBuilder().setValue(count.get()/ total.get()).build();
+            if(count.get()==0)  return ProbDelay.newBuilder().setValue(0.0).build();
+            return ProbDelay.newBuilder()
+                    .setValue(total.get() > 0 ? count.get()/ total.get() : 1.0)
+                    .build();
         }
         catch(Exception ex){
             log.severe(ex.getMessage());

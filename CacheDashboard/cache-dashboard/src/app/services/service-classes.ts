@@ -8,6 +8,7 @@ export class PerfData{
   public summary: Summary;
   public cachememory: CacheStat;
   public expectedSLA: ExpSLA;
+  public avgContextAge: number;
 }
 
 export class ExpSLA{

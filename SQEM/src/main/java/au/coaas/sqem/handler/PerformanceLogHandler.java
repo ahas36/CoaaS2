@@ -330,15 +330,15 @@ public class PerformanceLogHandler {
     }
 
     // Context Accessing
-    public static void insertAccess(String id, String outcome) {
-        String queryString = "INSERT INTO context_access(time,context_id,outcome) VALUES('%s','%s','%s');";
+    public static void insertAccess(String id, String outcome, double age) {
+        String queryString = "INSERT INTO context_access(time,context_id,outcome,age) VALUES('%s','%s','%s', %f);";
         Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
         try{
             Statement statement = conn.createStatement();
             LocalDateTime now = LocalDateTime.now();
             Timestamp timestamp = Timestamp.valueOf(now);
             String ts = timestamp.toString();
-            statement.executeUpdate(String.format(queryString, ts, id, outcome));
+            statement.executeUpdate(String.format(queryString, ts, id, outcome, age));
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -469,7 +469,7 @@ public class PerformanceLogHandler {
         Document persRecord = new Document();
 
         try{
-            ExecutorService executor = Executors.newFixedThreadPool(14);
+            ExecutorService executor = Executors.newFixedThreadPool(16);
             ArrayList<Future<?>> tasks = new ArrayList<>();
 
             tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
@@ -480,6 +480,12 @@ public class PerformanceLogHandler {
                 tasks.add(executor.submit(() -> { profileContextProviders(persRecord); }));
                 tasks.add(executor.submit(() -> { profileConsumers(persRecord); }));
                 tasks.add(executor.submit(() -> { profileCQClasses(persRecord); }));
+                tasks.add(executor.submit(() -> {
+                    ContextProfile result = getContextAgeProfile();
+                    if(result.getStatus().equals("200")) persRecord.put("avgContextAge",
+                            Double.valueOf(result.getTrend()));
+                    else persRecord.put("avgContextAge", 0);
+                }));
             }
             persRecord.put("cachememory", ContextCacheHandler.getMemoryUtility());
 
@@ -1466,6 +1472,35 @@ public class PerformanceLogHandler {
         }
     }
 
+    public static ContextProfile getContextAgeProfile() {
+        String queryString = "SELECT AVG(age) AS avgAge\n " +
+                " FROM context_access\n" +
+                " WHERE (time BETWEEN '%s' AND '%s') AND outcome = 'hit'";
+        Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
+        try {
+            Statement statement = conn.createStatement();
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime history = now.minusSeconds(60);
+            ResultSet rs = statement.executeQuery(String.format(queryString,
+                    Timestamp.valueOf(history).toString(),
+                    Timestamp.valueOf(now).toString()));
+            if(rs.next()){
+                return ContextProfile.newBuilder()
+                        .setTrend(String.valueOf(rs.getDouble("avgAge")))
+                        .setStatus("200").build();
+            }
+            return ContextProfile.newBuilder()
+                    .setTrend("NoChange")
+                    .setStatus("200").build();
+        }
+        catch(SQLException ex) {
+            log.severe(ex.getMessage());
+            return ContextProfile.newBuilder()
+                    .setTrend("NaN")
+                    .setStatus("500").build();
+        }
+    }
+
     public static QueryClassProfile getQueryClassProfile(String classId){
         try{
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
@@ -1772,7 +1807,8 @@ public class PerformanceLogHandler {
             statement.execute("CREATE TABLE context_access(\n" +
                     "    time TIMESTAMPTZ NOT NULL," +
                     "    context_id TEXT," +
-                    "    outcome VARCHAR(10))");
+                    "    outcome VARCHAR(10)," +
+                    "    age DOUBLE PRECISION)");
             statement.execute("SELECT create_hypertable('context_access', 'time');");
         }
         catch(Exception ex){

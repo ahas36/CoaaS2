@@ -41,6 +41,8 @@ export class SummaryModel{
   public exp_fth: Queue<number>;
   public exp_earn: Queue<number>;
   public exp_rtmax: Queue<number>;
+
+  public con_age: Queue<number>;
     
   constructor(){
     this.gain = new Queue<number>();
@@ -82,6 +84,8 @@ export class SummaryModel{
     this.exp_fth = new Queue<number>();
     this.exp_earn = new Queue<number>();
     this.exp_rtmax = new Queue<number>();
+
+    this.con_age = new Queue<number>();
   }   
 }
 

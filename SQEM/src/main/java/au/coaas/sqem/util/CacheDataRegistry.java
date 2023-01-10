@@ -88,6 +88,7 @@ public final class CacheDataRegistry{
     // Registry lookup. Returns hash key if available in cache.
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
         long remainingLife = 0;
+        double ageLoss = 0;
         LocalDateTime staleTime;
         String refreshLogic = "reactive";
         AtomicReference<String> hashKey = new AtomicReference<>();
@@ -112,7 +113,7 @@ public final class CacheDataRegistry{
                         // Need to get this information rather from Himadri's lifetime profiler
                         JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
                         // This is a potential cache item. But this should be cached lineant
-                        double ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId, hashKey.get());
+                        ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId, hashKey.get());
 
                         // Periodic Sampling Device Check
                         JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
@@ -195,8 +196,9 @@ public final class CacheDataRegistry{
 
                         if(now.isAfter(expiryTime)){
                             // Store cache access in Time Series DB
+                            double finalAgeLoss = ageLoss;
                             Executors.newCachedThreadPool().execute(()
-                                    -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"p_miss"));
+                                    -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"p_miss", finalAgeLoss*1000));
                             return res.setHashkey(hashKey.get())
                                     .setIsValid(false)
                                     .setIsCached(true)
@@ -208,8 +210,9 @@ public final class CacheDataRegistry{
                     }
 
                     // Store cache access in Time Series DB
+                    double finalAgeLoss = ageLoss;
                     Executors.newCachedThreadPool().execute(()
-                            -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"hit"));
+                            -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"hit", finalAgeLoss*1000));
                     return res.setHashkey(hashKey.get())
                             .setIsValid(true)
                             .setIsCached(true)
@@ -228,7 +231,7 @@ public final class CacheDataRegistry{
 
         // Store cache access in Time Series DB
         Executors.newCachedThreadPool().execute(()
-                -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"miss"));
+                -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"miss", 0));
         return res.build();
     }
 

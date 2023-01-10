@@ -327,6 +327,7 @@ service SQEMService {
     rpc getPerformanceData (Empty) returns (SQEMResponse);
     rpc getProbDelay(ProbDelayRequest) returns (ProbDelay);
     rpc logParsedQueryTree(CDQLLog) returns (SQEMResponse);
+    rpc getContextAgeProfile(Empty) returns (ContextProfile);
     rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
     rpc logCacheDecision (ContextCacheDecision) returns (Empty);
     rpc getContextProfile(ContextProfileRequest) returns (ContextProfile);

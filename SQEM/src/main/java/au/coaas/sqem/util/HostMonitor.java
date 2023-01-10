@@ -15,11 +15,12 @@ public class HostMonitor {
             processCpuTime += threadMXBean.getThreadCpuTime(id);
         }
 
+        // Currently the total processing CPU time is in nanoseconds.
         // double cpuUsage = processCpuTime - lastProcessCpuTime;
         // lastProcessCpuTime = processCpuTime;
 
         // returns in miliseconds
-        // return cpuUsage/1000;
-        return processCpuTime/1000;
+        // return cpuUsage/1000000;
+        return processCpuTime/1000000;
     }
 }

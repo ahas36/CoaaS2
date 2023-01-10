@@ -17,6 +17,7 @@ export class OverallComponent implements OnInit {
   avg_total_gain;
   cache;
   model;
+  conAge;
 
   earning;
   penalty_earning;
@@ -463,10 +464,11 @@ export class OverallComponent implements OnInit {
     try{
       // Top bar
       this.gain = data.gain.get();
+      this.conAge = data.con_age.get();
       this.avg_gain = data.avg_gain.get()
       this.total_gain = data.total_gain.get();
-      this.avg_total_gain = data.avg_total_gain.get()
       this.no_of_queries = data.no_of_queries.get();
+      this.avg_total_gain = data.avg_total_gain.get()
       this.no_of_retrievals = data.no_of_retrievals.get();
       // + current average query latency
 
@@ -589,10 +591,12 @@ export class OverallComponent implements OnInit {
 
       // Top bar
       this.gain = data.gain.get();
-      this.avg_gain = data.avg_gain.get()
+      
+      this.conAge = data.con_age.get();
+      this.avg_gain = data.avg_gain.get();
       this.total_gain = data.total_gain.get();
-      this.avg_total_gain = data.avg_total_gain.get()
       this.no_of_queries = data.no_of_queries.get();
+      this.avg_total_gain = data.avg_total_gain.get()
       this.no_of_retrievals = data.no_of_retrievals.get();
 
       // 2nd

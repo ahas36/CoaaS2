@@ -19,8 +19,8 @@
         <mat-card class="stat-card">
             <mat-card-content>
                 <div class="metric">
-                    <h1>{{avg_total_gain[avg_total_gain.length-1]}}</h1>
-                    <h3> AUD</h3>
+                    <h1 style="color: rgb(243, 104, 104);">{{avg_total_gain[avg_total_gain.length-1]}}</h1>
+                    <h3 style="color: rgb(243, 104, 104);"> AUD</h3>
                     <p>Gain or Loss Per Query <i class="fa fa-info-circle tooltip">
                         <span class="tooltiptext">Average Gain or loss in monetary value from responding to context queries and any other earnings during the last window.</span>
                     </i></p>
@@ -34,6 +34,17 @@
                     <h3> s</h3>
                     <p>Query Latency <i class="fa fa-info-circle tooltip">
                         <span class="tooltiptext">Average response time to a context query.</span>
+                    </i></p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+        <mat-card class="stat-card">
+            <mat-card-content>
+                <div class="metric">
+                    <h1>{{conAge[conAge.length-1]}}</h1>
+                    <h3> ms</h3>
+                    <p>Age of Context <i class="fa fa-info-circle tooltip">
+                        <span class="tooltiptext">Average age of context information responded from CoaaS.</span>
                     </i></p>
                 </div>
             </mat-card-content>

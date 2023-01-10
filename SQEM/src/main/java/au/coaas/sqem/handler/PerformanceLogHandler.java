@@ -1473,7 +1473,7 @@ public class PerformanceLogHandler {
     }
 
     public static ContextProfile getContextAgeProfile() {
-        String queryString = "SELECT AVG(age) AS avgAge\n " +
+        String queryString = "SELECT AVG(age) AS avgAge, COUNT(*) AS avgCnt\n " +
                 " FROM context_access\n" +
                 " WHERE (time BETWEEN '%s' AND '%s') AND outcome = 'hit'";
         Connection conn = au.coaas.sqem.timescale.ConnectionPool.getInstance().getTSConnection();
@@ -1484,14 +1484,21 @@ public class PerformanceLogHandler {
             ResultSet rs = statement.executeQuery(String.format(queryString,
                     Timestamp.valueOf(history).toString(),
                     Timestamp.valueOf(now).toString()));
+
+            AbstractMap.SimpleEntry<Double, Double> fetcedhAge = getFetchedContextAge();
             if(rs.next()){
+                Double avgAge = ((fetcedhAge.getKey() * fetcedhAge.getValue()) +
+                        (rs.getDouble("avgAge") * rs.getDouble("avgCnt"))) /
+                        (fetcedhAge.getValue() + rs.getDouble("avgCnt"));
                 return ContextProfile.newBuilder()
-                        .setTrend(String.valueOf(rs.getDouble("avgAge")))
+                        .setTrend(String.valueOf(avgAge))
                         .setStatus("200").build();
             }
-            return ContextProfile.newBuilder()
-                    .setTrend("NoChange")
-                    .setStatus("200").build();
+            else {
+                return ContextProfile.newBuilder()
+                        .setTrend(String.valueOf(fetcedhAge.getKey()))
+                        .setStatus("200").build();
+            }
         }
         catch(SQLException ex) {
             log.severe(ex.getMessage());
@@ -1500,6 +1507,21 @@ public class PerformanceLogHandler {
                     .setStatus("500").build();
         }
     }
+
+    private static AbstractMap.SimpleEntry<Double,Double> getFetchedContextAge() throws SQLException {
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(30);
+
+        HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
+        ResultSet rs_1 = statement.executeQuery("SELECT avg(age) AS avg_age, count(*) AS cnt " +
+                "FROM coass_performance WHERE method = 'executeFetch';");
+        if(rs_1.next()){
+            return new AbstractMap.SimpleEntry<>(rs_1.getDouble("avg_age"),
+                    rs_1.getDouble("cnt"));
+        }
+        return new AbstractMap.SimpleEntry<>(0.0,0.0);
+    }
+
 
     public static QueryClassProfile getQueryClassProfile(String classId){
         try{

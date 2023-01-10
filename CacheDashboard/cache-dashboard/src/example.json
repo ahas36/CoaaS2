@@ -1,0 +1,661 @@
+{
+    "_id": {
+        "$oid": "63bcb30ddbee7a199a2b0ac3"
+    },
+    "csms": {
+        "discoverMatchingServices": {
+            "ok": {
+                "count": 56,
+                "average": 4
+            }
+        }
+    },
+    "cachememory": {
+        "used_memory": {
+            "value": 1.217236E7,
+            "unit": "Number"
+        },
+        "used_memory_human": {
+            "value": 11.61,
+            "unit": "MegaBytes"
+        },
+        "used_memory_rss": {
+            "value": 2.1061632E7,
+            "unit": "Number"
+        },
+        "used_memory_rss_human": {
+            "value": 20.09,
+            "unit": "MegaBytes"
+        },
+        "used_memory_peak": {
+            "value": 1.3048528E7,
+            "unit": "Number"
+        },
+        "used_memory_peak_human": {
+            "value": 12.44,
+            "unit": "MegaBytes"
+        },
+        "used_memory_peak_perc": {
+            "value": 93.29,
+            "unit": "Percentage"
+        },
+        "used_memory_overhead": {
+            "value": 1088600.0,
+            "unit": "Number"
+        },
+        "used_memory_startup": {
+            "value": 862920.0,
+            "unit": "Number"
+        },
+        "used_memory_dataset": {
+            "value": 1.108376E7,
+            "unit": "Number"
+        },
+        "used_memory_dataset_perc": {
+            "value": 98.0,
+            "unit": "Percentage"
+        },
+        "allocator_allocated": {
+            "value": 1.257256E7,
+            "unit": "Number"
+        },
+        "allocator_active": {
+            "value": 1.427456E7,
+            "unit": "Number"
+        },
+        "allocator_resident": {
+            "value": 1.7227776E7,
+            "unit": "Number"
+        },
+        "total_system_memory": {
+            "value": 4.125417472E9,
+            "unit": "Number"
+        },
+        "total_system_memory_human": {
+            "value": 3.84,
+            "unit": "GigaBytes"
+        },
+        "used_memory_lua": {
+            "value": 51200.0,
+            "unit": "Number"
+        },
+        "used_memory_vm_eval": {
+            "value": 51200.0,
+            "unit": "Number"
+        },
+        "used_memory_lua_human": {
+            "value": 50.0,
+            "unit": "KiloBytes"
+        },
+        "used_memory_scripts_eval": {
+            "value": 2640.0,
+            "unit": "Number"
+        },
+        "number_of_cached_scripts": {
+            "value": 3.0,
+            "unit": "Number"
+        },
+        "number_of_functions": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "number_of_libraries": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "used_memory_vm_functions": {
+            "value": 32768.0,
+            "unit": "Number"
+        },
+        "used_memory_vm_total": {
+            "value": 83968.0,
+            "unit": "Number"
+        },
+        "used_memory_vm_total_human": {
+            "value": 82.0,
+            "unit": "KiloBytes"
+        },
+        "used_memory_functions": {
+            "value": 184.0,
+            "unit": "Number"
+        },
+        "used_memory_scripts": {
+            "value": 2824.0,
+            "unit": "Number"
+        },
+        "used_memory_scripts_human": {
+            "value": 2.76,
+            "unit": "KiloBytes"
+        },
+        "maxmemory": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "maxmemory_human": {
+            "value": 0.0,
+            "unit": "Bytes"
+        },
+        "allocator_frag_ratio": {
+            "value": 1.14,
+            "unit": "Number"
+        },
+        "allocator_frag_bytes": {
+            "value": 1702000.0,
+            "unit": "Number"
+        },
+        "allocator_rss_ratio": {
+            "value": 1.21,
+            "unit": "Number"
+        },
+        "allocator_rss_bytes": {
+            "value": 2953216.0,
+            "unit": "Number"
+        },
+        "rss_overhead_ratio": {
+            "value": 1.22,
+            "unit": "Number"
+        },
+        "rss_overhead_bytes": {
+            "value": 3833856.0,
+            "unit": "Number"
+        },
+        "mem_fragmentation_ratio": {
+            "value": 1.72,
+            "unit": "Number"
+        },
+        "mem_fragmentation_bytes": {
+            "value": 8848656.0,
+            "unit": "Number"
+        },
+        "mem_not_counted_for_evict": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "mem_replication_backlog": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "mem_total_replication_buffers": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "mem_clients_slaves": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "mem_clients_normal": {
+            "value": 45536.0,
+            "unit": "Number"
+        },
+        "mem_cluster_links": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "mem_aof_buffer": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "active_defrag_running": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "lazyfree_pending_objects": {
+            "value": 0.0,
+            "unit": "Number"
+        },
+        "lazyfreed_objects": {
+            "value": 0.0,
+            "unit": "Number"
+        }
+    },
+    "classes": {
+        "1": {
+            "penalty": 0.7571428625711373,
+            "count": 14.0,
+            "rtmax": 1757.142857142857,
+            "fthresh": 0.7821428562913623,
+            "earning": 0.5246428650404725
+        }
+    },
+    "rawContext": {
+        "638d868ad3ab4b1382d36670": {
+            "reliability": {
+                "retLatency": 34.0,
+                "cost": 0.009999999776482582,
+                "success": 2.0,
+                "reliability": 1.0,
+                "count": 2.0,
+                "delayed": 0.0,
+                "failed": 0.0
+            }
+        },
+        "638d4795d3ab4b1382d3664d": {
+            "profile": {
+                "count": 14.0,
+                "fthresh": 0.7821428562913623
+            }
+        },
+        "638d868ad3ab4b1382d36662": {
+            "reliability": {
+                "retLatency": 677.0,
+                "cost": 0.07500000298023224,
+                "success": 4.0,
+                "reliability": 1.0,
+                "count": 4.0,
+                "delayed": 0.0,
+                "failed": 0.0
+            }
+        },
+        "638d868ad3ab4b1382d36663": {
+            "reliability": {
+                "retLatency": 656.0,
+                "cost": 0.07500000298023224,
+                "success": 8.0,
+                "reliability": 1.0,
+                "count": 8.0,
+                "delayed": 0.0,
+                "failed": 0.0
+            }
+        },
+        "638d47a4d3ab4b1382d3664f": {
+            "profile": {
+                "count": 14.0,
+                "fthresh": 0.7785714311259133
+            }
+        },
+        "638d4d68d3ab4b1382d36653": {
+            "reliability": {
+                "retLatency": 1138.0,
+                "cost": 0.05999999865889549,
+                "success": 14.0,
+                "reliability": 1.0,
+                "count": 14.0,
+                "delayed": 0.0,
+                "failed": 0.0
+            }
+        }
+    },
+    "consumers": {
+        "638d2c2fd3ab4b1382d36616": {
+            "count": 3,
+            "rtmax": 1200.0,
+            "penalty": 1.0,
+            "earning": 0.6000000238418579,
+            "fthresh": 0.8999999761581421
+        },
+        "638d2c2fd3ab4b1382d3661f": {
+            "count": 1,
+            "rtmax": 2000.0,
+            "penalty": 0.5,
+            "earning": 0.800000011920929,
+            "fthresh": 0.75
+        },
+        "638d2c2fd3ab4b1382d36617": {
+            "count": 1,
+            "rtmax": 1500.0,
+            "penalty": 0.800000011920929,
+            "earning": 0.6000000238418579,
+            "fthresh": 0.8500000238418579
+        },
+        "638d2c2fd3ab4b1382d36614": {
+            "count": 1,
+            "rtmax": 2000.0,
+            "penalty": 0.5,
+            "earning": 0.30000001192092896,
+            "fthresh": 0.699999988079071
+        },
+        "638d2c2fd3ab4b1382d3661d": {
+            "count": 1,
+            "rtmax": 3000.0,
+            "penalty": 0.10000000149011612,
+            "earning": 0.07000000029802322,
+            "fthresh": 0.5
+        },
+        "638d2c2fd3ab4b1382d36625": {
+            "count": 1,
+            "rtmax": 1500.0,
+            "penalty": 0.699999988079071,
+            "earning": 0.30000001192092896,
+            "fthresh": 0.800000011920929
+        },
+        "638d2c2fd3ab4b1382d36624": {
+            "count": 1,
+            "rtmax": 2000.0,
+            "penalty": 0.6000000238418579,
+            "earning": 0.5,
+            "fthresh": 0.699999988079071
+        },
+        "638d2c2fd3ab4b1382d36621": {
+            "count": 1,
+            "rtmax": 1500.0,
+            "penalty": 1.2000000476837158,
+            "earning": 1.25,
+            "fthresh": 0.8500000238418579
+        },
+        "638d2c2fd3ab4b1382d3661a": {
+            "count": 1,
+            "rtmax": 2500.0,
+            "penalty": 0.20000000298023224,
+            "earning": 0.125,
+            "fthresh": 0.6000000238418579
+        },
+        "638d2c2fd3ab4b1382d36622": {
+            "count": 1,
+            "rtmax": 1000.0,
+            "penalty": 2.0,
+            "earning": 1.399999976158142,
+            "fthresh": 0.8999999761581421
+        },
+        "638d2c2fd3ab4b1382d36620": {
+            "count": 2,
+            "rtmax": 2000.0,
+            "penalty": 0.5,
+            "earning": 0.10000000149011612,
+            "fthresh": 0.800000011920929
+        }
+    },
+    "expectedSLA": {
+        "exp_earn": 0.5246428650404725,
+        "exp_pen": 0.7571428625711373,
+        "exp_fth": 0.7821428562913623,
+        "exp_rtmax": 1757.142857142857
+    },
+    "levels": {
+        "aggfunction": {
+            "miss_response_time": 0.0,
+            "items": [],
+            "hit_response_time": 0.0,
+            "hitrate": 0.0
+        },
+        "situfunction": {
+            "miss_response_time": 0.0,
+            "items": [],
+            "hit_response_time": 0.0,
+            "hitrate": 0.0
+        },
+        "query": {
+            "miss_response_time": 0.0,
+            "items": [],
+            "hit_response_time": 0.0,
+            "hitrate": 0.0
+        },
+        "entity": {
+            "miss_response_time": 0.8214285714285714,
+            "items": [
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "aab49f3725105501107656661dfe0795e2916a20bf8de5dba2c7db8c8a24df90"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "3ebe73687e578131b616765cca0693bc79c6c1c8218792f946d437bf083e3f48"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "1745730b4585a82ee034ea9382cf337b03772c5f8b9717147e916c3bc7fb9304"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "9f91829ba5734d6cdd5b90c74b697b2bd6de12dfd26c9e8cd2506917133fd8a6"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "3475c9e3cd36614509a9da23910c1dae65e187bffe4b5fed8b55736a402d1ddc"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "3a5aca8f1d79d9c4023f3c2b915ee4df0dd591cc018a1acee52a58cf4a8da3d5"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "ec929ba5dc70cf1c6539afa36516c5a9a6bf8cbf793d5070c376c16e5eeb9e05"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "30e8498b94b831fe4ea9d91ee065715816ea909674e158b098673a5e023f0d5f"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "5a8cb8c33e6bcb84467c84d6a931fe387fded7c6725b6849ec23f1e5b1fcbace"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "eac9de697b81ed70ab8f49cae9fb5d1f60cee62303ac056a45de935e380769be"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "d6eb064320db6838c067baa602ee2955716249f9e45feb7f8678a8815d76cc65"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "2"
+                    },
+                    "hitrate": 0.0,
+                    "id": "ce43fbd7d6714e141352f777783df732e1c9be8d8738e2dd2c8e8c7a6a64488b"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "f8c7ae8185f14b62cf4aa40f541723dd28808443af70757cc6843472a1dd2172"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "7db2762fb645c223434c09f1cb1f774fc157a4add29d42a402f8a0e7679ab460"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "c6b34b4eb1370762eb862f52256105390c2218db308b622dc983d5e6cc0685f1"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "2ee3cb43a74591583c2b229a8b8ab38b194b694b49cb9190eed3ce9490a7e4f3"
+                },
+                {
+                    "hits": {
+                        "$numberLong": "14"
+                    },
+                    "hitrate": 1.0,
+                    "id": "0f0f23c96e4c8e8441d8a7ba2ebf2e463d20948483bd697daffff1daa154f408"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "f49173535727dee6e3707d1083dbdbd070f50c068102ce78e788634afb4b734d"
+                },
+                {
+                    "hits": {
+                        "$numberLong": "14"
+                    },
+                    "hitrate": 1.0,
+                    "id": "231c1c2d1b39e57dcdd24d99dc4687a6f4f9456a369ae3e56ebf2f4eb023ebaf"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "c6a9a5ad89a80df8b6154e4bc405efff781d90db734e153f9a29e516cf28d200"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "4b3a23d78bc55d46c25cf3086afbd190af24f8b41351d06cb868fcbb30fb4838"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "15271fcd0bee9128c7deb729c05561ce3888521fa394f26a5ad19ac804bf9c6b"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "808a293c9fe478c4b5a25abd9f64626d2f43759ec7891129b72521f998a10078"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "3ee4a7b46774b10bc1adaa69c487f22bf631dc4ab1266e75a942f33b54aed004"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "926142baf60f2c2cc5375fb6d1d4ccb56da0c7c418632fb04fb2b7a8b03298b6"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "a91e9b3aca9b57d65d52f11face501b9fa690f193857c57a98c8eb29ebc1eb8d"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "0f0ed84f4ff38d804960f60877a981c088c775baaec1349a478fcd419f387e7b"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "d568f6672c1c47d57ec40bc67fe0394e2d82ed682b9f7d1ef11f7e04f4894006"
+                },
+                {
+                    "misses": {
+                        "$numberLong": "1"
+                    },
+                    "hitrate": 0.0,
+                    "id": "9423532646014c522568ecd5c228ba1810c26a4cb69e97a601a1868cf81d4aff"
+                }
+            ],
+            "hit_response_time": 0.6785714285714286,
+            "hitrate": 0.5
+        },
+        "contextrequest": {
+            "miss_response_time": 0.0,
+            "items": [],
+            "hit_response_time": 0.0,
+            "hitrate": 0.0
+        }
+    },
+    "cpree": {
+        "evaluateAndCacheContext": {
+            "error": {
+                "count": 28,
+                "average": 30
+            }
+        }
+    },
+    "coaas": {
+        "execute": {
+            "ok": {
+                "count": {
+                    "$numberLong": "14"
+                },
+                "average": {
+                    "$numberLong": "8496"
+                }
+            }
+        },
+        "executeFetch": {
+            "ok": {
+                "count": {
+                    "$numberLong": "28"
+                },
+                "average": {
+                    "$numberLong": "855"
+                }
+            }
+        }
+    },
+    "summary": {
+        "no_of_queries": {
+            "$numberLong": "14"
+        },
+        "delayed_queries": {
+            "$numberLong": "14"
+        },
+        "no_of_retrievals": {
+            "$numberLong": "28"
+        },
+        "no_of_delayed_retrievals": {
+            "$numberLong": "9"
+        },
+        "avg_query_overhead": {
+            "$numberLong": "8496"
+        },
+        "avg_network_overhead": {
+            "$numberLong": "855"
+        },
+        "avg_processing_overhead": 720493.7142857143,
+        "gain": -14.58152786445714,
+        "avg_gain": -1.0415377046040815,
+        "total_gain": -14.499777864794279,
+        "avg_total_gain": -1.0356984189138772,
+        "earning": 0.0,
+        "cache_cost": 0.0,
+        "processing_cost": 2.4215277599999996,
+        "penalty_cost": 10.400000087916851,
+        "penalty_earning": 0.08174999966286123,
+        "retrieval_cost": 1.760000016540289
+    },
+    "created": "2023.01.10-11.36.29"
+}

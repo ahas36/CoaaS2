@@ -11,7 +11,6 @@ const divisor = 1073741824;
 })
 
 export class ApiServiceService {
-
   apiData;
   queryLocs;
   modelState;

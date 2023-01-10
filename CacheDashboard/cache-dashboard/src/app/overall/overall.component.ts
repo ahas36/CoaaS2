@@ -478,7 +478,7 @@ export class OverallComponent implements OnInit {
       // 3rd - Left
       this.earning = data.earning.get();
       this.lineChartData.push({ data: this.earning, label: 'Earning' }); 
-      this.penalty_earning = data.earning.get();
+      this.penalty_earning = data.penalty_earning.get();
       this.lineChartData.push({ data: this.penalty_earning, label: 'Penalty Earning' });    
       this.retrieval_cost = data.retrieval_cost.get();
       this.lineChartData.push({ data: this.retrieval_cost, label: 'Retrieval Cost' });

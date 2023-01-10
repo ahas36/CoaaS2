@@ -31,38 +31,49 @@ public class ConQEngHelper {
     public static boolean createContextRequest(JSONObject cr, JSONArray contextServices, String sample){
         String result = call(baseURL + "context_requests",
                 HttpRequests.POST, cr.toString());
+
         if(result != null) {
-            Executors.newCachedThreadPool().execute(() -> {
-                if(result.startsWith("{")){
-                    JSONObject crRes = new JSONObject(result);
-                    String crId = crRes.getString("_id");
-                    SQEMServiceGrpc.SQEMServiceFutureStub future =
-                            SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                    future.logConQEngCR(ConQEngLog.newBuilder()
-                            .setId(crId).setCr(cr.toString()).setStatus(200).build());
+            if(result.startsWith("{")){
+                JSONObject crRes = new JSONObject(result);
+                String crId = crRes.getString("_id");
+                SQEMServiceGrpc.SQEMServiceFutureStub future =
+                        SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                future.logConQEngCR(ConQEngLog.newBuilder()
+                        .setId(crId).setCr(cr.toString()).setStatus(200).build());
+                Executors.newSingleThreadExecutor().execute(() -> reportContextProviders(contextServices, sample, crId));
+            }
 
-                    contextServices.forEach(cs -> {
-                        JSONObject fcp  = (JSONObject) cs;
-                        JSONObject conqEngSort = new JSONObject(sample);
-
-                        conqEngSort.put("pid", fcp.getJSONObject("_id").getString("$oid"));
-
-                        // The following are example SLA values given to ConQEng as reference.
-                        JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
-                        conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
-                        conqEngSort.put("cost", cpQoS.getDouble("rate"));
-                        conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
-
-                        if(!registerCPs(conqEngSort)) {
-                            log.severe("Failed registering Context Providers for " + crId + ".");
-                            return;
-                        }
-                    });
-                }
-            });
             return true;
         }
         return false;
+    }
+
+    private static void reportContextProviders(JSONArray contextServices, String sample, String crId){
+        // This block threw a concurrent modification exception when used an iterator.
+        for(int i = 0; i < contextServices.length(); i++){
+            try {
+                JSONObject fcp  = (JSONObject) contextServices.get(i);
+                JSONObject conqEngSort = new JSONObject(sample);
+
+                conqEngSort.put("pid", fcp.getJSONObject("_id").getString("$oid"));
+
+                // The following are example SLA values given to ConQEng as reference.
+                JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
+                conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
+                conqEngSort.put("cost", cpQoS.getDouble("rate"));
+                conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
+
+                boolean res = registerCPs(conqEngSort);
+                if(!res) {
+                    log.severe("Failed registering Context Providers for " + crId + ".");
+                    break;
+                }
+            }
+            catch(Exception ex){
+                log.severe("Error occured in registering all the context providers: " +
+                        ex.getMessage());
+            }
+        }
     }
 
     // Requests the ordered list of Context Providers based on Cost and Quality from ConQEng.

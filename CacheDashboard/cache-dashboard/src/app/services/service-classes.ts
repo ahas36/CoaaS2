@@ -46,7 +46,7 @@ export class CacheStat{
 
 export class CachePerfStat{
   public value: number;
-  public unit: String;
+  public unit: string;
 }
 
 export class LevelStat{

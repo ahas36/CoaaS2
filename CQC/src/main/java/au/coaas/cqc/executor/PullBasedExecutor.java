@@ -498,7 +498,10 @@ public class PullBasedExecutor {
                     }
                     filters.add(filter.pop());
                     List<JSONObject> result = new ArrayList<>();
-                    ce.get(entityId).getJSONArray("results").forEach(x -> result.add((JSONObject) x));
+                    if(ce.get(entityId).has("results"))
+                        ce.get(entityId).getJSONArray("results").forEach(x -> result.add((JSONObject) x));
+                    else if(ce.get(entityId).length() != 0)
+                        result.add(ce.get(entityId));
 
                     List<JSONObject> dataList = result.stream().filter(filters.stream().reduce(x -> true, Predicate::and))
                             .collect(Collectors.toList());
@@ -577,7 +580,10 @@ public class PullBasedExecutor {
                     }
                     filters.add(filter.pop());
                     List<JSONObject> result = new ArrayList<>();
-                    ce.get(entityId).getJSONArray("results").forEach(x -> result.add((JSONObject) x));
+                    if(ce.get(entityId).has("results"))
+                        ce.get(entityId).getJSONArray("results").forEach(x -> result.add((JSONObject) x));
+                    else if(ce.get(entityId).length() != 0)
+                        result.add(ce.get(entityId));
 
                     List<JSONObject> dataList = result.stream().filter(filters.stream().reduce(x -> true, Predicate::and))
                             .collect(Collectors.toList());
@@ -827,7 +833,8 @@ public class PullBasedExecutor {
                     if(appliee == null) {
                         attribute = ca.getAttributeName();
                         resultEntity = ca.getEntityName();
-                        appliee = ce.get(resultEntity).getJSONArray("results");
+                        appliee = ce.get(resultEntity).has("results") ?
+                                ce.get(resultEntity).getJSONArray("results") : new JSONArray();
                     }
                     else {
                         JSONObject comparator = ce.get(ca.getEntityName());

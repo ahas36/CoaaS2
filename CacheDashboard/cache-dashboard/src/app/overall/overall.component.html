@@ -134,7 +134,7 @@
             <mat-card class="chart-card-2" style="width:305px; height:70px; display: block; margin-top: 12px;">
                 <mat-card-content class="description">
                     <div class="metric">
-                        <h1>{{penlty_earning[penalty_earning.length-1]}}</h1>
+                        <h1>{{penalty_earning[penalty_earning.length-1]}}</h1>
                         <h3> AUD</h3>
                         <p><i class="fa fa-circle " style="color:rgb(17, 192, 45, 0.6)"></i>   Penalties Earning </p>
                     </div>
@@ -189,10 +189,10 @@
             </mat-card>
         </div>
         <div style="display:inline-block; vertical-align:top;">
-            <mat-card class="chart-card-2" style="width:550px;">
+            <mat-card class="chart-card-2" style="width:550px;height:240px">
                 <mat-card-content>
                     <div class="chart-line" style="width:520px; height:100px !important;">
-                        <h2>Earning to Cost Ratio</h2>
+                        <h2 style="margin-top:0px">Earning to Cost Ratio</h2>
                         <canvas baseChart
                             height = 110px
                             [datasets]="line4ChartData"
@@ -207,10 +207,10 @@
                 </mat-card-content>
             </mat-card>
             <br/><br/>
-            <mat-card class="chart-card-2" style="width:550px;">
+            <mat-card class="chart-card-2" style="width:550px;height:240px">
                 <mat-card-content>
                     <div class="chart-line" style="width:520px; height:100px !important;">
-                        <h2>Average Applicable Freshness Threshold</h2>
+                        <h2 style="margin-top:0px">Average Applicable Freshness Threshold</h2>
                         <canvas baseChart
                             height = 110px
                             [datasets]="line6ChartData"

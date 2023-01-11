@@ -253,7 +253,7 @@ public class RefreshExecutor {
 
         double fthresh = 0.0;
         if(profile.getExpFthr().startsWith("{")){
-            JSONObject cp_prof = new JSONObject(profile.getExpFthr());
+            JSONObject cp_prof = new JSONObject(!profile.getExpFthr().equals("NaN") ? profile.getExpFthr() : 0.7);
             fthresh = cp_prof.getDouble("fthresh");
         }
         else

@@ -88,4 +88,4 @@ class CarParkContext(Resource):
             print('An error occured : ' + traceback.format_exc())
 
             # Return message and 400 Error code
-            return parse_response({'message':'An error occured'}), 400  
+            return parse_response({'message':'An error occured: ' + traceback.format_exc() }), 400  

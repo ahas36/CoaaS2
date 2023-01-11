@@ -166,7 +166,8 @@ class CarparkHandler(metaclass=SingletonMeta):
             variation = park['occupancy'][date]
             current_availability = capacity - variation[index]
 
-            if current_availability < int(args['availableSlots']):
+            if current_availability == 0: continue
+            if ('availableSlots' in args) and (current_availability < int(args['availableSlots'])):
                 continue
 
             park['ownedBy'] = {
@@ -179,13 +180,22 @@ class CarparkHandler(metaclass=SingletonMeta):
             }
             park['currenciesAccepted'] = 'AUD'
             
-            if 'height' in park['gates'][0] and park['gates'][0]['height']['value'] >= float(args['maxHeight']):
-                park['maxHeight'] = {
-                    "value": park['gates'][0]['height']['value'],
-                    "unitText": park['gates'][0]['height']['unit']
-                }
+            if('maxHeight' in args):
+                if 'height' in park['gates'][0] and park['gates'][0]['height']['value'] >= float(args['maxHeight']):
+                    park['maxHeight'] = {
+                        "value": park['gates'][0]['height']['value'],
+                        "unitText": park['gates'][0]['height']['unit']
+                    }
+                else:
+                    continue
             else:
-                continue
+                if 'height' in park['gates'][0]:
+                    park['maxHeight'] = {
+                        "value": park['gates'][0]['height']['value'],
+                        "unitText": park['gates'][0]['height']['unit']
+                    }
+                else:
+                    continue
 
             if 'hourly' in park['price']:
                 for off in park['price']['hourly']:
@@ -201,7 +211,7 @@ class CarparkHandler(metaclass=SingletonMeta):
                     'priceCurrency': 'AUD'
                 }
 
-            if 'price' in args and park['price_offer']['price'] > float(args['price']):
+            if ('price' in args) and park['price_offer']['price'] > float(args['price']):
                 continue
 
             del park['_id']
@@ -222,13 +232,19 @@ class CarparkHandler(metaclass=SingletonMeta):
                     isOpen = True
                 else:
                     isOpen = False
-                    
-            if isOpen and bool(args['isOpen']):
-                park['free_slots'] = current_availability
-                park['is_open'] = True
-            else:
-                continue
-            
+
+            if 'isOpen' in args:
+                if isOpen and bool(args['isOpen']):
+                    park['free_slots'] = current_availability
+                    park['is_open'] = True
+                else:
+                    continue
+            else: 
+                if isOpen:
+                    park['free_slots'] = current_availability
+                    park['is_open'] = True
+                else:
+                    continue
             selected_parks.append(park)
         
         return selected_parks, 200

@@ -87,19 +87,6 @@ public class RetrievalManager {
                 else age = Long.valueOf(response.getString("age"));
             }
 
-            // Step 3
-            // Report back retrieval performance to ConQEng
-            long finalAge = age;
-            CSIResponse finalFetch = fetch;
-            Executors.newCachedThreadPool().execute(()-> {
-                        JSONObject conqEngReport = new JSONObject();
-                        conqEngReport.put("age", finalAge);
-                        conqEngReport.put("id", cpId);
-                        conqEngReport.put("Ca", new JSONObject(finalFetch.getBody()));
-                        ConQEngHelper.reportPerformance(conqEngReport);
-                    }
-            );
-
             long retLatency = endTime-startTime;
             double retDiff = retLatency - qos.getDouble("rtmax");
             if(retDiff > 0){
@@ -115,25 +102,6 @@ public class RetrievalManager {
 
             return fetch.getBody();
         }
-
-        // Sending feedback of unavailable CP to ConQEng
-        Executors.newCachedThreadPool().execute(() -> {
-            JSONObject conqEngFB = new JSONObject();
-            conqEngFB.put("ccid", ccId);
-            conqEngFB.put("cctype", "AC");
-            conqEngFB.put("etype", entType);
-            conqEngFB.put("Ca", attributes);
-
-            conqEngFB.put("latitude", "x");
-            conqEngFB.put("longitude", "y");
-
-            conqEngFB.put("pid", cpId);
-            conqEngFB.put("RRunit", 0);
-            conqEngFB.put("price", qos.getDouble("rate"));
-            conqEngFB.put("timeliness", qos.getDouble("rtmax"));
-
-            ConQEngHelper.reportFeedback(conqEngFB);
-        });
 
         // Returning null means the CMP failed to retrieved context from the provider despite all attempts.
         return null;

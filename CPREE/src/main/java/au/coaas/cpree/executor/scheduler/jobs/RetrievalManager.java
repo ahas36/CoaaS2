@@ -88,19 +88,6 @@ public class RetrievalManager {
                 else age = Long.valueOf(response.getString("age"));
             }
 
-            // Step 3
-            // Report back retrieval performance to ConQEng
-            long finalAge = age;
-            CSIResponse finalFetch = fetch;
-            Executors.newCachedThreadPool().execute(()-> {
-                        JSONObject conqEngReport = new JSONObject();
-                        conqEngReport.put("age", finalAge);
-                        conqEngReport.put("id", provider.getJSONObject("_id").getString("$oid"));
-                        conqEngReport.put("Ca", new JSONObject(finalFetch.getBody()));
-                        ConQEngHelper.reportPerformance(conqEngReport);
-                    }
-            );
-
             long retLatency = endTime-startTime;
             double retDiff = retLatency - qos.getDouble("rtmax");
             if(retDiff > 0){

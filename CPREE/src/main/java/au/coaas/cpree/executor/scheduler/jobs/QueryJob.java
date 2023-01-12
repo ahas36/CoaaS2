@@ -33,38 +33,6 @@ public class QueryJob implements Job {
                     dataMap.getString("params"),
                     new TypeToken<HashMap<String, String>>() {}.getType());
 
-            SimpleTrigger trigger = (SimpleTrigger) context.getTrigger();
-
-            // Periodically checking if priority has changed for the context provider.
-            if(trigger.getTimesTriggered() % 10 == 0){
-                Executors.newCachedThreadPool().execute(() -> {
-                    JSONObject conqEngSort = new JSONObject();
-                    conqEngSort.put("clatitude", "x");
-                    conqEngSort.put("clongitude", "y");
-                    conqEngSort.put("cetype", dataMap.getString("entityType"));
-                    // Not sure whether this next line would actually work.
-                    conqEngSort.put("cCa", (List<String>) dataMap.get("attributes"));
-
-                    conqEngSort.put("pid", dataMap.getString("cpId"));
-
-                    // The following are example SLA values given to ConQEng as reference.
-                    JSONObject fcp = new JSONObject(contextProvider);
-                    JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
-
-                    conqEngSort.put("cost", cpQoS.getDouble("rate"));
-                    conqEngSort.put("ctimeliness", cpQoS.getDouble("rtmax"));
-                    conqEngSort.put("pen_timeliness", cpQoS.getDouble("penPct"));
-
-                    if(!ConQEngHelper.verifyCPOrder(conqEngSort)) {
-                        log.info("Context Provider priority has changed for " + contextId + ". Evicting for updated priority.");
-                        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                        String hashkey = (contextId.split("-"))[1];
-                        asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(hashkey).build());
-                    }
-                });
-            }
-
             String fetchResponse = null;
             switch (fetchMode){
                 case "reactive":
@@ -89,30 +57,6 @@ public class QueryJob implements Job {
                         = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                 String hashkey = (contextId.split("-"))[1];
                 asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(hashkey).build());
-
-                // Sending feedback of unavailable CP to ConQEng
-                Executors.newCachedThreadPool().execute(() -> {
-                    JSONObject conqEngFB = new JSONObject();
-                    conqEngFB.put("cctype", "AC");
-                    conqEngFB.put("latitude", "x");
-                    conqEngFB.put("longitude", "y");
-                    conqEngFB.put("ccid", (contextId.split("-"))[0]);
-                    conqEngFB.put("etype", dataMap.getString("entityType"));
-                    // Not sure whether this next line would actually work.
-                    conqEngFB.put("Ca", (List<String>) dataMap.get("attributes"));
-
-                    conqEngFB.put("pid", dataMap.getString("cpId"));
-
-                    JSONObject fcp = new JSONObject(contextProvider);
-                    JSONObject cpQoS = fcp.getJSONObject("sla").getJSONObject("qos");
-
-                    conqEngFB.put("price", cpQoS.getDouble("rate"));
-                    conqEngFB.put("timeliness", cpQoS.getDouble("rtmax"));
-                    // This value indicates the CP is currently unavailable.
-                    conqEngFB.put("RRunit", 0);
-
-                    ConQEngHelper.reportFeedback(conqEngFB);
-                });
 
                 throw new RuntimeException("Couldn't retrieve the context for refreshing. Evicted the entity as a result.");
             }

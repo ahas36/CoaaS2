@@ -1,4 +1,5 @@
 import sys, os
+import datetime
 
 from lib.restapiwrapper import Requester
 sys.path.append(os.path.abspath(os.path.join('.')))
@@ -12,8 +13,9 @@ class PlaceHandler(metaclass=SingletonMeta):
         self.__db = db
         self.__config = config
 
-    def getPlace(self, address):
+    def getPlace(self, address, type):
         place = self.__db.read_single('places', {'name':address})
+        time = datetime.datetime.now()
     
         if place == None:
             """Go to Google Maps and get the result"""
@@ -32,10 +34,18 @@ class PlaceHandler(metaclass=SingletonMeta):
             return [],200
         else:
             del place['_id']
+            age = time.second
+            if(type == "1"):
+                age = age + (60*time.minute)
+                
             place['primary_location'] = {
                 'address': place['formatted_address'],
                 'latitude': place['geometry']['location']['lat'],
                 'longitude': place['geometry']['location']['lng']
+            }
+            place['age'] = {
+                'value':age,
+                'unitText': 's'
             }
 
             return [place], 200

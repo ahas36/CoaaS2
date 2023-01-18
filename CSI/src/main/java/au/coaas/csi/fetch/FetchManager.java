@@ -85,6 +85,9 @@ public class FetchManager {
             call.enqueue(fu_res);
             Response response = fu_res.future.get();
 
+            if(response.code() != 200)
+                return CSIResponse.newBuilder().setStatus("500").build();
+
             // This is what I should be caching at this point. Not the entity.
             // When the context service is resolved, the cache should look if the context service response is available in cache.
             String res = response.body().string().trim();

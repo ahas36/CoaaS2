@@ -40,9 +40,8 @@ class PlaceContext(Resource):
         try:            
             # Retriving the measurement
             args = request.args
-            data = self.handler.getPlace(args['name'])
-
             csType = args['type']
+            data = self.handler.getPlace(args['name'],csType)
             chance = 0.0
 
             if(csType == "1"):

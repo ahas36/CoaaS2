@@ -33,7 +33,9 @@ public class SelectionExecutor {
     private static final boolean cacheAll = false; // Should be false
 
     private static final double min_value = 0.001;
-    private static final long max_delay_cache_residence = 3600 * 1000;
+    private static final long min_cache_residence = 60000;
+    private static final long max_delay_cache_residence = 600000;
+    private static final long max_threshold = (long) (Math.pow(2,15)-1);
 
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
 
@@ -45,7 +47,7 @@ public class SelectionExecutor {
     private static Hashtable<String, Double> cachePerfStats = new Hashtable<>();
     private static Hashtable<String, Double> cacheLookupLatency = new Hashtable<>();
 
-    private static ExecutorService executor = Executors.newScheduledThreadPool(20);
+    private static ExecutorService executor = Executors.newScheduledThreadPool(40);
 
     private static void defaultWeights(){
         weightThresholds.put("kappa", 0.2);
@@ -56,22 +58,25 @@ public class SelectionExecutor {
         weightThresholds.put("teta", 0.5);
 
         double thresh = valueHistory.reverse(0.5);
-        weightThresholds.put("threshold", Double.isNaN(thresh)? Math.pow(2,31)-1 : thresh);
+        weightThresholds.put("threshold", Double.isNaN(thresh)? max_threshold : thresh);
     }
 
     public static Empty updateWeights(LearnedWeights request){
-        weightThresholds.put("kappa", request.getKappa());
         weightThresholds.put("mu", request.getMu());
         weightThresholds.put("pi", request.getPi());
-        weightThresholds.put("delta", request.getDelta());
         weightThresholds.put("row", request.getRow());
+        weightThresholds.put("delta", request.getDelta());
+        weightThresholds.put("kappa", request.getKappa());
         weightThresholds.put("teta", request.getThreshold());
 
         double thresh = valueHistory.reverse(request.getThreshold());
-        if(weightThresholds.containsKey("threshold") && !Double.isNaN(thresh))
+        if(weightThresholds.containsKey("threshold") && !Double.isNaN(thresh)){
+            // I'm not sure of how this next line would have an impact.
+            if(thresh < 0) weightThresholds.put("threshold", 0.0);
             weightThresholds.put("threshold", thresh);
+        }
         else if(!weightThresholds.containsKey("threshold"))
-            weightThresholds.put("threshold", Math.pow(2,31)-1);
+            weightThresholds.put("threshold", 1000.0);
 
         return null;
     }
@@ -152,6 +157,7 @@ public class SelectionExecutor {
                 return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
             }
 
+            // When not caching all the context as in traditional techniques.
             if (profile.getStatus().equals("200")) {
                 // Evaluate and Cache if selected
                 AbstractMap.SimpleEntry<Boolean, RefreshLogics> result = evaluateAndCache(request.getContext(),
@@ -216,7 +222,8 @@ public class SelectionExecutor {
             ListenableFuture<ContextProfile> c_profile = sqemStub.getContextProfile(ContextProfileRequest.newBuilder()
                     .setPrimaryKey(contextId).build());
 
-            double lambda = c_profile.get().getExpAR().equals("NaN") ? 1.0/60 : Double.valueOf(c_profile.get().getExpAR()); // per second
+            double lambda = c_profile.get().getExpAR().equals("NaN") ? 1.0/60 :
+                        Double.valueOf(c_profile.get().getExpAR()); // per second
 
             if(!profile.getAccessTrend().equals("NaN") &&
                     LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
@@ -231,12 +238,13 @@ public class SelectionExecutor {
                 String pre_json = new Gson().toJson(weightThresholds);
                 JSONObject json = new JSONObject(pre_json);
 
-                ListenableFuture<QueryClassProfile> cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest.newBuilder()
-                        .setPrimaryKey(lookup.getQClass()).build());
+                ListenableFuture<QueryClassProfile> cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest
+                        .newBuilder().setPrimaryKey(lookup.getQClass()).build());
 
                 double access_trend = c_profile.get().getTrend().equals("NaN") ?
                         0.0 : Double.valueOf(c_profile.get().getTrend());
 
+                // Access Rate to Context Information Dropping
                 if(access_trend < 0){
                     // TODO: IMPORTANT!
                     // In the next line, it is assumed that there is only one class of context queries because, the
@@ -247,7 +255,7 @@ public class SelectionExecutor {
 
                     if(cqc_profile.get().getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
-                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+                        double fthr = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
@@ -320,8 +328,8 @@ public class SelectionExecutor {
                                 est_cacheLife = lambda_conf < 0 ?
                                         Math.round(((-intercept)/access_trend) * 1000) :
                                         Math.round(((lambda_conf - intercept)/access_trend) * 1000);
-                                if(est_cacheLife < 0)
-                                    est_cacheLife = Math.abs(est_cacheLife);
+                                if(est_cacheLife < min_cache_residence)
+                                    est_cacheLife = min_cache_residence;
 
                                 json.put("definite", true);
                                 json.put("cache_life", est_cacheLife);
@@ -345,15 +353,17 @@ public class SelectionExecutor {
                                     indefinite = true;
                                     json.put("label", "not_cache_indefinite");
                                     json.put("definite", false);
-                                    json.put("lambda_conf", lambda_conf);
-                                    LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda_conf);
+                                    json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
+                                    LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
+                                            lambda_conf < 0 ? 0.0 : lambda_conf);
                                 }
                                 else {
-                                    est_delayTime = 60 * 1000; // default delay
+                                    est_delayTime = min_cache_residence; // default delay
                                     json.put("label", "not_cache_definite");
                                     json.put("definite", true);
                                     json.put("delay_time", est_delayTime);
-                                    LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                                    LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId,
+                                            curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
                                 }
                             }
                         }
@@ -382,8 +392,9 @@ public class SelectionExecutor {
                             indefinite = true;
                             json.put("label", "not_cache_indefinite");
                             json.put("definite", false);
-                            json.put("lambda_conf", lambda_conf);
-                            LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda_conf);
+                            json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
+                            LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
+                                    lambda_conf < 0 ? 0.0 : lambda_conf);
                         }
 
                         // Record decision history
@@ -397,7 +408,7 @@ public class SelectionExecutor {
                     // the eviction algorithm.
                     if(cqc_profile.get().getStatus().equals("200")) {
                         JSONObject slaObj = new JSONObject(sla);
-                        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+                        double fthr = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
@@ -470,7 +481,7 @@ public class SelectionExecutor {
                                     lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
                                 }
                                 json.put("definite", false);
-                                json.put("lambda_conf", lambda_conf);
+                                json.put("lambda_conf", lambda_conf < 0 ? 0.0:lambda_conf);
                             }
                             else {
                                 // Need to delay until the AR is such that it could at least break-even the cost.
@@ -488,13 +499,13 @@ public class SelectionExecutor {
                                         lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
                                     }
                                     est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
-                                    if(est_delayTime < 0)
+                                    if(est_delayTime <= 0)
                                         est_delayTime = Math.abs(est_delayTime);
                                     if(est_delayTime > max_delay_cache_residence)
                                         est_delayTime = max_delay_cache_residence;
                                 }
                                 else {
-                                    est_delayTime = 60 * 1000; // default delay
+                                    est_delayTime = min_cache_residence; // default delay
                                 }
                                 LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
                                 json.put("definite", true);
@@ -526,8 +537,9 @@ public class SelectionExecutor {
                             indefinite = true;
                             json.put("label", "not_cache_indefinite");
                             json.put("definite", false);
-                            json.put("lambda_conf", lambda_conf);
-                            LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda_conf);
+                            json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
+                            LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
+                                    lambda_conf < 0 ? 0.0 : lambda_conf);
                         }
 
                         // Recording decision history
@@ -578,13 +590,13 @@ public class SelectionExecutor {
                 + (cacheLookupLatency.get("200") * (1 - missRate)));
         double redirCost = cachePerfStats.get("processCost") * (retLatency + cacheLookupLatency.get("404"));
 
-        return cacheCost > 0 ? redirCost/cacheCost : Double.MAX_VALUE;
+        return cacheCost > 0 ? redirCost/cacheCost : max_threshold;
     }
 
     private static RetrievalEfficiency getRetrievalEfficiency(String serviceId, ContextProviderProfile profile, double expLambda,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
         /** Initializing the variables **/
-        double fthr = profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
+        double fthr = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                 slaObj.getJSONObject("freshness").getDouble("fthresh");
         double lambda = expLambda; // per second
         double rtmax = Double.valueOf(cqc_profile.getRtmax()); // seconds
@@ -681,6 +693,8 @@ public class SelectionExecutor {
 
         // Retrieval efficiency is the ratio between the cost of totally retrieving from the CPs in an adhoc manner
         // called the redirector mode, and the cost of serving from a cache
-        return response.setEfficiecy(red_cost/cache_cost).setCacheCost(cache_cost).setExpMR(exp_mr).build();
+        double retEff = red_cost/cache_cost;
+        return response.setEfficiecy(retEff > max_threshold ? max_threshold : retEff)
+                .setCacheCost(cache_cost).setExpMR(exp_mr).build();
     }
 }

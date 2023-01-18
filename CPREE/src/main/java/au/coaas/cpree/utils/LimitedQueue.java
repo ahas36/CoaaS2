@@ -37,6 +37,7 @@ public class LimitedQueue<E> extends LinkedList<E> {
     public double reverse(double teta) {
         stdDev = Utilities.getStandardDeviation(super.toArray(), average());
         double zValue = Utilities.getZValueForProbability(teta);
+        if(Double.isNaN(zValue)) return mean;
         return mean + (zValue * stdDev);
     }
 }

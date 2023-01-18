@@ -1566,7 +1566,7 @@ public class PerformanceLogHandler {
                     }
                 };
 
-                ExecutorService regression_executor = Executors.newFixedThreadPool(3);
+                ExecutorService regression_executor = Executors.newFixedThreadPool(6);
                 ArrayList<Future<?>> taskList = new ArrayList<>();
 
                 // The list is inverted, so, estimating from x=-1.

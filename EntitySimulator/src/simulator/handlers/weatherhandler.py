@@ -32,7 +32,16 @@ class WeatherHandler(metaclass=SingletonMeta):
         else:
             hour = str(hour)
 
-        age = time.second + (60*time.minute)
+        # this is becasue sampling happens every 1hr only.
+        age = time.second
+        if(type == "1"):
+            age = age + (60*time.minute)
+        elif(type == "2"):
+            mins = time.minute % 30
+            age = age + (60*mins)
+        else:
+            mins = time.minute % 10
+            age = time.second + (60*mins)
 
         curr_time = "2019{0}{1}T{2}00".format(month,date,hour)
         weather = self.__db.read_single('weather', {'timestamp':curr_time})

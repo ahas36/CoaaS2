@@ -1,4 +1,6 @@
 import sys, os
+import datetime
+
 sys.path.append(os.path.abspath(os.path.join('.')))
 
 from SingletonMeta import SingletonMeta
@@ -14,6 +16,17 @@ class VehicleHandler(metaclass=SingletonMeta):
             return {}, 404
         else:
             location = self.__db.read_single('query-params', {'vin':vin})
+            time = datetime.datetime.now()
+            age = time.second
+            if(csType == "4" or csType == "3"):
+                age = age % 30
+            elif(csType == "9"):
+                age = age % 20
+            elif(csType == "2" or csType == "8"):
+                age = age % 10
+            else:
+                mins = time.minute % 2
+                age = age + (60 * mins)
 
             if(csType == "1" or csType == "5" or csType == "8" or csType == "9"):
                 return {
@@ -54,6 +67,10 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'speed': {
                         'value': 60,
                         'unitText': 'kmph'
+                    },
+                    'age': {
+                        'value':age,
+                        'unitText': 's'
                     } 
                 }, 200
             elif(csType == "2"):
@@ -79,6 +96,10 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'speed': {
                         'value': 60,
                         'unitText': 'kmph'
+                    },
+                    'age': {
+                        'value':age,
+                        'unitText': 's'
                     } 
                 }, 200
             elif(csType == "3"):
@@ -104,6 +125,10 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'speed': {
                         'value': 60,
                         'unitText': 'kmph'
+                    },
+                    'age': {
+                        'value':age,
+                        'unitText': 's'
                     } 
                 }, 200
             elif(csType == "4"):
@@ -137,6 +162,10 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'speed': {
                         'value': 60,
                         'unitText': 'kmph'
+                    },
+                    'age': {
+                        'value':age,
+                        'unitText': 's'
                     } 
                 }, 200
             elif(csType == "6"):
@@ -165,6 +194,10 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'speed': {
                         'value': 60,
                         'unitText': 'kmph'
+                    },
+                    'age': {
+                        'value':age,
+                        'unitText': 's'
                     } 
                 }, 200
             elif(csType == "7"):
@@ -185,6 +218,10 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'speed': {
                         'value': 60,
                         'unitText': 'kmph'
+                    },
+                    'age': {
+                        'value':age,
+                        'unitText': 's'
                     } 
                 }, 200
             else:
@@ -214,6 +251,10 @@ class VehicleHandler(metaclass=SingletonMeta):
                     'speed': {
                         'value': 60,
                         'unitText': 'kmph'
+                    },
+                    'age': {
+                        'value':age,
+                        'unitText': 's'
                     } 
                 }, 200
 

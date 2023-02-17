@@ -77,8 +77,13 @@ public class MainParser {
             throw new CDQLSyntaxtErrorException(error);
         }
 
-        ExecutorService executorService = Executors.newSingleThreadExecutor();
-        Future<Double> complexity = executorService.submit(() -> measureComplexity(tree, parser));
+        Future<Double> complexity = null;
+        boolean isFunctionRegistry = stringQuery.contains("sFunction") || stringQuery.contains("aFunction");
+
+        if(!isFunctionRegistry){
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            complexity = executorService.submit(() -> measureComplexity(tree, parser));
+        }
 
         CdqlVisitorImpl stringCDQLBaseVisitor = new CdqlVisitorImpl();
         // Walk the tree created during the parse, trigger callbacks
@@ -103,38 +108,44 @@ public class MainParser {
                 throw new CDQLSyntaxtErrorException(error);
             }
             // Logging the parsed query tree for collaborative filtering
-            Executors.newCachedThreadPool().execute(() -> {
-                try {
-                    logParsedQueryTree(Arrays.asList(parser.getRuleNames()),
-                            tree, queryId, complexity.get());
-                } catch (InterruptedException e) {
-                    log.severe(e.getMessage());
-                } catch (ExecutionException e) {
-                    log.severe(e.getMessage());
-                }
-            });
+            if(!isFunctionRegistry) {
+                Future<Double> finalComplexity = complexity;
+                Executors.newCachedThreadPool().execute(() -> {
+                    try {
+                        logParsedQueryTree(Arrays.asList(parser.getRuleNames()),
+                                tree, queryId, finalComplexity.get());
+                    } catch (InterruptedException e) {
+                        log.severe(e.getMessage());
+                    } catch (ExecutionException e) {
+                        log.severe(e.getMessage());
+                    }
+                });
+            }
 
             return cdqlConstructBuilder.setType(CDQLType.QUERY)
                     .setQuery(query.build())
-                    .setComplexity(complexity.get())
+                    .setComplexity(3)
                     .setQueryId(queryId).build();
         }
         else if (stringCDQLBaseVisitor.getContextFunction() != null) {
             // Logging the parsed query tree for collaborative filtering
-            Executors.newCachedThreadPool().execute(() -> {
-                try {
-                    logParsedQueryTree(Arrays.asList(parser.getRuleNames()),
-                            tree, queryId, complexity.get());
-                } catch (InterruptedException e) {
-                    log.severe(e.getMessage());
-                } catch (ExecutionException e) {
-                    log.severe(e.getMessage());
-                }
-            });
+            if(!isFunctionRegistry) {
+                Future<Double> finalComplexity1 = complexity;
+                Executors.newCachedThreadPool().execute(() -> {
+                    try {
+                        logParsedQueryTree(Arrays.asList(parser.getRuleNames()),
+                                tree, queryId, finalComplexity1.get());
+                    } catch (InterruptedException e) {
+                        log.severe(e.getMessage());
+                    } catch (ExecutionException e) {
+                        log.severe(e.getMessage());
+                    }
+                });
+            }
 
             return cdqlConstructBuilder.setType(CDQLType.FUNCTION_DEF)
                     .setFunction(stringCDQLBaseVisitor.getContextFunction().build())
-                    .setComplexity(complexity.get())
+                    .setComplexity(3)
                     .setQueryId(queryId).build();
         }
 

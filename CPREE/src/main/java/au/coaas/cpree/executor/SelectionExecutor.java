@@ -291,10 +291,10 @@ public class SelectionExecutor {
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
                             double vec_total = caching_efficiency < min_value ? 0 : Math.pow(caching_efficiency, 2) +
+                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2) +
                                     access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
                                     complexity < min_value ? 0 : Math.pow(complexity, 2) +
-                                    retEff < min_value ? 0 : Math.pow(retEff, 2) +
-                                    Math.pow(reliability, 2);
+                                    retEff < min_value ? 0 : Math.pow(retEff, 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
@@ -302,13 +302,13 @@ public class SelectionExecutor {
                             double nonRetrievalConfidence = 0;
                             if(denom != 0){
                                 nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * caching_efficiency) +
+                                        complexity < min_value ? 0 : (weightThresholds.get("row") * complexity) +
                                         access_trend < min_value ? 0 : (weightThresholds.get("kappa") * access_trend) +
-                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * reliability) +
-                                        complexity < min_value ? 0 : (weightThresholds.get("row") * complexity);
+                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * (1-reliability));
 
                                 cacheConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * ((1-reliability)/denom)) +
                                         access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
-                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * (reliability/denom)) +
                                         complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom)) +
                                         retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom));
                             }
@@ -372,8 +372,8 @@ public class SelectionExecutor {
                             json.put("retEff", 0.0);
                             json.put("cacheEff", 0.0);
                             double vec_total = access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
-                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
-                                    Math.pow(reliability, 2);
+                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2) +
+                                    complexity < min_value ? 0 : Math.pow(complexity, 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
@@ -447,7 +447,7 @@ public class SelectionExecutor {
                                     access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
                                     complexity < min_value ? 0 : Math.pow(complexity, 2) +
                                     retEff < min_value ? 0 : Math.pow(retEff, 2) +
-                                    Math.pow(reliability, 2);
+                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
@@ -456,12 +456,12 @@ public class SelectionExecutor {
                             if(denom != 0){
                                 nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * caching_efficiency) +
                                         access_trend < min_value ? 0 : (weightThresholds.get("kappa") * access_trend) +
-                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * reliability) +
+                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * (1-reliability)) +
                                         complexity < min_value ? 0 : (weightThresholds.get("row") * complexity);
 
                                 cacheConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
                                         access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
-                                        reliability < min_value ? 0 : (weightThresholds.get("delta") * (reliability/denom)) +
+                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * ((1-reliability)/denom)) +
                                         complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom)) +
                                         retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom));
                             }
@@ -517,8 +517,8 @@ public class SelectionExecutor {
                             json.put("retEff", 0.0);
                             json.put("cacheEff", 0.0);
                             double vec_total = access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
-                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
-                                    Math.pow(reliability, 2);
+                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2) +
+                                    complexity < min_value ? 0 : Math.pow(complexity, 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
@@ -535,8 +535,8 @@ public class SelectionExecutor {
                             }
                             // Indefinite delaying until the item reach a better AR
                             indefinite = true;
-                            json.put("label", "not_cache_indefinite");
                             json.put("definite", false);
+                            json.put("label", "not_cache_indefinite");
                             json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
                             LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
                                     lambda_conf < 0 ? 0.0 : lambda_conf);

@@ -762,33 +762,33 @@ public class PullBasedExecutor {
                 .setConstantTokenType(CdqlConstantConditionTokenType.Boolean)
                 .build(), true);
 
-            if (operand1.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Numeric) {
-                int res = Double.valueOf(operand1.getCdqlConditionToken().getStringValue())
-                            .compareTo(Double.valueOf(operand2.getCdqlConditionToken().getStringValue()));
-                switch (operator) {
-                    case ">":
-                        return res > 0 ? tokenTrue : tokenFalse;
-                    case ">=":
-                        return res >= 0 ? tokenTrue : tokenFalse;
-                    case "=":
-                        return res == 0 ? tokenTrue : tokenFalse;
-                    case "<=":
-                        return res <= 0 ? tokenTrue : tokenFalse;
-                    case "<":
-                        return res < 0 ? tokenTrue : tokenFalse;
-                    case "!=":
-                        return res != 0 ? tokenTrue : tokenFalse;
-                }
-            } else {
-                switch (operator) {
-                    case "=":
-                        return operand1.getCdqlConditionToken().getStringValue().equals(operand2.getCdqlConditionToken().getStringValue()) ?
-                                tokenTrue : tokenFalse;
-                    case "!=":
-                        return !operand1.getCdqlConditionToken().getStringValue().equals(operand2.getCdqlConditionToken().getStringValue()) ?
-                                tokenTrue : tokenFalse;
-                }
+        if (operand1.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Numeric) {
+            int res = Double.valueOf(operand1.getCdqlConditionToken().getStringValue())
+                        .compareTo(Double.valueOf(operand2.getCdqlConditionToken().getStringValue()));
+            switch (operator) {
+                case ">":
+                    return res > 0 ? tokenTrue : tokenFalse;
+                case ">=":
+                    return res >= 0 ? tokenTrue : tokenFalse;
+                case "=":
+                    return res == 0 ? tokenTrue : tokenFalse;
+                case "<=":
+                    return res <= 0 ? tokenTrue : tokenFalse;
+                case "<":
+                    return res < 0 ? tokenTrue : tokenFalse;
+                case "!=":
+                    return res != 0 ? tokenTrue : tokenFalse;
             }
+        } else {
+            switch (operator) {
+                case "=":
+                    return operand1.getCdqlConditionToken().getStringValue().equals(operand2.getCdqlConditionToken().getStringValue()) ?
+                            tokenTrue : tokenFalse;
+                case "!=":
+                    return !operand1.getCdqlConditionToken().getStringValue().equals(operand2.getCdqlConditionToken().getStringValue()) ?
+                            tokenTrue : tokenFalse;
+            }
+        }
 
         throw new WrongOperatorException("Wrong operator provided.");
     }
@@ -1183,7 +1183,7 @@ public class PullBasedExecutor {
                     }
                 } else {
                     String entityType = entities.getString("entityType");
-                    Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().toString().equals(entityType)).findFirst().get();
+                    Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
                     String prefix = findEntity.getKey();
                     entityKey = findEntity.getKey();
                     List<AttributeValue> entityAttributeValues = new ArrayList<>();
@@ -1252,7 +1252,14 @@ public class PullBasedExecutor {
             finalResult.put(itemResult);
         }
         if (finalResult.length() == 1) {
-            return finalResult.getJSONObject(0).get("outcome");
+            // This is a quick fix
+            Object outcome = finalResult.getJSONObject(0).get("outcome");
+            if(outcome instanceof JSONObject){
+                String situationName = function.getSituations(0).getSituationName();
+                return ((JSONObject) outcome).get(situationName);
+            }
+            return outcome;
+            // return finalResult.getJSONObject(0).get("outcome");
         } else {
             JSONObject resultWrapper = new JSONObject();
             resultWrapper.put("results", finalResult);

@@ -344,6 +344,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    ////////// Continuous Situation Monitoring ///////////
+    @Override
+    public void getRelatedSubscriptions (au.coaas.sqem.proto.Situation request,
+                                         io.grpc.stub.StreamObserver<au.coaas.sqem.proto.CdqlSubscription> responseObserver){
+        try {
+            responseObserver.onNext(ContinuousEventHandler.findRelatedSubscriptions(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 
     ////////// Log Functions ///////////
 

@@ -148,7 +148,6 @@ message UpdateEntityRequest
     int64 observedTime = 4;
 }
 
-
 message RegisterContextServiceRequest
 {
     string json = 1;
@@ -280,6 +279,19 @@ message DecisionLog {
     bool indefinite = 4;
 }
 
+message CdqlSubscription {
+    string status = 1;
+    string body = 2;
+}
+
+message Situation {
+    string subscriptionID = 1;
+    string providerID = 2;
+    string subscriptionValue = 3;
+    string timestamp = 4;
+    au.coaas.cqp.proto.ContextEntity contextEntity = 5;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -315,6 +327,8 @@ service SQEMService {
     rpc getAllSubscriptions (Empty) returns (SQEMResponse);
     rpc registerSituationFunction (RegisterSituationRequest) returns (SQEMResponse);
     rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
+
+    rpc getRelatedSubscriptions (Situation) returns (CdqlSubscription);
 
     rpc logCPREEData (Statistic) returns (Empty);
     rpc logQuery (CDQLLog) returns (SQEMResponse);

@@ -207,14 +207,6 @@ services:
       ports:
         - 5436:5432
 
-    zookeeper:
-      image: confluentinc/cp-zookeeper:latest
-      environment:
-        ZOOKEEPER_CLIENT_PORT: 2181
-        ZOOKEEPER_TICK_TIME: 2000
-      ports:
-        - 22181:2181
-
     redis:
       container_name: "redis"
       image: redis
@@ -234,6 +226,15 @@ services:
         SA_PASSWORD: "coaas@PerfDB2k22"
       ports:
         - '1433:1433'
+
+    # Kafka brokers and IoT stream processing
+    zookeeper:
+      image: confluentinc/cp-zookeeper:latest
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+      ports:
+        - 22181:2181
 
     kafka:
       image: confluentinc/cp-kafka:latest

@@ -55,6 +55,7 @@ public class ContextEntityManager {
         return CdqlResponse.newBuilder().setBody(sqemResponse.getBody()).setStatus(sqemResponse.getStatus()).build();
     }
 
+    /* This seems a temporary function that Ali had created.
     public static void main (String [] args)
     {
         CdqlResponse res = registerContextEntity( ExecutionRequest.newBuilder().setCdql("{\n" +
@@ -73,4 +74,5 @@ public class ContextEntityManager {
 
         System.out.print(res.toString());
     }
+     */
 }

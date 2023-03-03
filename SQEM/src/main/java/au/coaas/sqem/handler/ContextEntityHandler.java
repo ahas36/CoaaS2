@@ -46,11 +46,12 @@ public class ContextEntityHandler {
 
             MongoCollection<Document> collection = db.getCollection(collectionName);
 
-            Document myDoc = Document.parse(registerRequest.getJson());
+            Document entDoc = Document.parse(registerRequest.getJson());
 
-            collection.insertOne(myDoc);
+            collection.insertOne(entDoc);
 
-            return SQEMResponse.newBuilder().setStatus("200").setBody("1 entity created").build();
+            return SQEMResponse.newBuilder().setStatus("200").setBody("One " +
+                    registerRequest.getEt().getType() +" entity created").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }

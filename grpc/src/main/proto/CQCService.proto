@@ -33,11 +33,17 @@ message RegisterState {
     bool state = 1;
 }
 
+message EventRequest {
+    string event = 1;
+    string provider = 2;
+}
+
 message Empty {}
 
 service CQCService {
     rpc execute (ExecutionRequest) returns (CdqlResponse);
     rpc changeRegisterState (RegisterState) returns (Empty);
+    rpc handleSituation (EventRequest) returns (CdqlResponse);
     rpc UpdateContextEntity (ExecutionRequest) returns (CdqlResponse);
     rpc RegisterContextEntity (ExecutionRequest) returns (CdqlResponse);
     rpc RegisterContextService (ExecutionRequest) returns (CdqlResponse);

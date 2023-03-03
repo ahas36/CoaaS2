@@ -86,4 +86,15 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void handleSituation(au.coaas.cqc.proto.EventRequest request,
+                                      io.grpc.stub.StreamObserver<CdqlResponse> responseObserver) {
+        try {
+            responseObserver.onNext(SituationManager.handleEvent(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 }

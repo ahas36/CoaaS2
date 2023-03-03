@@ -8,10 +8,14 @@ package au.coaas.cre.proto;
 
 import "CQPService.proto";
 
-
 message CREResponse {
     string status = 1;
     repeated ReasoningResponse body = 2;
+}
+
+message CRESituation {
+    string status = 1;
+    string body = 2;
 }
 
 message ReasoningResponse {
@@ -30,7 +34,12 @@ message AttributeValue {
     string value = 2;
 }
 
+message SituationRequest {
+    string event = 1;
+    string provider = 2;
+}
 
 service CREService {
     rpc infer (SituationInferenceRequest) returns (CREResponse);
+    rpc createSituation (SituationRequest) returns (CRESituation);
 }

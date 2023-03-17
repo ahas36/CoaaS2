@@ -42,4 +42,15 @@ public class CREServiceImpl extends CREServiceGrpc.CREServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void getSiddhiResults(au.coaas.cre.proto.ContextEvent request,
+                                 io.grpc.stub.StreamObserver<CRESituation> responseObserver){
+        try {
+            responseObserver.onNext(SituationHandler.getResults(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 }

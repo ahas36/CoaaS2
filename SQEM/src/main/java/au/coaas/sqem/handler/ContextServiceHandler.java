@@ -94,12 +94,9 @@ public class ContextServiceHandler {
 
             JSONArray finalResultJsonArr = new JSONArray();
 
-            Block<Document> printBlock = new Block<Document>() {
-                @Override
-                public void apply(final Document document) {
-                    JSONObject resultJSON = new JSONObject(document.toJson());
-                    finalResultJsonArr.put(resultJSON);
-                }
+            Block<Document> printBlock = document -> {
+                JSONObject resultJSON = new JSONObject(document.toJson());
+                finalResultJsonArr.put(resultJSON);
             };
 
             // Get all the context services that conforms to the given ontology, and contains all the attributes needed in the query.
@@ -129,12 +126,9 @@ public class ContextServiceHandler {
 
             JSONArray finalResultJsonArr = new JSONArray();
 
-            Block<Document> printBlock = new Block<Document>() {
-                @Override
-                public void apply(final Document document) {
-                    JSONObject resultJSON = new JSONObject(document.toJson());
-                    finalResultJsonArr.put(resultJSON);
-                }
+            Block<Document> printBlock = document -> {
+                JSONObject resultJSON = new JSONObject(document.toJson());
+                finalResultJsonArr.put(resultJSON);
             };
 
             collection.find(new BasicDBObject()).forEach(printBlock);

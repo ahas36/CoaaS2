@@ -7,6 +7,7 @@ package au.coaas.sqem.proto;
 
 import "CQPService.proto";
 import "CSIService.proto";
+import "CREService.proto";
 
 message SQEMResponse {
     
@@ -329,6 +330,7 @@ service SQEMService {
     rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
 
     rpc getRelatedSubscriptions (Situation) returns (CdqlSubscription);
+    rpc updateEventRegistry (au.coaas.cre.proto.ContextEvent) returns (Empty);
 
     rpc logCPREEData (Statistic) returns (Empty);
     rpc logQuery (CDQLLog) returns (SQEMResponse);

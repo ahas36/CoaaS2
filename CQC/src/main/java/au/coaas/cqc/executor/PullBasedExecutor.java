@@ -1144,7 +1144,7 @@ public class PullBasedExecutor {
         return jo2;
     }
 
-    private static Object executeSituationFunction(SituationFunction function, FunctionCall fCall) {
+    public static Object executeSituationFunction(SituationFunction function, FunctionCall fCall) {
 
         CREServiceGrpc.CREServiceBlockingStub creStub
                 = CREServiceGrpc.newBlockingStub(CREChannel.getInstance().getChannel());

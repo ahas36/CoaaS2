@@ -39,7 +39,18 @@ message SituationRequest {
     string provider = 2;
 }
 
+message ContextEvent {
+    string key = 1;
+    string subscriptionID = 2;
+    string providerID = 3;
+    string subscriptionValue = 4;
+    string timestamp = 5;
+    au.coaas.cqp.proto.ContextEntity contextEntity = 6;
+    string functionString = 7;
+}
+
 service CREService {
     rpc infer (SituationInferenceRequest) returns (CREResponse);
     rpc createSituation (SituationRequest) returns (CRESituation);
+    rpc getSiddhiResults (ContextEvent) returns (CRESituation);
 }

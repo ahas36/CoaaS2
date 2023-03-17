@@ -38,6 +38,16 @@ message CDQLQuery {
     map<int32, au.coaas.base.proto.ListOfString> executionPlan = 11;
 }
 
+message SubscribedQuery {
+    string id = 1;
+    repeated CdqlConditionToken situation = 2;
+    CDQLQuery query = 3;
+    repeated ContextEntity relatedEntities = 4;
+    string queryId = 5;
+    double complexity = 6;
+    CDQLCallback callback = 7;
+}
+
 enum CDQLType {
     UNKNOWN_CDQL_TYPE = 0;
     QUERY = 2;
@@ -163,7 +173,7 @@ message ContextEntity {
     ContextEntityType type = 1;
     string entityID = 2;
     Condition condition = 3;
-    map<string, string> contextAttributes = 4;
+    map<string,string> contextAttributes = 4;
 }
 
 enum TimeUnit {

@@ -356,6 +356,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void updateEventRegistry (au.coaas.cre.proto.ContextEvent request,
+                                         io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
+        try {
+            responseObserver.onNext(ContinuousEventHandler.updateSubscription(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
     ////////// Log Functions ///////////
 
     @Override

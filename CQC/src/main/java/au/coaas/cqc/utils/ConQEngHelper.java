@@ -1,5 +1,6 @@
 package au.coaas.cqc.utils;
 
+import au.coaas.cqc.utils.enums.RequestDataType;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.ConQEngLog;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
@@ -29,8 +30,8 @@ public class ConQEngHelper {
 
     // Starts a Context Request in ConQEng.
     public static boolean createContextRequest(JSONObject cr, JSONArray contextServices, String sample){
-        String result = call(baseURL + "context_requests",
-                HttpRequests.POST, cr.toString());
+        String result = Utilities.httpCall(baseURL + "context_requests",
+                HttpRequests.POST, RequestDataType.JSON, null, cr.toString());
 
         if(result != null) {
             if(result.startsWith("{")){
@@ -78,8 +79,8 @@ public class ConQEngHelper {
 
     // Requests the ordered list of Context Providers based on Cost and Quality from ConQEng.
     public static List<JSONObject> getCPOrder(JSONObject cpRequest, JSONArray contextServices){
-        String result = call(baseURL + "context_providers",
-                HttpRequests.POST, cpRequest.toString());
+        String result = Utilities.httpCall(baseURL + "context_providers",
+                HttpRequests.POST, RequestDataType.JSON, null, cpRequest.toString());
         List<JSONObject> orderdCPs = new ArrayList<>();
         if(result != null) {
             JSONArray sorted = new JSONArray(result);
@@ -100,69 +101,23 @@ public class ConQEngHelper {
 
     // Registers context providers in ConCQEng
     private static boolean registerCPs(JSONObject cpRequest){
-        String result = call(baseURL + "context_providers",
-                HttpRequests.POST, cpRequest.toString());
+        String result = Utilities.httpCall(baseURL + "context_providers",
+                HttpRequests.POST, RequestDataType.JSON, null, cpRequest.toString());
         if(result != null) return true;
         return false;
     }
 
     // Reports back the performance of the last context retrieval based on selection to ConQEng.
     public static void reportPerformance(JSONObject perfRequest){
-        call(evalbaseURL + "context_responses", HttpRequests.POST, perfRequest.toString());
+        Utilities.httpCall(evalbaseURL + "context_responses", HttpRequests.POST,
+                RequestDataType.JSON, null, perfRequest.toString());
     }
 
     // Reports back failed context providers to ConQEng.
     public static void reportFeedback(JSONObject perfRequest){
-        call(evalbaseURL + "feedback", HttpRequests.POST, perfRequest.toString());
+        Utilities.httpCall(evalbaseURL + "feedback", HttpRequests.POST,
+                RequestDataType.JSON, null, perfRequest.toString());
     }
 
-    private static String call(String serviceUrl, HttpRequests type, String body){
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        builder.connectTimeout(10, TimeUnit.SECONDS);
-        builder.writeTimeout(10, TimeUnit.SECONDS);
-        builder.readTimeout(10, TimeUnit.SECONDS);
-        OkHttpClient client = builder.build();
 
-        HttpResponseFuture fu_res = new HttpResponseFuture();
-
-        MediaType JSON = MediaType.parse("application/json; charset=utf-8");
-        Request.Builder request = new Request.Builder()
-                .url(serviceUrl);
-        switch (type){
-            case GET:
-                request.get();
-                break;
-            case POST:
-                RequestBody formBody = RequestBody.create(JSON, body);
-                request.post(formBody);
-                break;
-        }
-
-        try{
-            Call call = client.newCall(request.build());
-            call.enqueue(fu_res);
-            Response response = fu_res.future.get();
-            if(response.isSuccessful())
-                return response.body().string().trim();
-            else {
-                SQEMServiceGrpc.SQEMServiceFutureStub future =
-                        SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                future.logConQEngCR(ConQEngLog.newBuilder()
-                                .setStatus(response.code()).setCr(body)
-                                .setMessage(response.body().string().trim()).build());
-            }
-        }
-        catch (IOException | ExecutionException | InterruptedException e) {
-            e.printStackTrace();
-            JSONObject error = new JSONObject();
-            error.put("message", e.getMessage());
-            StringWriter strOut = new StringWriter();
-            PrintWriter writer = new PrintWriter(strOut);
-            e.printStackTrace(writer);
-            writer.flush();
-            error.put("stack trace", strOut.toString());
-        }
-
-        return null;
-    }
 }

@@ -6,7 +6,10 @@ import au.coaas.cqc.utils.enums.RequestDataType;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.ConQEngLog;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
+import com.google.protobuf.MessageOrBuilder;
+import com.google.protobuf.util.JsonFormat;
 import okhttp3.*;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.Map;
@@ -125,6 +128,29 @@ public class Utilities {
                 return new AbstractMap.SimpleEntry("m", MeasuredProperty.DISTANCE);
         }
         return null;
+    }
+
+    public static Object getValueOfJsonObject(final JSONObject obj, String path) {
+        JSONObject jo = new JSONObject(obj.toString());
+        String[] split = path.split("\\.");
+
+        for (int i = 0; i < split.length - 1; i++) {
+            jo = jo.getJSONObject(split[i]);
+        }
+
+        Object result = jo.get(split[split.length - 1]);
+        if(result instanceof String){
+            if(((String) result).startsWith("{"))
+                return new JSONObject((String) result);
+            else if(((String) result).startsWith("["))
+                return new JSONArray((String) result);
+        }
+
+        return result;
+    }
+
+    public static String messageToJson(MessageOrBuilder messageOrBuilder) throws IOException {
+        return JsonFormat.printer().print(messageOrBuilder);
     }
 
     public static String httpCall(String serviceUrl, HttpRequests type, RequestDataType datatype,

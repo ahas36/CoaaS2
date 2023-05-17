@@ -38,7 +38,14 @@ public class SituationHandler {
 
     public static CRESituation getResults(ContextEvent event){
         Event eventList = SiddhiWrapper.getResults(event.getSubscriptionID(), event.getFunctionString());
-        return CRESituation.newBuilder().setStatus("200")
-                .setBody(eventList.getData().toString()).build();
+        try{
+            return CRESituation.newBuilder().setStatus("200")
+                    .setBody(eventList.getData().toString()).build();
+        }
+        catch(NullPointerException ex){
+            log.info("No previous data available in Siddhi for this subscribed function.");
+            return CRESituation.newBuilder().setStatus("200")
+                    .setBody("[]").build();
+        }
     }
 }

@@ -1,15 +1,25 @@
 package au.coaas.cqc.executor;
 
-import au.coaas.cqc.proto.EventStats;
+import au.coaas.base.proto.ListOfString;
 import au.coaas.cqc.proto.RegisterState;
+import au.coaas.cqc.utils.SiddhiQueryGenerator;
 import au.coaas.cqp.proto.*;
 import au.coaas.cqc.utils.Utilities;
+import au.coaas.cre.proto.CREServiceGrpc;
+import au.coaas.cre.proto.CRESituation;
 import au.coaas.cre.proto.ContextEvent;
 import au.coaas.cqc.proto.CdqlResponse;
 import au.coaas.cqc.utils.enums.HttpRequests;
 import au.coaas.cqc.utils.enums.RequestDataType;
 
+import au.coaas.cre.proto.SiddhiRegister;
+import au.coaas.grpc.client.CREChannel;
+import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.RegisterPushQuery;
+import au.coaas.sqem.proto.SQEMServiceGrpc;
+import au.coaas.sqem.proto.SituationFunctionRequest;
 import com.google.firebase.FirebaseApp;
+import com.google.gson.Gson;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.firebase.FirebaseOptions;
@@ -19,6 +29,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONObject;
 
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
@@ -26,9 +38,12 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 
 import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ScheduledFuture;
+
+import static au.coaas.cqc.utils.SiddhiQueryGenerator.generateQueries;
 
 public class PushBasedExecutor {
     // This is the context push dedugging switch
@@ -36,12 +51,221 @@ public class PushBasedExecutor {
     // This is the cache switch
     private static boolean cacheEnabled = true;
     private static Map<String, ScheduledFuture<?>> scheduledJobs = new HashMap<>();
+    private static ScheduledExecutorService execService = Executors.newScheduledThreadPool(15);
 
     private static Logger log = Logger.getLogger(PushBasedExecutor.class.getName());
 
-    public static CdqlResponse executePushBaseQuery(CDQLQuery query, String queryId, double complexity) {
-        // TODO: Register push queries only
-        return null;
+    public static CdqlResponse executePushBaseQuery(CDQLQuery query, String token, String queryId,
+                                                    String criticality, double complexity) throws IOException {
+
+        SubscribedQuery.Builder cdqlSubscription = SubscribedQuery.newBuilder();
+        cdqlSubscription.setCallback(query.getCallback());
+        cdqlSubscription.setCriticality(criticality);
+        cdqlSubscription.setComplexity(complexity);
+        cdqlSubscription.setToken(token);
+        cdqlSubscription.setQuery(query);
+
+        // Initializing variables
+        Map<String, ListOfString> dependency = query.getWhen().getCondition().getDependencyMap();
+        Map<String, SituationFunction> situations = new HashMap<>();
+        List<FunctionCall> functionCalls = new ArrayList<>();
+        Set<String> usedSiddhifunctions = new HashSet<>();
+
+        boolean addTimer = false;
+        final StringBuilder siddhiQueryBody = new StringBuilder();
+        List<FunctionCall> fCalls = getFunctionCalls(
+                new LinkedList<>(query.getWhen().getCondition().getRPNConditionList()));
+
+        for (FunctionCall functionCall : fCalls) {
+            String functionName = functionCall.getFunctionName();
+            functionCalls.add(functionCall);
+            switch(functionName) {
+                case "decrease": {
+                    usedSiddhifunctions.add("decrease");
+                    siddhiQueryBody.append(
+                            generateQueries("decrease",
+                                    Double.valueOf(functionCall.getArguments(1).getStringValue()),
+                                    Utilities.messageToJson(functionCall)));
+                    break;
+                }
+                case "increase": {
+                    usedSiddhifunctions.add("increase");
+                    siddhiQueryBody.append(
+                            generateQueries("increase",
+                                    Double.valueOf(functionCall.getArguments(1).getStringValue()),
+                                    Utilities.messageToJson(functionCall)));
+                    break;
+                }
+                case "isValid": {
+                    usedSiddhifunctions.add("isValid");
+                    siddhiQueryBody.append(
+                            generateQueries("isValid",
+                                    Double.valueOf(functionCall.getArguments(1).getStringValue()),
+                                    Utilities.messageToJson(functionCall)));
+                    break;
+                }
+                case "currentTime": {
+                    addTimer = true;
+                    break;
+                }
+                default: {
+                    try {
+                        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                        SituationFunction situationFunction = sqemStub.findSituationByTitle(
+                                SituationFunctionRequest.newBuilder().setName(functionName).build());
+                        if (situationFunction != null)
+                            situations.put(functionName, situationFunction);
+                    }
+                    catch (Exception ex) {
+                        log.severe("Not a valid function for push queries or some error occurred in" +
+                                queryId + ": " + ex.getMessage());
+                    }
+                }
+            }
+        }
+
+        Set<String> relatedEntitiesTitles = new HashSet<>(dependency.keySet());
+        Set<String> tempEntitiesTitles = new HashSet<>(dependency.keySet());
+
+        while (!tempEntitiesTitles.isEmpty()) {
+            Set<String> newEntities = new HashSet<>();
+            for (String entityID : new HashSet<>(tempEntitiesTitles)) {
+                Optional<ContextEntity> findEntity = query.getDefine()
+                        .getDefinedEntitiesList().stream()
+                        .filter(ent -> ent.getEntityID().equals(entityID))
+                        .findFirst();
+                if(findEntity.isPresent()){
+                    for (String tempEntityID : findEntity.get().getCondition().getDependencyMap().keySet()) {
+                        if (!relatedEntitiesTitles.contains(tempEntityID)) {
+                            newEntities.add(tempEntityID);
+                        }
+                    }
+                }
+            }
+            relatedEntitiesTitles.addAll(newEntities);
+            tempEntitiesTitles = new HashSet<>(newEntities);
+        }
+
+        List<ContextEntity> relateCdqlSubscriptionEntities = new ArrayList<>();
+
+        for (String entityID : relatedEntitiesTitles) {
+            Optional<ContextEntity> contextEntity = query.getDefine()
+                    .getDefinedEntitiesList().stream()
+                    .filter(ent -> ent.getEntityID().equals(entityID))
+                    .findFirst();
+            if(contextEntity.isPresent()){
+                ContextEntity.Builder csEntity = ContextEntity.newBuilder();
+                csEntity.setEntityID(entityID);
+
+                ListOfString relatedAttributes = dependency.get(entityID);
+                csEntity.setType(contextEntity.get().getType());
+
+                Condition.Builder cseCondition = Condition.newBuilder();
+                cseCondition.addAllRPNCondition(contextEntity.get().getCondition().getRPNConditionList());
+                csEntity.setCondition(cseCondition.build());
+
+                Set<String> cseAttributes = new HashSet<>();
+                if (relatedAttributes != null) {
+                    cseAttributes.addAll(relatedAttributes.getValueList());
+                }
+                cseAttributes.addAll(contextEntity.get().getContextAttributesMap().keySet());
+
+                for (FunctionCall functionCall : functionCalls) {
+                    if (situations.containsKey(functionCall.getFunctionName())) {
+                        SituationFunction situ = situations.get(functionCall.getFunctionName());
+                        for (Operand argument : functionCall.getArgumentsList()) {
+                            if (argument.getType() == OperandType.CONTEXT_ENTITY && argument.getStringValue().equals(entityID)) {
+                                String entityType = contextEntity.get().getType().getType();
+                                Map.Entry<String, ContextEntityType> findEntity = situ.getRelatedEntitiesMap().entrySet().stream()
+                                        .filter(p -> p.getValue().toString().equals(entityType))
+                                        .findFirst().get();
+                                String prefix = findEntity.getKey();
+                                for (String attr : situ.getAllAttributesList()) {
+                                    if (attr.startsWith(prefix + "dot")) {
+                                        cseAttributes.add(attr.substring((prefix + "dot").length()));
+                                    }
+                                }
+                                situ.getRelatedEntitiesMap().remove(findEntity.getKey());
+                            }
+
+                        }
+                    }
+                }
+
+                // TODO: Known bug. Need to check how the attribute list is used when retrived for execution.
+                csEntity.putAllContextAttributes(new ArrayList<>(cseAttributes));
+                relateCdqlSubscriptionEntities.add(csEntity.build());
+            }
+        }
+
+        cdqlSubscription.addAllRelatedEntities(relateCdqlSubscriptionEntities);
+        cdqlSubscription.addAllSituation(query.getWhen().getCondition().getRPNConditionList());
+
+        // Registering the push query and subscriptions
+        String jsonInString = Utilities.messageToJson(cdqlSubscription.build());
+        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        RegisterPushQuery sub_id = sqemStub.registerPushQuery(
+                RegisterPushQuery.newBuilder().setMessage(jsonInString).build());
+
+        if(!sub_id.getStatus().equals("200"))
+            return CdqlResponse.newBuilder().setStatus("500")
+                    .setBody("Error occured in push query registration.").build();
+
+        // Setting event monitoring in Siddhi
+        cdqlSubscription.setId(sub_id.getMessage());
+        if (usedSiddhifunctions.size() > 0) {
+            // Sending the request to CRE to register with Siddhi.
+            CREServiceGrpc.CREServiceBlockingStub creStub
+                    = CREServiceGrpc.newBlockingStub(CREChannel.getInstance().getChannel());
+            CRESituation response = creStub.registerInSiddhi(SiddhiRegister.newBuilder()
+                    .setJson(SiddhiQueryGenerator.registerQuery(cdqlSubscription.getId(), siddhiQueryBody))
+                    .addAllUsedFunctions(usedSiddhifunctions).build());
+
+            if(response.getStatus().equals("200")){
+                log.info("Push query " + sub_id.getMessage() + " successfully registered in Siddhi.");
+            }
+            else {
+                log.severe("Push query " + sub_id.getMessage() + " FAILED to registered in Siddhi.");
+                log.severe(response.getBody());
+            }
+        }
+
+        if (addTimer) {
+            ScheduledFuture<?> sf = execService.scheduleAtFixedRate(() -> {
+                handelSubscription(cdqlSubscription.build());
+            }, 0, 60000L, TimeUnit.MILLISECONDS);
+            scheduledJobs.put(cdqlSubscription.getId(), sf);
+        }
+
+        return CdqlResponse.newBuilder().setStatus("200")
+                .setBody("Push query "+ sub_id.getMessage() +" successfully subscribed!").build();
+    }
+
+    private static List<FunctionCall> getFunctionCalls(Queue<CdqlConditionToken> tokens) {
+        List<FunctionCall> result = new ArrayList<>();
+        for (CdqlConditionToken token : tokens) {
+            if (token.getType() == CdqlConditionTokenType.Function) {
+                FunctionCall fCall = token.getFunctionCall();
+                result.add(fCall);
+                result.addAll(getSubFunctionCalls(fCall));
+            }
+        }
+        return result;
+    }
+
+    private static Gson gson = new Gson();
+    private static List<FunctionCall> getSubFunctionCalls(FunctionCall fCall) {
+        List<FunctionCall> result = new ArrayList<>();
+        for (Operand argument : fCall.getArgumentsList()) {
+            if (argument.getType() == OperandType.FUNCTION_CALL) {
+                FunctionCall subFCall = gson.fromJson(gson.toJson(argument.getStringValue()), FunctionCall.class);
+                result.add(subFCall);
+                result.addAll(getSubFunctionCalls(subFCall));
+            }
+        }
+        return result;
     }
 
     // Triggers a recursive event to CoaaS
@@ -155,5 +379,24 @@ public class PushBasedExecutor {
             log.severe(String.valueOf(ex.getStackTrace()));
         }
         return RegisterState.newBuilder().setState(false).build();
+    }
+
+    private static void handelSubscription(SubscribedQuery subscription) {
+        try {
+            CdqlResponse executePullBaseQuery = PullBasedExecutor.executePullBaseQuery(
+                    subscription.getQuery(), subscription.getToken(),-1, -1,
+                    subscription.getQueryId(), subscription.getCriticality(),
+                    subscription.getComplexity());
+
+            if(executePullBaseQuery.getStatus().equals("200")){
+                JSONObject jsonObject = new JSONObject(executePullBaseQuery.getBody());
+                pushContext(subscription.getCallback(), jsonObject, subscription.getId());
+            }
+            else log.severe("Problem with executing the query for subscription: " + subscription.getId());
+
+        }
+        catch(Exception ex){
+            log.severe("Exception occured when handling periodic push query: " + subscription.getId());
+        }
     }
 }

@@ -49,8 +49,14 @@ message ContextEvent {
     string functionString = 7;
 }
 
+message SiddhiRegister {
+    string json = 1;
+    repeated string usedFunctions = 2;
+}
+
 service CREService {
     rpc infer (SituationInferenceRequest) returns (CREResponse);
     rpc createSituation (SituationRequest) returns (CRESituation);
     rpc getSiddhiResults (ContextEvent) returns (CRESituation);
+    rpc registerInSiddhi (SiddhiRegister) returns (CRESituation);
 }

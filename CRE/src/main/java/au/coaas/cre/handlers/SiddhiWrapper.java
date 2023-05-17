@@ -1,5 +1,7 @@
 package au.coaas.cre.handlers;
 
+import au.coaas.cre.proto.CRESituation;
+import au.coaas.cre.proto.SiddhiRegister;
 import org.wso2.siddhi.core.event.Event;
 import org.wso2.siddhi.core.SiddhiManager;
 import org.wso2.siddhi.core.SiddhiAppRuntime;
@@ -16,7 +18,7 @@ public class SiddhiWrapper {
     private static Logger log = Logger.getLogger(SiddhiWrapper.class.getName());
     private static final ReentrantReadWriteLock lock = new ReentrantReadWriteLock(true);
 
-    StreamCallback increaseCallback = new StreamCallback() {
+    static StreamCallback increaseCallback = new StreamCallback() {
         @Override
         public void receive(Event[] events) {
             EventPrinter.print(events);
@@ -24,7 +26,7 @@ public class SiddhiWrapper {
         }
     };
 
-    StreamCallback stableCallback = new StreamCallback() {
+    static StreamCallback stableCallback = new StreamCallback() {
         @Override
         public void receive(Event[] events) {
             EventPrinter.print(events);
@@ -32,7 +34,7 @@ public class SiddhiWrapper {
         }
     };
 
-    StreamCallback decreaseCallback = new StreamCallback() {
+    static StreamCallback decreaseCallback = new StreamCallback() {
         @Override
         public void receive(Event[] events) {
             EventPrinter.print(events);
@@ -42,18 +44,41 @@ public class SiddhiWrapper {
 
     public static void addEvent(Object[] obj, String streamName) throws InterruptedException {
         lock.readLock().lock();
-        InputHandler inputHandler = siddhiManager.getSiddhiAppRuntime(streamName).getInputHandler("subs");
+        InputHandler inputHandler = getSiddhiManager()
+                .getSiddhiAppRuntime(streamName).getInputHandler("subs");
         inputHandler.send(obj);
         lock.readLock().unlock();
     }
 
-    public static void createSiddhiApp(String siddhiApp, Set<String> usedFunctions) {
-        SiddhiAppRuntime siddhiAppRuntime = siddhiManager.createSiddhiAppRuntime(siddhiApp);
-        siddhiAppRuntime.start();
+    public static CRESituation createSiddhiApp(SiddhiRegister specs) {
+        try{
+            SiddhiAppRuntime siddhiAppRuntime = getSiddhiManager().createSiddhiAppRuntime(specs.getJson());
+            for (String usedFunction : specs.getUsedFunctionsList()) {
+                switch (usedFunction) {
+                    case "decrease":
+                        siddhiAppRuntime.addCallback("DecreaseTrendAlertStream", decreaseCallback);
+                        break;
+                    case "increase":
+                        siddhiAppRuntime.addCallback("IncreaseTrendAlertStream", increaseCallback);
+                        break;
+                    case "isValid":
+                        siddhiAppRuntime.addCallback("stableTrendAlertStream", stableCallback);
+                        break;
+                }
+            }
+
+            siddhiAppRuntime.start();
+            return CRESituation.newBuilder().setStatus("200").build();
+        }
+        catch(Exception ex) {
+            return CRESituation.newBuilder()
+                    .setBody(ex.getMessage())
+                    .setStatus("500").build();
+        }
     }
 
     public static Event getResults(String appName, String functionSignature) {
-        Event[] events = siddhiManager.getSiddhiAppRuntime(appName).query(""
+        Event[] events = getSiddhiManager().getSiddhiAppRuntime(appName).query(""
                 + " from eventResultTable on  functionSignature == '" + functionSignature
                 + "' select * order by timestamp desc\n limit 1");
         return events == null ? null : events[0];

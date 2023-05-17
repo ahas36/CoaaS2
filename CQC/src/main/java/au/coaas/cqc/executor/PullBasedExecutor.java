@@ -60,25 +60,6 @@ public class PullBasedExecutor {
     private static Logger log = Logger.getLogger(PullBasedExecutor.class.getName());
     private static JsonParser parser = new JsonParser();
 
-    private static Object getValueOfJsonObject(final JSONObject obj, String path) {
-        JSONObject jo = new JSONObject(obj.toString());
-        String[] split = path.split("\\.");
-
-        for (int i = 0; i < split.length - 1; i++) {
-            jo = jo.getJSONObject(split[i]);
-        }
-
-        Object result = jo.get(split[split.length - 1]);
-        if(result instanceof String){
-            if(((String) result).startsWith("{"))
-                return new JSONObject((String) result);
-            else if(((String) result).startsWith("["))
-                return new JSONArray((String) result);
-        }
-
-        return result;
-    }
-
     private static List<FunctionCall> getFunctionCalls(Queue<CdqlConditionToken> tokens) {
         List<FunctionCall> result = new ArrayList<>();
         for (CdqlConditionToken token : tokens) {
@@ -185,9 +166,9 @@ public class PullBasedExecutor {
                                 try {
                                     // What happens here is, the query contains a condition that compares that values of an existing entity.
                                     // So, this try to get the matched attribute (i.e., valueEntityBody) value from the 'ce'.
-                                    get = getValueOfJsonObject(ce.get(valueEntityID), valueEntityBody);
+                                    get = Utilities.getValueOfJsonObject(ce.get(valueEntityID), valueEntityBody);
                                 } catch (Exception ex) {
-                                    get = getValueOfJsonObject(ce.get(valueEntityID).getJSONArray("results").getJSONObject(0), valueEntityBody);
+                                    get = Utilities.getValueOfJsonObject(ce.get(valueEntityID).getJSONArray("results").getJSONObject(0), valueEntityBody);
                                 }
                             }
                             if (get instanceof JSONObject) {
@@ -906,7 +887,7 @@ public class PullBasedExecutor {
         return(c * r);
     }
 
-    private static Object executeFunctionCall(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query) {
+    public static Object executeFunctionCall(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query) {
         FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(fCall.getFunctionName());
         fCallTemp.addAllSubItems(fCall.getSubItemsList());
 
@@ -1414,7 +1395,7 @@ public class PullBasedExecutor {
         return conSer;
     }
 
-    private static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
+    public static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
         ArrayList<CdqlConditionToken> list = new ArrayList(targetEntity.getCondition().getRPNConditionList());
 
         for (int i = 0; i < list.size(); i++) {
@@ -1516,6 +1497,12 @@ public class PullBasedExecutor {
         return cr;
     }
 
+    public static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
+                                                           Map<String, JSONObject> ce, int page, int limit) {
+        AbstractMap.SimpleEntry res = executeSQEMQuery(targetEntity, query, ce, page, limit, null);
+        return (JSONObject) res.getKey();
+    }
+
     private static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
                                                Map<String, JSONObject> ce, int page, int limit, JSONObject sla) {
         ContextRequest cr = generateContextRequest(targetEntity, query, ce, page, limit);
@@ -1545,21 +1532,10 @@ public class PullBasedExecutor {
             e.printStackTrace();
         }
 
-
-        //ToDo validate return entities
-//        JSONArray result = new JSONArray();
-//        JSONArray jsonArray = invoke.getJSONArray("result");
-//
-//        for (int i = 0; i < Math.min(jsonArray.length(), 10); i++) {
-//            JSONObject carpark = jsonArray.getJSONObject(i);
-//            if (this.evaluate(carpark, ce, targetEntity.getCondition().getRPNCondition())) {
-//                try {
-//                    carparks.put(JsonSimplifier.Simplify(carpark.getJSONObject("document")));
-//                } catch (Exception e) {
-//                    carparks.put(JsonSimplifier.Simplify(carpark));
-//                }
-//            }
-//        }
+        //ToDo: validate return entities
+        if(sla == null){
+            return new AbstractMap.SimpleEntry(invoke,null);
+        }
 
         return new AbstractMap.SimpleEntry(invoke,
                 qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));

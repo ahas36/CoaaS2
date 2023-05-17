@@ -293,6 +293,11 @@ message Situation {
     au.coaas.cqp.proto.ContextEntity contextEntity = 5;
 }
 
+message RegisterPushQuery {
+    string message = 1;
+    string status = 2;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -326,6 +331,7 @@ service SQEMService {
 
     rpc getAllSituations (Empty) returns (SQEMResponse);
     rpc getAllSubscriptions (Empty) returns (SQEMResponse);
+    rpc registerPushQuery (RegisterPushQuery) returns (RegisterPushQuery);
     rpc registerSituationFunction (RegisterSituationRequest) returns (SQEMResponse);
     rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
 

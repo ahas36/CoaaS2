@@ -3,6 +3,7 @@ package au.coaas.sqem.handler;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextServiceRequest;
 import au.coaas.sqem.proto.RegisterContextServiceRequest;
+import au.coaas.sqem.proto.RegisterPushQuery;
 import au.coaas.sqem.proto.SQEMResponse;
 import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
@@ -47,6 +48,25 @@ public class SubscriptionHandler {
             body.put("message",e.getMessage());
             body.put("cause",e.getCause().toString());
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+        }
+    }
+
+    public static RegisterPushQuery registerPushQuery (String pushQueryJson){
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_subscription");
+            MongoCollection<Document> collection = db.getCollection("subscriptions");
+
+            Document query = Document.parse(pushQueryJson);
+            collection.insertOne(query);
+
+            return RegisterPushQuery.newBuilder().setStatus("200")
+                    .setMessage(query.get("_id").toString()).build();
+        } catch (Exception e) {
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            return RegisterPushQuery.newBuilder().setStatus("500").build();
         }
     }
 }

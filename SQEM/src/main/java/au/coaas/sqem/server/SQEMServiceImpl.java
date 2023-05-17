@@ -367,6 +367,19 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void registerPushQuery (au.coaas.sqem.proto.RegisterPushQuery request,
+                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.RegisterPushQuery> responseObserver){
+        try {
+            responseObserver.onNext(SubscriptionHandler.registerPushQuery(request.getMessage()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+
+
     ////////// Log Functions ///////////
 
     @Override

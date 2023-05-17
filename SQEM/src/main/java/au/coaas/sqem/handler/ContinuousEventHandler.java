@@ -62,6 +62,8 @@ public class ContinuousEventHandler {
             projection.put("situation", 1);
             projection.put("callback", 1);
             projection.put("query", 1);
+            projection.put("token", 1);
+            projection.put("criticality", 1);
             projection.put("relatedEntities", relEntities);
 
             Block<Document> printBlock = document -> {
@@ -83,6 +85,8 @@ public class ContinuousEventHandler {
         }
     }
 
+    // This function updates the values of a registered context entity in the context storage.
+    // The subscription refered to here is of a context entity.
     public static Empty updateSubscription(ContextEvent event){
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();

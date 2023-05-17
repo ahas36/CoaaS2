@@ -43,8 +43,8 @@ public class CDQLExecutor {
                             request.getPage(), request.getLimit(), request.getQueryid(),
                             request.getCriticality(), cdqlConstruct.getComplexity());
                 }else {
-                    return PushBasedExecutor.executePushBaseQuery(query, request.getQueryid(),
-                            cdqlConstruct.getComplexity());
+                    return PushBasedExecutor.executePushBaseQuery(query, request.getToken(),
+                            request.getQueryid(), request.getCriticality(), cdqlConstruct.getComplexity());
                 }
             case FUNCTION_DEF:
                 ContextFunction cFunction = cdqlConstruct.getFunction();

@@ -5,6 +5,7 @@
  */
 package au.coaas.cre.server;
 
+import au.coaas.cre.handlers.SiddhiWrapper;
 import au.coaas.cre.proto.CREResponse;
 import au.coaas.cre.proto.CREServiceGrpc;
 import au.coaas.cre.handlers.SituationHandler;
@@ -53,4 +54,16 @@ public class CREServiceImpl extends CREServiceGrpc.CREServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void registerInSiddhi(au.coaas.cre.proto.SiddhiRegister request,
+                                 io.grpc.stub.StreamObserver<CRESituation> responseObserver){
+        try {
+            responseObserver.onNext(SiddhiWrapper.createSiddhiApp(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
 }

@@ -50,7 +50,7 @@ public class SituationManager {
 
     private static Logger log = Logger.getLogger(SituationManager.class.getName());
 
-    public static CdqlResponse handleEvent(EventRequest eventRequest) throws IOException, WrongOperatorException {
+    public static CdqlResponse handleEvent(EventRequest eventRequest) throws Exception {
         long eventStartTime = System.currentTimeMillis();
         CREServiceGrpc.CREServiceBlockingStub stub
                 = CREServiceGrpc.newBlockingStub(CREChannel.getInstance().getChannel());
@@ -59,14 +59,16 @@ public class SituationManager {
                 .setProvider(eventRequest.getProvider()).build());
 
         // Could not find any subscriptions by ID or there exist no subscription ID attached in the event.
+        // Subscription IDs exist for function executions.
         if(!res.getStatus().equals("200")){
             JSONObject persEvent = new JSONObject(eventRequest.getEvent());
             ObjectMapper mapper = new ObjectMapper();
             ContextEvent event = ContextEvent.newBuilder()
                     .setKey(persEvent.getString("key"))
-                    .setSubscriptionID(persEvent.getString("subscriptionID"))
                     .setProviderID(eventRequest.getProvider())
-                    .setSubscriptionValue(persEvent.getString("subscriptionValue"))
+                    // Following are commented because they should be null.
+                    // .setSubscriptionID(persEvent.getString("subscriptionID"))
+                    // .setSubscriptionValue(persEvent.getString("subscriptionValue"))
                     .setTimestamp(persEvent.getString("timestamp"))
                     .setContextEntity(mapper.readValue(persEvent.getJSONObject("contextEntity").toString(),
                             ContextEntity.class))
@@ -95,8 +97,9 @@ public class SituationManager {
 
                 if (notRelated) continue;
 
-                CdqlResponse pullResponse = PushBasedExecutor.executePushBaseQuery(subscription.getQuery(),
-                        subscription.getQueryId(), subscription.getComplexity());
+                CdqlResponse pullResponse = PullBasedExecutor.executePullBaseQuery(subscription.getQuery(),
+                        subscription.getToken(), -1, -1, subscription.getQueryId(),
+                        subscription.getCriticality(), subscription.getComplexity());
 
                 String body = pullResponse.getBody();
                 JSONObject jsonObject = new JSONObject(body);
@@ -180,8 +183,9 @@ public class SituationManager {
         CdqlSubscription subs_res = sqemStub.getRelatedSubscriptions(Situation.newBuilder()
                 .setContextEntity(event.getContextEntity())
                 .setProviderID(event.getProviderID())
-                .setSubscriptionID(event.getSubscriptionID())
-                .setSubscriptionValue(event.getSubscriptionValue())
+                // Following are commented because they should be null.
+                // .setSubscriptionID(event.getSubscriptionID())
+                // .setSubscriptionValue(event.getSubscriptionValue())
                 .setTimestamp(event.getTimestamp()).build());
 
         if(subs_res.getStatus().equals("200")){
@@ -652,6 +656,7 @@ public class SituationManager {
                     String[] split = event.split(",");
                     List<String> ev_list = Arrays.asList(split);
 
+                    // Need to find what this calculation is. Seems like a polling time.
                     if (Long.valueOf(ev_list.get(3)) >= (System.currentTimeMillis() - Double.valueOf(fCall.getArguments(1).getStringValue()) * 60000)) {
                         if (fCall.getArgumentsCount() > 2) {
                             double delta = Double.valueOf(fCall.getArguments(2).getStringValue());
@@ -666,11 +671,6 @@ public class SituationManager {
                 return new JSONObject("{\"value\":false}");
             }
 
-            // TODO: Here is a problem
-            // The current way of executing function passes the context values in 'ce'. Here, it is purely using the
-            // data in the StingValues. These functions need to be resolved.
-            // Uncomment (including the last catch block) below when done.
-            // JSONObject result = new JSONObject(parser.callFunction(fCall).getBody());
             JSONObject result = new JSONObject();
 
             if (fCall.getSubItemsList().isEmpty()) {
@@ -706,10 +706,6 @@ public class SituationManager {
                 return (new JSONObject()).put("value", execute);
             }
         }
-//        catch (CDQLSyntaxtErrorException ex) {
-//            log.severe("CDQL syntax error in Situation Manager: " + ex.getMessage());
-//        }
-//        return null;
     }
 
     public static EventStats getEventHandlingStats() {

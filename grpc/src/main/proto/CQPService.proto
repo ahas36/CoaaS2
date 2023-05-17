@@ -46,6 +46,8 @@ message SubscribedQuery {
     string queryId = 5;
     double complexity = 6;
     CDQLCallback callback = 7;
+    string token = 8;
+    string criticality = 9;
 }
 
 enum CDQLType {

@@ -38,12 +38,24 @@ message EventRequest {
     string provider = 2;
 }
 
+message EventStats {
+    double avgExecutionTime = 1;
+    uint64 eventsProcessed = 2;
+}
+
 message Empty {}
 
+message Subscription {
+    string id = 1;
+}
+
 service CQCService {
+    rpc resetEventStats (Empty) returns (Empty);
+    rpc getEventStats (Empty) returns (EventStats);
     rpc execute (ExecutionRequest) returns (CdqlResponse);
     rpc changeRegisterState (RegisterState) returns (Empty);
     rpc handleSituation (EventRequest) returns (CdqlResponse);
+    rpc cancelSubscription (Subscription) returns (RegisterState);
     rpc UpdateContextEntity (ExecutionRequest) returns (CdqlResponse);
     rpc RegisterContextEntity (ExecutionRequest) returns (CdqlResponse);
     rpc RegisterContextService (ExecutionRequest) returns (CdqlResponse);

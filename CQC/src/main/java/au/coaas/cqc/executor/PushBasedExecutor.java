@@ -1,5 +1,7 @@
 package au.coaas.cqc.executor;
 
+import au.coaas.cqc.proto.EventStats;
+import au.coaas.cqc.proto.RegisterState;
 import au.coaas.cqp.proto.*;
 import au.coaas.cqc.utils.Utilities;
 import au.coaas.cre.proto.ContextEvent;
@@ -44,7 +46,7 @@ public class PushBasedExecutor {
 
     // Triggers a recursive event to CoaaS
     public static void sendEvent(ContextEvent event) throws InvalidProtocolBufferException {
-        String eventURI = "http://localhost:8082/event";
+        String eventURI = "http://localhost:8082/event/create";
         Utilities.httpCall(eventURI, HttpRequests.POST, RequestDataType.JSON,
                 null, JsonFormat.printer().print(event));
     }
@@ -142,16 +144,16 @@ public class PushBasedExecutor {
         }
     }
 
-    private static boolean cancelJob(String subID) {
+    public static RegisterState cancelJob(String subID) {
         try {
             if (scheduledJobs.containsKey(subID)) {
                 scheduledJobs.get(subID).cancel(false);
-                return true;
+                return RegisterState.newBuilder().setState(true).build();
             }
         } catch (Exception ex) {
             log.severe("Error occurred when canceling a scheduled push subscription.");
             log.severe(String.valueOf(ex.getStackTrace()));
         }
-        return false;
+        return RegisterState.newBuilder().setState(false).build();
     }
 }

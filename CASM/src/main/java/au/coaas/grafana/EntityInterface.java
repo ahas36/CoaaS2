@@ -29,7 +29,7 @@ import java.util.logging.Logger;
 public class EntityInterface {
 
     /**
-     * Creates a new instance of QueryInterface
+     * Creates a new instance of EntityInterface
      */
     public EntityInterface() {
     }

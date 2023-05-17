@@ -37,5 +37,6 @@ public class ApplicationConfig extends Application {
         resources.add(LogInterface.class);
         resources.add(ConsumerInterface.class);
         resources.add(StatisticsInterface.class);
+        resources.add(EventInterface.class);
     }
 }

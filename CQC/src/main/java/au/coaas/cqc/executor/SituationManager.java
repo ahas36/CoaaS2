@@ -1,11 +1,12 @@
 package au.coaas.cqc.executor;
 
 import au.coaas.cqc.proto.CdqlResponse;
+import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.proto.EventRequest;
+import au.coaas.cqc.proto.EventStats;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
 import au.coaas.cqp.proto.*;
-import au.coaas.cqp.exception.CDQLSyntaxtErrorException;
 
 import au.coaas.cre.proto.CRESituation;
 import au.coaas.cre.proto.ContextEvent;
@@ -45,6 +46,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SituationManager {
     public static long totalExecutionTime = 0;
+    public static long totalNumberOfEvents = 0;
+
     private static Logger log = Logger.getLogger(SituationManager.class.getName());
 
     public static CdqlResponse handleEvent(EventRequest eventRequest) throws IOException, WrongOperatorException {
@@ -707,5 +710,17 @@ public class SituationManager {
 //            log.severe("CDQL syntax error in Situation Manager: " + ex.getMessage());
 //        }
 //        return null;
+    }
+
+    public static EventStats getEventHandlingStats() {
+        return EventStats.newBuilder()
+               .setAvgExecutionTime(totalExecutionTime/totalNumberOfEvents)
+               .setEventsProcessed(totalNumberOfEvents).build();
+    }
+
+    public static Empty restartMonitoring() {
+        totalNumberOfEvents = 0;
+        totalExecutionTime = 0;
+        return Empty.newBuilder().build();
     }
 }

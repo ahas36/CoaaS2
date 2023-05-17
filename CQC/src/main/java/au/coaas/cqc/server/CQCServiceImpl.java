@@ -6,9 +6,7 @@
 package au.coaas.cqc.server;
 
 import au.coaas.cqc.executor.*;
-import au.coaas.cqc.proto.CQCServiceGrpc;
-import au.coaas.cqc.proto.CdqlResponse;
-import au.coaas.cqc.proto.Empty;
+import au.coaas.cqc.proto.*;
 
 import java.util.logging.Logger;
 
@@ -92,6 +90,39 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
                                       io.grpc.stub.StreamObserver<CdqlResponse> responseObserver) {
         try {
             responseObserver.onNext(SituationManager.handleEvent(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getEventStats(au.coaas.cqc.proto.Empty request,
+                              io.grpc.stub.StreamObserver<EventStats> responseObserver) {
+        try {
+            responseObserver.onNext(SituationManager.getEventHandlingStats());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void resetEventStats(au.coaas.cqc.proto.Empty request,
+                              io.grpc.stub.StreamObserver<Empty> responseObserver) {
+        try {
+            responseObserver.onNext(SituationManager.restartMonitoring());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void cancelSubscription(au.coaas.cqc.proto.Subscription request,
+                                io.grpc.stub.StreamObserver<RegisterState> responseObserver) {
+        try {
+            responseObserver.onNext(PushBasedExecutor.cancelJob(request.getId()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

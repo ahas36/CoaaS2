@@ -21,11 +21,10 @@ public class SituationHandler {
         log.info("Started to process event at: " + System.currentTimeMillis());
 
         JSONObject persEvent = new JSONObject(eventRequest.getEvent());
-        SiddhiWrapper sb = null;
 
         if (persEvent.getString("subscriptionID") != null) {
             try {
-                sb.addEvent(new Object[]{"test", Double.valueOf(persEvent.getString("subscriptionValue")),
+                SiddhiWrapper.addEvent(new Object[]{"test", Double.valueOf(persEvent.getString("subscriptionValue")),
                         persEvent.getString("timestamp")},"sub_" + persEvent.getString("subscriptionID"));
             } catch (InterruptedException ex) {
                 log.severe("Error when adding event: " + ex.getStackTrace());

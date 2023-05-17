@@ -46,7 +46,7 @@ public class PushBasedExecutor {
 
     // Triggers a recursive event to CoaaS
     public static void sendEvent(ContextEvent event) throws InvalidProtocolBufferException {
-        String eventURI = "http://localhost:8082/event/create";
+        String eventURI = "http://localhost:8070/CASM-2.0.1/api/event/create";
         Utilities.httpCall(eventURI, HttpRequests.POST, RequestDataType.JSON,
                 null, JsonFormat.printer().print(event));
     }

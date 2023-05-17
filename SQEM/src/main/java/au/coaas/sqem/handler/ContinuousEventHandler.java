@@ -59,9 +59,9 @@ public class ContinuousEventHandler {
 
             Document projection = new Document();
             projection.put("_id", 1);
-            projection.put("callback", 1);
             projection.put("situation", 1);
-            projection.put("parsedQuery", 1);
+            projection.put("callback", 1);
+            projection.put("query", 1);
             projection.put("relatedEntities", relEntities);
 
             Block<Document> printBlock = document -> {

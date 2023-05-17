@@ -34,7 +34,7 @@ public class KafkaMessenger {
         try (KafkaConnection conn = factory.createConnection()) {
             conn.send(new ProducerRecord(topic, msg));
         } catch (Exception ex) {
-            log.severe(ex.getMessage());
+            log.severe("Error when producing kafka message:" + ex.getMessage());
         }
     }
 }

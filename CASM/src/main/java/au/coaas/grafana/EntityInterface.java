@@ -36,7 +36,6 @@ public class EntityInterface {
 
     private static Logger log = Logger.getLogger(EntityInterface.class.getName());
 
-
     @POST
     @Path("create")
     @Consumes(MediaType.TEXT_PLAIN)

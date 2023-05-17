@@ -24,7 +24,7 @@ public class SituationHandler {
 
         if (persEvent.getString("subscriptionID") != null) {
             try {
-                SiddhiWrapper.addEvent(new Object[]{"test", Double.valueOf(persEvent.getString("subscriptionValue")),
+                SiddhiWrapper.addEvent(new Object[]{"event", Double.valueOf(persEvent.getString("subscriptionValue")),
                         persEvent.getString("timestamp")},"sub_" + persEvent.getString("subscriptionID"));
             } catch (InterruptedException ex) {
                 log.severe("Error when adding event: " + ex.getStackTrace());

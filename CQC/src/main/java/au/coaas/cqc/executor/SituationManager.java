@@ -58,7 +58,7 @@ public class SituationManager {
                 .setEvent(eventRequest.getEvent())
                 .setProvider(eventRequest.getProvider()).build());
 
-        // Could not find any subscriptions by ID.
+        // Could not find any subscriptions by ID or there exist no subscription ID attached in the event.
         if(!res.getStatus().equals("200")){
             JSONObject persEvent = new JSONObject(eventRequest.getEvent());
             ObjectMapper mapper = new ObjectMapper();

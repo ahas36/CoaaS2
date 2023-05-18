@@ -59,8 +59,10 @@ public class ContextEntityHandler {
 
     public static SQEMResponse updateEntities(UpdateEntityRequest updateRequest) {
         String json = updateRequest.getJson();
-        if (json.trim().startsWith("[")) {
-            JSONArray items = new JSONArray(json);
+
+        if (!json.trim().startsWith("{")) {
+            JSONObject response = new JSONObject(json);
+            JSONArray items = response.getJSONArray("results");
             int numberOfThreads = 10;
 
             int numberOfItemsPerTask = 100;
@@ -78,15 +80,29 @@ public class ContextEntityHandler {
                     int end = Math.min(items.length(), start + numberOfItemsPerTask);
                     for (int i = start; i < end; i++) {
                         JSONObject data = items.getJSONObject(i);
-                        JSONObject entityType = data.getJSONObject("EntityType");
-                        JSONObject entity = data.getJSONObject("Attributes");
-                        JSONArray keys = data.getJSONArray("key");
-                        Long timestamp = data.optLong("observedTime");
+                        // observed time calculation
+                        Long timestamp = new java.util.Date().getTime();
+                        if(data.has("age")){
+                            long age = 0;
+                            JSONObject age_obj = data.getJSONObject("age");
+
+                            String unit = age_obj.getString("unitText");
+                            long value = age_obj.getLong("value");
+
+                            // Age here is considered in miliseconds
+                            switch(unit){
+                                case "ms": age = value; break;
+                                case "s": age = value*1000; break;
+                                case "h": age = value*60*1000; break;
+                            }
+                            timestamp -= (age + updateRequest.getRetLatency());
+                        }
+
                         UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder()
-                                .setJson(entity.toString())
-                                .setEt(ContextEntityType.newBuilder().setVocabURI(entityType.getString("namespace")).setType(entityType.getString("type")).build())
+                                .setJson(data.toString())
+                                .setEt(updateRequest.getEt())
                                 .setObservedTime(timestamp)
-                                .setKey(keys.toString());
+                                .setKey(updateRequest.getKey());
 
                         SQEMResponse sqemResponse = updateEntity(builder.build());
                         if (sqemResponse.getStatus().equals("200")) {

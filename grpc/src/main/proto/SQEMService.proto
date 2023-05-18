@@ -147,6 +147,7 @@ message UpdateEntityRequest
     au.coaas.cqp.proto.ContextEntityType et = 2;
     string key = 3;
     int64 observedTime = 4;
+    int64 retLatency = 5;
 }
 
 message RegisterContextServiceRequest

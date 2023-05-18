@@ -115,10 +115,10 @@ public class FetchManager {
                 rawResult = new JSONObject(res);
             }else if (res.startsWith("[")){
                 rawResult = new JSONObject();
-                rawResult.put("result", new JSONArray(res));
+                rawResult.put("results", new JSONArray(res));
             }else {
                 rawResult = new JSONObject();
-                rawResult.put("result", res);
+                rawResult.put("results", res);
             }
 
             return CSIResponse.newBuilder().setStatus("200")
@@ -247,6 +247,7 @@ public class FetchManager {
     }
 
     private static JSONObject mapJsonObject(JSONArray attributes, String service)
+            // params: attributes list, response
     {
         try {
             JSONObject result = new JSONObject();
@@ -267,6 +268,12 @@ public class FetchManager {
                 }
                 result.put(attribute.getJSONObject("key").getString("label"), value);
             }
+
+            JSONObject response = new JSONObject(service);
+            if(response.has("age")){
+                result.put("age",response.getJSONObject("age"));
+            }
+
             return result;
         }
         catch (Exception e)
@@ -275,7 +282,6 @@ public class FetchManager {
         }
         return new JSONObject();
     }
-
 
     private static Object semanticMapper(JSONArray attributes, String service, String resultTag) {
         if(service.trim().startsWith("[") || resultTag!=null)
@@ -288,7 +294,6 @@ public class FetchManager {
             }else{
                 items = new JSONObject(service).getJSONArray(resultTag);
             }
-
 
             int numberOfThreads = 10;
 

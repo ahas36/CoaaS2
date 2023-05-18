@@ -6,7 +6,6 @@ import org.json.JSONObject;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
-
 public class JobSchedulerManager {
 
     // private instance, so that it can be
@@ -72,6 +71,7 @@ public class JobSchedulerManager {
 
         JSONObject contextService = new JSONObject(cs.getJson());
 
+        // This key is the unique identifier of the entity
         jobDataMap.put("key", contextService.getJSONObject("sla").get("key").toString());
 
         String ontClass = contextService.getJSONObject("info").getString("ontClass").trim();
@@ -87,6 +87,8 @@ public class JobSchedulerManager {
 
         graph = graph.substring(1, graph.length() - 1);
         jobDataMap.put("graph", graph);
+
+        jobDataMap.put("params", (new JSONObject(cs.getParamsMap())).toString());
 
         if(cs.getTimes() < 1){
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()

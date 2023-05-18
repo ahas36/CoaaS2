@@ -47,6 +47,7 @@ message ContextEvent {
     string timestamp = 5;
     au.coaas.cqp.proto.ContextEntity contextEntity = 6;
     string functionString = 7;
+    string attributes = 8;
 }
 
 message SiddhiRegister {

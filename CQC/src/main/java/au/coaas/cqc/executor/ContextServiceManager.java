@@ -25,8 +25,7 @@ public class ContextServiceManager {
         SQEMResponse sqemResponse = null;
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub = null;
         try {
-            sqemStub
-                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            sqemStub = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
             String service = request.getCdql();
             sqemResponse = sqemStub.registerContextService(RegisterContextServiceRequest.newBuilder().setJson(service).build());
 
@@ -38,11 +37,13 @@ public class ContextServiceManager {
                 JSONObject sqemBody = new JSONObject(sqemResponse.getBody());
                 String id = sqemBody.getString("id");
 
-                CSIResponse fetchJob = csiStub.createFetchJob(ContextService.newBuilder().setMongoID(id).setJson(service).build());
+                CSIResponse fetchJob = csiStub.createFetchJob(
+                        ContextService.newBuilder().setMongoID(id).setJson(service).build());
 
                 if(!fetchJob.getStatus().equals("200"))
                 {
-                    sqemStub.updateContextServiceStatus(UpdateContextServiceStatusRequest.newBuilder().setId(id).setStatus("inactive").build());
+                    sqemStub.updateContextServiceStatus(
+                            UpdateContextServiceStatusRequest.newBuilder().setId(id).setStatus("inactive").build());
                     sqemBody.put("status","inactive");
                     sqemBody.put("cause",new JSONObject(fetchJob.getBody()));
                     return CdqlResponse.newBuilder().setBody(sqemBody.toString()).setStatus(sqemResponse.getStatus()).build();

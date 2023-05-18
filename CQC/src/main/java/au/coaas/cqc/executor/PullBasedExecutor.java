@@ -96,12 +96,11 @@ public class PullBasedExecutor {
                                                     String queryId, String criticality, double complexity) throws Exception{
 
         // Initialize values
-        // How are the values assigned to 'ce'? I only see values assigned in the catch block.
         Map<String, JSONObject> ce = new HashMap<>();
         JSONObject consumerQoS = null;
 
-        // Iterates over execution plan
-        // The first loop goes over dependent sets of entities
+        // Iterates over execution plan.
+        // The first loop goes over dependent sets of entities.
         Collection<ListOfString> aList = query.getExecutionPlanMap().values();
 
         // Fetching Consumer SLA
@@ -112,10 +111,10 @@ public class PullBasedExecutor {
 
         // Replace with bList for Testing
         for (ListOfString entityList : aList) {
-            // Second loop iterates over the entities in the dependent set
+            // Second loop iterates over the entities in the dependent set.
             for (String entityID : entityList.getValueList()) {
                 ContextEntity entity = query.getDefine().getDefinedEntitiesList().stream().filter(v -> v.getEntityID().equals(entityID)).findFirst().get();
-                // Here the entity ID is the aliase that is defined in the query. e.g., e1 in "define entity e1 is from swm:type1"
+                // Here the entity ID is the aliase that is defined in the query. e.g., e1 in "define entity e1 is from swm:type1".
 
                 Queue<CdqlConditionToken> rpnCondition = new LinkedList<>(entity.getCondition().getRPNConditionList());
 

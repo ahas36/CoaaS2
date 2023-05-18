@@ -23,8 +23,9 @@ public class FetchJob implements Job {
         try {
             JobDataMap dataMap = context.getTrigger().getJobDataMap();
             String contextService = dataMap.getString("cs");
-            CSIResponse fetch = FetchManager.fetch(ContextServiceInvokerRequest.newBuilder().
-                    setContextService(ContextService.newBuilder().setJson(contextService).build())
+            CSIResponse fetch = FetchManager.fetch(ContextServiceInvokerRequest.newBuilder()
+                    .setContextService(ContextService.newBuilder().setJson(contextService))
+                    // .putAllParams() // TODO: MISSING!!!
                     .build());
 
             if(fetch.getStatus().equals("200"))

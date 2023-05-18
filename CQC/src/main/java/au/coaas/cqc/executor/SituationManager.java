@@ -64,7 +64,7 @@ public class SituationManager {
         if(!res.getStatus().equals("200")){
             JSONObject persEvent = new JSONObject(eventRequest.getEvent());
             ObjectMapper mapper = new ObjectMapper();
-            ContextEvent event = ContextEvent.newBuilder()
+            ContextEvent.Builder eventBuilder = ContextEvent.newBuilder()
                     .setKey(persEvent.getString("key"))
                     .setProviderID(eventRequest.getProvider())
                     // Following are commented because they should be null.
@@ -72,8 +72,11 @@ public class SituationManager {
                     // .setSubscriptionValue(persEvent.getString("subscriptionValue"))
                     .setTimestamp(persEvent.getString("timestamp"))
                     .setContextEntity(mapper.readValue(persEvent.getJSONObject("contextEntity").toString(),
-                            ContextEntity.class))
-                    .build();
+                            ContextEntity.class));
+            if(persEvent.has("attributes"))
+                eventBuilder.setAttributes(persEvent.getJSONObject("attributes").toString());
+
+            ContextEvent event = eventBuilder.build();
 
             List<SubscribedQuery> subQueries = getSubscribedQueries(event);
 

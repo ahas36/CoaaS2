@@ -82,22 +82,35 @@ public class JobSchedulerManager {
 
         String graph = contextService.getJSONObject("info").getString("graph").trim();
 
-        long updateFrequency = this.convertTime2MilliSecond(contextService.getJSONObject("sla").getJSONObject("updateFrequency"));
+        long updateFrequency = this.convertTime2MilliSecond(
+                contextService.getJSONObject("sla").getJSONObject("updateFrequency"));
 
         graph = graph.substring(1, graph.length() - 1);
         jobDataMap.put("graph", graph);
 
-        SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
-                .withIdentity(cs.getMongoID(), "cs-fetch-trigger")
-                .forJob("fetch-job", "cs-fetch-job")
-                .usingJobData(jobDataMap)
-                .withSchedule(SimpleScheduleBuilder.simpleSchedule().repeatForever()
-                        .withIntervalInMilliseconds(updateFrequency))
-                .startNow()
-                .build();
-
-        scheduler.scheduleJob(trigger);
-
+        if(cs.getTimes() < 1){
+            SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
+                    .withIdentity(cs.getMongoID(), "cs-fetch-trigger")
+                    .forJob("fetch-job", "cs-fetch-job")
+                    .usingJobData(jobDataMap)
+                    .withSchedule(SimpleScheduleBuilder.simpleSchedule().repeatForever()
+                            .withIntervalInMilliseconds(updateFrequency))
+                    .startNow()
+                    .build();
+            scheduler.scheduleJob(trigger);
+        }
+        else {
+            SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
+                    .withIdentity(cs.getMongoID(), "cs-fetch-trigger")
+                    .forJob("fetch-job", "cs-fetch-job")
+                    .usingJobData(jobDataMap)
+                    .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                            .withRepeatCount(cs.getTimes())
+                            .withIntervalInMilliseconds(updateFrequency))
+                    .startNow()
+                    .build();
+            scheduler.scheduleJob(trigger);
+        }
 
         return CSIResponse.newBuilder().setStatus("200").build();
     }

@@ -59,6 +59,7 @@ public class SituationManager {
                 .setProvider(eventRequest.getProvider()).build());
 
         // Could not find any subscriptions by ID or there exist no subscription ID attached in the event.
+        // This happens when a Context provider push data. This is why in line 85, it's data is mapped to an entity.
         // Subscription IDs exist for function executions.
         if(!res.getStatus().equals("200")){
             JSONObject persEvent = new JSONObject(eventRequest.getEvent());
@@ -74,10 +75,8 @@ public class SituationManager {
                             ContextEntity.class))
                     .build();
 
-            String jsonInString = mapper.writeValueAsString(event);
             List<SubscribedQuery> subQueries = getSubscribedQueries(event);
 
-            JSONObject jsonEvent = new JSONObject(jsonInString);
             JSONObject result = new JSONObject();
             JSONArray pushList = new JSONArray();
 
@@ -86,7 +85,7 @@ public class SituationManager {
                 for (ContextEntity subEntity : subscription.getRelatedEntitiesList()) {
                     Queue<CdqlConditionToken> tempEntityQueue = new LinkedList<>(subEntity.getCondition().getRPNConditionList());
                     if (event.getContextEntity().getType().getType().equals(subEntity.getType().getType())) {
-                        JSONObject tempEventJson = new JSONObject(jsonEvent.getJSONObject("attributes").toString());
+                        JSONObject tempEventJson = persEvent.getJSONObject("attributes");
                         tempEventJson.put(event.getKey(), event.getContextEntity().getEntityID());
                         if (evaluateNonDeterministic(new JSONObject().put(subEntity.getEntityID(), tempEventJson), tempEntityQueue) == true) {
                             notRelated = false;
@@ -131,7 +130,7 @@ public class SituationManager {
                 for (Map.Entry<String, String> entry : event.getContextEntity().getContextAttributesMap().entrySet()) {
                     String[] keys = entry.getKey().split(":");
                     String key = keys[keys.length - 1];
-                    Object value = jsonEvent.getJSONObject("attributes").get(key);
+                    Object value = persEvent.getJSONObject("attributes").get(key);
                     jsonObject.getJSONObject(entityID).put(key, value);
                 }
 

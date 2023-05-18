@@ -165,36 +165,38 @@ public class PushBasedExecutor {
                 cseCondition.addAllRPNCondition(contextEntity.get().getCondition().getRPNConditionList());
                 csEntity.setCondition(cseCondition.build());
 
-                Set<String> cseAttributes = new HashSet<>();
-                if (relatedAttributes != null) {
-                    cseAttributes.addAll(relatedAttributes.getValueList());
-                }
-                cseAttributes.addAll(contextEntity.get().getContextAttributesMap().keySet());
+//                Set<String> cseAttributes = new HashSet<>();
+//                if (relatedAttributes != null) {
+//                    cseAttributes.addAll(relatedAttributes.getValueList());
+//                }
+//                cseAttributes.addAll(contextEntity.get().getContextAttributesMap().keySet());
+//
+//                for (FunctionCall functionCall : functionCalls) {
+//                    if (situations.containsKey(functionCall.getFunctionName())) {
+//                        SituationFunction situ = situations.get(functionCall.getFunctionName());
+//                        for (Operand argument : functionCall.getArgumentsList()) {
+//                            if (argument.getType() == OperandType.CONTEXT_ENTITY && argument.getStringValue().equals(entityID)) {
+//                                String entityType = contextEntity.get().getType().getType();
+//                                Map.Entry<String, ContextEntityType> findEntity = situ.getRelatedEntitiesMap().entrySet().stream()
+//                                        .filter(p -> p.getValue().toString().equals(entityType))
+//                                        .findFirst().get();
+//                                String prefix = findEntity.getKey();
+//                                for (String attr : situ.getAllAttributesList()) {
+//                                    if (attr.startsWith(prefix + "dot")) {
+//                                        cseAttributes.add(attr.substring((prefix + "dot").length()));
+//                                    }
+//                                }
+//                                situ.getRelatedEntitiesMap().remove(findEntity.getKey());
+//                            }
+//
+//                        }
+//                    }
+//                }
 
-                for (FunctionCall functionCall : functionCalls) {
-                    if (situations.containsKey(functionCall.getFunctionName())) {
-                        SituationFunction situ = situations.get(functionCall.getFunctionName());
-                        for (Operand argument : functionCall.getArgumentsList()) {
-                            if (argument.getType() == OperandType.CONTEXT_ENTITY && argument.getStringValue().equals(entityID)) {
-                                String entityType = contextEntity.get().getType().getType();
-                                Map.Entry<String, ContextEntityType> findEntity = situ.getRelatedEntitiesMap().entrySet().stream()
-                                        .filter(p -> p.getValue().toString().equals(entityType))
-                                        .findFirst().get();
-                                String prefix = findEntity.getKey();
-                                for (String attr : situ.getAllAttributesList()) {
-                                    if (attr.startsWith(prefix + "dot")) {
-                                        cseAttributes.add(attr.substring((prefix + "dot").length()));
-                                    }
-                                }
-                                situ.getRelatedEntitiesMap().remove(findEntity.getKey());
-                            }
+//                csEntity.putAllContextAttributes(new ArrayList<>(cseAttributes));
+                // Uncomment above, and comment the below line, if there is anything wrong with attribute management
 
-                        }
-                    }
-                }
-
-                // TODO: Known bug. Need to check how the attribute list is used when retrived for execution.
-                csEntity.putAllContextAttributes(new ArrayList<>(cseAttributes));
+                csEntity.putAllContextAttributes(contextEntity.get().getContextAttributesMap());
                 relateCdqlSubscriptionEntities.add(csEntity.build());
             }
         }
@@ -354,7 +356,7 @@ public class PushBasedExecutor {
 
     private static void sendODFWrite(String URI, String msg, Map<String, String> headers, CDQLCallback callback) {
         try {
-            // TODO: Incase the callback has an aiuthication requirement, the following has to be uncommented.
+            // TODO: Incase the callback has an authentication requirement, the following has to be uncommented.
             // if (callback.getAuthorizationType() != null &&
             //         (callback.getAuthorizationType().equalsIgnoreCase("basic auth") ||
             //                 callback.getAuthorizationType().equalsIgnoreCase("basic"))) {

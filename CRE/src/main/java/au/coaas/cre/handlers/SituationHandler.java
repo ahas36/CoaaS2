@@ -22,7 +22,7 @@ public class SituationHandler {
 
         JSONObject persEvent = new JSONObject(eventRequest.getEvent());
 
-        if (persEvent.getString("subscriptionID") != null) {
+        if (persEvent.has("subscriptionID") && persEvent.getString("subscriptionID") != null) {
             try {
                 SiddhiWrapper.addEvent(new Object[]{"event", Double.valueOf(persEvent.getString("subscriptionValue")),
                         persEvent.getString("timestamp")},"sub_" + persEvent.getString("subscriptionID"));

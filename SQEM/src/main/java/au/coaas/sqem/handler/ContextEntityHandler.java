@@ -20,6 +20,7 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
+import com.mongodb.util.JSON;
 import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -47,6 +48,7 @@ public class ContextEntityHandler {
             MongoCollection<Document> collection = db.getCollection(collectionName);
 
             Document entDoc = Document.parse(registerRequest.getJson());
+            entDoc.put("providers", new String[]{registerRequest.getProviderId()});
 
             collection.insertOne(entDoc);
 
@@ -80,7 +82,7 @@ public class ContextEntityHandler {
                     int end = Math.min(items.length(), start + numberOfItemsPerTask);
                     for (int i = start; i < end; i++) {
                         JSONObject data = items.getJSONObject(i);
-                        // observed time calculation
+                        // Observed time calculation for each entity (more specific than the avgAge in response).
                         Long timestamp = new java.util.Date().getTime();
                         if(data.has("age")){
                             long age = 0;
@@ -102,6 +104,7 @@ public class ContextEntityHandler {
                                 .setJson(data.toString())
                                 .setEt(updateRequest.getEt())
                                 .setObservedTime(timestamp)
+                                .setProviderId(updateRequest.getProviderId())
                                 .setKey(updateRequest.getKey());
 
                         SQEMResponse sqemResponse = updateEntity(builder.build());
@@ -125,7 +128,35 @@ public class ContextEntityHandler {
             body.put("success", success.intValue());
             body.put("error", error.intValue());
             return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
-        } else {
+        }
+        else {
+            long age = 0;
+            Long timestamp = new java.util.Date().getTime();
+            JSONObject data = new JSONObject(updateRequest.getJson());
+            if(data.has("age")){
+                JSONObject age_obj = data.getJSONObject("age");
+
+                String unit = age_obj.getString("unitText");
+                long value = age_obj.getLong("value");
+
+                // Age here is considered in miliseconds
+                switch(unit){
+                    case "ms": age = value; break;
+                    case "s": age = value*1000; break;
+                    case "h": age = value*60*1000; break;
+                }
+                timestamp -= (age + updateRequest.getRetLatency());
+
+                UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder()
+                        .setJson(updateRequest.getJson())
+                        .setEt(updateRequest.getEt())
+                        .setObservedTime(timestamp)
+                        .setProviderId(updateRequest.getProviderId())
+                        .setKey(updateRequest.getKey());
+
+                return updateEntity(builder.build());
+            }
+
             return updateEntity(updateRequest);
         }
     }
@@ -158,7 +189,7 @@ public class ContextEntityHandler {
 
             JSONObject attributes = new JSONObject(updateRequest.getJson());
 
-            //form a query to find all the matching entities that needs to be updated
+            //Matching the entities by unique keys
             for (String attributeName : attributes.keySet()) {
                 Object item = attributes.get(attributeName);
                 if (item instanceof JSONArray || item instanceof JSONObject) {
@@ -177,7 +208,10 @@ public class ContextEntityHandler {
             }
 
             //execute the update
-            UpdateResult ur = collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
+            Document queryDoc = new Document();
+            queryDoc.put("$set", updateFields);
+            queryDoc.put("$addToSet", new Document("providers", updateRequest.getProviderId()));
+            UpdateResult ur = collection.updateMany(query, queryDoc, new UpdateOptions().upsert(false));
 
             //todo it might be better to create a separate thread and update the historical db there instead of blocking main thread
             ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query, updateRequest.getObservedTime());

@@ -185,6 +185,7 @@ public class PerformanceLogHandler {
                     break;
                 }
                 case "executeFetch":
+                case "FetchJob-execute":
                 case "executeStreamRead":{
                     String hashKey = Utilty.getHashKey(request.getCs().getParamsMap());
 
@@ -625,7 +626,7 @@ public class PerformanceLogHandler {
             ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
                     "avg(response_time) AS rt_avg, avg(cost) AS avg_cost, " +
                     "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
-                    "FROM coass_performance WHERE method = 'executeFetch' " +
+                    "FROM coass_performance WHERE method = 'executeFetch' OR method = 'FetchJob-execute'" +
                     "GROUP BY identifier, status;");
 
             while(rs_1.next()){
@@ -922,7 +923,7 @@ public class PerformanceLogHandler {
                         totalPenalties += rs_2.getDouble("tcost");
                     }
                 }
-                else if(method.equals("executeFetch")){
+                else if(method.equals("executeFetch") || method.equals("FetchJob-execute")){
                     if(status.equals("200")){
                         totalRetrievals += rs_2.getLong("cnt");
                         totalRetrievalCost += rs_2.getDouble("tcost");
@@ -1514,7 +1515,7 @@ public class PerformanceLogHandler {
 
         HashMap<String, HashMap<String,Double>>  res = new HashMap<>();
         ResultSet rs_1 = statement.executeQuery("SELECT avg(age) AS avg_age, count(*) AS cnt " +
-                "FROM coass_performance WHERE method = 'executeFetch';");
+                "FROM coass_performance WHERE method = 'executeFetch' or method = 'FetchJob-execute';");
         if(rs_1.next()){
             return new AbstractMap.SimpleEntry<>(rs_1.getDouble("avg_age"),
                     rs_1.getDouble("cnt"));

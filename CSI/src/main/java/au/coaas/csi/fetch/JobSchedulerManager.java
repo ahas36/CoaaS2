@@ -89,6 +89,7 @@ public class JobSchedulerManager {
         jobDataMap.put("graph", graph);
 
         jobDataMap.put("params", (new JSONObject(cs.getParamsMap())).toString());
+        jobDataMap.put("providerId", cs.getMongoID());
 
         if(cs.getTimes() < 1){
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()

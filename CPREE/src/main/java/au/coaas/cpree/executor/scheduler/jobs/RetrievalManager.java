@@ -87,6 +87,9 @@ public class RetrievalManager {
                 }
                 else age = Long.valueOf(response.getString("age"));
             }
+            else if(response.has("avgAge")){
+                age = (long) response.getDouble("avgAge");
+            }
 
             long retLatency = endTime-startTime;
             double retDiff = retLatency - qos.getDouble("rtmax");

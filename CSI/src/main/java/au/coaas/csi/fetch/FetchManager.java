@@ -18,8 +18,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -95,7 +94,7 @@ public class FetchManager {
             String res = response.body().string().trim();
 
             if(cs.has("attributes")){
-                Object result = semanticMapper(cs.getJSONArray("attributes"), res, info.optString("resultTag",null));
+                JSONObject result = semanticMapper(cs.getJSONArray("attributes"), res, info.optString("resultTag",null));
                 // This return value should be what should be cached.
                 CSSummary.Builder summary = CSSummary.newBuilder()
                         .setId(cs.getJSONObject("_id").getString("$oid"))
@@ -114,11 +113,23 @@ public class FetchManager {
             if(res.startsWith("{")){
                 rawResult = new JSONObject(res);
             }else if (res.startsWith("[")){
+                Double avgAge = 0.0;
                 rawResult = new JSONObject();
-                rawResult.put("results", new JSONArray(res));
+                JSONArray results = new JSONArray(res);
+                if(results.getJSONObject(0).has("age")){
+                    Double sum = 0.0;
+                    for(int i = 0; i<results.length(); i++){
+                        sum += results.getJSONObject(i)
+                                .getJSONObject("age").getDouble("value");
+                    }
+                    avgAge = (sum*1000) / results.length();
+                }
+                rawResult.put("results", results);
+                rawResult.put("avgAge", avgAge);
             }else {
                 rawResult = new JSONObject();
                 rawResult.put("results", res);
+                rawResult.put("avgAge", 0.0); // avgAge in miliseconds
             }
 
             return CSIResponse.newBuilder().setStatus("200")
@@ -283,7 +294,7 @@ public class FetchManager {
         return new JSONObject();
     }
 
-    private static Object semanticMapper(JSONArray attributes, String service, String resultTag) {
+    private static JSONObject semanticMapper(JSONArray attributes, String service, String resultTag) {
         if(service.trim().startsWith("[") || resultTag!=null)
         {
             JSONArray result = new JSONArray();
@@ -302,6 +313,7 @@ public class FetchManager {
             int numberOfIterations = (int)(items.length()/numberOfItemsPerTask) + 1;
 
             ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+            Stack<Double> ages = new Stack<>();
 
             for (int factor = 0; factor< numberOfIterations ; factor++)
             {
@@ -310,7 +322,9 @@ public class FetchManager {
                     int start = numberOfItemsPerTask * finalFactor;
                     int end =  Math.min(items.length(),start+numberOfItemsPerTask);
                     for(int i = start; i < end; i++){
-                        result.put(mapJsonObject(attributes,items.getJSONObject(i).toString()));
+                        JSONObject entity = mapJsonObject(attributes,items.getJSONObject(i).toString());
+                        ages.push(entity.getJSONObject("age").getDouble("value"));
+                        result.put(entity);
                     }
                 });
             }
@@ -323,7 +337,13 @@ public class FetchManager {
 
             }
             JSONObject finalResult = new JSONObject();
-            finalResult.put("results",result);
+            finalResult.put("results", result);
+
+            Double[] ageArrary = (Double[]) ages.toArray();
+            Double sum = 0.0;
+            for(int i=0; i < ageArrary.length ; i++)
+                sum = sum + ageArrary[i];
+            finalResult.put("avgAge", (sum*1000)/ageArrary.length);
             return finalResult;
         }else {
             return mapJsonObject(attributes,service);

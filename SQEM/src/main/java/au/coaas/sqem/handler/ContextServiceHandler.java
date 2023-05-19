@@ -102,8 +102,8 @@ public class ContextServiceHandler {
             // Get all the context services that conforms to the given ontology, and contains all the attributes needed in the query.
             // Service Description is within this json documents. Not like the prototype.
             collection.find(Filters.and(
-                    Filters.eq("info.ontClass",vocabURI),
                     // Filters.eq("sla.cache",false),
+                    Filters.eq("info.ontClass",vocabURI),
                     Filters.all("info.params.term.label",serviceRequest.getParamsList())
                     )).forEach(printBlock);
 

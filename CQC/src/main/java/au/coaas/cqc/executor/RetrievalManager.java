@@ -69,8 +69,6 @@ public class RetrievalManager {
 
         long age = 0;
         if(fetch.getStatus().equals("200")){
-            // TODO: With the recent update, age is attributed to the entity not the context provider.
-            // So, age should be calculated for the entity (Need to refactor the code).
             JSONObject response = new JSONObject(fetch.getBody());
             if(response.has("age")){
                 if(response.getString("age").startsWith("{")){
@@ -87,6 +85,9 @@ public class RetrievalManager {
                     }
                 }
                 else age = Long.valueOf(response.getString("age"));
+            }
+            else if(response.has("avgAge")){
+                age = (long) response.getDouble("avgAge");
             }
 
             long retLatency = endTime-startTime;

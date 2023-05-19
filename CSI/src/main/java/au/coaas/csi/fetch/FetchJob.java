@@ -7,9 +7,11 @@ import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
+import au.coaas.sqem.proto.Statistic;
 import au.coaas.sqem.proto.UpdateEntityRequest;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.json.JSONObject;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -20,6 +22,7 @@ import java.util.logging.Logger;
 
 public class FetchJob implements Job {
 
+    private static final int retrys = 20;
     private static Logger log = Logger.getLogger(FetchJob.class.getName());
 
     public void execute(JobExecutionContext context) throws JobExecutionException {
@@ -30,11 +33,40 @@ public class FetchJob implements Job {
                     dataMap.getString("params"),
                     new TypeToken<HashMap<String, String>>() {}.getType());
 
-            long startTime = System.currentTimeMillis();
-            CSIResponse fetch = FetchManager.fetch(ContextServiceInvokerRequest.newBuilder()
+            long startTime = 0;
+            double penEarning = 0;
+            CSIResponse fetch = null;
+
+            JSONObject qos = (new JSONObject(contextService)).getJSONObject("sla").getJSONObject("qos");
+
+            ContextServiceInvokerRequest request  = ContextServiceInvokerRequest.newBuilder()
                     .setContextService(ContextService.newBuilder().setJson(contextService))
                     .putAllParams(params)
-                    .build());
+                    .build();
+            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+            for(int i=0; i < retrys; i++){
+                startTime = System.currentTimeMillis();
+                fetch = FetchManager.fetch(request);
+
+                if(fetch.getStatus().equals("200")) break;
+                else {
+                    long int_endTime = System.currentTimeMillis();
+                    long retLatency = int_endTime-startTime;
+                    double retDiff = retLatency - qos.getDouble("rtmax");
+                    if(retDiff > 0){
+                        penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
+                                * qos.getDouble("penPct") / 100;
+                    }
+
+                    asyncStub.logPerformanceData(Statistic.newBuilder()
+                            .setIsDelayed(retDiff>0).setEarning(penEarning)
+                            .setMethod("executeFetch").setStatus(fetch.getStatus())
+                            .setTime(int_endTime-startTime).setCs(request).setAge(0)
+                            .setCost(!fetch.getStatus().equals("500")? fetch.getSummary().getPrice() : 0).build());
+                }
+            }
 
             if(fetch.getStatus().equals("200"))
             {
@@ -44,9 +76,12 @@ public class FetchJob implements Job {
                         setVocabURI(dataMap.getString("graph")).
                         setType(dataMap.getString("ontClass")).build();
 
-                UpdateEntityRequest updateRequest = UpdateEntityRequest.newBuilder().setEt(et)
+                UpdateEntityRequest updateRequest = UpdateEntityRequest.newBuilder()
+                        .setEt(et)
                         .setJson(fetch.getBody())
+                        .setProviderId(dataMap.getString("providerId"))
                         .setKey(dataMap.getString("key"))
+                        // This key is the unique identifier attribute(s) of the entity.
                         .setRetLatency(retLatency)
                         .build();
 
@@ -55,15 +90,22 @@ public class FetchJob implements Job {
 
                 SQEMResponse sqemResponse = sqemStub.updateContextEntity(updateRequest);
 
-                SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                // This calculation is unnessecary if running in complete DB mode.
+                double retDiff = retLatency - qos.getDouble("rtmax");
+                if(retDiff > 0){
+                    penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
+                            * qos.getDouble("penPct") / 100;
+                }
 
-                // TODO: Need to push stats if this will be used.
-//                asyncStub.logPerformanceData(Statistic.newBuilder()
-//                        .setMethod("FetchJob-execute").setStatus(fetch.getStatus())
-//                        .setTime(retLatency).setCs(contextService).setAge(age)
-//                        .setIsDelayed(retDiff>0).setEarning(penEarning)
-//                        .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
+                JSONObject fr = new JSONObject(fetch.getBody());
+                Double age = fr.has("results") ? fr.getDouble("avgAge")
+                        : fr.getJSONObject("age").getDouble("value");
+
+                asyncStub.logPerformanceData(Statistic.newBuilder()
+                        .setMethod("FetchJob-execute").setStatus(fetch.getStatus())
+                        .setTime(retLatency).setCs(request).setAge(age.longValue())
+                        .setIsDelayed(retDiff>0).setEarning(penEarning)
+                        .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
                 if(!sqemResponse.getStatus().equals("200")){
                     log.info(sqemResponse.getBody());

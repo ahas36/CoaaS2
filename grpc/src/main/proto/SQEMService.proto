@@ -139,6 +139,7 @@ message RegisterEntityRequest
 {
     string json = 1;
     au.coaas.cqp.proto.ContextEntityType et = 2;
+    string providerId = 3;
 }
 
 message UpdateEntityRequest
@@ -148,6 +149,7 @@ message UpdateEntityRequest
     string key = 3;
     int64 observedTime = 4;
     int64 retLatency = 5;
+    string providerId = 6;
 }
 
 message RegisterContextServiceRequest

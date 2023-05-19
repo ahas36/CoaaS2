@@ -1294,11 +1294,13 @@ public class PullBasedExecutor {
 
                     // Fetching from the same context provider OR it's stream otherwise
                     String retEntity = slaObj.getBoolean("autoFetch") ?
-                            RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
+                            RetrievalManager.executeStreamRead(
+                                    conSer.toString(), slaObj.getJSONObject("qos"), params) :
+                            RetrievalManager.executeFetch(
+                                    conSer.toString(), slaObj.getJSONObject("qos"), params,
                                     conSer.getJSONObject("_id").getString("$oid"),
                                     consumerSLA.getJSONObject("_id").getString("$oid"),
-                                    targetEntity.getType().getType(), attributes) :
-                            RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params);
+                                    targetEntity.getType().getType(), attributes) ;
 
                     // There is problem with the current context provider which makes it unsuitable for retrieving now.
                     // Therefore, has to move to the next context provider

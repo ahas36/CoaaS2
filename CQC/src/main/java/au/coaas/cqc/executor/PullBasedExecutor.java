@@ -1320,11 +1320,12 @@ public class PullBasedExecutor {
 
             JSONObject slaObj = conSer.getJSONObject("sla");
             String retEntity = conSer.getJSONObject("sla").getBoolean("autoFetch") ?
+                    RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params) :
                     RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
                             conSer.getJSONObject("_id").getString("$oid"),
                             consumerSLA.getJSONObject("_id").getString("$oid"),
-                            targetEntity.getType().getType(), attributes) :
-                    RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params);
+                            targetEntity.getType().getType(), attributes);
+                    ;
             if(retEntity != null)
                 return new AbstractMap.SimpleEntry(retEntity,
                         qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));

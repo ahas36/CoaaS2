@@ -1,27 +1,36 @@
 package au.coaas.cpree.executor.scheduler.jobs;
 
-import au.coaas.cpree.utils.ConQEngHelper;
+import au.coaas.cpree.proto.SimpleContainer;
+import au.coaas.cpree.utils.Utilities;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 
+import au.coaas.sqem.proto.GetEntitiesRequest;
+import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.Statistic;
 
 import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.AbstractMap;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.Executors;
+import java.util.List;
+import java.util.logging.Logger;
 
 public class RetrievalManager {
     
     private static final int retrys = 20;
+    private static Logger log = Logger.getLogger(RetrievalManager.class.getName());
+
     // Retrieval from non-streaming Context Providers
-    public static String executeFetch(String contextService, HashMap<String,String> params) {
+    public static AbstractMap.SimpleEntry<String,SimpleContainer> executeFetch(String contextService, HashMap<String,String> params) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
@@ -98,13 +107,42 @@ public class RetrievalManager {
                         * qos.getDouble("penPct") / 100;
             }
 
+            JSONArray key = provider.getJSONObject("sla").getJSONArray("key");
+            List<String> hkeys = new ArrayList<>();
+
+            if(response.has("results")){
+                String hashkey = "";
+                JSONArray entities = response.getJSONArray("results");
+                for(int j=0; j<entities.length(); j++){
+                    for (int i = 0; i < key.length(); i++) {
+                        Object idValue = entities.getJSONObject(i).get(key.getString(i));
+                        hashkey += key.getString(i) + "@" + idValue.toString() + ";";
+                    }
+                    hkeys.add(Utilities.getHashKey(hashkey));
+                }
+            }
+            else {
+                String hashkey = "";
+                for (int i = 0; i < key.length(); i++) {
+                    Object idValue = response.get(key.getString(i));
+                    hashkey += key.getString(i) + "@" + idValue.toString() + ";";
+                }
+                hkeys.add(Utilities.getHashKey(hashkey));
+            }
+
             asyncStub.logPerformanceData(Statistic.newBuilder()
+                    .addAllHaskeys(hkeys)
                     .setIsDelayed(retDiff>0).setEarning(penEarning)
                     .setCs(fetchRequest).setAge(age).setTime(retLatency)
                     .setMethod("executeFetch").setStatus(fetch.getStatus())
                     .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
-            return fetch.getBody();
+            SimpleContainer meta = SimpleContainer.newBuilder().addAllHashKeys(hkeys)
+                    .setRetLatMilis(endTime-startTime)
+                    .setFreshness(provider.getJSONObject("sla").getJSONObject("freshness").getDouble("value"))
+                    .build();
+
+            return new AbstractMap.SimpleEntry(fetch.getBody(),meta);
         }
 
         // Returning null means teh CMP failed to retrieved context from the provider despite all attempts.
@@ -112,50 +150,36 @@ public class RetrievalManager {
     }
 
     // Retrieval from streaming Context Providers
-    public static String executeStreamRead(String contextService, HashMap<String,String> params){
+    public static AbstractMap.SimpleEntry<String,SimpleContainer> executeStreamRead(String contextService, HashMap<String,String> params,
+                                           String csID, String entityType){
+        CSIServiceGrpc.CSIServiceBlockingStub csiStub
+                = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
+
         long startTime = System.currentTimeMillis();
+        CSIResponse fetch = csiStub.updateFetchJob(ContextService.newBuilder()
+                .setJson(contextService).setMongoID(csID)
+                .setTimes(1).putAllParams(params)
+                .build());
 
-        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        if(fetch.getStatus().equals("200")) {
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            SQEMResponse entities = sqemStub.getEntities(GetEntitiesRequest.newBuilder()
+                            .setEntityType(entityType)
+                            .addAllKeys(fetch.getHashkeysList())
+                            .build());
 
-        // TODO: Implement this method to retrieve data from the storage the stream written to.
-        // SQEMResponse fetch = sqemStub.fetchStreamedData();
-
-        long endTime = System.currentTimeMillis();
-
-        long age = 0;
-//        if(fetch.getStatus().equals("200")){
-//            JSONObject response = new JSONObject(fetch.getBody());
-//            if(response.has("age")){
-//                if(response.getString("age").startsWith("{")){
-//                    JSONObject age_obj = new JSONObject(response.getString("age"));
-//
-//                    String unit = age_obj.getString("unitText");
-//                    long value = age_obj.getLong("value");
-//
-//                    // Age is always considered in seconds in the code
-//                    switch(unit){
-//                        case "ms": age = value/1000; break;
-//                        case "s": age = value; break;
-//                        case "h": age = value*60; break;
-//                    }
-//                }
-//                else age = Long.valueOf(response.getString("age"));
-//            }
-//        }
-//
-//        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-//                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-//        // TODO: Set Context Service details
-//        asyncStub.logPerformanceData(Statistic.newBuilder()
-//                .setMethod("executeStreamRead").setStatus(fetch.getStatus())
-//                .setTime(endTime-startTime).setEarning(0).setAge(age)
-//                .setCost(fetch.getStatus().equals("200")? Double.valueOf(fetch.getMeta()) : 0).build());
-//
-//        if (fetch.getStatus().equals("200")) {
-//            return fetch.getBody();
-//        }
-
-        return null;
+            long endTime = System.currentTimeMillis();
+            JSONObject cs = new JSONObject(contextService);
+            SimpleContainer meta = SimpleContainer.newBuilder().addAllHashKeys(fetch.getHashkeysList())
+                    .setRetLatMilis(endTime-startTime)
+                    .setFreshness(cs.getJSONObject("sla").getJSONObject("freshness").getDouble("value"))
+                    .build();
+            return new AbstractMap.SimpleEntry(entities.getBody(),meta);
+        }
+        else{
+            log.severe("Error occurred when refreshing from to refresh in Storage");
+            return null;
+        }
     }
 }

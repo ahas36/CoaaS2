@@ -53,6 +53,10 @@ import static au.coaas.sqem.util.StatisticalUtils.*;
 public class PerformanceLogHandler {
 
     private static Connection connection;
+
+    private static final int numberOfThreads = 10;
+    private static final int numberOfItemsPerTask = 100;
+
     private static final Logger log = Logger.getLogger(LogHandler.class.getName());
     private static List<String> all_tables = Stream.of(LogicalContextLevel.values())
             .map(Enum::name)
@@ -187,30 +191,87 @@ public class PerformanceLogHandler {
                 case "executeFetch":
                 case "FetchJob-execute":
                 case "executeStreamRead":{
-                    String hashKey = Utilty.getHashKey(request.getCs().getParamsMap());
-
                     JSONObject cs = new JSONObject(request.getCs().getContextService().getJson());
                     String cs_id = cs.getJSONObject("_id").getString("$oid");
 
                     // Value at the Identifier column here is the Context Service ID
-                    String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
-                            "cost,identifier,hashKey,createdDatetime,isDelayed,age,fthresh) " +
-                            "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', CAST('%s' AS DATETIME2), %d, %d, %f);";
+
                     LocalDateTime now = LocalDateTime.now();
 
-                    String formatted_string = String.format(queryString,
-                            method, // Method name
+                    if(request.getStatus().equals("200")){
+                        String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                                "cost,identifier,hashkey, createdDatetime,isDelayed,age,fthresh) " +
+                                "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', CAST('%s' AS DATETIME2), %d, %d, %f);";
+
+                        int numberOfIterations = (int)(request.getHaskeysCount()/numberOfItemsPerTask) + 1;
+
+                        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+
+                        for (int factor = 0; factor< numberOfIterations ; factor++)
+                        {
+                            int finalFactor = factor;
+                            executorService.submit(() -> {
+                                int start = numberOfItemsPerTask * finalFactor;
+                                int end =  Math.min(request.getHaskeysCount(),start+numberOfItemsPerTask);
+                                for(int i = start; i < end; i++){
+                                    String formatted_string = String.format(queryString,
+                                            method, // Method name
+                                            request.getStatus(), // Status of the retrieval
+                                            request.getTime(), // Response time
+                                            request.getEarning(), // Earnings from the retrieval (penalties)
+                                            request.getCost(), // Cost of retrieval
+                                            cs_id, // Context Service Identifier
+                                            request.getHaskeys(i), // Hashkey of the entity
+                                            now.format(formatter),
+                                            request.getIsDelayed() ? 1 : 0, // is Delayed?
+                                            request.getAge(), //age
+                                            cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); // fthresh
+                                    try {
+                                        statement.executeUpdate(formatted_string);
+                                    } catch (SQLException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+                        }
+
+                        executorService.shutdown();
+
+                        try {
+                            executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+                        } catch (InterruptedException e) {
+                            log.severe("Error when recording performance log: "+ e.getMessage());
+                        }
+                    }
+                    else {
+                        String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
+                                "cost,identifier,createdDatetime,isDelayed,age,fthresh) " +
+                                "VALUES('%s', '%s', %d, %f, %f, '%s', CAST('%s' AS DATETIME2), %d, %d, %f);";
+                        String formatted_string = String.format(queryString,
+                                method, // Method name
+                                request.getStatus(), // Status of the retrieval
+                                request.getTime(), // Response time
+                                request.getEarning(), // Earnings from the retrieval (penalties)
+                                request.getCost(), // Cost of retrieval
+                                cs_id, // Context Service Identifier
+                                now.format(formatter),
+                                request.getIsDelayed() ? 1 : 0, // is Delayed?
+                                request.getAge(), //age
+                                cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); // fthresh
+                        statement.executeUpdate(formatted_string);
+                    }
+
+                    String queryString_2 = "INSERT INTO retrieval-summary(status,response_time,"+
+                            "cost,identifier,createdDatetime,isDelayed) " +
+                            "VALUES('%s', '%s', %d, %f, %f, '%s', CAST('%s' AS DATETIME2), %d, %d, %f);";
+                    String formatted_string_2 = String.format(queryString_2,
                             request.getStatus(), // Status of the retrieval
                             request.getTime(), // Response time
-                            request.getEarning(), // Earnings from the retrieval (penalties)
                             request.getCost(), // Cost of retrieval
                             cs_id, // Context Service Identifier
-                            hashKey, // Hashkey (cached or not cached)
                             now.format(formatter),
-                            request.getIsDelayed() ? 1 : 0, // is Delayed?
-                            request.getAge(), //age
-                            cs.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh")); // fthresh
-                    statement.executeUpdate(formatted_string);
+                            request.getIsDelayed() ? 1 : 0); // is Delayed?
+                    statement.executeUpdate(formatted_string_2);
                     break;
                 }
                 case "cacheSearch": {
@@ -626,8 +687,7 @@ public class PerformanceLogHandler {
             ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
                     "avg(response_time) AS rt_avg, avg(cost) AS avg_cost, " +
                     "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
-                    "FROM coass_performance WHERE method = 'executeFetch' OR method = 'FetchJob-execute'" +
-                    "GROUP BY identifier, status;");
+                    "FROM retrieval-summary GROUP BY identifier, status;");
 
             while(rs_1.next()){
                 Double count = rs_1.getInt("cnt") * 1.0;
@@ -1303,6 +1363,9 @@ public class PerformanceLogHandler {
 
             MongoCollection<Document> collection = db.getCollection("performanceSummary");
 
+            // Not defining any conditions in the find because there is a need to get the whole sequence
+            // retrievals in each window which is not guranteed in each.
+
             Document sort = new Document();
             sort.put("_id",-1); // Auto generated _id embeds the timestamp. So, ordering from newest to oldest
 
@@ -1766,6 +1829,16 @@ public class PerformanceLogHandler {
                     "    isDelayed BIT NOT NULL,\n" +
                     "    age BIGINT NULL,\n" +
                     "    fthresh REAL NULL)");
+
+            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='retrieval-summary')\n" +
+                    "CREATE TABLE retrieval-summary(\n" +
+                    "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                    "    status VARCHAR(5) NOT NULL,\n" +
+                    "    response_time BIGINT NULL,\n" +
+                    "    cost REAL NULL,\n" +
+                    "    identifier VARCHAR(MAX) NOT NULL,\n" +
+                    "    createdDatetime DATETIME NOT NULL,\n" +
+                    "    isDelayed BIT NOT NULL)");
 
             statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cpree_performance')\n" +
                     "CREATE TABLE cpree_performance(\n" +

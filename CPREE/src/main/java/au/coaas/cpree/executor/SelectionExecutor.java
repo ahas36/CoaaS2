@@ -101,25 +101,23 @@ public class SelectionExecutor {
         }
     }
 
+    // Done
     public static CPREEResponse execute(CacheSelectionRequest request) {
         try {
-            // Get Context Identifier
-            String hashKey = Utilities.getHashKey(request.getReference().getParamsMap());
-
             // Get Context Provider's Profile
             SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
             ContextProviderProfile profile = blockingStub.getContextProviderProfile(ContextProfileRequest.newBuilder()
                     .setPrimaryKey(request.getReference().getServiceId())
-                    .setHashKey(hashKey)
-                    .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
+                    .setHashKey(request.getHashKey())
+                    .setLevel(CacheLevels.ENTITY.toString().toLowerCase())
                     .build());
 
             if(cacheAll){
                 // Block executes the traditional cache-all (leave a copy) policy if configured.
-                RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(new JSONObject(request.getSla()), profile,
-                        request.getReference().getServiceId());
+                RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(
+                        new JSONObject(request.getSla()), profile);
 
                 SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
                         = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
@@ -132,7 +130,7 @@ public class SelectionExecutor {
                         .setReference(request.getReference()).build());
 
                 // Configuring refreshing
-                if(reftype == RefreshLogics.PROACTIVE_SHIFT){
+                if(reftype.equals(RefreshLogics.PROACTIVE_SHIFT)){
                     executor.execute(() -> {
                         JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
                         JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
@@ -144,12 +142,12 @@ public class SelectionExecutor {
 
                         RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                 .setEt(request.getReference().getEt())
-                                .setRequest(request).setFthreh(fthresh)
+                                .setReference(request.getReference()).setFthreh(fthresh)
                                 .setLifetime(freshReq.getDouble("value")) // seconds
                                 .setResiLifetime(res_life) // seconds
-                                .setHashKey(hashKey)
+                                .setHashKey(request.getHashKey())
                                 .setSamplingInterval(sampling.getDouble("value")) // seconds
-                                .setRefreshPolicy(RefreshLogics.REACTIVE.toString().toLowerCase())
+                                .setRefreshPolicy(RefreshLogics.PROACTIVE_SHIFT.toString().toLowerCase())
                                 .build());
                     });
                 }
@@ -157,11 +155,11 @@ public class SelectionExecutor {
                 return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
             }
 
-            // When not caching all the context as in traditional techniques.
+            // When not caching context as in traditional techniques.
             if (profile.getStatus().equals("200")) {
                 // Evaluate and Cache if selected
                 AbstractMap.SimpleEntry<Boolean, RefreshLogics> result = evaluateAndCache(request.getContext(),
-                        request.getReference(), request.getSla(), profile, hashKey, request.getComplexity());
+                        request.getReference(), request.getSla(), profile, request.getHashKey(), request.getComplexity());
 
                 if(result.getKey()){
                     // Configuring refreshing
@@ -177,10 +175,10 @@ public class SelectionExecutor {
 
                             RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                     .setEt(request.getReference().getEt())
-                                    .setRequest(request).setFthreh(fthresh)
+                                    .setReference(request.getReference()).setFthreh(fthresh)
                                     .setLifetime(freshReq.getDouble("value")) // seconds
                                     .setResiLifetime(res_life) // seconds
-                                    .setHashKey(hashKey)
+                                    .setHashKey(request.getHashKey())
                                     .setSamplingInterval(sampling.getDouble("value")) // seconds
                                     .setRefreshPolicy(result.getValue().toString().toLowerCase())
                                     .build());
@@ -205,7 +203,8 @@ public class SelectionExecutor {
         }
     }
 
-    private static AbstractMap.SimpleEntry<Boolean, RefreshLogics> evaluateAndCache(String context, CacheLookUp lookup, String sla,
+    // Done
+    public static AbstractMap.SimpleEntry<Boolean, RefreshLogics> evaluateAndCache(String context, CacheLookUp lookup, String sla,
                              ContextProviderProfile profile, String hashkey, double complexity) {
         try {
             boolean cache = false;
@@ -213,7 +212,7 @@ public class SelectionExecutor {
             if(weightThresholds.isEmpty()) defaultWeights();
 
             RefreshLogics ref_type;
-            String contextId = lookup.getServiceId() + "-" + hashkey;
+            String contextId = lookup.getEt().getType() + "-" + hashkey;
             LocalDateTime curr = LocalDateTime.now();
 
             SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
@@ -229,7 +228,7 @@ public class SelectionExecutor {
                     LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
                     LookUps.lookup(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda)) {
 
-                ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile, lookup.getServiceId());
+                ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile);
 
                 double lambda_conf = 0;
                 long est_delayTime = 0;
@@ -400,7 +399,7 @@ public class SelectionExecutor {
                         // Record decision history
                         sqemStub.logCacheDecision(ContextCacheDecision.newBuilder()
                                 .setJson(json.toString())
-                                .setLevel(CacheLevels.RAW_CONTEXT.toString()).build());
+                                .setLevel(CacheLevels.ENTITY.toString()).build());
                     }
                 }
                 else {
@@ -545,7 +544,7 @@ public class SelectionExecutor {
                         // Recording decision history
                         sqemStub.logCacheDecision(ContextCacheDecision.newBuilder()
                                 .setJson(json.toString())
-                                .setLevel(CacheLevels.RAW_CONTEXT.toString()).build());
+                                .setLevel(CacheLevels.ENTITY.toString()).build());
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
                         // The expiry period should also be greater than the time between 2 access to the item in order to at least have > 0 chance of a hit.
@@ -561,11 +560,20 @@ public class SelectionExecutor {
                     // Check available cache memory before caching
                     ListenableFuture<SQEMResponse> response = sqemStub.cacheEntity(CacheRequest.newBuilder()
                             .setJson(context)
+                            .setHashkey(hashkey)
                             .setRefreshLogic(ref_type.toString().toLowerCase())
                             .setCachelife(est_cacheLife) // This is in miliseconds
                             .setLambdaConf(lambda_conf)
                             .setIndefinite(indefinite)
-                            .setReference(lookup).build());
+                            .setReference(CacheLookUp.newBuilder()
+                                    .setEt(lookup.getEt())
+                                    .setServiceId(lookup.getServiceId())
+                                    .setUniformFreshness(lookup.getUniformFreshness())
+                                    .setSamplingInterval(lookup.getSamplingInterval())
+                                    .setCheckFresh(lookup.getCheckFresh())
+                                    .setKey(lookup.getKey())
+                                    .setQClass(lookup.getQClass())
+                                    .setHashKey(hashkey)).build());
                     return new AbstractMap.SimpleEntry<>(response.get().getStatus().equals("200") ? true : false,
                             ref_type);
                 }
@@ -584,6 +592,7 @@ public class SelectionExecutor {
         return new AbstractMap.SimpleEntry<>(false, null);
     }
 
+    // Done
     private static double getCacheEfficiency(int size, double missRate, double retLatency) {
         double cacheCost = (size * cachePerfStats.get("costPerByte"))
                 + cachePerfStats.get("processCost") * (((retLatency + cacheLookupLatency.get("400")) * missRate)
@@ -593,6 +602,7 @@ public class SelectionExecutor {
         return cacheCost > 0 ? redirCost/cacheCost : max_threshold;
     }
 
+    // Done
     private static RetrievalEfficiency getRetrievalEfficiency(String serviceId, ContextProviderProfile profile, double expLambda,
                                                  QueryClassProfile cqc_profile, String refPolicy, JSONObject slaObj){
         /** Initializing the variables **/
@@ -622,7 +632,7 @@ public class SelectionExecutor {
             // Here too, I'm only considering exp_rtmax of a single query class (since we have only 1 for testing 1 scenario).
             ProbDelay prob_delay = sqemStub.getProbDelay(ProbDelayRequest.newBuilder()
                     .setPrimaryKey(serviceId)
-                    .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
+                    .setLevel(CacheLevels.ENTITY.toString().toLowerCase())
                     .setThreshold(rtmax - cacheLookupLatency.get("404")) // in seconds
                     .build());
             // TODO:
@@ -650,7 +660,7 @@ public class SelectionExecutor {
 
                 ProbDelay prob_delay = sqemStub.getProbDelay(ProbDelayRequest.newBuilder()
                         .setPrimaryKey(serviceId)
-                        .setLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
+                        .setLevel(CacheLevels.ENTITY.toString().toLowerCase())
                         .setThreshold(rtmax - cacheLookupLatency.get("400")) // in seconds
                         .build());
 

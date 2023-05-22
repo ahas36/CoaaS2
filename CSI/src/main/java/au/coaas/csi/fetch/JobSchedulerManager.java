@@ -102,7 +102,7 @@ public class JobSchedulerManager {
                     .build();
             scheduler.scheduleJob(trigger);
         }
-        else {
+        else if(cs.getTimes() > 1) {
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
                     .withIdentity(cs.getMongoID(), "cs-fetch-trigger")
                     .forJob("fetch-job", "cs-fetch-job")
@@ -114,6 +114,13 @@ public class JobSchedulerManager {
                     .build();
             scheduler.scheduleJob(trigger);
         }
+        else {
+            // When times == 1.
+            // Only this block is blocking.
+            FetchJob tempFetchJob = new FetchJob();
+            return CSIResponse.newBuilder().setStatus("200")
+                    .addAllHashkeys(tempFetchJob.execute(jobDataMap)).build();
+        }
 
         return CSIResponse.newBuilder().setStatus("200").build();
     }
@@ -124,8 +131,11 @@ public class JobSchedulerManager {
     }
 
     public CSIResponse updateJob(ContextService cs) throws SchedulerException {
-
-        boolean cs1 = scheduler.unscheduleJob(new TriggerKey(cs.getMongoID(), "cs-fetch-trigger"));
+        boolean cs1 = true;
+        TriggerKey triggerKey = new TriggerKey(cs.getMongoID(), "cs-fetch-trigger");
+        if(scheduler.checkExists(triggerKey)){
+            cs1 = scheduler.unscheduleJob(triggerKey);
+        }
 
         if (cs1) {
             return registerJob(cs);

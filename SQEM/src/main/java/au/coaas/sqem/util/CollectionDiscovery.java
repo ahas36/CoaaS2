@@ -7,6 +7,10 @@ public class CollectionDiscovery {
     // This is largely in contrast to a common space that a cache would make entities to share.
     public static String discover(ContextEntityType et) {
         String entityType = et.getType();
+        return discover(entityType);
+    }
+
+    public static String discover(String entityType) {
         switch(entityType){
             case "ParkingFacility":
             case "ParkingGarage":

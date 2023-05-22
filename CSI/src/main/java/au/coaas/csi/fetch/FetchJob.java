@@ -11,13 +11,16 @@ import au.coaas.sqem.proto.Statistic;
 import au.coaas.sqem.proto.UpdateEntityRequest;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class FetchJob implements Job {
@@ -27,7 +30,15 @@ public class FetchJob implements Job {
 
     public void execute(JobExecutionContext context) throws JobExecutionException {
         try {
-            JobDataMap dataMap = context.getTrigger().getJobDataMap();
+            execute(context.getTrigger().getJobDataMap());
+        }catch (Exception e){
+            log.info(e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public List<String> execute(JobDataMap dataMap) throws JobExecutionException {
+        try {
             String contextService = dataMap.getString("cs");
             HashMap<String,String> params = new Gson().fromJson(
                     dataMap.getString("params"),
@@ -39,7 +50,7 @@ public class FetchJob implements Job {
 
             JSONObject qos = (new JSONObject(contextService)).getJSONObject("sla").getJSONObject("qos");
 
-            ContextServiceInvokerRequest request  = ContextServiceInvokerRequest.newBuilder()
+            ContextServiceInvokerRequest request = ContextServiceInvokerRequest.newBuilder()
                     .setContextService(ContextService.newBuilder().setJson(contextService))
                     .putAllParams(params)
                     .build();
@@ -62,7 +73,7 @@ public class FetchJob implements Job {
 
                     asyncStub.logPerformanceData(Statistic.newBuilder()
                             .setIsDelayed(retDiff>0).setEarning(penEarning)
-                            .setMethod("executeFetch").setStatus(fetch.getStatus())
+                            .setMethod("FetchJob-execute").setStatus(fetch.getStatus())
                             .setTime(int_endTime-startTime).setCs(request).setAge(0)
                             .setCost(!fetch.getStatus().equals("500")? fetch.getSummary().getPrice() : 0).build());
                 }
@@ -101,14 +112,26 @@ public class FetchJob implements Job {
                 Double age = fr.has("results") ? fr.getDouble("avgAge")
                         : fr.getJSONObject("age").getDouble("value");
 
+                JSONObject sqemResBody = new JSONObject(sqemResponse.getBody());
+                List<String> hkeys = new ArrayList<>();
+                if(sqemResBody.has("hashkeys")){
+                    JSONArray ks = sqemResBody.getJSONArray("hashkeys");
+                    for(int i = 0; i < ks.length(); i++){
+                        hkeys.add(ks.getString(i));
+                    }
+                }
+                else hkeys.add(sqemResBody.getString("hashkey"));
+
                 asyncStub.logPerformanceData(Statistic.newBuilder()
                         .setMethod("FetchJob-execute").setStatus(fetch.getStatus())
                         .setTime(retLatency).setCs(request).setAge(age.longValue())
                         .setIsDelayed(retDiff>0).setEarning(penEarning)
+                        .addAllHaskeys(hkeys)
                         .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
                 if(!sqemResponse.getStatus().equals("200")){
                     log.info(sqemResponse.getBody());
+                    return hkeys;
                 }
             }
             else {
@@ -118,6 +141,6 @@ public class FetchJob implements Job {
             log.info(e.getMessage());
             e.printStackTrace();
         }
-
+        return null;
     }
 }

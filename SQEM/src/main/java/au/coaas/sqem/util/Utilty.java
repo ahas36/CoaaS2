@@ -36,6 +36,10 @@ public class Utilty {
         return Hashing.sha256().hashString(hashKey, StandardCharsets.UTF_8).toString();
     }
 
+    public static String getHashKey(String key){
+        return Hashing.sha256().hashString(key, StandardCharsets.UTF_8).toString();
+    }
+
     public static String getStatus(String status){
         switch(status){
             case "200": return "ok";

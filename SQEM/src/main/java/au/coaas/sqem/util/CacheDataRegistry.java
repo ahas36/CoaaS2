@@ -1,77 +1,30 @@
 package au.coaas.sqem.util;
 
+import au.coaas.sqem.proto.CacheLookUp;
+import au.coaas.sqem.entity.ContextItem;
+import au.coaas.sqem.proto.RefreshUpdate;
+import au.coaas.sqem.proto.CacheLookUpResponse;
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.handler.PerformanceLogHandler;
-import au.coaas.sqem.proto.CacheLookUp;
-import au.coaas.sqem.proto.CacheLookUpResponse;
-import au.coaas.sqem.proto.RefreshUpdate;
+
 import org.json.JSONObject;
 
 import java.time.LocalDateTime;
-
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.util.*;
+import java.util.logging.Logger;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ExecutorService;
 
 public final class CacheDataRegistry{
-    class ContextItem {
-        private String refreshLogic;
-        private LocalDateTime createdTime;
-        private LocalDateTime updatedTime;
-        HashMap<String, ContextItem> child;
 
-        /*
-        ContextItem(CacheLookUp lookup){
-            this.createdTime = LocalDateTime.now();
-            this.updatedTime = LocalDateTime.now();
-            this.child = new ConcurrentHashMap<>();
-            this.child.put(lookup.getServiceId(), new ContextItem(lookup.getParamsMap()));
-        }
-        */
-
-        ContextItem(CacheLookUp lookup, String hashKey, String refreshLogic){
-            this.createdTime = LocalDateTime.now();
-            this.updatedTime = LocalDateTime.now();
-            this.child = new HashMap<>();
-            String serId = lookup.getServiceId();
-            if(serId.startsWith("{")){
-                JSONObject obj = new JSONObject(serId);
-                serId = obj.getString("$oid");
-            }
-            this.child.put(serId, new ContextItem(hashKey, refreshLogic));
-        }
-
-        ContextItem(Map<String,String> params, String refreshLogic){
-            this.createdTime = LocalDateTime.now();
-            this.updatedTime = LocalDateTime.now();
-            this.child = new HashMap<>();
-            this.child.put(Utilty.getHashKey(params), new ContextItem(refreshLogic));
-        }
-
-        ContextItem(String hashKey, String refreshLogic){
-            this.createdTime = LocalDateTime.now();
-            this.updatedTime = LocalDateTime.now();
-            this.child = new HashMap<>();
-            this.child.put(hashKey, new ContextItem(refreshLogic));
-        }
-
-        ContextItem(){
-            this.refreshLogic = "reactive";
-            this.createdTime = LocalDateTime.now();
-            this.updatedTime = LocalDateTime.now();
-        }
-
-        ContextItem(String refreshLogic){
-            this.refreshLogic = refreshLogic;
-            this.createdTime = LocalDateTime.now();
-            this.updatedTime = LocalDateTime.now();
-        }
-    }
-
-    private static CacheDataRegistry singleton = null;
     private HashMap<String, ContextItem> root;
+    private static CacheDataRegistry singleton = null;
+    private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
+
+    private static final int numberOfThreads = 10;
+    private static final int numberOfItemsPerTask = 100;
 
     private CacheDataRegistry(){
         this.root = new HashMap<>();
@@ -86,16 +39,18 @@ public final class CacheDataRegistry{
     }
 
     // Registry lookup. Returns hash key if available in cache.
+    // Done
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
-        long remainingLife = 0;
-        double ageLoss = 0;
-        LocalDateTime staleTime;
-        String refreshLogic = "reactive";
-        AtomicReference<String> hashKey = new AtomicReference<>();
+        // Initializing
         CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
 
+        // Check if the keys are the same as the parameters. If so, send in the hashkey available path.
+        List<String> idKeySet = Arrays.asList(lookup.getKey().split(","));
+        boolean idAvailable = lookup.getParamsMap().keySet().containsAll(idKeySet);
+
+        // Check if the entity type is cached.
         if(this.root.containsKey(lookup.getEt().getType())){
-            Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).child;
+            Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).getChildren();
             String serId = lookup.getServiceId();
 
             if(serId.startsWith("{")){
@@ -103,152 +58,389 @@ public final class CacheDataRegistry{
                 serId = obj.getString("$oid");
             }
 
+            // Check if originating from a context provider is available
+            // This is because of the context provider selection.
             if(cs.containsKey(serId)){
-                Map<String,ContextItem> entities = cs.get(serId).child;
+                Map<String,ContextItem> entities = cs.get(serId).getChildren();
+                // Map<String, String> parameters = lookup.getParamsMap();
 
-                hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-                if(entities.containsKey(hashKey.get())){
-                    if(lookup.getCheckFresh()){
-                        // TODO:
-                        // Need to get this information rather from Himadri's lifetime profiler
-                        JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
-                        // This is a potential cache item. But this should be cached lineant
-                        ageLoss = PerformanceLogHandler.getLastRetrievalTime(serId, hashKey.get());
+                if(lookup.getCheckFresh()){
+                    if(lookup.getHashKey().isEmpty() && !idAvailable){
+                        // I need to parallely check in all the entities whether at least one of them is not fresh.
+                        int entitiesCached = entities.size();
+                        int numberOfIterations = (int)(entitiesCached/numberOfItemsPerTask) + 1;
+                        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
 
-                        // Periodic Sampling Device Check
-                        JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
+                        Stack<Long> remainLife = new Stack<>();
+                        Stack<String> staleEntities = new Stack<>();
 
+                        List<String> keySet = new ArrayList<>(entities.keySet());
+                        for (int factor = 0; factor<numberOfIterations; factor++)
+                        {
+                            int finalFactor = factor;
+                            executorService.submit(() -> {
+                                int start = numberOfItemsPerTask * finalFactor;
+                                int end =  Math.min(entitiesCached, start + numberOfItemsPerTask);
+
+                                // Check for freshness of each context entity
+                                for(int i = start; i < end; i++){
+                                    // Initializing
+                                    double ageLoss = 0;
+                                    long remainingLife = 0;
+                                    LocalDateTime staleTime;
+                                    LocalDateTime expiryTime;
+
+                                    ContextItem data = entities.get(keySet.get(i));
+
+                                    JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
+                                    JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
+
+                                    ageLoss = PerformanceLogHandler.getLastRetrievalTime(
+                                            lookup.getServiceId(), keySet.get(i));
+
+                                    LocalDateTime now = LocalDateTime.now();
+                                    LocalDateTime updateTime = data.getUpdatedTime();
+
+                                    // This freshness should be from the response coming from lifetime profiler
+                                    switch(freshness.getString("unit")){
+                                        case "m": {
+                                            Double fthresh = freshness.getDouble("fthresh");
+
+                                            if(fthresh < 1) {
+                                                Double residual_life = freshness.getLong("value")
+                                                        - ageLoss > 1 ? ageLoss/60 : 0;
+                                                Double expPrd = residual_life * (1 - fthresh);
+                                                staleTime = updateTime.plusMinutes(residual_life.longValue());
+                                                expiryTime = updateTime.plusMinutes(expPrd.longValue());
+                                            }
+                                            else {
+                                                Double expPrd = fthresh;
+                                                LocalDateTime sensedTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                                expiryTime = sensedTime.plusMinutes(expPrd.longValue());
+                                                staleTime = expiryTime;
+                                            }
+                                            break;
+                                        }
+                                        case "s":
+                                        default:
+                                            if(sampling.equals("")){
+                                                Double residual_life = freshness.getLong("value") - ageLoss;
+                                                Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
+                                                staleTime = updateTime.plusSeconds(residual_life.longValue());
+                                                expiryTime = updateTime.plusSeconds(expPrd.longValue());
+                                            }
+                                            else {
+                                                long samplingInterval = sampling.getLong("value");
+                                                Double fthresh = freshness.getDouble("fthresh");
+                                                long lifetime = freshness.getLong("value");
+
+                                                if(lifetime>samplingInterval){
+                                                    // When the lifetime is longer than the sampling interval
+                                                    long residual_life = lifetime - samplingInterval;
+                                                    if(fthresh < 1){
+                                                        Double expPrd = residual_life * (1 - fthresh);
+                                                        LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                                        expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                                        staleTime = sampledTime.plusSeconds(lifetime);
+                                                    }
+                                                    else {
+                                                        Double expPrd = fthresh;
+                                                        LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                                        expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                                        staleTime = expiryTime;
+                                                    }
+                                                }
+                                                else {
+                                                    // When the lifetime is shorter
+                                                    LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                                    expiryTime = sampledTime.plusSeconds(samplingInterval);
+                                                    // expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
+                                                    //         : sampledTime.plusSeconds(samplingInterval);
+                                                    staleTime = expiryTime;
+                                                }
+                                            }
+                                            break;
+                                    }
+
+                                    if(now.isAfter(expiryTime)){
+                                        // Store cache access in Time Series DB
+                                        double finalAgeLoss = ageLoss;
+                                        PerformanceLogHandler.insertAccess(
+                                                lookup.getEt().getType() + "-" + keySet.get(i),
+                                                "p_miss", finalAgeLoss*1000);
+                                        staleEntities.push(keySet.get(i));
+                                    }
+
+                                    remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
+                                    remainLife.push(remainingLife);
+
+                                    double finalAgeLoss = ageLoss;
+                                    PerformanceLogHandler.insertAccess(
+                                            lookup.getEt().getType() + "-" + keySet.get(i),
+                                            "hit", finalAgeLoss * 1000);
+                                }
+                            });
+                        }
+                        executorService.shutdown();
+
+                        try {
+                            executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+                        } catch (InterruptedException e) {
+                            log.severe("Executor failed to execute with error: " + e.getMessage());
+                        }
+
+                        int stackSize = 0;
+                        long sumRemLife = 0;
+                        for(stackSize = 0; stackSize < remainLife.size(); stackSize++){
+                            sumRemLife += remainLife.pop();
+                        }
+
+                        // Reconciling what is stale and what is not? Whether refreshing is needed?
+                        if(staleEntities.isEmpty()){
+                            // Meaning all the context entities are valid
+                            return res.setHashkey("service:" + lookup.getServiceId())
+                                    .addAllHashKeys(keySet)
+                                    .setIsValid(true)
+                                    .setIsCached(true)
+                                    .setRemainingLife(sumRemLife/stackSize).build();
+                        }
+                        else {
+                            // Meaning some of the context entities may be stale.
+                            return res.setHashkey("service:" + lookup.getServiceId())
+                                    .addAllHashKeys(keySet)
+                                    .setIsValid(false)
+                                    .setIsCached(true)
+                                    .setRemainingLife(sumRemLife/stackSize).build();
+                        }
+                    }
+                    else { // Cache lookup for a specific entity
+                        double ageLoss = 0;
+                        long remainingLife = 0;
+                        LocalDateTime staleTime;
                         LocalDateTime expiryTime;
-                        LocalDateTime now = LocalDateTime.now();
-                        // This freshness should be from the response coming from lifetime profiler
-                        switch(freshness.getString("unit")){
-                            case "m": {
+                        String finalHashKey = "";
 
-                                Double fthresh = freshness.getDouble("fthresh");
-                                LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
-
-                                if(fthresh < 1) {
-                                    // TODO:
-                                    // This block need to change similar to the "s" and default block
-                                    Double residual_life = freshness.getLong("value")
-                                            - ageLoss > 1 ? ageLoss/60 : 0;
-                                    Double expPrd = residual_life * (1 - fthresh);
-                                    staleTime = updateTime.plusMinutes(residual_life.longValue());
-                                    expiryTime = updateTime.plusMinutes(expPrd.longValue());
-                                }
-                                else {
-                                    Double expPrd = fthresh;
-                                    LocalDateTime sensedTime = updateTime.minusSeconds(Math.round(ageLoss));
-                                    expiryTime = sensedTime.plusMinutes(expPrd.longValue());
-                                    staleTime = expiryTime;
-                                }
-                                break;
+                        if(idAvailable){
+                            String unencrypt = "";
+                            for (String attr : idKeySet) {
+                                unencrypt += attr+"@"+lookup.getParamsMap().get(attr)+";";
                             }
-                            case "s":
-                            default:
-                                if(sampling.equals("")){
-                                    Double residual_life = freshness.getLong("value") - ageLoss;
-                                    Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
+                            finalHashKey = Utilty.getHashKey(unencrypt);
+                        }
+                        else finalHashKey = lookup.getHashKey();
 
-                                    LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+                        ContextItem data = entities.get(finalHashKey);
+                        if(data != null){
+                            JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
+                            JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
 
-                                    staleTime = updateTime.plusSeconds(residual_life.longValue());
-                                    expiryTime = updateTime.plusSeconds(expPrd.longValue());
-                                }
-                                else {
-                                    long samplingInterval = sampling.getLong("value");
+                            ageLoss = PerformanceLogHandler.getLastRetrievalTime(
+                                    lookup.getServiceId(), lookup.getHashKey());
+
+                            LocalDateTime now = LocalDateTime.now();
+                            LocalDateTime updateTime = data.getUpdatedTime();
+
+                            // This freshness should be from the response coming from lifetime profiler
+                            switch(freshness.getString("unit")){
+                                case "m": {
                                     Double fthresh = freshness.getDouble("fthresh");
-                                    long lifetime = freshness.getLong("value");
 
-                                    if(lifetime>samplingInterval){
-                                        // When the lifetime is longer than the sampling interval
-                                        long residual_life = lifetime - samplingInterval;
-                                        if(fthresh < 1){
-                                            Double expPrd = residual_life * (1 - fthresh);
-                                            LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
-                                            LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                    if(fthresh < 1) {
+                                        Double residual_life = freshness.getLong("value")
+                                                - ageLoss > 1 ? ageLoss/60 : 0;
+                                        Double expPrd = residual_life * (1 - fthresh);
+                                        staleTime = updateTime.plusMinutes(residual_life.longValue());
+                                        expiryTime = updateTime.plusMinutes(expPrd.longValue());
+                                    }
+                                    else {
+                                        Double expPrd = fthresh;
+                                        LocalDateTime sensedTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                        expiryTime = sensedTime.plusMinutes(expPrd.longValue());
+                                        staleTime = expiryTime;
+                                    }
+                                    break;
+                                }
+                                case "s":
+                                default:
+                                    if(sampling.equals("")){
+                                        Double residual_life = freshness.getLong("value") - ageLoss;
+                                        Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
+                                        staleTime = updateTime.plusSeconds(residual_life.longValue());
+                                        expiryTime = updateTime.plusSeconds(expPrd.longValue());
+                                    }
+                                    else {
+                                        long samplingInterval = sampling.getLong("value");
+                                        Double fthresh = freshness.getDouble("fthresh");
+                                        long lifetime = freshness.getLong("value");
 
-                                            expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
-                                            staleTime = sampledTime.plusSeconds(lifetime);
+                                        if(lifetime>samplingInterval){
+                                            // When the lifetime is longer than the sampling interval
+                                            long residual_life = lifetime - samplingInterval;
+                                            if(fthresh < 1){
+                                                Double expPrd = residual_life * (1 - fthresh);
+                                                LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                                expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                                staleTime = sampledTime.plusSeconds(lifetime);
+                                            }
+                                            else {
+                                                Double expPrd = fthresh;
+                                                LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                                expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                                staleTime = expiryTime;
+                                            }
                                         }
                                         else {
-                                            Double expPrd = fthresh;
-                                            LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
+                                            // When the lifetime is shorter
                                             LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
-
-                                            expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
+                                            expiryTime = sampledTime.plusSeconds(samplingInterval);
+                                            // expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
+                                            //         : sampledTime.plusSeconds(samplingInterval);
                                             staleTime = expiryTime;
                                         }
                                     }
-                                    else {
-                                        // When the lifetime is shorter
-                                        LocalDateTime updateTime = entities.get(hashKey.get()).updatedTime;
-                                        LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                    break;
+                            }
 
-                                        expiryTime = sampledTime.plusSeconds(samplingInterval);
-                                        // expiryTime = fthresh > samplingInterval ? sampledTime.plusSeconds(fthresh.longValue())
-                                        //         : sampledTime.plusSeconds(samplingInterval);
-                                        staleTime = expiryTime;
-                                    }
-                                }
-                                break;
-                        }
+                            if(now.isAfter(expiryTime)){
+                                double finalAgeLoss = ageLoss;
 
-                        if(now.isAfter(expiryTime)){
-                            // Store cache access in Time Series DB
+                                PerformanceLogHandler.insertAccess(
+                                        lookup.getEt().getType() + "-" + finalHashKey,
+                                        "p_miss", finalAgeLoss * 1000);
+                                return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                                        .setIsValid(false)
+                                        .setIsCached(true)
+                                        .setRefreshLogic(data.getRefreshLogic())
+                                        .setRemainingLife(remainingLife).build();
+                            }
+
+                            remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
                             double finalAgeLoss = ageLoss;
-                            Executors.newCachedThreadPool().execute(()
-                                    -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"p_miss", finalAgeLoss*1000));
-                            return res.setHashkey(hashKey.get())
-                                    .setIsValid(false)
+
+                            PerformanceLogHandler.insertAccess(
+                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    "hit", finalAgeLoss * 1000);
+                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                                    .setIsValid(true)
                                     .setIsCached(true)
-                                    .setRefreshLogic(entities.get(hashKey.get()).refreshLogic)
+                                    .setRefreshLogic(data.getRefreshLogic())
                                     .setRemainingLife(remainingLife).build();
                         }
-
-                        remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
+                        else {
+                            PerformanceLogHandler.insertAccess(
+                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    "miss", 0);
+                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                                    .setIsValid(false)
+                                    .setIsCached(false)
+                                    .setRemainingLife(0).build();
+                        }
                     }
-
-                    // Store cache access in Time Series DB
-                    double finalAgeLoss = ageLoss;
-                    Executors.newCachedThreadPool().execute(()
-                            -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"hit", finalAgeLoss*1000));
-                    return res.setHashkey(hashKey.get())
-                            .setIsValid(true)
-                            .setIsCached(true)
-                            .setRemainingLife(remainingLife).build();
                 }
+                else if(!entities.isEmpty()){
+                    // This is when the freshness is not considered.
+                    if(lookup.getHashKey().isEmpty() && !idAvailable){
+                        int entitiesCached = entities.size();
+                        List<String> keySet = new ArrayList<>(entities.keySet());
+                        int numberOfIterations = (int)(entitiesCached/numberOfItemsPerTask) + 1;
+                        ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+
+                        for (int factor = 0; factor<numberOfIterations; factor++)
+                        {
+                            int finalFactor = factor;
+                            executorService.submit(() -> {
+                                int start = numberOfItemsPerTask * finalFactor;
+                                int end =  Math.min(entitiesCached, start + numberOfItemsPerTask);
+
+                                // Sending cache hit or miss record to performance monitor.
+                                for(int i = start; i < end; i++){
+                                    PerformanceLogHandler.insertAccess(
+                                            lookup.getEt().getType() + "-" + keySet.get(i),
+                                            "hit", 0);
+                                }
+                            });
+                        }
+
+                        executorService.shutdown();
+
+                        try {
+                            executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+                        } catch (InterruptedException e) {
+                            log.severe("Executor failed to execute with error: " + e.getMessage());
+                        }
+
+                        // Sending the ID is the level above to generalize the cache hit.
+                        return res.setHashkey("service:" + lookup.getServiceId())
+                                .addAllHashKeys(keySet)
+                                .setIsValid(true)
+                                .setIsCached(true)
+                                .setRemainingLife(-1).build(); // -1 to notify the remaining life is ignored.
+                    }
+                    else {
+                        // Hashkey provided and the freshness not cached.
+                        String finalHashKey = "";
+                        if(idAvailable){
+                            String unencrypt = "";
+                            for (String attr : idKeySet) {
+                                unencrypt += attr+"@"+lookup.getParamsMap().get(attr)+";";
+                            }
+                            finalHashKey = Utilty.getHashKey(unencrypt);
+                        }
+                        else finalHashKey = lookup.getHashKey();
+
+                        ContextItem data = entities.get(finalHashKey);
+                        if(data != null){
+                            PerformanceLogHandler.insertAccess(
+                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    "hit", 0);
+                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                                    .setIsValid(true)
+                                    .setIsCached(true)
+                                    .setRefreshLogic(data.getRefreshLogic())
+                                    .setRemainingLife(-1).build();
+                        }
+                        else {
+                            PerformanceLogHandler.insertAccess(
+                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    "miss", 0);
+                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                                    .setIsValid(false)
+                                    .setIsCached(false)
+                                    .setRemainingLife(0).build();
+                        }
+                    }
+                }
+                // If this block is missed, then it means a complete miss.
             }
         }
 
         // There can be 2 types of returns
         // 1. (hashkey, false) - the specific entity (by parameter combination) is not cached.
         // 2. ("", false) - either the entity type or the context service is not cached.
-        hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-        res.setIsCached(false).setIsValid(false).setRemainingLife(remainingLife).build();
-        if(hashKey.get() != null)
-            res.setHashkey(hashKey.get());
+        res.setIsCached(false).setIsValid(false).setRemainingLife(0);
 
         // Store cache access in Time Series DB
         Executors.newCachedThreadPool().execute(()
-                -> PerformanceLogHandler.insertAccess(lookup.getServiceId() + "-" + hashKey.get(),"miss", 0));
+                -> PerformanceLogHandler.insertAccess(lookup.getHashKey() != null?
+                        lookup.getEt().getType() + "-" + lookup.getHashKey():
+                        lookup.getServiceId(),
+                "miss", 0));
         return res.build();
     }
 
     // Adds or updates the cached context repository
-    public synchronized AtomicReference<String> updateRegistry(CacheLookUp lookup){
+    // Done
+    public synchronized String updateRegistry(CacheLookUp lookup){
         return updateRegistry(lookup, null);
     }
 
-    public synchronized AtomicReference<String> updateRegistry(CacheLookUp lookup, String refreshLogic){
-        AtomicReference<String> hashKey = new AtomicReference<>();
-
+    // Done
+    public synchronized String updateRegistry(CacheLookUp lookup, String refreshLogic){
         if(this.root.containsKey(lookup.getEt().getType())){
             // Updating the last update time of the entity type
-
             this.root.compute(lookup.getEt().getType(), (k,v) -> {
                 if(v != null){
-                    v.updatedTime = LocalDateTime.now();
+                    v.setUpdatedTime(LocalDateTime.now());
 
                     // Updating the last update time of the context service
                     // Add a new context service if any available.
@@ -259,23 +451,44 @@ public final class CacheDataRegistry{
                         serId = obj.getString("$oid");
                     }
 
-                    if(v.child.containsKey(serId)){
-                        v.child.compute(serId, (id,stat) -> {
+                    if(v.getChildren().containsKey(serId)){
+                        String finalSerId = serId;
+                        v.getChildren().compute(serId, (id, stat) -> {
                             if(stat != null){
-                                stat.updatedTime = LocalDateTime.now();
+                                stat.setUpdatedTime(LocalDateTime.now());
 
                                 // Updating the last update time of the entity by hash key
                                 // Add a new entity by hash key if not available.
-                                hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-                                if(!stat.child.containsKey(hashKey.get()))
-                                    stat.child.put(hashKey.get(),
-                                            refreshLogic != null ? new ContextItem(refreshLogic) : new ContextItem());
+                                if(!stat.getChildren().containsKey(lookup.getHashKey())){
+                                    ContextItem sharedEntity = null;
+                                    HashMap<String, ContextItem> siblingCPs = v.getChildren();
+                                    for(Map.Entry<String, ContextItem> sibling : siblingCPs.entrySet()){
+                                        if(sibling.getValue().getChildren().containsKey(lookup.getHashKey())){
+                                            sharedEntity = sibling.getValue()
+                                                    .getChildren().get(lookup.getHashKey());
+                                            break;
+                                        }
+                                    }
+
+                                    if(sharedEntity == null){
+                                        // No shared entity.
+                                        stat.getChildren().put(lookup.getHashKey(),
+                                                refreshLogic != null ? new ContextItem(stat, lookup.getHashKey(), refreshLogic)
+                                                        : new ContextItem(stat, lookup.getHashKey()));
+                                    }
+                                    else {
+                                        // Already existing shared entity.
+                                        sharedEntity.setParents(finalSerId, stat);
+                                        sharedEntity.setUpdatedTime(LocalDateTime.now());
+                                        stat.getChildren().put(lookup.getHashKey(),sharedEntity);
+                                    }
+                                }
                                 else {
-                                    stat.child.compute(hashKey.get(), (k1,v1) -> {
+                                    stat.getChildren().compute(lookup.getHashKey(), (k1,v1) -> {
                                         if(v1!=null){
-                                            v1.updatedTime = LocalDateTime.now();
+                                            v1.setUpdatedTime(LocalDateTime.now());
                                             if(refreshLogic != null)
-                                                v1.refreshLogic = refreshLogic;
+                                                v1.setRefreshLogic(refreshLogic);
                                         }
                                         return v1;
                                     });
@@ -285,23 +498,21 @@ public final class CacheDataRegistry{
                         });
                     }
                     else {
-                        v.child.put(serId,new ContextItem(lookup.getParamsMap(), refreshLogic));
+                        v.getChildren().put(serId,new ContextItem(v, serId, lookup.getHashKey(), refreshLogic));
                     }
                 }
                 return v;
             });
         }
         else {
-            hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-            this.root.put(lookup.getEt().getType(), new ContextItem(lookup, hashKey.get(), refreshLogic));
+            this.root.put(lookup.getEt().getType(), new ContextItem(lookup,lookup.getHashKey(), refreshLogic));
         }
-        return hashKey;
+        return lookup.getHashKey();
     }
 
     // Change the hashtable record of the current refreshing logic
+    // Done
     public void changeRefreshLogic(RefreshUpdate lookup){
-        AtomicReference<String> hashKey = new AtomicReference<>();
-
         if(this.root.containsKey(lookup.getLookup().getEt().getType())){
             this.root.compute(lookup.getLookup().getEt().getType(), (k,v) -> {
                 if(v != null){
@@ -311,14 +522,13 @@ public final class CacheDataRegistry{
                         serId = obj.getString("$oid");
                     }
 
-                    if(v.child.containsKey(serId)){
-                        v.child.compute(serId, (id,stat) -> {
+                    if(v.getChildren().containsKey(serId)){
+                        v.getChildren().compute(serId, (id,stat) -> {
                             if(stat != null){
-                                hashKey.set(Utilty.getHashKey(lookup.getLookup().getParamsMap()));
-                                if(stat.child.containsKey(hashKey.get())){
-                                    stat.child.compute(hashKey.get(), (k1,v1) -> {
+                                if(stat.getChildren().containsKey(lookup.getHashkey())){
+                                    stat.getChildren().compute(lookup.getHashkey(), (k1,v1) -> {
                                         if(v1!=null)
-                                            v1.refreshLogic = lookup.getRefreshLogic();
+                                            v1.setRefreshLogic(lookup.getRefreshLogic());
                                         return v1;
                                     });
                                 }
@@ -327,8 +537,8 @@ public final class CacheDataRegistry{
                         });
                     }
                     else {
-                        v.child.put(serId,
-                                new ContextItem(lookup.getLookup().getParamsMap(), lookup.getRefreshLogic()));
+                        v.getChildren().put(serId,
+                                new ContextItem(v, serId, lookup.getHashkey(), lookup.getRefreshLogic()));
                     }
                 }
                 return v;
@@ -337,8 +547,8 @@ public final class CacheDataRegistry{
     }
 
     // Removes context items from the cached context registry
-    public AtomicReference<String> removeFromRegistry(CacheLookUp lookup){
-        AtomicReference<String> hashKey = new AtomicReference<>();
+    // Done
+    public String removeFromRegistry(CacheLookUp lookup){
         if(this.root.containsKey(lookup.getEt().getType())){
             this.root.compute(lookup.getEt().getType(), (k,v) -> {
 
@@ -348,33 +558,34 @@ public final class CacheDataRegistry{
                     serId = obj.getString("$oid");
                 }
 
-                if(v.child.containsKey(serId)){
-                    v.child.compute(serId, (id,stat) -> {
-
-                        hashKey.set(Utilty.getHashKey(lookup.getParamsMap()));
-                        if(stat.child.containsKey(hashKey)){
-                            stat.child.remove(hashKey);
+                if(v.getChildren().containsKey(serId)){
+                    v.getChildren().compute(serId, (id,stat) -> {
+                        if(stat.getChildren().containsKey(lookup.getHashKey())){
+                            ContextItem entity = stat.getChildren().get(lookup.getHashKey());
+                            for(Map.Entry<String, ContextItem> parent: entity.getParents().entrySet()){
+                                parent.getValue().getChildren().remove(lookup.getHashKey());
+                            }
                         }
-
                         return stat;
                     });
 
-                    if(v.child.get(serId).child.isEmpty()){
-                        v.child.remove(serId);
+                    if(v.getChildren().get(serId).getChildren().isEmpty()){
+                        v.getChildren().remove(serId);
                     }
                 }
 
                 return v;
             });
 
-            if(this.root.get(lookup.getEt().getType()).child.isEmpty()){
+            if(this.root.get(lookup.getEt().getType()).getChildren().isEmpty()){
                 this.root.remove(lookup.getEt().getType());
             }
         }
 
-        return hashKey;
+        return lookup.getHashKey();
     }
 
+    // Done
     public void removeFromRegistry(String serviceId, String hashKey, String entityType){
         if(this.root.containsKey(entityType)){
             this.root.compute(entityType, (k,v) -> {
@@ -384,24 +595,27 @@ public final class CacheDataRegistry{
                     serId = obj.getString("$oid");
                 }
 
-                if(v.child.containsKey(serId)){
-                    v.child.compute(serId, (id,stat) -> {
-                        if(stat.child.containsKey(hashKey)){
-                            stat.child.remove(hashKey);
+                if(v.getChildren().containsKey(serId)){
+                    v.getChildren().compute(serId, (id,stat) -> {
+                        if(stat.getChildren().containsKey(hashKey)){
+                            ContextItem entity = stat.getChildren().get(hashKey);
+                            for(Map.Entry<String, ContextItem> parent: entity.getParents().entrySet()){
+                                parent.getValue().getChildren().remove(hashKey);
+                            }
                         }
 
                         return stat;
                     });
 
-                    if(v.child.get(serId).child.isEmpty()){
-                        v.child.remove(serId);
+                    if(v.getChildren().get(serId).getChildren().isEmpty()){
+                        v.getChildren().remove(serId);
                     }
                 }
 
                 return v;
             });
 
-            if(this.root.get(entityType).child.isEmpty()){
+            if(this.root.get(entityType).getChildren().isEmpty()){
                 this.root.remove(entityType);
             }
         }

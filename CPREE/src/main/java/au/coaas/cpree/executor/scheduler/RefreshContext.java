@@ -17,7 +17,6 @@ public class RefreshContext {
     private String contextProvider;
     private ContextEntityType etype;
     private Map<String, String> params;
-    private List<String> attributes;
 
     private long initInterval;
     private long refreshInterval; // This is in miliseconds
@@ -26,13 +25,12 @@ public class RefreshContext {
     // refInteral = Lifetime - age - retrievalLatency
     public RefreshContext(String contextId, double fthr, String refreshPolicy, double initResiLife,
                           double lifetime, Map<String, String> params, String contextProvider,
-                          ContextEntityType et, List<String> attributes){
+                          ContextEntityType et){
         this.etype = et;
         this.fthr = fthr;
         this.params = params;
         this.lifetime = lifetime;
         this.contextId = contextId;
-        this.attributes = attributes;
         this.refreshPolicy = refreshPolicy;
 
         JSONObject cpObj = new JSONObject(contextProvider);
@@ -79,7 +77,6 @@ public class RefreshContext {
         Map<String, Object> jobMap = new HashMap<>();
 
         jobMap.put("cpId", this.csId);
-        jobMap.put("attributes", attributes);
         jobMap.put("contextId", this.contextId);
         jobMap.put("fetchMode", this.refreshPolicy);
         jobMap.put("entityType", this.etype.getType());
@@ -94,5 +91,9 @@ public class RefreshContext {
         this.fthr = fthr;
         this.refreshInterval = (long) (this.lifetime * 1000 * (1 - fthr));
         this.initInterval = (long) (initResiLife * 1000 * (1 - fthr));
+    }
+
+    public void setInitInterval(double initResiLife){
+        this.initInterval = (long) (initResiLife * 1000 * (1 - this.fthr));
     }
 }

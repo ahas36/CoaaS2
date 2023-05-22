@@ -2,6 +2,7 @@ package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.ContextEntityType;
 
+import au.coaas.sqem.proto.GetEntitiesRequest;
 import au.coaas.sqem.util.ResponseUtils;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
@@ -9,11 +10,13 @@ import au.coaas.sqem.util.CollectionDiscovery;
 import au.coaas.sqem.proto.UpdateEntityRequest;
 import au.coaas.sqem.proto.RegisterEntityRequest;
 
+import au.coaas.sqem.util.Utilty;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.MongoIterable;
+import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
@@ -26,10 +29,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.bson.conversions.Bson;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Calendar;
-import java.util.ArrayList;
+import javax.swing.text.Utilities;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,6 +74,7 @@ public class ContextEntityHandler {
 
             ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
 
+            Stack<String> hashkeys = new Stack<>();
             AtomicInteger error = new AtomicInteger();
             AtomicInteger success = new AtomicInteger();
             for (int factor = 0; factor < numberOfIterations; factor++) {
@@ -110,6 +112,7 @@ public class ContextEntityHandler {
                         SQEMResponse sqemResponse = updateEntity(builder.build());
                         if (sqemResponse.getStatus().equals("200")) {
                             success.getAndIncrement();
+                            hashkeys.push((new JSONObject(sqemResponse.getBody()).getString("hashkey")));
                         } else {
                             error.getAndIncrement();
                         }
@@ -127,6 +130,7 @@ public class ContextEntityHandler {
             JSONObject body = new JSONObject();
             body.put("success", success.intValue());
             body.put("error", error.intValue());
+            body.put("hashkeys", hashkeys);
             return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
         }
         else {
@@ -174,6 +178,33 @@ public class ContextEntityHandler {
         return value;
     }
 
+    public static SQEMResponse getEntities(GetEntitiesRequest entIDs) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas");
+
+            //it finds the collection based on the entity type
+            String collectionName = CollectionDiscovery.discover(entIDs.getEntityType());
+
+            MongoCollection<Document> collection = db.getCollection(collectionName);
+
+            BasicDBObject query = new BasicDBObject();
+            query.put("hashkey", entIDs.getKeysList());
+            MongoCursor<Document> cursor = collection.find(query).cursor();
+            JSONArray ja = new JSONArray();
+            while (cursor.hasNext()) {
+                ja.put(cursor.next());
+            }
+            JSONObject result = new JSONObject();
+            result.put("results", ja);
+
+            return SQEMResponse.newBuilder().setBody(result.toString()).setStatus("200").build();
+        }
+        catch(Exception ex){
+            return SQEMResponse.newBuilder().setStatus("500").setBody(ex.getMessage()).build();
+        }
+    }
+
     //this method will get an update request as input and either update the entities that matches the provided key or create a new one
     public static SQEMResponse updateEntity(UpdateEntityRequest updateRequest) {
         try {
@@ -188,6 +219,7 @@ public class ContextEntityHandler {
             BasicDBObject updateFields = new BasicDBObject();
 
             JSONObject attributes = new JSONObject(updateRequest.getJson());
+            String hashkey = "";
 
             //Matching the entities by unique keys
             for (String attributeName : attributes.keySet()) {
@@ -204,8 +236,12 @@ public class ContextEntityHandler {
             JSONArray key = new JSONArray(updateRequest.getKey());
 
             for (int i = 0; i < key.length(); i++) {
-                query.put(key.getString(i), getValueByKey(updateRequest.getJson(), key.getString(i)));
+                String idKey = key.getString(i);
+                Object idValue = getValueByKey(updateRequest.getJson(), idKey);
+                query.put(idKey, idValue);
+                hashkey += key.getString(i) + "@" + idValue.toString() + ";";
             }
+            updateFields.append("hashkey", Utilty.getHashKey(hashkey));
 
             //execute the update
             Document queryDoc = new Document();
@@ -220,14 +256,19 @@ public class ContextEntityHandler {
             if (ur.getMatchedCount() == 0) {
                 Document myDoc = Document.parse(updateRequest.getJson());
                 collection.insertOne(myDoc);
-                return SQEMResponse.newBuilder().setStatus("200").setBody("1 entity created").build();
+                JSONObject res = new JSONObject();
+                res.put("message", "Created a new context entity");
+                res.put("hashkey", Utilty.getHashKey(hashkey));
+                return SQEMResponse.newBuilder().setStatus("200").setBody(res.toString()).build();
             } else {
-                return SQEMResponse.newBuilder().setStatus("200").setBody(ur.getMatchedCount() + " entity updated").build();
+                JSONObject res = new JSONObject();
+                res.put("message", ur.getMatchedCount() + " entity updated");
+                res.put("hashkey", Utilty.getHashKey(hashkey));
+                return SQEMResponse.newBuilder().setStatus("200").setBody(res.toString()).build();
             }
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
-
     }
 
     //this function will store the update in mongodb based on the Size-based bucketing policy

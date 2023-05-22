@@ -336,6 +336,7 @@ public class FetchManager {
             } catch (InterruptedException e) {
 
             }
+
             JSONObject finalResult = new JSONObject();
             finalResult.put("results", result);
 

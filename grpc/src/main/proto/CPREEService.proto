@@ -26,10 +26,11 @@ message CacheSelectionRequest {
   au.coaas.sqem.proto.CacheLookUp reference = 4;
   double complexity = 5;
   repeated string attributes = 6;
+  string hashKey = 7;
 }
 
 message ProactiveRefreshRequest {
-    CacheSelectionRequest request = 1;
+  au.coaas.sqem.proto.CacheLookUp reference = 1;
     double fthreh = 2;
     double resiLifetime = 3;
     double lifetime = 4;
@@ -43,6 +44,16 @@ message ContextRefreshRequest {
   au.coaas.sqem.proto.CacheRefreshRequest request = 1;
   string refreshPolicy = 2;
   repeated string attributes = 3;
+  string hashKey = 4;
+  double complexity = 5;
+}
+
+message SimpleContainer {
+  repeated string hashKeys = 1;
+  uint64 retLatMilis = 2;
+  double freshness = 3;
+  string status = 4;
+  string refPolicy = 5;
 }
 
 message LearnedWeights {

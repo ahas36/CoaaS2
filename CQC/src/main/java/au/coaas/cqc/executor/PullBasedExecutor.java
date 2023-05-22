@@ -6,6 +6,7 @@ import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.CacheSelectionRequest;
 import au.coaas.cpree.proto.ContextRefreshRequest;
 
+import au.coaas.cpree.proto.SimpleContainer;
 import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.ConQEngHelper;
 import au.coaas.cqc.utils.enums.CacheLevels;
@@ -39,6 +40,7 @@ import org.json.JSONObject;
 import org.json.JSONException;
 
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Predicate;
@@ -56,6 +58,9 @@ public class PullBasedExecutor {
     // This is the cache switch
     private static boolean cacheEnabled = true;
     private static boolean registerState = false;
+
+    private static final int numberOfThreads = 10;
+    private static final int numberOfItemsPerTask = 10;
 
     private static Logger log = Logger.getLogger(PullBasedExecutor.class.getName());
     private static JsonParser parser = new JsonParser();
@@ -221,7 +226,7 @@ public class PullBasedExecutor {
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
 
                 if (contextService != null) {
-                    ContextRequest contextRequest = generateContextRequest(entity, query, ce, 0, 0);
+                    ContextRequest.Builder contextRequest = generateContextRequest(entity, query, ce, 0, 0);
                     List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
 
                     String key = null;
@@ -270,7 +275,8 @@ public class PullBasedExecutor {
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,
                                                                     criticality, sla, complexity, terms.keySet());
 
-                    if(cacheResult != null){
+                    // Checking if from Stream Read or not.
+                    if(cacheResult.getKey() != null){
                         JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
                         ce.put(entity.getEntityID(),resultJson);
                         if(query.getSelect().getSelectAttrsMap().containsKey(entity.getEntityID()))
@@ -278,10 +284,43 @@ public class PullBasedExecutor {
                         if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                     }
                     else {
-                        // When the data can not be retrieved from any context providers, checking the stored data as the last resort.
-                        AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, sla);
+                        // When the data can not be retrieved from any context providers,
+                        // checking the stored data as the last resort.
+                        AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, contextService);
                         ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
-                        if(consumerQoS == null)  consumerQoS = (JSONObject) rex.getValue();
+
+                        if(cacheEnabled){
+                            if(consumerQoS == null) {
+                                consumerQoS = (new JSONObject(sla)).getJSONObject("sla").getJSONObject("qos");
+                            }
+
+                            JSONObject conSer = new JSONObject(contextService);
+                            JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
+                            String keys = "";
+                            for(Object k : candidate_keys)
+                                keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
+
+                            JSONObject freshnessCal = conSer.getJSONObject("sla").getJSONObject("freshness");
+                            freshnessCal.put("fthresh", consumerQoS.getDouble("fthresh"));
+
+                            CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
+                                    .setEt(entity.getType())
+                                    .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
+                                    .setCheckFresh(true)
+                                    .setKey(keys).setQClass("1")
+                                    .setUniformFreshness(freshnessCal.toString()) // current lifetime & REQUESTED fthresh for the query
+                                    .setSamplingInterval(conSer.getJSONObject("sla")
+                                            .getJSONObject("updateFrequency").toString()); // sampling
+
+                            SimpleContainer summary = (SimpleContainer) cacheResult.getValue();
+                            Executors.newCachedThreadPool().execute(()
+                                    -> refreshOrCacheContext(
+                                    conSer.getJSONObject("sla"),
+                                    Integer.parseInt(summary.getStatus()),
+                                    lookup, rex.getKey().toString(),
+                                    summary.getRefPolicy(),
+                                    complexity, (List<String>) cacheResult.getValue()));
+                        }
                     }
 
                 }
@@ -301,7 +340,7 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, sla);
+                    AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, null);
                     ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
                     if(consumerQoS == null)  consumerQoS = (JSONObject) rex.getValue();
                     continue;
@@ -1288,48 +1327,79 @@ public class PullBasedExecutor {
                     // Need to fetch from a different Context Provider for 2 scenarios when partial misses occur when proactively refreshed, and
                     // (1) The data are streamed
                     // (2) The sensor is sampling at a certain rate
+
+                    // IMPORTANT:
+                    // Here, when at least one of the entities originating from a context provider is invalid
+                    // it suggests a re-retrieval from the context provider and update all the entities at once.
+                    // But this is sorted in the refresh logic since any entity refreshed before proactive refreshing
+                    // are re-scheduled.
                     if(data.getStatus().equals("400") && data.getMeta().equals("proactive_shift")
                             && slaObj.getJSONObject("updateFrequency").getDouble("value") > 0)
-                        continue;
+                        continue; // This continue means alternative CP retriveal
 
                     // Fetching from the same context provider OR it's stream otherwise
-                    String retEntity = slaObj.getBoolean("autoFetch") ?
-                            RetrievalManager.executeStreamRead(
-                                    conSer.toString(), slaObj.getJSONObject("qos"), params) :
-                            RetrievalManager.executeFetch(
-                                    conSer.toString(), slaObj.getJSONObject("qos"), params,
-                                    conSer.getJSONObject("_id").getString("$oid"),
-                                    consumerSLA.getJSONObject("_id").getString("$oid"),
-                                    targetEntity.getType().getType(), attributes) ;
+                    if(!slaObj.getBoolean("autoFetch")){
+                        AbstractMap.SimpleEntry<String,List<String>> retEntity =
+                                RetrievalManager.executeFetch(
+                                conSer.toString(), slaObj.getJSONObject("qos"), params,
+                                conSer.getJSONObject("_id").getString("$oid"),
+                                consumerSLA.getJSONObject("_id").getString("$oid"),
+                                targetEntity.getType().getType(), attributes) ;
 
-                    // There is problem with the current context provider which makes it unsuitable for retrieving now.
-                    // Therefore, has to move to the next context provider
-                    if(retEntity == null) continue;
+                        // There is problem with the current context provider which makes it unsuitable for retrieving now.
+                        // Therefore, has to move to the next context provider
+                        if(retEntity == null) continue;
 
-                    Executors.newCachedThreadPool().execute(()
-                            -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()), lookup,
-                            retEntity, data.getMeta(), complexity, attributes));
-                    return new AbstractMap.SimpleEntry(retEntity,qos.put("price",
-                            consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                        Executors.newCachedThreadPool().execute(()
+                                -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()),
+                                lookup, retEntity.getKey(), data.getMeta(), // Meta can be Empty if it's not an entity.
+                                complexity, retEntity.getValue()));
+
+                        return new AbstractMap.SimpleEntry(retEntity.getKey(),qos.put("price",
+                                consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                    }
+                    else {
+                        AbstractMap.SimpleEntry<String,List<String>> status =
+                                RetrievalManager.executeStreamRead(conSer.toString(),
+                                conSer.getJSONObject("_id").getString("$oid"), params);
+                        // This null means the context retrieval occurs in to the storage.
+                        if(status.getKey().equals("200"))
+                            return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
+                                .addAllHashKeys(status.getValue())
+                                .setStatus(data.getStatus())
+                                .setRefPolicy(data.getMeta()).build());
+                        continue; // Moving to the next context provider since it is currently unavailable.
+                    }
                 }
                 else {
+                    // Complete Hit Return
                     return new AbstractMap.SimpleEntry(data.getBody(),
                             qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                 }
             }
 
+            // No caching block
             JSONObject slaObj = conSer.getJSONObject("sla");
-            String retEntity = conSer.getJSONObject("sla").getBoolean("autoFetch") ?
-                    RetrievalManager.executeStreamRead(conSer.toString(), slaObj.getJSONObject("qos"), params) :
-                    RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
-                            conSer.getJSONObject("_id").getString("$oid"),
-                            consumerSLA.getJSONObject("_id").getString("$oid"),
-                            targetEntity.getType().getType(), attributes);
-                    ;
-            if(retEntity != null)
-                return new AbstractMap.SimpleEntry(retEntity,
-                        qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
-            else continue; // Moving to the next context provider since it is currently unavailable.
+            if(conSer.getJSONObject("sla").getBoolean("autoFetch")){
+                AbstractMap.SimpleEntry<String,List<String>> status =
+                        RetrievalManager.executeStreamRead(conSer.toString(),
+                        conSer.getJSONObject("_id").getString("$oid"), params);
+                if(status.equals("200"))
+                    return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
+                            .addAllHashKeys(status.getValue()).build());
+                continue; // Moving to the next context provider since it is currently unavailable.
+            }
+            else {
+                AbstractMap.SimpleEntry retEntity = RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
+                        conSer.getJSONObject("_id").getString("$oid"),
+                        consumerSLA.getJSONObject("_id").getString("$oid"),
+                        targetEntity.getType().getType(), attributes);
+
+                if(retEntity != null)
+                    return new AbstractMap.SimpleEntry(retEntity.getKey(),
+                            qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                continue; // Moving to the next context provider since it is currently unavailable.
+            }
         }
 
         log.severe("Runtime error during context retrieval.");
@@ -1338,32 +1408,100 @@ public class PullBasedExecutor {
 
     private static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
                                               String retEntity, String currRefPolicy, double complexity,
-                                              Set<String> attributes){
+                                              List<String> hashKeys){
         CPREEServiceGrpc.CPREEServiceFutureStub asynStub
                 = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
 
         if(cacheStatus == 400){
             // 400 means the cache missed due to invalidity
             // The cached context needs to be refreshed.
-            asynStub.refreshContext(ContextRefreshRequest.newBuilder()
-                    .addAllAttributes(attributes)
-                    .setRefreshPolicy(currRefPolicy)
-                    .setRequest(CacheRefreshRequest.newBuilder()
-                            .setSla(sla.toString())
-                            .setReference(lookup)
-                            .setJson(retEntity)).build());
+            if(retEntity.startsWith("{")){
+                asynStub.refreshContext(ContextRefreshRequest.newBuilder()
+                        .setHashKey(hashKeys.get(0))
+                        // Removed attributes
+                        .setRefreshPolicy(currRefPolicy)
+                        .setComplexity(complexity)
+                        // currRefPolicy will be empty when at least one of the entities under a CS is invalid.
+                        .setRequest(CacheRefreshRequest.newBuilder()
+                                .setSla(sla.toString())
+                                .setReference(lookup)
+                                .setJson(retEntity)).build());
+            }
+            else {
+                int numberOfIterations = (int)(hashKeys.size()/numberOfItemsPerTask) + 1;
+                ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+                JSONArray entityData = (new JSONObject(retEntity)).getJSONArray("results");
+
+                for (int factor = 0; factor<numberOfIterations; factor++)
+                {
+                    int finalFactor = factor;
+                    executorService.submit(() -> {
+                        int start = numberOfItemsPerTask * finalFactor;
+                        int end =  Math.min(hashKeys.size(), start + numberOfItemsPerTask);
+
+                        // Sending cache hit or miss record to performance monitor.
+                        for(int i = start; i < end; i++){
+                            asynStub.refreshContext(ContextRefreshRequest.newBuilder()
+                                    .setHashKey(hashKeys.get(i))
+                                    // Removed attributes
+                                    .setRefreshPolicy(currRefPolicy)
+                                    .setComplexity(complexity)
+                                    // currRefPolicy will be empty when at least one of the entities under a CS is invalid.
+                                    .setRequest(CacheRefreshRequest.newBuilder()
+                                            .setSla(sla.toString())
+                                            .setReference(lookup)
+                                            .setJson(entityData.getJSONObject(i).toString())).build());
+                        }
+                    });
+                }
+                executorService.shutdown();
+
+                try {
+                    executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+                } catch (InterruptedException e) {
+                    log.severe("Executor failed to execute with error: " + e.getMessage());
+                }
+            }
         }
         else if(cacheStatus == 404 && registerState){
             // 404 means the item is not at all cached
             // Trigger Selective Caching Evaluation
-            asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
-                            .setSla(sla.toString())
-                            .setContext(retEntity)
-                            .setContextLevel(CacheLevels.RAW_CONTEXT.toString().toLowerCase())
-                            .setReference(lookup)
-                            .setComplexity(complexity)
-                            .addAllAttributes(attributes)
-                            .build());
+            if(retEntity.startsWith("{")){
+                asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
+                        .setHashKey(hashKeys.get(0))
+                        .setSla(sla.toString())
+                        .setContext(retEntity)
+                        .setContextLevel(CacheLevels.ENTITY.toString().toLowerCase())
+                        .setReference(lookup)
+                        .setComplexity(complexity)
+                        // Removed attributes
+                        .build());
+            }
+            else {
+                int numberOfIterations = (int)(hashKeys.size()/numberOfItemsPerTask) + 1;
+                ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+                JSONArray entityData = (new JSONObject(retEntity)).getJSONArray("results");
+
+                for (int factor = 0; factor<numberOfIterations; factor++)
+                {
+                    int finalFactor = factor;
+                    executorService.submit(() -> {
+                        int start = numberOfItemsPerTask * finalFactor;
+                        int end =  Math.min(hashKeys.size(), start + numberOfItemsPerTask);
+                        for(int i = start; i < end; i++){
+                            asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
+                                    .setHashKey(hashKeys.get(i))
+                                    .setSla(sla.toString())
+                                    .setContext(entityData.getJSONObject(i).toString())
+                                    .setContextLevel(CacheLevels.ENTITY.toString().toLowerCase())
+                                    .setReference(lookup)
+                                    .setComplexity(complexity)
+                                    // Removed attributes
+                                    .build());
+                        }
+                    });
+                }
+            }
         }
     }
 
@@ -1397,7 +1535,7 @@ public class PullBasedExecutor {
         return conSer;
     }
 
-    public static ContextRequest generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
+    public static ContextRequest.Builder generateContextRequest(ContextEntity targetEntity, CDQLQuery query, Map<String, JSONObject> ce, int page, int limit) {
         ArrayList<CdqlConditionToken> list = new ArrayList(targetEntity.getCondition().getRPNConditionList());
 
         for (int i = 0; i < list.size(); i++) {
@@ -1487,14 +1625,15 @@ public class PullBasedExecutor {
         tempContextEntityBuilder.setType(targetEntity.getType());
         ContextEntity tempContextEntity = tempContextEntityBuilder.build();
         List<ContextAttribute> returnAttributes = new ArrayList<>();
+
         //ToDo fix return attribute section
-        ContextRequest cr = ContextRequest.newBuilder().setEt(targetEntity.getType())
+        ContextRequest.Builder cr = ContextRequest.newBuilder().setEt(targetEntity.getType())
                 .setCondition(tempContextEntity.getCondition())
                 .setMeta(query.getMeta())
                 .setPage(page)
                 .setLimit(limit)
                 .setEntityID(targetEntity.getEntityID())
-                .addAllReturnAttributes(returnAttributes).build();
+                .addAllReturnAttributes(returnAttributes);
 
         return cr;
     }
@@ -1506,15 +1645,22 @@ public class PullBasedExecutor {
     }
 
     private static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
-                                               Map<String, JSONObject> ce, int page, int limit, JSONObject sla) {
-        ContextRequest cr = generateContextRequest(targetEntity, query, ce, page, limit);
+                                               Map<String, JSONObject> ce, int page, int limit,
+                                               String contextService) {
+
+        ContextRequest.Builder cr = generateContextRequest(targetEntity, query, ce, page, limit);
+        JSONObject cs = new JSONObject(contextService);
+        if(contextService != null) {
+            cr.setProviderId(cs.getJSONObject("_id").getString("$oid"));
+        }
 
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-        JSONObject qos = sla.getJSONObject("sla").getJSONObject("qos");
 
-        Iterator<Chunk> data = sqemStub.handleContextRequest(cr);
+        JSONObject qos = cs.getJSONObject("sla").getJSONObject("qos");
+
+        Iterator<Chunk> data = sqemStub.handleContextRequest(cr.build());
 
         ByteString.Output output = ByteString.newOutput();
 
@@ -1534,13 +1680,8 @@ public class PullBasedExecutor {
             e.printStackTrace();
         }
 
-        //ToDo: validate return entities
-        if(sla == null){
-            return new AbstractMap.SimpleEntry(invoke,null);
-        }
-
         return new AbstractMap.SimpleEntry(invoke,
-                qos.put("price", sla.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                qos.put("price", cs.getJSONObject("sla").getJSONObject("price").getDouble("value")));
     }
 
     private static CdqlConstantConditionTokenType getConstantType(String val) {

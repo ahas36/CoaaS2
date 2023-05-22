@@ -6,12 +6,14 @@ import au.coaas.cqc.utils.enums.RequestDataType;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.ConQEngLog;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
+import com.google.common.hash.Hashing;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.util.JsonFormat;
 import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -128,6 +130,10 @@ public class Utilities {
                 return new AbstractMap.SimpleEntry("m", MeasuredProperty.DISTANCE);
         }
         return null;
+    }
+
+    public static String getHashKey(String key){
+        return Hashing.sha256().hashString(key, StandardCharsets.UTF_8).toString();
     }
 
     public static Object getValueOfJsonObject(final JSONObject obj, String path) {

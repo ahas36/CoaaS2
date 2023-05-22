@@ -49,7 +49,12 @@ public class RefreshScheduler {
         return refreshScheduler;
     }
 
+    // Done
     public void scheduleRefresh(RefreshContext query) throws SchedulerException {
+        if (!scheduler.isStarted()) {
+            throw new SchedulerException("Scheduler not started");
+        }
+
         JobDetail job = JobBuilder.newJob(QueryJob.class)
                 .withIdentity(query.getContextId(), "refreshGroup")
                 .usingJobData(query.getJobDataMap())
@@ -82,6 +87,7 @@ public class RefreshScheduler {
         }
     }
 
+    // Done
     public void updateRefreshing(RefreshContext query) throws SchedulerException {
         JobKey jobkey = new JobKey(query.getContextId(),"refreshGroup");
         TriggerKey triggerKey = TriggerKey.triggerKey(query.getContextId(), "refreshGroup");
@@ -97,6 +103,7 @@ public class RefreshScheduler {
         }
     }
 
+    // Done
     public void scheduleRegisterClearance() throws SchedulerException {
         JobDetail job = JobBuilder.newJob(RegisterClearJob.class)
                 .withIdentity("registerClear", "routineGroup")

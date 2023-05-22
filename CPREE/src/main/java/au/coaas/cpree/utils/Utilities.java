@@ -123,6 +123,10 @@ public class Utilities {
         return Hashing.sha256().hashString(hashKey, StandardCharsets.UTF_8).toString();
     }
 
+    public static String getHashKey(String hashKey){
+        return Hashing.sha256().hashString(hashKey, StandardCharsets.UTF_8).toString();
+    }
+
     public static double getZValueForProbability(double prob) {
         if (prob < 0.5) return -getZValueForProbability(1 - prob);
 

@@ -106,6 +106,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void simpleLookup(au.coaas.sqem.proto.CacheLookUp request,
+                                            io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            // Retrieving context for entity from cache
+            responseObserver.onNext(ContextCacheHandler.lookUp(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void handleContextRequestInCache(au.coaas.sqem.proto.CacheLookUp request,
                                             io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
@@ -230,6 +242,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
                                  io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
             responseObserver.onNext(ContextEntityHandler.remove(request.getName()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getEntities(au.coaas.sqem.proto.GetEntitiesRequest request,
+                                 io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(ContextEntityHandler.getEntities(request));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

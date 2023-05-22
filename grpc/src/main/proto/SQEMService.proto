@@ -10,11 +10,11 @@ import "CSIService.proto";
 import "CREService.proto";
 
 message SQEMResponse {
-    
     string status = 1;
     string body = 2;
     string meta = 3;
     string hashKey = 4;
+    CacheLookUpResponse cacheresponse = 5;
 }
 
 message ContextRequest
@@ -26,6 +26,7 @@ message ContextRequest
     int32 page = 5;
     int32 limit = 6;
     string entityID = 7;
+    string providerId = 8;
 }
 
 message CacheLookUp {
@@ -43,6 +44,7 @@ message CacheLookUp {
 message RefreshUpdate {
     CacheLookUp lookup = 1;
     string refreshLogic = 2;
+    string hashkey = 3;
 }
 
 message ProbDelay {
@@ -99,6 +101,7 @@ message CacheLookUpResponse {
     bool isValid = 3;
     int64 remainingLife = 4;
     string refreshLogic =5;
+    repeated string hashKeys = 6;
 }
 
 message ScheduleTask {
@@ -125,6 +128,7 @@ message CacheRequest
     string refreshLogic = 4;
     CacheLookUp reference = 5;
     bool indefinite = 6;
+    string hashkey = 7;
 }
 
 message CacheRefreshRequest
@@ -150,6 +154,12 @@ message UpdateEntityRequest
     int64 observedTime = 4;
     int64 retLatency = 5;
     string providerId = 6;
+}
+
+message GetEntitiesRequest
+{
+    string entityType = 1;
+    repeated string keys = 2;
 }
 
 message RegisterContextServiceRequest
@@ -263,6 +273,7 @@ message Statistic {
     bool isDelayed = 7;
     int64 age = 8;
     au.coaas.csi.proto.ContextServiceInvokerRequest cs = 9;
+    repeated string haskeys = 10;
 }
 
 message SummarySLA
@@ -312,15 +323,17 @@ service SQEMService {
     rpc clearCache (Empty) returns (SQEMResponse);
     rpc toggleRefreshLogic(RefreshUpdate) returns (Empty);
     rpc cacheEntity (CacheRequest) returns (SQEMResponse);
+    rpc simpleLookup (CacheLookUp) returns (SQEMResponse);
     rpc getcachePerformance(Empty) returns (CachePerformance);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
-    rpc evictContextEntityByHashKey (ContextServiceId) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
+    rpc evictContextEntityByHashKey (ContextServiceId) returns (SQEMResponse);
 
     rpc handleContextRequest (ContextRequest) returns (stream Chunk);
 
     rpc getAllEntityTypes (Empty) returns (SQEMResponse);
+    rpc getEntities (GetEntitiesRequest) returns (SQEMResponse);
     rpc clearEntityType (EntityTypeRequest) returns (SQEMResponse);
     rpc removeEntityType (EntityTypeRequest) returns (SQEMResponse);
     rpc UpdateContextEntity (UpdateEntityRequest) returns (SQEMResponse);

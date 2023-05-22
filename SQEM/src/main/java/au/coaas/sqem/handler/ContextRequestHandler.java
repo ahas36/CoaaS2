@@ -437,7 +437,7 @@ public class ContextRequestHandler {
         // The prefix is custom set here
         String attributePrefix = isHistoricalQuery ? "coaas:samples.coaas:value." : "";
 
-        // Constructor to the BSON object to save the context query in MongoDB
+        // Constructor to the BSON object to execute the context query in MongoDB
         Bson finalQuery = new BasicDBObject();
         // This condition is kind of redundant because
         // RPNCondition contains all the Context Query Tokens - attributes, operators, constants etc.
@@ -496,7 +496,18 @@ public class ContextRequestHandler {
                 return createErrorResponse(e.getMessage());
             }
 
-            finalQuery = stack.pop().getBson();
+            if(contextRequest.getProviderId() == null || contextRequest.getProviderId().isEmpty())
+                finalQuery = stack.pop().getBson();
+            else {
+                BasicDBObject queryConstruct = new BasicDBObject();
+                queryConstruct.put("providers", contextRequest.getProviderId());
+
+                List<Bson> bsons = new ArrayList<>();
+                bsons.add(stack.pop().getBson());
+                bsons.add(queryConstruct);
+
+                finalQuery = Filters.and(bsons);
+            }
         }
 
         // Each of the entity has it's own collection in MongoDB. This is limited ny number.

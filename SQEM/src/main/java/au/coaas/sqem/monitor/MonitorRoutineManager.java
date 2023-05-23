@@ -16,14 +16,14 @@ public class MonitorRoutineManager {
     private SchedulerFactory schedulerFactory;
     private static MonitorRoutineManager instance;
 
-    private MonitorRoutineManager() throws SchedulerException {}
-
-    private void SetSchedules() throws SchedulerException {
+    private MonitorRoutineManager() throws SchedulerException {
         schedulerFactory = new StdSchedulerFactory();
         scheduler = schedulerFactory.getScheduler();
-
         scheduler.clear();
+        scheduler.start();
+    }
 
+    private void SetSchedules() throws SchedulerException {
         JobDetail statJob = JobBuilder.newJob(StatisticsAction.class)
                 .withIdentity("stat-actions", "monitor-job")
                 .storeDurably()

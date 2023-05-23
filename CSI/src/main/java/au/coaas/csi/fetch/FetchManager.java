@@ -228,14 +228,8 @@ public class FetchManager {
         while (matcher.find()) {
             String pram = matcher.group(0).trim();
             Object attributeValue = getAttributeValue(res,pram);
-            if(attributeValue instanceof String){
-                expression = attributeValue != null ?
-                        expression.replaceAll(pram,"\""+attributeValue.toString()+"\"") : null;
-            }
-            else {
-                expression = attributeValue != null ? expression.replaceAll(pram,
+            expression = attributeValue != null ? expression.replaceAll(pram,
                         attributeValue.toString()): null;
-            }
         }
         // return expression;
         return evaluateExpression(expression);
@@ -340,11 +334,15 @@ public class FetchManager {
             JSONObject finalResult = new JSONObject();
             finalResult.put("results", result);
 
-            Double[] ageArrary = (Double[]) ages.toArray();
+            List<Double> ageArrary = new ArrayList<>();
+            while(!ages.isEmpty()){
+                ageArrary.add(ages.pop());
+            }
+
             Double sum = 0.0;
-            for(int i=0; i < ageArrary.length ; i++)
-                sum = sum + ageArrary[i];
-            finalResult.put("avgAge", (sum*1000)/ageArrary.length);
+            for(int i=0; i < ageArrary.size() ; i++)
+                sum = sum + ageArrary.get(i);
+            finalResult.put("avgAge", (sum*1000)/ageArrary.size());
             return finalResult;
         }else {
             return mapJsonObject(attributes,service);

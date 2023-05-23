@@ -29,8 +29,6 @@ import com.google.firebase.messaging.FirebaseMessaging;
 
 import org.json.JSONObject;
 
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
@@ -40,7 +38,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
+
 import java.util.logging.Logger;
 
 import static au.coaas.cqc.utils.SiddhiQueryGenerator.generateQueries;

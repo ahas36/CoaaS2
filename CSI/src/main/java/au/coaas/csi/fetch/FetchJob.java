@@ -54,8 +54,6 @@ public class FetchJob implements Job {
                     .setContextService(ContextService.newBuilder().setJson(contextService))
                     .putAllParams(params)
                     .build();
-            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
             for(int i=0; i < retrys; i++){
                 startTime = System.currentTimeMillis();
@@ -70,6 +68,9 @@ public class FetchJob implements Job {
                         penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
                                 * qos.getDouble("penPct") / 100;
                     }
+
+                    SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                            = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                     asyncStub.logPerformanceData(Statistic.newBuilder()
                             .setIsDelayed(retDiff>0).setEarning(penEarning)
@@ -122,14 +123,17 @@ public class FetchJob implements Job {
                 }
                 else hkeys.add(sqemResBody.getString("hashkey"));
 
-                asyncStub.logPerformanceData(Statistic.newBuilder()
+                SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
+                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+                asyncStub.logPerformanceData(Statistic.newBuilder().setCs(request)
                         .setMethod("FetchJob-execute").setStatus(fetch.getStatus())
                         .setTime(retLatency).setCs(request).setAge(age.longValue())
                         .setIsDelayed(retDiff>0).setEarning(penEarning)
                         .addAllHaskeys(hkeys)
                         .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
-                if(!sqemResponse.getStatus().equals("200")){
+                if(sqemResponse.getStatus().equals("200")){
                     log.info(sqemResponse.getBody());
                     return hkeys;
                 }

@@ -13,10 +13,17 @@ public class JobSchedulerManager {
     private static JobSchedulerManager instance;
 
     private JobSchedulerManager() throws SchedulerException {
-        schedulerFactory = new StdSchedulerFactory();
-        scheduler = schedulerFactory.getScheduler();
+        try {
+            schedulerFactory = new StdSchedulerFactory();
+            scheduler = schedulerFactory.getScheduler();
 
-        scheduler.clear();
+            scheduler.clear();
+            start();
+        }
+        catch(Exception ex){
+            System.out.println(ex.getMessage());
+            shutdown();
+        }
 
         JobDetail job = JobBuilder.newJob(FetchJob.class)
                 .withIdentity("fetch-job", "cs-fetch-job")

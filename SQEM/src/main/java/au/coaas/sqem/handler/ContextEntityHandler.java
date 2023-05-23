@@ -11,6 +11,7 @@ import au.coaas.sqem.proto.UpdateEntityRequest;
 import au.coaas.sqem.proto.RegisterEntityRequest;
 
 import au.coaas.sqem.util.Utilty;
+import com.google.gson.JsonParser;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
@@ -62,9 +63,9 @@ public class ContextEntityHandler {
 
     public static SQEMResponse updateEntities(UpdateEntityRequest updateRequest) {
         String json = updateRequest.getJson();
+        JSONObject response = new JSONObject(json.trim());
 
-        if (!json.trim().startsWith("{")) {
-            JSONObject response = new JSONObject(json);
+        if (response.has("results")) {
             JSONArray items = response.getJSONArray("results");
             int numberOfThreads = 10;
 
@@ -130,15 +131,21 @@ public class ContextEntityHandler {
             JSONObject body = new JSONObject();
             body.put("success", success.intValue());
             body.put("error", error.intValue());
-            body.put("hashkeys", hashkeys);
+
+            List<String> hashList = new ArrayList<>();
+            while(!hashkeys.isEmpty()){
+                hashList.add(hashkeys.pop());
+            }
+
+            body.put("hashkeys", hashList);
             return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
         }
         else {
             long age = 0;
             Long timestamp = new java.util.Date().getTime();
-            JSONObject data = new JSONObject(updateRequest.getJson());
-            if(data.has("age")){
-                JSONObject age_obj = data.getJSONObject("age");
+
+            if(response.has("age")){
+                JSONObject age_obj = response.getJSONObject("age");
 
                 String unit = age_obj.getString("unitText");
                 long value = age_obj.getLong("value");
@@ -152,7 +159,7 @@ public class ContextEntityHandler {
                 timestamp -= (age + updateRequest.getRetLatency());
 
                 UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder()
-                        .setJson(updateRequest.getJson())
+                        .setJson(response.toString())
                         .setEt(updateRequest.getEt())
                         .setObservedTime(timestamp)
                         .setProviderId(updateRequest.getProviderId())
@@ -224,7 +231,14 @@ public class ContextEntityHandler {
             //Matching the entities by unique keys
             for (String attributeName : attributes.keySet()) {
                 Object item = attributes.get(attributeName);
-                if (item instanceof JSONArray || item instanceof JSONObject) {
+
+                if(item.toString().startsWith("{")){
+                    updateFields.append(attributeName, Document.parse(item.toString()));
+                }
+                else if(item.toString().startsWith("[")) {
+                    updateFields.append(attributeName, Document.parse(item.toString()));
+                }
+                else if (item instanceof JSONArray || item instanceof JSONObject) {
                     updateFields.append(attributeName, Document.parse(item.toString()));
                 } else {
                     updateFields.append(attributeName, item);

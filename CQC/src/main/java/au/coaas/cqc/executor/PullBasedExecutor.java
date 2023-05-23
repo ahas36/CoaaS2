@@ -1294,13 +1294,13 @@ public class PullBasedExecutor {
 
         // This list is currently unordered.
         JSONArray contextServices = new JSONArray(contextServicesText);
+        JSONObject qos = consumerSLA.getJSONObject("sla").getJSONObject("qos");
 
         // This for loop returns the context data from the first context service.
         // Although, there may be multiple other context services, this loop assumes the context services are ordered.
         // Therefore, the 1st SC in the list is the best match (Input from Kanaka).
         for (Object ctSer : contextServices) {
             // Mapping context service with SLA constraints
-            JSONObject qos = consumerSLA.getJSONObject("sla").getJSONObject("qos");
             JSONObject conSer = mapServiceWithSLA((JSONObject) ctSer, qos, targetEntity.getType(), criticality.toLowerCase());
 
             if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){

@@ -33,8 +33,8 @@ public class SelectionExecutor {
     private static final boolean cacheAll = false; // Should be false
 
     private static final double min_value = 0.001;
-    private static final long min_cache_residence = 60000;
-    private static final long max_delay_cache_residence = 600000;
+    private static final long min_cache_residence = 30000; // 30 Seconds
+    private static final long max_delay_cache_residence = 300000; // 5 Minutes
     private static final long max_threshold = (long) (Math.pow(2,15)-1);
 
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());

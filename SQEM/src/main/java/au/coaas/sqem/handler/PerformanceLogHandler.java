@@ -261,9 +261,9 @@ public class PerformanceLogHandler {
                         statement.executeUpdate(formatted_string);
                     }
 
-                    String queryString_2 = "INSERT INTO retrieval-summary(status,response_time,"+
+                    String queryString_2 = "INSERT INTO retrieval_summary(status,response_time,"+
                             "cost,identifier,createdDatetime,isDelayed) " +
-                            "VALUES('%s', '%s', %d, %f, %f, '%s', CAST('%s' AS DATETIME2), %d, %d, %f);";
+                            "VALUES('%s', %d, %f, '%s', CAST('%s' AS DATETIME2), %d);";
                     String formatted_string_2 = String.format(queryString_2,
                             request.getStatus(), // Status of the retrieval
                             request.getTime(), // Response time
@@ -687,7 +687,7 @@ public class PerformanceLogHandler {
             ResultSet rs_1 = statement.executeQuery("SELECT identifier, status, count(status) AS cnt, " +
                     "avg(response_time) AS rt_avg, avg(cost) AS avg_cost, " +
                     "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
-                    "FROM retrieval-summary GROUP BY identifier, status;");
+                    "FROM retrieval_summary GROUP BY identifier, status;");
 
             while(rs_1.next()){
                 Double count = rs_1.getInt("cnt") * 1.0;
@@ -1830,8 +1830,8 @@ public class PerformanceLogHandler {
                     "    age BIGINT NULL,\n" +
                     "    fthresh REAL NULL)");
 
-            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='retrieval-summary')\n" +
-                    "CREATE TABLE retrieval-summary(\n" +
+            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='retrieval_summary')\n" +
+                    "CREATE TABLE retrieval_summary(\n" +
                     "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
                     "    status VARCHAR(5) NOT NULL,\n" +
                     "    response_time BIGINT NULL,\n" +

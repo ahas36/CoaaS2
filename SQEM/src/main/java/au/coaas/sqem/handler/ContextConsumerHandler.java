@@ -127,7 +127,7 @@ public class ContextConsumerHandler {
         catch(Exception e){
             JSONObject body = new JSONObject();
             body.put("message",e.getMessage());
-            body.put("cause",e.getCause() != null ? e.getCause().toString() : "See Cause in Message.");
+            body.put("cause",e.getCause() != null ? e.getCause().toString() : "Error in Retrieve Consumer SLA.");
 
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }

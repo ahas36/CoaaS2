@@ -319,7 +319,7 @@ public class PullBasedExecutor {
                                     Integer.parseInt(summary.getStatus()),
                                     lookup, rex.getKey().toString(),
                                     summary.getRefPolicy(),
-                                    complexity, (List<String>) cacheResult.getValue()));
+                                    complexity, summary.getHashKeysList()));
                         }
                     }
 
@@ -1410,99 +1410,107 @@ public class PullBasedExecutor {
     private static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
                                               String retEntity, String currRefPolicy, double complexity,
                                               List<String> hashKeys){
-        CPREEServiceGrpc.CPREEServiceFutureStub asynStub
-                = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+        try {
+            CPREEServiceGrpc.CPREEServiceFutureStub asynStub
+                    = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
 
-        if(cacheStatus == 400){
-            // 400 means the cache missed due to invalidity
-            // The cached context needs to be refreshed.
-            if(retEntity.startsWith("{")){
-                asynStub.refreshContext(ContextRefreshRequest.newBuilder()
-                        .setHashKey(hashKeys.get(0))
-                        // Removed attributes
-                        .setRefreshPolicy(currRefPolicy)
-                        .setComplexity(complexity)
-                        // currRefPolicy will be empty when at least one of the entities under a CS is invalid.
-                        .setRequest(CacheRefreshRequest.newBuilder()
-                                .setSla(sla.toString())
-                                .setReference(lookup)
-                                .setJson(retEntity)).build());
-            }
-            else {
-                int numberOfIterations = (int)(hashKeys.size()/numberOfItemsPerTask) + 1;
-                ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
-                JSONArray entityData = (new JSONObject(retEntity)).getJSONArray("results");
-
-                for (int factor = 0; factor<numberOfIterations; factor++)
-                {
-                    int finalFactor = factor;
-                    executorService.submit(() -> {
-                        int start = numberOfItemsPerTask * finalFactor;
-                        int end =  Math.min(hashKeys.size(), start + numberOfItemsPerTask);
-
-                        // Sending cache hit or miss record to performance monitor.
-                        for(int i = start; i < end; i++){
-                            asynStub.refreshContext(ContextRefreshRequest.newBuilder()
-                                    .setHashKey(hashKeys.get(i))
-                                    // Removed attributes
-                                    .setRefreshPolicy(currRefPolicy)
-                                    .setComplexity(complexity)
-                                    // currRefPolicy will be empty when at least one of the entities under a CS is invalid.
-                                    .setRequest(CacheRefreshRequest.newBuilder()
-                                            .setSla(sla.toString())
-                                            .setReference(lookup)
-                                            .setJson(entityData.getJSONObject(i).toString())).build());
-                        }
-                    });
+            if(cacheStatus == 400){
+                // 400 means the cache missed due to invalidity
+                // The cached context needs to be refreshed.
+                JSONObject retrievedContext = new JSONObject(retEntity);
+                if(!retrievedContext.has("results")){
+                    asynStub.refreshContext(ContextRefreshRequest.newBuilder()
+                            .setHashKey(hashKeys.get(0))
+                            // Removed attributes
+                            .setRefreshPolicy(currRefPolicy)
+                            .setComplexity(complexity)
+                            // currRefPolicy will be empty when at least one of the entities under a CS is invalid.
+                            .setRequest(CacheRefreshRequest.newBuilder()
+                                    .setSla(sla.toString())
+                                    .setReference(lookup)
+                                    .setJson(retEntity)).build());
                 }
-                executorService.shutdown();
+                else {
+                    int numberOfIterations = (int)(hashKeys.size()/numberOfItemsPerTask) + 1;
+                    ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+                    JSONArray entityData = retrievedContext.getJSONArray("results");
 
-                try {
-                    executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
-                } catch (InterruptedException e) {
-                    log.severe("Executor failed to execute with error: " + e.getMessage());
+                    for (int factor = 0; factor<numberOfIterations; factor++)
+                    {
+                        int finalFactor = factor;
+                        executorService.submit(() -> {
+                            int start = numberOfItemsPerTask * finalFactor;
+                            int end =  Math.min(hashKeys.size(), start + numberOfItemsPerTask);
+
+                            // Sending cache hit or miss record to performance monitor.
+                            for(int i = start; i < end; i++){
+                                asynStub.refreshContext(ContextRefreshRequest.newBuilder()
+                                        .setHashKey(hashKeys.get(i))
+                                        // Removed attributes
+                                        .setRefreshPolicy(currRefPolicy)
+                                        .setComplexity(complexity)
+                                        // currRefPolicy will be empty when at least one of the entities under a CS is invalid.
+                                        .setRequest(CacheRefreshRequest.newBuilder()
+                                                .setSla(sla.toString())
+                                                .setReference(lookup)
+                                                .setJson(entityData.getJSONObject(i).toString())).build());
+                            }
+                        });
+                    }
+                    executorService.shutdown();
+
+                    try {
+                        executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
+                    } catch (InterruptedException e) {
+                        log.severe("Executor failed to execute with error: " + e.getMessage());
+                    }
+                }
+            }
+            else if(cacheStatus == 404 && registerState){
+                // 404 means the item is not at all cached
+                // Trigger Selective Caching Evaluation
+                JSONObject retrievedContext = new JSONObject(retEntity);
+                if(!retrievedContext.has("results")){
+                    asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
+                            .setHashKey(hashKeys.get(0))
+                            .setSla(sla.toString())
+                            .setContext(retEntity)
+                            .setContextLevel(CacheLevels.ENTITY.toString().toLowerCase())
+                            .setReference(lookup)
+                            .setComplexity(complexity)
+                            // Removed attributes
+                            .build());
+                }
+                else {
+                    int numberOfIterations = (int)(hashKeys.size()/numberOfItemsPerTask) + 1;
+                    ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
+                    JSONArray entityData = retrievedContext.getJSONArray("results");
+
+                    for (int factor = 0; factor<numberOfIterations; factor++)
+                    {
+                        int finalFactor = factor;
+                        executorService.submit(() -> {
+                            int start = numberOfItemsPerTask * finalFactor;
+                            int end =  Math.min(hashKeys.size(), start + numberOfItemsPerTask);
+                            for(int i = start; i < end; i++){
+                                asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
+                                        .setHashKey(hashKeys.get(i))
+                                        .setSla(sla.toString())
+                                        .setContext(entityData.getJSONObject(i).toString())
+                                        .setContextLevel(CacheLevels.ENTITY.toString().toLowerCase())
+                                        .setReference(lookup)
+                                        .setComplexity(complexity)
+                                        // Removed attributes
+                                        .build());
+                            }
+                        });
+                    }
                 }
             }
         }
-        else if(cacheStatus == 404 && registerState){
-            // 404 means the item is not at all cached
-            // Trigger Selective Caching Evaluation
-            if(retEntity.startsWith("{")){
-                asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
-                        .setHashKey(hashKeys.get(0))
-                        .setSla(sla.toString())
-                        .setContext(retEntity)
-                        .setContextLevel(CacheLevels.ENTITY.toString().toLowerCase())
-                        .setReference(lookup)
-                        .setComplexity(complexity)
-                        // Removed attributes
-                        .build());
-            }
-            else {
-                int numberOfIterations = (int)(hashKeys.size()/numberOfItemsPerTask) + 1;
-                ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
-                JSONArray entityData = (new JSONObject(retEntity)).getJSONArray("results");
-
-                for (int factor = 0; factor<numberOfIterations; factor++)
-                {
-                    int finalFactor = factor;
-                    executorService.submit(() -> {
-                        int start = numberOfItemsPerTask * finalFactor;
-                        int end =  Math.min(hashKeys.size(), start + numberOfItemsPerTask);
-                        for(int i = start; i < end; i++){
-                            asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
-                                    .setHashKey(hashKeys.get(i))
-                                    .setSla(sla.toString())
-                                    .setContext(entityData.getJSONObject(i).toString())
-                                    .setContextLevel(CacheLevels.ENTITY.toString().toLowerCase())
-                                    .setReference(lookup)
-                                    .setComplexity(complexity)
-                                    // Removed attributes
-                                    .build());
-                        }
-                    });
-                }
-            }
+        catch (Exception ex){
+            log.severe("Error occured in Refresh Or Cache Context method. See message for details.");
+            log.severe("Error: " + ex.getMessage());
         }
     }
 

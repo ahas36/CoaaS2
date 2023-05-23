@@ -9,7 +9,6 @@ import org.wso2.siddhi.core.util.EventPrinter;
 import org.wso2.siddhi.core.stream.input.InputHandler;
 import org.wso2.siddhi.core.stream.output.StreamCallback;
 
-import java.util.Set;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 

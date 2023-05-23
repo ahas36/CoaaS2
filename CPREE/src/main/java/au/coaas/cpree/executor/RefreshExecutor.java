@@ -139,7 +139,7 @@ public class RefreshExecutor {
                     if(hashkey != (initContextId.split("-"))[1]){
                         // Should reset the next scheduled retrieval for the entity.
                         double residual_life = 0.0;
-                        if(context.has("age")){
+                        if(entData.has("age")){
                             residual_life = meta.getFreshness() - (meta.getRetLatMilis()/1000.0)
                                     - entData.getJSONObject("age").getDouble("value");
                         }

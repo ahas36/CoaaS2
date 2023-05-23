@@ -145,7 +145,7 @@ public class RetrievalManager {
             return new AbstractMap.SimpleEntry(fetch.getBody(),meta);
         }
 
-        // Returning null means teh CMP failed to retrieved context from the provider despite all attempts.
+        // Returning null means the CMP failed to retrieved context from the provider despite all attempts.
         return null;
     }
 

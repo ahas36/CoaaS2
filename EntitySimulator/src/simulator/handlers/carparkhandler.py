@@ -12,6 +12,7 @@ class CarparkHandler(metaclass=SingletonMeta):
     def getAvailability(self, id):
         now = datetime.now()
         date = getDate(now.weekday())
+        age = 0
 
         try:
             park = self.__db.read_single('carparks', {'reference': id, 'open_hours.day':date.capitalize()})
@@ -20,12 +21,16 @@ class CarparkHandler(metaclass=SingletonMeta):
             num = 0
             if sampling == 60000:
                 num = 1440
+                age = now.second
             elif sampling == 600000:
                 num = 144
+                age = ((now.minute%10)*60) + now.second
             elif sampling == 1800000:
                 num = 48
+                age = ((now.minute%30)*60) + now.second
             else:
                 num = 24
+                age = (now.minute*60) + now.second
                      
             hour = now.hour
             min = now.minute
@@ -88,6 +93,11 @@ class CarparkHandler(metaclass=SingletonMeta):
             else:
                 park['free_slots'] = 0
                 park['is_open'] = False
+            
+            park['age'] = {
+                'value': age,
+                'unitText': 's'
+            }
 
             return park, 200
 
@@ -128,6 +138,11 @@ class CarparkHandler(metaclass=SingletonMeta):
             park['free_slots'] = 0
             park['is_open'] = False
 
+            park['age'] = {
+                'value': 0,
+                'unitText': 's'
+            }
+
             return park, 200      
 
     def getCarparks(self, args):
@@ -148,14 +163,20 @@ class CarparkHandler(metaclass=SingletonMeta):
         for park in parks:
             sampling = park['sampling_interval']['value']
             num = 0
+            age = 0
+
             if sampling == 60000:
                 num = 1440
+                age = now.second
             elif sampling == 600000:
                 num = 144
+                age = ((now.minute%10)*60) + now.second
             elif sampling == 1800000:
                 num = 48
+                age = ((now.minute%30)*60) + now.second
             else:
                 num = 24
+                age = (now.minute*60) + now.second
                     
             hour = now.hour
             min = now.minute
@@ -221,6 +242,11 @@ class CarparkHandler(metaclass=SingletonMeta):
             del park['address']
             del park['location']
             del park['price']
+
+            park['age'] = {
+                'value': age,
+                'unitText': 's'
+            }
             
             schedule = park['open_hours'][now.weekday()]
             open = int(schedule['open'].split(':')[0])

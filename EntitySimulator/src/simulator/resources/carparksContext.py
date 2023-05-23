@@ -42,9 +42,10 @@ class CarParkContext(Resource):
             # Retriving the measurement
             args = request.args
             csType = args['type']
+            
             chance = 0.0
             chance_2 = 0.0
-
+            
             if len(args) > 1:
                 data = self.handler.getCarparks(args)
                 # Simulating variation of response latencies

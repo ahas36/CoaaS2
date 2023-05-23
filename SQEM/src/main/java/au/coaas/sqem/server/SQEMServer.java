@@ -29,7 +29,7 @@ import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 public class SQEMServer {
     private static Logger log = Logger.getLogger(SQEMServer.class.getName());
 
-    static public void main (String [] args) throws IOException, InterruptedException, SchedulerException {
+    static public void main (String [] args) throws Exception {
 
         MonitorRoutineManager monitorManager = MonitorRoutineManager.getInstance();
 
@@ -43,8 +43,8 @@ public class SQEMServer {
 
         PerformanceLogHandler.seed_performance_db();
         PerformanceLogHandler.seed_timeseries_db();
-        monitorManager.start();
 
+        monitorManager.start();
         monitorManager.registerRoutine(Routine.STAT, StorageRoutine.newBuilder()
                 .setFrequency(1).setFreqUnit("min").build());
 

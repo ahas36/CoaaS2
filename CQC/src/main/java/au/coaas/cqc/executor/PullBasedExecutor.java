@@ -284,17 +284,17 @@ public class PullBasedExecutor {
                         if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                     }
                     else {
-                        // When the data can not be retrieved from any context providers,
-                        // checking the stored data as the last resort.
-                        AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, contextService);
+                        AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit,
+                                ((SimpleContainer) cacheResult.getValue()).getContextService());
                         ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
 
                         if(cacheEnabled){
                             if(consumerQoS == null) {
-                                consumerQoS = (new JSONObject(sla)).getJSONObject("sla").getJSONObject("qos");
+                                consumerQoS = sla.getJSONObject("sla").getJSONObject("qos");
                             }
 
-                            JSONObject conSer = new JSONObject(contextService);
+                            JSONObject conSer = new JSONObject(
+                                    ((SimpleContainer) cacheResult.getValue()).getContextService());
                             JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
                             String keys = "";
                             for(Object k : candidate_keys)
@@ -386,7 +386,8 @@ public class PullBasedExecutor {
                 .setBody(result.toString())
                 .setAdmin(CdqlAdmin.newBuilder()
                         .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
-                        .setPrice(consumerQoS.getDouble("price"))
+                        .setPrice(consumerQoS.has("price")? consumerQoS.getDouble("price") :
+                                sla.getJSONObject("sla").getJSONObject("price").getDouble("value"))
                         .setRtpenalty(consumerQoS.getJSONObject("rtmax").getJSONObject("penalty")
                                 .getDouble("value"))
                         .build())
@@ -1366,7 +1367,7 @@ public class PullBasedExecutor {
                         if(status.getKey().equals("200"))
                             return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
                                 .addAllHashKeys(status.getValue())
-                                .setStatus(data.getStatus())
+                                .setStatus(data.getStatus()).setContextService(((JSONObject) ctSer).toString())
                                 .setRefPolicy(data.getMeta()).build());
                         continue; // Moving to the next context provider since it is currently unavailable.
                     }
@@ -1681,7 +1682,7 @@ public class PullBasedExecutor {
         }
 
         return new AbstractMap.SimpleEntry(invoke,
-                qos.put("price", cs.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                qos.put("price", cs.getJSONObject("sla").getJSONObject("cost").getDouble("value")));
     }
 
     private static CdqlConstantConditionTokenType getConstantType(String val) {

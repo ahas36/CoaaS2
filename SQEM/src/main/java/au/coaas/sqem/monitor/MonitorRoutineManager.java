@@ -164,11 +164,11 @@ public class MonitorRoutineManager {
     }
 
     // Start and shutting the monitoring routines
-    public void start() throws SchedulerException {
+    public void start() throws Exception {
         if (scheduler == null || !scheduler.isStarted()) {
-            this.SetSchedules();
-            scheduler.start();
+            throw new Exception("Scheduler hasn't started yet!");
         }
+        this.SetSchedules();
     }
 
     public void shutdown() throws SchedulerException {

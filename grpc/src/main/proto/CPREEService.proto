@@ -54,6 +54,7 @@ message SimpleContainer {
   double freshness = 3;
   string status = 4;
   string refPolicy = 5;
+  string contextService = 6;
 }
 
 message LearnedWeights {

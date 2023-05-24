@@ -37,9 +37,12 @@ import org.json.JSONObject;
 import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
 import java.util.*;
+import java.util.Date;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -159,6 +162,29 @@ public class PerformanceLogHandler {
         }
     }
 
+    public static void summarizeAge (Statistic ents){
+        JSONArray entities = new JSONArray(ents.getMethod());
+        if(!entities.isEmpty()){
+            for(Object ent: entities){
+                JSONObject properEntity = (JSONObject) ent;
+
+                Double ageInMS = properEntity.getJSONObject("age").getDouble("value") * 1000;
+                JSONObject updated = properEntity.getJSONObject("updatedTime");
+                Date now = new Date();
+                long nowTime = now.getTime();
+
+                long totalAge = 0;
+                String date = updated.getString("$date").replace("Z","");
+                ZonedDateTime datetime = LocalDateTime.parse(date).atZone(ZoneId.systemDefault());
+                long diff = nowTime - datetime.toInstant().toEpochMilli();
+                totalAge = ageInMS.longValue() + diff;
+
+                coassPerformanceRecord(Statistic.newBuilder()
+                        .setMethod("queryRetrieval").setAge(totalAge).build());
+            }
+        }
+    }
+
     // COASS Performance
     public static void coassPerformanceRecord(Statistic request) {
         try{
@@ -271,6 +297,21 @@ public class PerformanceLogHandler {
                             cs_id, // Context Service Identifier
                             now.format(formatter),
                             request.getIsDelayed() ? 1 : 0); // is Delayed?
+                    statement.executeUpdate(formatted_string_2);
+                    break;
+                }
+                case "queryRetrieval": {
+                    LocalDateTime now = LocalDateTime.now();
+                    String queryString_2 = "INSERT INTO retrieval_summary(status,response_time,"+
+                            "cost,identifier,createdDatetime,isDelayed) " +
+                            "VALUES('%s', %d, %f, '%s', CAST('%s' AS DATETIME2), %d);";
+                    String formatted_string_2 = String.format(queryString_2,
+                            "200", // Status of the retrieval
+                            request.getAge(), // Response time
+                            0.0, // Cost of retrieval
+                            "coaas", // Context Service Identifier
+                            now.format(formatter),
+                            0); // is Delayed?
                     statement.executeUpdate(formatted_string_2);
                     break;
                 }

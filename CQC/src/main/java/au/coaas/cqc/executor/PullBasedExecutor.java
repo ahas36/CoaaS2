@@ -342,7 +342,10 @@ public class PullBasedExecutor {
 
                     AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, null);
                     ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
-                    if(consumerQoS == null)  consumerQoS = (JSONObject) rex.getValue();
+                    if(consumerQoS == null) {
+                        consumerQoS = sla.getJSONObject("sla").getJSONObject("qos");
+                        consumerQoS.put("price", 0.0);
+                    }
                     continue;
                 }
 
@@ -1185,7 +1188,7 @@ public class PullBasedExecutor {
                     for (int i = 0; i < results.length(); i++) {
                         JSONObject entity = results.getJSONObject(i);
 
-                        Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().toString().equals(entityType)).findFirst().get();
+                        Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
                         String prefix = findEntity.getKey();
                         entityKey = findEntity.getKey();
                         List<AttributeValue> entityAttributeValues = new ArrayList<>();
@@ -1385,7 +1388,7 @@ public class PullBasedExecutor {
                 AbstractMap.SimpleEntry<String,List<String>> status =
                         RetrievalManager.executeStreamRead(conSer.toString(),
                         conSer.getJSONObject("_id").getString("$oid"), params);
-                if(status.equals("200"))
+                if(status.getKey().equals("200"))
                     return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
                             .addAllHashKeys(status.getValue()).build());
                 continue; // Moving to the next context provider since it is currently unavailable.
@@ -1658,16 +1661,14 @@ public class PullBasedExecutor {
                                                String contextService) {
 
         ContextRequest.Builder cr = generateContextRequest(targetEntity, query, ce, page, limit);
-        JSONObject cs = new JSONObject(contextService);
+
         if(contextService != null) {
+            JSONObject cs = new JSONObject(contextService);
             cr.setProviderId(cs.getJSONObject("_id").getString("$oid"));
         }
 
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-
-
-        JSONObject qos = cs.getJSONObject("sla").getJSONObject("qos");
 
         Iterator<Chunk> data = sqemStub.handleContextRequest(cr.build());
 
@@ -1678,6 +1679,7 @@ public class PullBasedExecutor {
         });
 
         JSONObject invoke = new JSONObject();
+        String entityCollection = "";
 
         try {
             SQEMResponse sqemResponse = SQEMResponse.parseFrom(output.toByteString());
@@ -1685,12 +1687,23 @@ public class PullBasedExecutor {
                 invoke.put("results", new JSONArray(sqemResponse.getBody()));
                 invoke.put("meta", new JSONObject(sqemResponse.getMeta()));
             }
+            entityCollection = sqemResponse.getBody();
         } catch (InvalidProtocolBufferException e) {
             e.printStackTrace();
         }
 
-        return new AbstractMap.SimpleEntry(invoke,
-                qos.put("price", cs.getJSONObject("sla").getJSONObject("cost").getDouble("value")));
+        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        asyncStub.summarizeAge(Statistic.newBuilder().setMethod(entityCollection).build());
+
+        if(contextService != null) {
+            JSONObject cs = new JSONObject(contextService);
+            JSONObject qos = cs.getJSONObject("sla").getJSONObject("qos");
+            return new AbstractMap.SimpleEntry(invoke,
+                    qos.put("price", cs.getJSONObject("sla").getJSONObject("cost").getDouble("value")));
+        }
+
+        return new AbstractMap.SimpleEntry(invoke, null);
     }
 
     private static CdqlConstantConditionTokenType getConstantType(String val) {

@@ -451,6 +451,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void summarizeAge(au.coaas.sqem.proto.Statistic request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
+        try {
+            PerformanceLogHandler.summarizeAge(request);
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void logCPREEData(au.coaas.sqem.proto.Statistic request,
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
         try {

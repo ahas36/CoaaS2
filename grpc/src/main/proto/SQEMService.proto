@@ -372,4 +372,6 @@ service SQEMService {
     rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
     rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
 
+    rpc summarizeAge (Statistic) returns (Empty);
+
 }

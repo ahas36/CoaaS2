@@ -31,6 +31,7 @@ import org.json.JSONObject;
 import org.bson.conversions.Bson;
 
 import javax.swing.text.Utilities;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
@@ -256,6 +257,7 @@ public class ContextEntityHandler {
                 hashkey += key.getString(i) + "@" + idValue.toString() + ";";
             }
             updateFields.append("hashkey", Utilty.getHashKey(hashkey));
+            updateFields.append("updatedTime", LocalDateTime.now());
 
             //execute the update
             Document queryDoc = new Document();

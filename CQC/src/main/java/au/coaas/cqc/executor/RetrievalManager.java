@@ -75,8 +75,9 @@ public class RetrievalManager {
         if(fetch.getStatus().equals("200")){
             JSONObject response = new JSONObject(fetch.getBody());
             if(response.has("age")){
-                if(response.getString("age").startsWith("{")){
-                    JSONObject age_obj = new JSONObject(response.getString("age"));
+                Object ageObj = response.get("age");
+                if(ageObj instanceof JSONObject){
+                    JSONObject age_obj = (JSONObject) ageObj;
 
                     String unit = age_obj.getString("unitText");
                     long value = age_obj.getLong("value");
@@ -88,7 +89,8 @@ public class RetrievalManager {
                         case "h": age = value*60; break;
                     }
                 }
-                else age = Long.valueOf(response.getString("age"));
+                else if(ageObj instanceof String) age = Long.valueOf((String) ageObj);
+                else age = Long.valueOf((long) ageObj);
             }
             else if(response.has("avgAge")){
                 age = (long) response.getDouble("avgAge");

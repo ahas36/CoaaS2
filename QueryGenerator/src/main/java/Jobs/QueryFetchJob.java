@@ -163,7 +163,7 @@ public class QueryFetchJob implements Job {
             Document vehicle = collection.aggregate(Arrays.asList(match(filter), sample(1))).first();
 
             finalQuery = String.format(queryString,
-                    query.getString("address"),
+                    query.getString("address").replace("'", ""),
                     vehicle.getString("vin"),
                     query.getInteger("distance"));
         }

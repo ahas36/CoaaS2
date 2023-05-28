@@ -40,9 +40,10 @@ public class ContextItem {
             JSONObject obj = new JSONObject(serId);
             serId = obj.getString("$oid");
         }
-        this.children.put(serId, new ContextItem(this, hashKey, refreshLogic));
+        this.children.put(serId, new ContextItem(this, serId, hashKey, refreshLogic));
     }
 
+    // Context Provider Object
     public ContextItem(ContextItem parent, String ownId, String hashKey, String refreshLogic){
         this.id = ownId;
         this.createdTime = LocalDateTime.now();
@@ -52,9 +53,10 @@ public class ContextItem {
         this.parents.put(parent.id, parent);
         // Multiple Context Entities.
         this.children = new HashMap<>();
-        this.children.put(hashKey, new ContextItem(this, refreshLogic));
+        this.children.put(hashKey, new ContextItem(this, hashKey, refreshLogic));
     }
 
+    // Entity Object
     public ContextItem(ContextItem parent, String ownId){
         this.id = ownId;
         this.refreshLogic = "reactive";
@@ -67,6 +69,7 @@ public class ContextItem {
         this.children = null;
     }
 
+    // Entity Object
     public ContextItem(ContextItem parent, String ownId, String refreshLogic){
         this.id = ownId;
         this.refreshLogic = refreshLogic;

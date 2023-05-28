@@ -443,32 +443,32 @@ public class SelectionExecutor {
 
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
-                            double vec_total = caching_efficiency < min_value ? 0.0 : Math.pow(caching_efficiency, 2) +
-                                    access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
-                                    complexity < min_value ? 0.0 : Math.pow(complexity, 2) +
-                                    retEff < min_value ? 0.0 : Math.pow(retEff, 2) +
-                                    (1-reliability) < min_value ? 0.0 : Math.pow((1.0 - reliability), 2);
+                            double vec_total = (caching_efficiency < min_value ? 0.0 : Math.pow(caching_efficiency, 2)) +
+                                    (access_trend < min_value ? 0.0 : Math.pow(access_trend, 2)) +
+                                    (complexity < min_value ? 0.0 : Math.pow(complexity, 2)) +
+                                    (retEff < min_value ? 0.0 : Math.pow(retEff, 2)) +
+                                    ((1-reliability) < min_value ? 0.0 : Math.pow((1.0 - reliability), 2));
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
                             double cacheConfidence = 0;
                             double nonRetrievalConfidence = 0;
                             if(denom != 0){
-                                nonRetrievalConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * caching_efficiency) +
-                                        access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * access_trend) +
-                                        (1-reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * (1.0 - reliability)) +
-                                        complexity < min_value ? 0.0 : (weightThresholds.get("row") * complexity);
+                                nonRetrievalConfidence = (caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * caching_efficiency)) +
+                                        (access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * access_trend)) +
+                                        ((1-reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * (1.0 - reliability))) +
+                                        (complexity < min_value ? 0.0 : (weightThresholds.get("row") * complexity));
 
-                                cacheConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
-                                        access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
-                                        (1-reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * ((1.0 - reliability)/denom)) +
-                                        complexity < min_value ? 0.0 : (weightThresholds.get("row") * (complexity/denom)) +
-                                        retEff < min_value ? 0.0 : (weightThresholds.get("pi") * (retEff/denom));
+                                cacheConfidence = (caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * (caching_efficiency/denom))) +
+                                        (access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * (access_trend/denom))) +
+                                        ((1-reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * ((1 - reliability)/denom))) +
+                                        (complexity < min_value ? 0.0 : (weightThresholds.get("row") * (complexity/denom))) +
+                                        (retEff < min_value ? 0.0 : (weightThresholds.get("pi") * (retEff/denom)));
                             }
 
                             valueHistory.add(cacheConfidence);
 
-                            if(cacheConfidence > weightThresholds.get("threshold")){
+                            if(cacheConfidence >= weightThresholds.get("threshold")){
                                 // No change to estimated lifetime.
                                 // Wait for eviction at least until the AR is below a threshold.
                                 cache = true;

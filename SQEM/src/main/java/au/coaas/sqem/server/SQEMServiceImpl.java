@@ -428,6 +428,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
+    public void logContextAccess(au.coaas.sqem.proto.ContextAccess request,
+                         io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver) {
+        try {
+            PerformanceLogHandler.insertAccess(request.getContextId(), request.getOutcome(), request.getAge());
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void logParsedQueryTree(au.coaas.sqem.proto.CDQLLog request,
                          io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {

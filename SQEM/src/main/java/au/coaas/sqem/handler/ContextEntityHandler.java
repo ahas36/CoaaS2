@@ -2,13 +2,11 @@ package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.ContextEntityType;
 
-import au.coaas.sqem.proto.GetEntitiesRequest;
+import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.*;
 import au.coaas.sqem.util.ResponseUtils;
-import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.util.CollectionDiscovery;
-import au.coaas.sqem.proto.UpdateEntityRequest;
-import au.coaas.sqem.proto.RegisterEntityRequest;
 
 import au.coaas.sqem.util.Utilty;
 import com.google.gson.JsonParser;
@@ -111,6 +109,8 @@ public class ContextEntityHandler {
                                 .setJson(data.toString())
                                 .setEt(updateRequest.getEt())
                                 .setObservedTime(timestamp)
+                                .setRetLatency(updateRequest.getRetLatency())
+                                .setReportAccess(updateRequest.getReportAccess())
                                 .setProviderId(updateRequest.getProviderId())
                                 .setKey(updateRequest.getKey());
 
@@ -269,7 +269,8 @@ public class ContextEntityHandler {
                 query.put(idKey, idValue);
                 hashkey += key.getString(i) + "@" + idValue.toString() + ";";
             }
-            updateFields.append("hashkey", Utilty.getHashKey(hashkey));
+            String hk = Utilty.getHashKey(hashkey);
+            updateFields.append("hashkey", hk);
             updateFields.append("updatedTime", LocalDateTime.now());
 
             //execute the update
@@ -277,6 +278,15 @@ public class ContextEntityHandler {
             queryDoc.put("$set", updateFields);
             queryDoc.put("$addToSet", new Document("providers", updateRequest.getProviderId()));
             UpdateResult ur = collection.updateMany(query, queryDoc, new UpdateOptions().upsert(false));
+
+            if(updateRequest.getReportAccess().equals("True")){
+                Executors.newCachedThreadPool().execute(() -> {
+                    String contextId = updateRequest.getEt().getType() + "-" + hk;
+                    double entage = attributes.getJSONObject("age").getDouble("value")*1000
+                            + updateRequest.getRetLatency();
+                    PerformanceLogHandler.insertAccess(contextId, "miss", entage);
+                });
+            }
 
             //todo it might be better to create a separate thread and update the historical db there instead of blocking main thread
             ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query, updateRequest.getObservedTime());

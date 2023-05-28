@@ -5,10 +5,7 @@ import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
-import au.coaas.sqem.proto.SQEMResponse;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
-import au.coaas.sqem.proto.Statistic;
-import au.coaas.sqem.proto.UpdateEntityRequest;
+import au.coaas.sqem.proto.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.json.JSONArray;
@@ -93,6 +90,7 @@ public class FetchJob implements Job {
                         .setJson(fetch.getBody())
                         .setProviderId(dataMap.getString("providerId"))
                         .setKey(dataMap.getString("key"))
+                        .setReportAccess(dataMap.getBoolean("reportAccess")?"True":"False")
                         // This key is the unique identifier attribute(s) of the entity.
                         .setRetLatency(retLatency)
                         .build();
@@ -121,10 +119,12 @@ public class FetchJob implements Job {
                         hkeys.add(ks.getString(i));
                     }
                 }
-                else hkeys.add(sqemResBody.getString("hashkey"));
+                else {
+                    hkeys.add(sqemResBody.getString("hashkey"));
+                }
 
-                SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
 
                 asyncStub.logPerformanceData(Statistic.newBuilder().setCs(request)
                         .setMethod("FetchJob-execute").setStatus(fetch.getStatus())

@@ -8,15 +8,14 @@ import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.ContextAccess;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.Statistic;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.naming.Context;
 import java.util.*;
-import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public class RetrievalManager {
@@ -26,13 +25,11 @@ public class RetrievalManager {
 
     // Retrieval from non-streaming Context Providers
     // Done
-    public static AbstractMap.SimpleEntry<String,List<String>> executeFetch(String contextService, JSONObject qos, HashMap<String,String> params,
-                                      String cpId, String ccId, String entType, Set<String> attributes) {
+    public static AbstractMap.SimpleEntry<String,List<String>> executeFetch(String contextService, JSONObject qos,
+                             HashMap<String,String> params, String cpId, String ccId, String entType,
+                             Set<String> attributes, Boolean isFullMiss) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
-
-        SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
-                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
         final ContextServiceInvokerRequest.Builder fetchRequest = ContextServiceInvokerRequest.newBuilder();
         fetchRequest.putAllParams(params);
@@ -59,6 +56,8 @@ public class RetrievalManager {
                             * qos.getDouble("penPct") / 100.0;
                 }
 
+                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                 asyncStub.logPerformanceData(Statistic.newBuilder()
                         .setIsDelayed(retDiff>0).setEarning(penEarning)
                         .setMethod("executeFetch").setStatus(fetch.getStatus())
@@ -111,10 +110,21 @@ public class RetrievalManager {
                 JSONArray entities = response.getJSONArray("results");
                 for(int j=0; j<entities.length(); j++){
                     for (int i = 0; i < key.length(); i++) {
-                        Object idValue = entities.getJSONObject(i).get(key.getString(i));
+                        Object idValue = entities.getJSONObject(j).get(key.getString(i));
                         hashkey += key.getString(i) + "@" + idValue.toString() + ";";
                     }
-                    hkeys.add(Utilities.getHashKey(hashkey));
+                    String hk = Utilities.getHashKey(hashkey);
+                    hkeys.add(hk);
+
+                    if(isFullMiss){
+                        JSONObject entage = entities.getJSONObject(j).optJSONObject("age");
+                        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_2
+                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                        String contextId = entType + "-" + hk;
+                        sqemStub_2.logContextAccess(ContextAccess.newBuilder()
+                                .setContextId(contextId).setOutcome("miss")
+                                .setAge(entage.getDouble("value")*1000 + retLatency).build());
+                    }
                 }
             }
             else {
@@ -123,9 +133,22 @@ public class RetrievalManager {
                     Object idValue = response.get(key.getString(i));
                     hashkey += key.getString(i) + "@" + idValue.toString() + ";";
                 }
-                hkeys.add(Utilities.getHashKey(hashkey));
+                String hk = Utilities.getHashKey(hashkey);
+                hkeys.add(hk);
+
+                if(isFullMiss){
+                    JSONObject entage = response.optJSONObject("age");
+                    SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_2
+                            = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                    String contextId = entType + "-" + hk;
+                    sqemStub_2.logContextAccess(ContextAccess.newBuilder()
+                            .setContextId(contextId).setOutcome("miss")
+                            .setAge(entage.getDouble("value")*1000 + retLatency).build());
+                }
             }
 
+            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
             asyncStub.logPerformanceData(Statistic.newBuilder()
                     .addAllHaskeys(hkeys)
                     .setMethod("executeFetch").setStatus(fetch.getStatus())
@@ -143,16 +166,17 @@ public class RetrievalManager {
     // Retrieval from streaming Context Providers
     // Done
     public static AbstractMap.SimpleEntry<String,List<String>> executeStreamRead(String contextService, String csID,
-                                           HashMap<String,String> params){
+                                           HashMap<String,String> params, Boolean isFullMiss){
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
         CSIResponse fetch = csiStub.updateFetchJob(ContextService.newBuilder()
                         .setJson(contextService).setMongoID(csID)
-                        .setTimes(1).putAllParams(params)
+                        .setTimes(1).putAllParams(params).setReportAccess(isFullMiss?"True":"False")
                         .build());
 
-        if(fetch.getStatus().equals("200")) return new AbstractMap.SimpleEntry("200",fetch.getHashkeysList());
+        if(fetch.getStatus().equals("200"))
+            return new AbstractMap.SimpleEntry("200",fetch.getHashkeysList());
         else{
             log.severe("Error occurred when trying to refresh in Storage");
             return new AbstractMap.SimpleEntry(fetch.getStatus(), null);

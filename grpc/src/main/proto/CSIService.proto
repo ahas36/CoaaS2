@@ -27,6 +27,7 @@ message ContextService
     string mongoID = 2;
     int32 times = 3;
     map<string,string> params = 4;
+    string reportAccess = 5;
 }
 
 message ContextServiceInvokerRequest

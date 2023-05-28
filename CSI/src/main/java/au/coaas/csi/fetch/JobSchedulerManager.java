@@ -88,6 +88,7 @@ public class JobSchedulerManager {
         String[] ontClassSplit = ontClass.split("/");
         ontClass = ontClassSplit[ontClassSplit.length - 1];
         jobDataMap.put("ontClass", ontClass);
+        jobDataMap.put("reportAccess", cs.getReportAccess().equals("True")? true: false);
 
         String graph = contextService.getJSONObject("info").getString("graph").trim();
 

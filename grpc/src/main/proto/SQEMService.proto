@@ -154,6 +154,7 @@ message UpdateEntityRequest
     int64 observedTime = 4;
     int64 retLatency = 5;
     string providerId = 6;
+    string reportAccess = 7;
 }
 
 message GetEntitiesRequest
@@ -312,6 +313,12 @@ message RegisterPushQuery {
     string status = 2;
 }
 
+message ContextAccess {
+    string contextId = 1;
+    string outcome = 2;
+    double age = 3;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -373,5 +380,5 @@ service SQEMService {
     rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
 
     rpc summarizeAge (Statistic) returns (Empty);
-
+    rpc logContextAccess (ContextAccess) returns (Empty);
 }

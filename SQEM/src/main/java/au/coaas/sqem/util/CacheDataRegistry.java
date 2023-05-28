@@ -170,14 +170,15 @@ public final class CacheDataRegistry{
                                                 "p_miss", finalAgeLoss*1000);
                                         staleEntities.push(keySet.get(i));
                                     }
+                                    else {
+                                        remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
+                                        remainLife.push(remainingLife);
 
-                                    remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
-                                    remainLife.push(remainingLife);
-
-                                    double finalAgeLoss = ageLoss;
-                                    PerformanceLogHandler.insertAccess(
-                                            lookup.getEt().getType() + "-" + keySet.get(i),
-                                            "hit", finalAgeLoss * 1000);
+                                        double finalAgeLoss = ageLoss;
+                                        PerformanceLogHandler.insertAccess(
+                                                lookup.getEt().getType() + "-" + keySet.get(i),
+                                                "hit", finalAgeLoss * 1000);
+                                    }
                                 }
                             });
                         }
@@ -420,11 +421,13 @@ public final class CacheDataRegistry{
         res.setIsCached(false).setIsValid(false).setRemainingLife(0);
 
         // Store cache access in Time Series DB
-        Executors.newCachedThreadPool().submit(()
-                -> PerformanceLogHandler.insertAccess(lookup.getHashKey() != null?
-                        lookup.getEt().getType() + "-" + lookup.getHashKey():
-                        lookup.getServiceId(),
-                "miss", 0));
+        if(!lookup.getHashKey().isEmpty()){
+            Executors.newCachedThreadPool().submit(()
+                    -> PerformanceLogHandler.insertAccess(
+                            lookup.getEt().getType() + "-" + lookup.getHashKey(),
+                            "miss", 0));
+        }
+
         return res.build();
     }
 

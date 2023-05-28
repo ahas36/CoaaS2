@@ -1345,12 +1345,14 @@ public class PullBasedExecutor {
 
                     // Fetching from the same context provider OR it's stream otherwise
                     if(!slaObj.getBoolean("autoFetch")){
+                        // Fetching from an API
                         AbstractMap.SimpleEntry<String,List<String>> retEntity =
                                 RetrievalManager.executeFetch(
                                 conSer.toString(), slaObj.getJSONObject("qos"), params,
                                 conSer.getJSONObject("_id").getString("$oid"),
                                 consumerSLA.getJSONObject("_id").getString("$oid"),
-                                targetEntity.getType().getType(), attributes) ;
+                                targetEntity.getType().getType(), attributes,
+                                cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty()) ;
 
                         // There is problem with the current context provider which makes it unsuitable for retrieving now.
                         // Therefore, has to move to the next context provider
@@ -1360,15 +1362,15 @@ public class PullBasedExecutor {
                                 -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()),
                                 lookup, retEntity.getKey(), data.getMeta(), // Meta can be Empty if it's not an entity.
                                 complexity, retEntity.getValue()));
-
                         return new AbstractMap.SimpleEntry(retEntity.getKey(),qos.put("price",
                                 consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
                     }
                     else {
+                        // This  means the context retrieval occurs in to the storage.
                         AbstractMap.SimpleEntry<String,List<String>> status =
                                 RetrievalManager.executeStreamRead(conSer.toString(),
-                                conSer.getJSONObject("_id").getString("$oid"), params);
-                        // This null means the context retrieval occurs in to the storage.
+                                conSer.getJSONObject("_id").getString("$oid"), params,
+                                cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty());
                         if(status.getKey().equals("200"))
                             return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
                                 .addAllHashKeys(status.getValue())
@@ -1389,7 +1391,7 @@ public class PullBasedExecutor {
             if(conSer.getJSONObject("sla").getBoolean("autoFetch")){
                 AbstractMap.SimpleEntry<String,List<String>> status =
                         RetrievalManager.executeStreamRead(conSer.toString(),
-                        conSer.getJSONObject("_id").getString("$oid"), params);
+                        conSer.getJSONObject("_id").getString("$oid"), params, cacheEnabled);
                 if(status.getKey().equals("200"))
                     return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
                             .addAllHashKeys(status.getValue()).build());
@@ -1399,7 +1401,7 @@ public class PullBasedExecutor {
                 AbstractMap.SimpleEntry retEntity = RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
                         conSer.getJSONObject("_id").getString("$oid"),
                         consumerSLA.getJSONObject("_id").getString("$oid"),
-                        targetEntity.getType().getType(), attributes);
+                        targetEntity.getType().getType(), attributes, cacheEnabled);
 
                 if(retEntity != null)
                     return new AbstractMap.SimpleEntry(retEntity.getKey(),

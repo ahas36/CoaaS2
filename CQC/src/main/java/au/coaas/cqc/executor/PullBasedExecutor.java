@@ -293,33 +293,35 @@ public class PullBasedExecutor {
                                 consumerQoS = sla.getJSONObject("sla").getJSONObject("qos");
                             }
 
-                            JSONObject conSer = new JSONObject(
-                                    ((SimpleContainer) cacheResult.getValue()).getContextService());
-                            JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
-                            String keys = "";
-                            for(Object k : candidate_keys)
-                                keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
+                            JSONObject finalConsumerQoS = consumerQoS;
+                            Executors.newCachedThreadPool().execute(() -> {
+                                JSONObject conSer = new JSONObject(
+                                        ((SimpleContainer) cacheResult.getValue()).getContextService());
+                                JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
+                                String keys = "";
+                                for(Object k : candidate_keys)
+                                    keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
 
-                            JSONObject freshnessCal = conSer.getJSONObject("sla").getJSONObject("freshness");
-                            freshnessCal.put("fthresh", consumerQoS.getDouble("fthresh"));
+                                JSONObject freshnessCal = conSer.getJSONObject("sla").getJSONObject("freshness");
+                                freshnessCal.put("fthresh", finalConsumerQoS.getDouble("fthresh"));
 
-                            CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
-                                    .setEt(entity.getType())
-                                    .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
-                                    .setCheckFresh(true)
-                                    .setKey(keys).setQClass("1")
-                                    .setUniformFreshness(freshnessCal.toString()) // current lifetime & REQUESTED fthresh for the query
-                                    .setSamplingInterval(conSer.getJSONObject("sla")
-                                            .getJSONObject("updateFrequency").toString()); // sampling
+                                CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
+                                        .setEt(entity.getType())
+                                        .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
+                                        .setCheckFresh(true)
+                                        .setKey(keys).setQClass("1")
+                                        .setUniformFreshness(freshnessCal.toString()) // current lifetime & REQUESTED fthresh for the query
+                                        .setSamplingInterval(conSer.getJSONObject("sla")
+                                                .getJSONObject("updateFrequency").toString()); // sampling
 
-                            SimpleContainer summary = (SimpleContainer) cacheResult.getValue();
-                            Executors.newCachedThreadPool().execute(()
-                                    -> refreshOrCacheContext(
-                                    conSer.getJSONObject("sla"),
-                                    Integer.parseInt(summary.getStatus()),
-                                    lookup, rex.getKey().toString(),
-                                    summary.getRefPolicy(),
-                                    complexity, summary.getHashKeysList()));
+                                SimpleContainer summary = (SimpleContainer) cacheResult.getValue();
+                                refreshOrCacheContext(
+                                        conSer.getJSONObject("sla"),
+                                        Integer.parseInt(summary.getStatus()),
+                                        lookup, rex.getKey().toString(),
+                                        summary.getRefPolicy(),
+                                        complexity, summary.getHashKeysList());
+                            });
                         }
                     }
 
@@ -1557,9 +1559,9 @@ public class PullBasedExecutor {
                 case Function:
                     FunctionCall.Builder fCall = item.getFunctionCall().toBuilder();
                     FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(fCall.getFunctionName());
-                    if (fCall.getFunctionName().toLowerCase().equals("distance") || fCall.getFunctionName().toLowerCase().equals("geoinside") || fCall.getFunctionName().toLowerCase().equals("geoinsidebox")) {
-                        continue;
-                    }
+//                    if (fCall.getFunctionName().toLowerCase().equals("distance") || fCall.getFunctionName().toLowerCase().equals("geoinside") || fCall.getFunctionName().toLowerCase().equals("geoinsidebox")) {
+//                        continue;
+//                    }
                     fCallTemp.addAllSubItems(fCall.getSubItemsList());
                     int requiredArgs = fCall.getArgumentsList().size();
                     for (int j = 0; j < fCall.getArgumentsList().size(); j++) {
@@ -1582,8 +1584,18 @@ public class PullBasedExecutor {
                             String entityNameTemp = ca.getEntityName();
                             String attributeNameTemp = ca.getAttributeName();
                             if (!entityNameTemp.equals(targetEntity.getEntityID())) {
-                                String handelQuantitativeValue = handelQuantitativeValue(ce.get(entityNameTemp).get(attributeNameTemp).toString());
-                                fCallTemp.addArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
+                                // This means when the entity in the argument is not should be in the select result.
+                                JSONObject ceResult = ce.get(entityNameTemp);
+                                if(ceResult.has("results")){
+                                    Object location = ceResult.getJSONArray("results").getJSONObject(0).get(attributeNameTemp);
+                                    String handelQuantitativeValue = handelQuantitativeValue(location.toString());
+                                    fCall.setArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
+                                }
+                                else{
+                                    String handelQuantitativeValue = handelQuantitativeValue(ceResult.get(attributeNameTemp).toString());
+                                    fCallTemp.addArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
+                                }
+
                                 requiredArgs--;
                             }
                         } else if (argument.getType() == OperandType.FUNCTION_CALL) {
@@ -1600,6 +1612,13 @@ public class PullBasedExecutor {
                                 .setStringValue(val)
                                 .setConstantTokenType(constantType).build();
                         list.set(i, constantToken);
+                    }
+                    else if(fCall.getFunctionName().toLowerCase().equals("distance") ||
+                            fCall.getFunctionName().toLowerCase().equals("geoinside") ||
+                            fCall.getFunctionName().toLowerCase().equals("geoinsidebox")) {
+                        CdqlConditionToken.Builder itemBuilder = item.toBuilder();
+                        itemBuilder.setFunctionCall(fCall.build());
+                        list.set(i, itemBuilder.build());
                     }
                     break;
                 case Attribute: {

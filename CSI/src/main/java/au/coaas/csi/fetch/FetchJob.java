@@ -105,8 +105,8 @@ public class FetchJob implements Job {
                 // This calculation is unnessecary if running in complete DB mode.
                 double retDiff = retLatency - qos.getDouble("rtmax");
                 if(retDiff > 0){
-                    penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
-                            * qos.getDouble("penPct") / 100;
+                    penEarning = (((int)(retDiff/1000.0))+1.0) * qos.getDouble("rate")
+                            * qos.getDouble("penPct") / 100.0;
                 }
 
                 JSONObject fr = new JSONObject(fetch.getBody());
@@ -134,15 +134,17 @@ public class FetchJob implements Job {
                         .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
                 if(sqemResponse.getStatus().equals("200")){
+                    log.info("Fetch Job Successfully completed form : " + dataMap.getString("providerId"));
                     log.info(sqemResponse.getBody());
                     return hkeys;
                 }
             }
             else {
+                log.severe("Fetch Job FAILED form : " + dataMap.getString("providerId"));
                 log.info(fetch.getBody());
             }
         }catch (Exception e){
-            log.info(e.getMessage());
+            log.severe(e.getMessage());
             e.printStackTrace();
         }
         return null;

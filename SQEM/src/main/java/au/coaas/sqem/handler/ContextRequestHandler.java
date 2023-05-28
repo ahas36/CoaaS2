@@ -18,6 +18,8 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Aggregates;
 
+import org.bson.BsonBoolean;
+import org.bson.BsonDocument;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.json.JSONObject;
@@ -209,8 +211,22 @@ public class ContextRequestHandler {
             location_prefix = ca.getPrefix();
         }
 
-        String dest_lat = "-37.8213341"; //fCall.getArgumentsList().get(1).getStringValue().replaceAll("\"", "");
-        String dest_lon = "144.9646982"; // fCall.getArgumentsList().get(2).getStringValue().replaceAll("\"", "");
+        String dest_lat = "";
+        String dest_lon = "";
+
+        String arguments = fCall.getArgumentsList().get(1).getStringValue();
+        if(arguments.startsWith("{")){
+            JSONObject argJson = new JSONObject(arguments);
+            dest_lat = argJson.has("latitude") ? argJson.get("latitude").toString() :
+                    argJson.getJSONArray("coordinates").get(1).toString();
+            dest_lon = argJson.has("longitude") ? argJson.get("longitude").toString() :
+                    argJson.getJSONArray("coordinates").get(0).toString();
+        }
+        else {
+            String[] cordinates = arguments.split(",");
+            dest_lat = cordinates[1];
+            dest_lon = cordinates[0];
+        }
 
         String distance_str = RPNcondition.poll().getStringValue();
         if(distance_str.startsWith("{")){
@@ -238,7 +254,7 @@ public class ContextRequestHandler {
         }
         // This is one of the places where the context of a query is placed in the hierachy affects the retriveal decision.
         // This is a BSON function from mongo. Basically a filter function (to filter out entities that falls inside the sphere) defined in BSON.
-        Bson eqDefault = Filters.geoWithinCenterSphere(attributePrefix + location_prefix, Double.valueOf(dest_lon), Double.valueOf(dest_lat), distance / 6371000.0);
+        Bson eqDefault = Filters.geoWithinCenterSphere(attributePrefix + location_prefix, Double.valueOf(dest_lon), Double.valueOf(dest_lat), distance / 6371.0);
         stack.push(new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), eqDefault));
     }
 
@@ -383,9 +399,22 @@ public class ContextRequestHandler {
 
     // Used in equality and other comparison operators
     private static ExtendedCdqlConditionToken processConstantValues(ExtendedCdqlConditionToken operand1, ExtendedCdqlConditionToken operand2, String operator) throws WrongOperatorException {
-        // What is this? What is the field name?
-        ExtendedCdqlConditionToken tokenTrue = new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), Filters.exists("VatanamVatanamVatanamVatanam", false));
-        ExtendedCdqlConditionToken tokenFalse = new ExtendedCdqlConditionToken(CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Expression).build(), Filters.exists("VatanamVatanamVatanamVatanam", true));
+        BasicDBObject truebson = new BasicDBObject();
+        truebson.put("value", new BsonBoolean(true));
+
+        BasicDBObject falsebson = new BasicDBObject();
+        falsebson.put("value", new BsonBoolean(false));
+
+        ExtendedCdqlConditionToken tokenTrue = new ExtendedCdqlConditionToken(
+                CdqlConditionToken.newBuilder()
+                        .setType(CdqlConditionTokenType.Expression).build(),
+                truebson);
+
+        ExtendedCdqlConditionToken tokenFalse = new ExtendedCdqlConditionToken(
+                CdqlConditionToken.newBuilder()
+                        .setType(CdqlConditionTokenType.Expression).build(),
+                falsebson);
+
         try {
             if (operand1.getCdqlConditionToken().getConstantTokenType() == CdqlConstantConditionTokenType.Numeric) {
                 int res = Double.valueOf(operand1.getCdqlConditionToken().getStringValue()).compareTo(Double.valueOf(operand2.getCdqlConditionToken().getStringValue()));
@@ -412,7 +441,7 @@ public class ContextRequestHandler {
                 }
             }
         } catch (Exception e) {
-
+            System.out.println(e.getMessage());
         }
         throwWrongOpException("oppps! Wrong op", operator, operand1.toString(), operand2.toString());
         return null;
@@ -496,14 +525,16 @@ public class ContextRequestHandler {
                 return createErrorResponse(e.getMessage());
             }
 
-            if(contextRequest.getProviderId() == null || contextRequest.getProviderId().isEmpty())
+            if(contextRequest.getProviderId() == null || contextRequest.getProviderId().isEmpty()){
                 finalQuery = stack.pop().getBson();
+            }
             else {
                 BasicDBObject queryConstruct = new BasicDBObject();
                 queryConstruct.put("providers", contextRequest.getProviderId());
 
                 List<Bson> bsons = new ArrayList<>();
-                bsons.add(stack.pop().getBson());
+                Bson firstbson = stack.pop().getBson();
+                bsons.add(firstbson);
                 bsons.add(queryConstruct);
 
                 finalQuery = Filters.and(bsons);

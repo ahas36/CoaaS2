@@ -11,6 +11,7 @@ public class ExtendedCdqlConditionToken{
 
     CdqlConditionToken cdqlConditionToken;
     Bson bson;
+    Boolean boolResult;
 
     public CdqlConditionToken getCdqlConditionToken() {
         return cdqlConditionToken;
@@ -31,6 +32,11 @@ public class ExtendedCdqlConditionToken{
     public ExtendedCdqlConditionToken(CdqlConditionToken cdqlConditionToken, Bson bson) {
         this.cdqlConditionToken = cdqlConditionToken;
         this.bson = bson;
+    }
+
+    public ExtendedCdqlConditionToken(CdqlConditionToken cdqlConditionToken, Boolean bson) {
+        this.cdqlConditionToken = cdqlConditionToken;
+        this.boolResult = bson;
     }
 
     public ExtendedCdqlConditionToken(CdqlConditionToken cdqlConditionToken) {

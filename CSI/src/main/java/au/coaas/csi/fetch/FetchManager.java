@@ -5,12 +5,15 @@ import au.coaas.csi.proto.CSSummary;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
 
 import au.coaas.csi.utils.HttpResponseFuture;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import okhttp3.*;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.json.Json;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 
@@ -270,6 +273,15 @@ public class FetchManager {
                     }
                 } else {
                     value = getResponseValue(service, attribute.getString("value"));
+                    if(attribute.getJSONObject("key").getString("label").equals("location")
+                            && value instanceof JsonObject){
+                        ((JsonObject) value).addProperty("type",
+                                attribute.optString("type","Point"));
+                        JsonArray coordinates = new JsonArray();
+                        coordinates.add(((JsonObject) value).get("longitude").getAsNumber());
+                        coordinates.add(((JsonObject) value).get("latitude").getAsNumber());
+                        ((JsonObject) value).add("coordinates",coordinates);
+                    }
                 }
                 result.put(attribute.getJSONObject("key").getString("label"), value);
             }
@@ -342,7 +354,7 @@ public class FetchManager {
             Double sum = 0.0;
             for(int i=0; i < ageArrary.size() ; i++)
                 sum = sum + ageArrary.get(i);
-            finalResult.put("avgAge", (sum*1000)/ageArrary.size());
+            finalResult.put("avgAge", ageArrary.size()>0?(sum*1000.0)/ageArrary.size():0.0);
             return finalResult;
         }else {
             return mapJsonObject(attributes,service);

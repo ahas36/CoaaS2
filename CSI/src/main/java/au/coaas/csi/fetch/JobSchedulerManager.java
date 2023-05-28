@@ -6,6 +6,8 @@ import org.json.JSONObject;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
+import java.util.List;
+
 public class JobSchedulerManager {
 
     // private instance, so that it can be
@@ -125,8 +127,9 @@ public class JobSchedulerManager {
             // When times == 1.
             // Only this block is blocking.
             FetchJob tempFetchJob = new FetchJob();
+            List<String> result = tempFetchJob.execute(jobDataMap);
             return CSIResponse.newBuilder().setStatus("200")
-                    .addAllHashkeys(tempFetchJob.execute(jobDataMap)).build();
+                    .addAllHashkeys(result).build();
         }
 
         return CSIResponse.newBuilder().setStatus("200").build();

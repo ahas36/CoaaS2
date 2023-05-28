@@ -12,6 +12,7 @@ import au.coaas.sqem.proto.RegisterEntityRequest;
 
 import au.coaas.sqem.util.Utilty;
 import com.google.gson.JsonParser;
+import com.microsoft.sqlserver.jdbc.StringUtils;
 import com.mongodb.MongoClient;
 import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoCursor;
@@ -36,6 +37,8 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.microsoft.sqlserver.jdbc.StringUtils.isNumeric;
 
 public class ContextEntityHandler {
 
@@ -232,16 +235,26 @@ public class ContextEntityHandler {
             //Matching the entities by unique keys
             for (String attributeName : attributes.keySet()) {
                 Object item = attributes.get(attributeName);
+                String stringItem = item.toString();
 
-                if(item.toString().startsWith("{")){
-                    updateFields.append(attributeName, Document.parse(item.toString()));
+                if(stringItem.startsWith("{")){
+                    updateFields.append(attributeName, Document.parse(stringItem));
                 }
-                else if(item.toString().startsWith("[")) {
-                    updateFields.append(attributeName, Document.parse(item.toString()));
+                else if(stringItem.startsWith("[")) {
+                    updateFields.append(attributeName, Document.parse(stringItem));
                 }
                 else if (item instanceof JSONArray || item instanceof JSONObject) {
-                    updateFields.append(attributeName, Document.parse(item.toString()));
-                } else {
+                    updateFields.append(attributeName, Document.parse(stringItem));
+                } else if(isNumeric(stringItem)){
+                    if(StringUtils.isInteger(stringItem))
+                        updateFields.append(attributeName, Integer.valueOf(stringItem));
+                    else
+                        updateFields.append(attributeName, Double.valueOf(stringItem));
+                }
+                else if(Boolean.parseBoolean(stringItem)){
+                    updateFields.append(attributeName, Boolean.valueOf(stringItem));
+                }
+                else {
                     updateFields.append(attributeName, item);
                 }
             }

@@ -18,8 +18,6 @@ public class ContextServiceManager {
 
     private static Logger log = Logger.getLogger(ContextServiceManager.class.getName());
 
-    private static final SchedulerFactory schedulerFactory = new StdSchedulerFactory();
-
     public static CdqlResponse registerContextService(ExecutionRequest request)
     {
         SQEMResponse sqemResponse = null;
@@ -53,6 +51,7 @@ public class ContextServiceManager {
         }
         catch (Exception e)
         {
+            log.severe(e.getMessage());
             if(sqemResponse!=null && sqemResponse.getStatus().equals("200"))
             {
                 JSONObject sqemBody = new JSONObject(sqemResponse.getBody());
@@ -60,6 +59,7 @@ public class ContextServiceManager {
                 sqemStub.updateContextServiceStatus(UpdateContextServiceStatusRequest.newBuilder().setId(id).setStatus("inactive").build());
                 sqemBody.put("status","inactive");
                 sqemBody.put("cause",new JSONObject(e.getMessage()));
+
                 return CdqlResponse.newBuilder().setBody(sqemBody.toString()).setStatus(sqemResponse.getStatus()).build();
             }
 

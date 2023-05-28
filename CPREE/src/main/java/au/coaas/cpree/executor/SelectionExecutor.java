@@ -35,7 +35,7 @@ public class SelectionExecutor {
     private static final double min_value = 0.001;
     private static final long min_cache_residence = 30000; // 30 Seconds
     private static final long max_delay_cache_residence = 300000; // 5 Minutes
-    private static final long max_threshold = (long) (Math.pow(2,15)-1);
+    private static final long max_threshold = (long) (Math.pow(2,10)-1);
 
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
 
@@ -47,7 +47,8 @@ public class SelectionExecutor {
     private static Hashtable<String, Double> cachePerfStats = new Hashtable<>();
     private static Hashtable<String, Double> cacheLookupLatency = new Hashtable<>();
 
-    private static ExecutorService executor = Executors.newScheduledThreadPool(40);
+    private static final int numberOfThreads = 50;
+    private static ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
 
     private static void defaultWeights(){
         weightThresholds.put("kappa", 0.2);
@@ -125,13 +126,13 @@ public class SelectionExecutor {
                         .setJson(request.getContext())
                         .setRefreshLogic(reftype.toString().toLowerCase())
                         .setCachelife(-1) // This is in miliseconds
-                        .setLambdaConf(0) //
+                        .setLambdaConf(0.0) //
                         .setIndefinite(true)
                         .setReference(request.getReference()).build());
 
                 // Configuring refreshing
                 if(reftype.equals(RefreshLogics.PROACTIVE_SHIFT)){
-                    executor.execute(() -> {
+                    executor.submit(() -> {
                         JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
                         JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
                         double fthresh = !profile.getExpFthr().equals("NaN") ?
@@ -163,7 +164,7 @@ public class SelectionExecutor {
 
                 if(result.getKey()){
                     // Configuring refreshing
-                    executor.execute(() -> {
+                    executor.submit(() -> {
                         if (result.getValue().equals(RefreshLogics.PROACTIVE_SHIFT)) {
                             JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
                             JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
@@ -221,7 +222,7 @@ public class SelectionExecutor {
             ListenableFuture<ContextProfile> c_profile = sqemStub.getContextProfile(ContextProfileRequest.newBuilder()
                     .setPrimaryKey(contextId).build());
 
-            double lambda = c_profile.get().getExpAR().equals("NaN") ? 1.0/60 :
+            double lambda = c_profile.get().getExpAR().equals("NaN") ? 1.0/60.0 :
                         Double.valueOf(c_profile.get().getExpAR()); // per second
 
             if(!profile.getAccessTrend().equals("NaN") &&
@@ -230,7 +231,7 @@ public class SelectionExecutor {
 
                 ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile);
 
-                double lambda_conf = 0;
+                double lambda_conf = 0.0;
                 long est_delayTime = 0;
                 long est_cacheLife = -1;
                 boolean indefinite = false;
@@ -244,7 +245,7 @@ public class SelectionExecutor {
                         0.0 : Double.valueOf(c_profile.get().getTrend());
 
                 // Access Rate to Context Information Dropping
-                if(access_trend < 0){
+                if(access_trend < 0.0){
                     // TODO: IMPORTANT!
                     // In the next line, it is assumed that there is only one class of context queries because, the
                     // implementation is only being tested for a single scenario (all queries are of the same class.)
@@ -273,9 +274,9 @@ public class SelectionExecutor {
                         // 3. Access trend
                         json.put("ar", access_trend);
 
-                        if((sampleInterval == 0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda)) ||
-                                (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
-                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda))))) {
+                        if((sampleInterval == 0.0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1.0/lambda)) ||
+                                (sampleInterval > 0.0 && ((sampleInterval > lifetime && sampleInterval > (1.0/lambda)) ||
+                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr)) > (1.0/lambda))))) {
                             // 4. Retrieval Efficiency
                             RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
                                     cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
@@ -289,27 +290,27 @@ public class SelectionExecutor {
 
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
-                            double vec_total = caching_efficiency < min_value ? 0 : Math.pow(caching_efficiency, 2) +
-                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2) +
-                                    access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
-                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
-                                    retEff < min_value ? 0 : Math.pow(retEff, 2);
+                            double vec_total = caching_efficiency < min_value ? 0.0 : Math.pow(caching_efficiency, 2) +
+                                    (1-reliability) < min_value ? 0.0 : Math.pow((1-reliability), 2) +
+                                    access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
+                                    complexity < min_value ? 0.0 : Math.pow(complexity, 2) +
+                                    retEff < min_value ? 0.0 : Math.pow(retEff, 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
-                            double cacheConfidence = 0;
-                            double nonRetrievalConfidence = 0;
+                            double cacheConfidence = 0.0;
+                            double nonRetrievalConfidence = 0.0;
                             if(denom != 0){
-                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * caching_efficiency) +
-                                        complexity < min_value ? 0 : (weightThresholds.get("row") * complexity) +
-                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * access_trend) +
-                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * (1-reliability));
+                                nonRetrievalConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * caching_efficiency) +
+                                        complexity < min_value ? 0.0 : (weightThresholds.get("row") * complexity) +
+                                        access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * access_trend) +
+                                        (1.0 - reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * (1.0 - reliability));
 
-                                cacheConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
-                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * ((1-reliability)/denom)) +
-                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
-                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom)) +
-                                        retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom));
+                                cacheConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                                        (1.0 - reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * ((1.0 - reliability)/denom)) +
+                                        access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
+                                        complexity < min_value ? 0.0 : (weightThresholds.get("row") * (complexity/denom)) +
+                                        retEff < min_value ? 0.0 : (weightThresholds.get("pi") * (retEff/denom));
                             }
 
                             valueHistory.add(cacheConfidence);
@@ -346,7 +347,7 @@ public class SelectionExecutor {
                                     else {
                                         double top = (ret_effficiency.getCacheCost()/ret_effficiency.getExpMR()) * weightThresholds.get("pi");
                                         double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
-                                        lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
+                                        lambda_conf = ((top/bot) - 1.0) * (1.0 / ret_effficiency.getExpPrd());
                                     }
                                     // Indefinite delaying until the item reach a better AR
                                     indefinite = true;
@@ -370,21 +371,21 @@ public class SelectionExecutor {
                             // Setting decision variables to 0 as they are ignored.
                             json.put("retEff", 0.0);
                             json.put("cacheEff", 0.0);
-                            double vec_total = access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
-                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2) +
-                                    complexity < min_value ? 0 : Math.pow(complexity, 2);
+                            double vec_total = access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
+                                    (1-reliability) < min_value ? 0.0 : Math.pow((1.0-reliability), 2) +
+                                    complexity < min_value ? 0.0 : Math.pow(complexity, 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
                             if(sampleInterval == 0)
-                                lambda_conf = 1/exp_prd;
+                                lambda_conf = 1.0/exp_prd;
                             else {
                                 if(sampleInterval > lifetime)
-                                    lambda_conf = 1/sampleInterval;
+                                    lambda_conf = 1.0/sampleInterval;
                                 else {
                                     // This is calculated assuming that the lifetime is constant for the context
-                                    double extd_expPrd = sampleInterval + (lifetime - sampleInterval) * (1 - fthr);
-                                    lambda_conf = 1/extd_expPrd;
+                                    double extd_expPrd = sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr);
+                                    lambda_conf = 1.0/extd_expPrd;
                                 }
                             }
                             // Indefinite delaying until the item reach a better AR
@@ -412,7 +413,7 @@ public class SelectionExecutor {
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
                         double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double intercept = profile.getArIntercept().equals("NaN") ? 0 : Double.valueOf(profile.getArIntercept());
-                        double exp_prd = lifetime * (1 - fthr);
+                        double exp_prd = lifetime * (1.0 - fthr);
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
                         // The expiry period should also be greater than the time between 2 access to the item in order to at least have > 0 chance of a hit.
@@ -426,9 +427,9 @@ public class SelectionExecutor {
                         // 3. Access trend
                         json.put("ar", access_trend);
 
-                        if((sampleInterval == 0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1/lambda)) ||
-                                (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1/lambda)) ||
-                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1 - fthr)) > (1/lambda))))) {
+                        if((sampleInterval == 0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1.0/lambda)) ||
+                                (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1.0/lambda)) ||
+                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr)) > (1.0/lambda))))) {
                             // 4. Retrieval Efficiency
                             RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
                                     cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
@@ -442,27 +443,27 @@ public class SelectionExecutor {
 
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
-                            double vec_total = caching_efficiency < min_value ? 0 : Math.pow(caching_efficiency, 2) +
-                                    access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
-                                    complexity < min_value ? 0 : Math.pow(complexity, 2) +
-                                    retEff < min_value ? 0 : Math.pow(retEff, 2) +
-                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2);
+                            double vec_total = caching_efficiency < min_value ? 0.0 : Math.pow(caching_efficiency, 2) +
+                                    access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
+                                    complexity < min_value ? 0.0 : Math.pow(complexity, 2) +
+                                    retEff < min_value ? 0.0 : Math.pow(retEff, 2) +
+                                    (1-reliability) < min_value ? 0.0 : Math.pow((1.0 - reliability), 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
                             double cacheConfidence = 0;
                             double nonRetrievalConfidence = 0;
                             if(denom != 0){
-                                nonRetrievalConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * caching_efficiency) +
-                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * access_trend) +
-                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * (1-reliability)) +
-                                        complexity < min_value ? 0 : (weightThresholds.get("row") * complexity);
+                                nonRetrievalConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * caching_efficiency) +
+                                        access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * access_trend) +
+                                        (1-reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * (1.0 - reliability)) +
+                                        complexity < min_value ? 0.0 : (weightThresholds.get("row") * complexity);
 
-                                cacheConfidence = caching_efficiency < min_value ? 0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
-                                        access_trend < min_value ? 0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
-                                        (1-reliability) < min_value ? 0 : (weightThresholds.get("delta") * ((1-reliability)/denom)) +
-                                        complexity < min_value ? 0 : (weightThresholds.get("row") * (complexity/denom)) +
-                                        retEff < min_value ? 0 : (weightThresholds.get("pi") * (retEff/denom));
+                                cacheConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                                        access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
+                                        (1-reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * ((1.0 - reliability)/denom)) +
+                                        complexity < min_value ? 0.0 : (weightThresholds.get("row") * (complexity/denom)) +
+                                        retEff < min_value ? 0.0 : (weightThresholds.get("pi") * (retEff/denom));
                             }
 
                             valueHistory.add(cacheConfidence);
@@ -495,7 +496,7 @@ public class SelectionExecutor {
                                     else {
                                         double top = (ret_effficiency.getCacheCost()/ret_effficiency.getExpMR()) * weightThresholds.get("pi");
                                         double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
-                                        lambda_conf = ((top/bot) - 1) * (1 / ret_effficiency.getExpPrd());
+                                        lambda_conf = ((top/bot) - 1.0) * (1.0 / ret_effficiency.getExpPrd());
                                     }
                                     est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
                                     if(est_delayTime <= 0)
@@ -515,21 +516,21 @@ public class SelectionExecutor {
                             // Setting decision variables to 0 as they are ignored.
                             json.put("retEff", 0.0);
                             json.put("cacheEff", 0.0);
-                            double vec_total = access_trend < min_value ? 0 : Math.pow(access_trend, 2) +
-                                    (1-reliability) < min_value ? 0 : Math.pow((1-reliability), 2) +
-                                    complexity < min_value ? 0 : Math.pow(complexity, 2);
+                            double vec_total = access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
+                                    (1-reliability) < min_value ? 0.0 : Math.pow((1.0-reliability), 2) +
+                                    complexity < min_value ? 0.0 : Math.pow(complexity, 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
 
                             if(sampleInterval == 0)
-                                lambda_conf = 1/exp_prd;
+                                lambda_conf = 1.0/exp_prd;
                             else {
                                 if(sampleInterval > lifetime)
-                                    lambda_conf = 1/sampleInterval;
+                                    lambda_conf = 1.0/sampleInterval;
                                 else {
                                     // This is calculated assuming that the lifetime is constant for the context
-                                    double extd_expPrd = sampleInterval + (lifetime - sampleInterval) * (1 - fthr);
-                                    lambda_conf = 1/ extd_expPrd;
+                                    double extd_expPrd = sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr);
+                                    lambda_conf = 1.0/extd_expPrd;
                                 }
                             }
                             // Indefinite delaying until the item reach a better AR
@@ -596,7 +597,7 @@ public class SelectionExecutor {
     private static double getCacheEfficiency(int size, double missRate, double retLatency) {
         double cacheCost = (size * cachePerfStats.get("costPerByte"))
                 + cachePerfStats.get("processCost") * (((retLatency + cacheLookupLatency.get("400")) * missRate)
-                + (cacheLookupLatency.get("200") * (1 - missRate)));
+                + (cacheLookupLatency.get("200") * (1.0 - missRate)));
         double redirCost = cachePerfStats.get("processCost") * (retLatency + cacheLookupLatency.get("404"));
 
         return cacheCost > 0 ? redirCost/cacheCost : max_threshold;
@@ -665,10 +666,10 @@ public class SelectionExecutor {
                         .build());
 
                 if(sampleInterval == 0) {
-                    double exp_prd = (lifetime - retlatency) * (1 - fthr);
+                    double exp_prd = (lifetime - retlatency) * (1.0 - fthr);
                     response.setExpPrd(exp_prd);
                     hits = exp_prd * lambda;
-                    exp_mr = 1/(hits + 1);
+                    exp_mr = 1.0/(hits + 1.0);
 
                     // Penalties when needing to refresh
                     if(retlatency >= rtmax) cache_penalties = penalty;
@@ -680,13 +681,13 @@ public class SelectionExecutor {
                 else {
                     if(lifetime > sampleInterval){
                         // Refreshing at a slightly lower rate than the sampling
-                        double exp_prd = sampleInterval + ((lifetime - sampleInterval) * (1 - fthr));
-                        double ref_rate = 1 / exp_prd;
+                        double exp_prd = sampleInterval + ((lifetime - sampleInterval) * (1.0 - fthr));
+                        double ref_rate = 1.0 / exp_prd;
 
                         cache_cost = (retCost + cache_penalties) * ref_rate;
                         response.setType(2);
                         hits = exp_prd * lambda;
-                        exp_mr = 1/(hits + 1);
+                        exp_mr = 1.0/(hits + 1.0);
 
                     }
                     else {
@@ -694,7 +695,7 @@ public class SelectionExecutor {
                         cache_cost = (retCost + cache_penalties) * (1/sampleInterval);
                         response.setType(3);
                         hits = sampleInterval * lambda;
-                        exp_mr = 1/(hits + 1);
+                        exp_mr = 1.0/(hits + 1.0);
                     }
                 }
                 break;

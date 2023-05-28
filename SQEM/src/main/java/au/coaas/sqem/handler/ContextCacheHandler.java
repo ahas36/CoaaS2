@@ -300,7 +300,7 @@ public class ContextCacheHandler {
                         else {
                             lock.unlockAsync();
                             long endTime = System.currentTimeMillis();
-                            Executors.newCachedThreadPool().execute(()
+                            Executors.newCachedThreadPool().submit(()
                                     -> logCacheSearch("404", request.getServiceId(),
                                     request.getUniformFreshness(), endTime - startTime));
 
@@ -359,7 +359,7 @@ public class ContextCacheHandler {
                 long endTime = System.currentTimeMillis();
 
                 if(entityContext.size() > 0){
-                    Executors.newCachedThreadPool().execute(()
+                    Executors.newCachedThreadPool().submit(()
                             -> logCacheSearch("200", request.getServiceId(),
                             request.getUniformFreshness(), endTime - startTime));
                     // Rest of the meta data is not needed when the context is returned from cache.
@@ -367,7 +367,7 @@ public class ContextCacheHandler {
                             .setBody((new JSONArray(entityContext)).toString()).build();
                 }
 
-                Executors.newCachedThreadPool().execute(()
+                Executors.newCachedThreadPool().submit(()
                         -> logCacheSearch("404", request.getServiceId(),
                         request.getUniformFreshness(), endTime - startTime));
                 return SQEMResponse.newBuilder().setStatus("404")
@@ -380,7 +380,7 @@ public class ContextCacheHandler {
         else if(!result.getHashkey().equals("") && result.getIsCached() && !result.getIsValid()){
             // There is some record in cache. But bot valid - Partial Miss.
             long endTime = System.currentTimeMillis();
-            Executors.newCachedThreadPool().execute(()
+            Executors.newCachedThreadPool().submit(()
                     -> logCacheSearch("400", request.getServiceId(),
                     request.getUniformFreshness(), endTime - startTime));
             return SQEMResponse.newBuilder().setStatus("400")
@@ -390,7 +390,7 @@ public class ContextCacheHandler {
 
         // Complete Miss
         long endTime = System.currentTimeMillis();
-        Executors.newCachedThreadPool().execute(()
+        Executors.newCachedThreadPool().submit(()
                 -> logCacheSearch("404", request.getServiceId(),
                 request.getUniformFreshness(), endTime - startTime));
         return SQEMResponse.newBuilder().setStatus("404")

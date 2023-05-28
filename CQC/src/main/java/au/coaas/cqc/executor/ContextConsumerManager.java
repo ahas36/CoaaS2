@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 
 public class ContextConsumerManager {
 
-    private static Logger log = Logger.getLogger(ContextServiceManager.class.getName());
+    private static Logger log = Logger.getLogger(ContextConsumerManager.class.getName());
 
     public static CdqlResponse registerContextConsumer(ExecutionRequest request)
     {
@@ -36,6 +36,7 @@ public class ContextConsumerManager {
 
                 sqemBody.put("status", false);
                 sqemBody.put("cause",new JSONObject(e.getMessage()));
+                log.severe(e.getMessage());
 
                 return CdqlResponse.newBuilder().setBody(sqemBody.toString())
                         .setStatus(sqemResponse.getStatus()).build();

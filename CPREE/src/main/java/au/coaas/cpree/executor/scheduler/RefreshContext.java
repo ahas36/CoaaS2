@@ -43,14 +43,14 @@ public class RefreshContext {
         // The parameter, when passed, should be set in seconds.
         double adjustment = lifetime - initResiLife;
         if(lifetime > samplingInt){
-            this.refreshInterval = (long) (samplingInt + ((lifetime - samplingInt) * (1 - fthr))) * 1000;
+            this.refreshInterval = (long) (samplingInt + ((lifetime - samplingInt) * (1.0 - fthr))) * 1000;
             if(adjustment < samplingInt) {
                 // If the retrieval latency + age loss is less than the sampling interval
-                this.initInterval = (long) (samplingInt + ((initResiLife - samplingInt) * (1 - fthr))) * 1000;
+                this.initInterval = (long) (samplingInt + ((initResiLife - samplingInt) * (1.0 - fthr))) * 1000;
             }
             else {
                 double diff = adjustment - samplingInt;
-                double exp_prd = (lifetime - samplingInt) * (1 - fthr);
+                double exp_prd = (lifetime - samplingInt) * (1.0 - fthr);
                 // Checking if the exp_prd has already elapsed that the item need immediatly be refreshed.
                 if(exp_prd < diff) this.initInterval = 0;
                 else this.initInterval = (long) (samplingInt + exp_prd) * 1000;
@@ -58,7 +58,7 @@ public class RefreshContext {
         }
         else {
             this.refreshInterval = (long) (samplingInt) * 1000;
-            this.initInterval = (long) (initResiLife * (1 - fthr)) * 1000;
+            this.initInterval = (long) (initResiLife * (1.0 - fthr)) * 1000;
         }
 
     }
@@ -89,11 +89,11 @@ public class RefreshContext {
     // Setters
     public void setfthresh(double fthr, double initResiLife) {
         this.fthr = fthr;
-        this.refreshInterval = (long) (this.lifetime * 1000 * (1 - fthr));
-        this.initInterval = (long) (initResiLife * 1000 * (1 - fthr));
+        this.refreshInterval = (long) (this.lifetime * 1000 * (1.0 - fthr));
+        this.initInterval = (long) (initResiLife * 1000 * (1.0 - fthr));
     }
 
     public void setInitInterval(double initResiLife){
-        this.initInterval = (long) (initResiLife * 1000 * (1 - this.fthr));
+        this.initInterval = (long) (initResiLife * 1000 * (1.0 - this.fthr));
     }
 }

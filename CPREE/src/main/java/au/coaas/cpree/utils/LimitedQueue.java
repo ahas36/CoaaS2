@@ -24,7 +24,7 @@ public class LimitedQueue<E> extends LinkedList<E> {
 
     public double average() {
         if(super.size() > 0){
-            AtomicReference<Double> sum = new AtomicReference<>((double) 0);
+            AtomicReference<Double> sum = new AtomicReference<>(0.0);
             super.forEach(value -> {
                 sum.updateAndGet(v -> new Double((v + (double) value)));
             });

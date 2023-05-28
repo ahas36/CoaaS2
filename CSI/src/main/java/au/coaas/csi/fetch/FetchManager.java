@@ -13,7 +13,6 @@ import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.json.Json;
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;
 

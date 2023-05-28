@@ -34,22 +34,22 @@ public class Utilities {
                     case "cm":
                         switch (targetUnit.toLowerCase()) {
                             case "km":
-                                return value/100000;
+                                return value/100000.0;
                             case "m":
-                                return value/100;
+                                return value/100.0;
                             case "mm":
-                                return value*10;
+                                return value*10.0;
                         }
                     case "mm":
                         switch (targetUnit.toLowerCase()) {
                             case "mm":
                                 return value;
                             case "km":
-                                return value / 1000000;
+                                return value / 1000000.0;
                             case "cm":
-                                return value / 10;
+                                return value / 10.0;
                             case "m":
-                                return value / 1000;
+                                return value / 1000.0;
                         }
                 }
             }
@@ -68,29 +68,29 @@ public class Utilities {
                     case "m":
                         switch (targetUnit.toLowerCase()) {
                             case "h":
-                                return value/60;
+                                return value/60.0;
                             case "s":
-                                return value*60;
+                                return value*60.0;
                             case "ms":
                                 return value*60*1000;
                         }
                     case "s":
                         switch (targetUnit.toLowerCase()) {
                             case "h":
-                                return value/3600;
+                                return value/3600.0;
                             case "m":
-                                return value/60;
+                                return value/60.0;
                             case "ms":
                                 return value*1000;
                         }
                     case "ms":
                         switch (targetUnit.toLowerCase()) {
                             case "h":
-                                return value/(3600*1000);
+                                return value/(3600.0*1000.0);
                             case "m":
-                                return value/(60*1000);
+                                return value/(60.0*1000.0);
                             case "s":
-                                return value/1000;
+                                return value/1000.0;
                         }
                 }
             }
@@ -149,8 +149,8 @@ public class Utilities {
             for(Object temp: input_array) {
                 standard_deviation += Math.pow(((double)temp) - mean, 2);
             }
-            return Math.sqrt(standard_deviation/array_length);
+            return Math.sqrt(standard_deviation/(double) array_length);
         }
-        return 1;
+        return 1.0;
     }
 }

@@ -41,7 +41,7 @@ public class RetrievalManager {
         fetchRequest.setContextService(cs);
 
         CSIResponse fetch = null;
-        double penEarning = 0;
+        double penEarning = 0.0;
         long startTime = 0;
 
         for(int i=0; i < retrys; i++){
@@ -55,8 +55,8 @@ public class RetrievalManager {
                 long retLatency = int_endTime-startTime;
                 double retDiff = retLatency - qos.getDouble("rtmax");
                 if(retDiff > 0){
-                    penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
-                            * qos.getDouble("penPct") / 100;
+                    penEarning = (((int)(retDiff/1000.0))+1.0) * qos.getDouble("rate")
+                            * qos.getDouble("penPct") / 100.0;
                 }
 
                 asyncStub.logPerformanceData(Statistic.newBuilder()
@@ -99,8 +99,8 @@ public class RetrievalManager {
             long retLatency = endTime-startTime;
             double retDiff = retLatency - qos.getDouble("rtmax");
             if(retDiff > 0){
-                penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
-                        * qos.getDouble("penPct") / 100;
+                penEarning = (((int)(retDiff/1000.0))+1.0) * qos.getDouble("rate")
+                        * qos.getDouble("penPct") / 100.0;
             }
 
             JSONArray key = (new JSONObject(contextService)).getJSONObject("sla").getJSONArray("key");

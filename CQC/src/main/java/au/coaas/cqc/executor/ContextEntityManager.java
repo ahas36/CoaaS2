@@ -55,25 +55,4 @@ public class ContextEntityManager {
         SQEMResponse sqemResponse = sqemStub.updateContextEntity(updateRequestBuilder.build());
         return CdqlResponse.newBuilder().setBody(sqemResponse.getBody()).setStatus(sqemResponse.getStatus()).build();
     }
-
-    /* This seems a temporary function that Ali had created.
-    public static void main (String [] args)
-    {
-        CdqlResponse res = registerContextEntity( ExecutionRequest.newBuilder().setCdql("{\n" +
-                "\t\"EntityType\":\n" +
-                "\t{\n" +
-                "\t\t\"namespace\" : \"https://cdql.coaas.csiro.au\",\n" +
-                "\t\t\"type\" : \"entity1\"\n" +
-                "\t},\n" +
-                "\t\"Attributes\":\n" +
-                "\t{\n" +
-                "\t\t\"id\": 1,\n" +
-                "\t\t\"name\" : ali,\n" +
-                "\t\t\"temp\" : 24\n" +
-                "\t}\n" +
-                "}").build());
-
-        System.out.print(res.toString());
-    }
-     */
 }

@@ -85,7 +85,7 @@ public final class CacheDataRegistry{
                                 // Check for freshness of each context entity
                                 for(int i = start; i < end; i++){
                                     // Initializing
-                                    double ageLoss = 0;
+                                    double ageLoss = 0.0;
                                     long remainingLife = 0;
                                     LocalDateTime staleTime;
                                     LocalDateTime expiryTime;
@@ -108,8 +108,8 @@ public final class CacheDataRegistry{
 
                                             if(fthresh < 1) {
                                                 Double residual_life = freshness.getLong("value")
-                                                        - ageLoss > 1 ? ageLoss/60 : 0;
-                                                Double expPrd = residual_life * (1 - fthresh);
+                                                        - ageLoss > 1 ? ageLoss/60.0 : 0.0;
+                                                Double expPrd = residual_life * (1.0 - fthresh);
                                                 staleTime = updateTime.plusMinutes(residual_life.longValue());
                                                 expiryTime = updateTime.plusMinutes(expPrd.longValue());
                                             }
@@ -214,7 +214,7 @@ public final class CacheDataRegistry{
                         }
                     }
                     else { // Cache lookup for a specific entity
-                        double ageLoss = 0;
+                        double ageLoss = 0.0;
                         long remainingLife = 0;
                         LocalDateTime staleTime;
                         LocalDateTime expiryTime;
@@ -247,8 +247,8 @@ public final class CacheDataRegistry{
 
                                     if(fthresh < 1) {
                                         Double residual_life = freshness.getLong("value")
-                                                - ageLoss > 1 ? ageLoss/60 : 0;
-                                        Double expPrd = residual_life * (1 - fthresh);
+                                                - ageLoss > 1 ? ageLoss/60.0 : 0.0;
+                                        Double expPrd = residual_life * (1.0 - fthresh);
                                         staleTime = updateTime.plusMinutes(residual_life.longValue());
                                         expiryTime = updateTime.plusMinutes(expPrd.longValue());
                                     }
@@ -264,7 +264,7 @@ public final class CacheDataRegistry{
                                 default:
                                     if(sampling.equals("")){
                                         Double residual_life = freshness.getLong("value") - ageLoss;
-                                        Double expPrd = residual_life * (1 - freshness.getDouble("fthresh"));
+                                        Double expPrd = residual_life * (1.0 - freshness.getDouble("fthresh"));
                                         staleTime = updateTime.plusSeconds(residual_life.longValue());
                                         expiryTime = updateTime.plusSeconds(expPrd.longValue());
                                     }
@@ -277,7 +277,7 @@ public final class CacheDataRegistry{
                                             // When the lifetime is longer than the sampling interval
                                             long residual_life = lifetime - samplingInterval;
                                             if(fthresh < 1){
-                                                Double expPrd = residual_life * (1 - fthresh);
+                                                Double expPrd = residual_life * (1.0 - fthresh);
                                                 LocalDateTime sampledTime = updateTime.minusSeconds(Math.round(ageLoss));
                                                 expiryTime = sampledTime.plusSeconds(samplingInterval + expPrd.longValue());
                                                 staleTime = sampledTime.plusSeconds(lifetime);
@@ -329,7 +329,7 @@ public final class CacheDataRegistry{
                         else {
                             PerformanceLogHandler.insertAccess(
                                     lookup.getEt().getType() + "-" + finalHashKey,
-                                    "miss", 0);
+                                    "miss", 0.0);
                             return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
                                     .setIsValid(false)
                                     .setIsCached(false)
@@ -420,7 +420,7 @@ public final class CacheDataRegistry{
         res.setIsCached(false).setIsValid(false).setRemainingLife(0);
 
         // Store cache access in Time Series DB
-        Executors.newCachedThreadPool().execute(()
+        Executors.newCachedThreadPool().submit(()
                 -> PerformanceLogHandler.insertAccess(lookup.getHashKey() != null?
                         lookup.getEt().getType() + "-" + lookup.getHashKey():
                         lookup.getServiceId(),

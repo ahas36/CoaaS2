@@ -41,7 +41,7 @@ public class ConQEngHelper {
                         SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                 future.logConQEngCR(ConQEngLog.newBuilder()
                         .setId(crId).setCr(cr.toString()).setStatus(200).build());
-                Executors.newSingleThreadExecutor().execute(() -> reportContextProviders(contextServices, sample, crId));
+                Executors.newSingleThreadExecutor().submit(() -> reportContextProviders(contextServices, sample, crId));
             }
 
             return true;

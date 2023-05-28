@@ -63,6 +63,7 @@ public class ContextConsumerHandler {
             JSONObject body = new JSONObject();
             body.put("message",e.getMessage());
             body.put("cause",e.getCause().toString());
+            log.severe(e.getMessage());
 
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }

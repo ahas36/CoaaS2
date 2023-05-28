@@ -233,7 +233,7 @@ public class ContextRequestHandler {
             JSONObject distanceObj = new JSONObject(distance_str);
             String unit = distanceObj.getString("unit");
             switch(unit){
-                case "m": distance_str = String.valueOf(distanceObj.getDouble("value")/1000); break;
+                case "m": distance_str = String.valueOf(distanceObj.getDouble("value")/1000.0); break;
                 case "km": distance_str = String.valueOf(distanceObj.getDouble("value")); break;
                 default:
                     throw new WrongOperatorException(unit + " is not a valid measurement unit for distance.");

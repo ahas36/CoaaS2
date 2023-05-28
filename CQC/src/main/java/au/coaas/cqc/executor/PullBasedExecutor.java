@@ -268,7 +268,7 @@ public class PullBasedExecutor {
                             sla = new JSONObject(slaResult.getBody());
                             JSONObject finalSla = sla;
                             // Profiling the context consumers
-                            Executors.newCachedThreadPool().execute(() -> profileConsumer(finalSla,queryId));
+                            Executors.newCachedThreadPool().submit(() -> profileConsumer(finalSla,queryId));
                         }
                     }
 
@@ -294,7 +294,7 @@ public class PullBasedExecutor {
                             }
 
                             JSONObject finalConsumerQoS = consumerQoS;
-                            Executors.newCachedThreadPool().execute(() -> {
+                            Executors.newCachedThreadPool().submit(() -> {
                                 JSONObject conSer = new JSONObject(
                                         ((SimpleContainer) cacheResult.getValue()).getContextService());
                                 JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
@@ -338,7 +338,7 @@ public class PullBasedExecutor {
                             sla = new JSONObject(slaResult.getBody());
                             JSONObject finalSla = sla;
                             // Profiling the context consumers
-                            Executors.newCachedThreadPool().execute(() -> profileConsumer(finalSla,queryId));
+                            Executors.newCachedThreadPool().submit(() -> profileConsumer(finalSla,queryId));
                         }
                     }
 
@@ -1356,7 +1356,7 @@ public class PullBasedExecutor {
                         // Therefore, has to move to the next context provider
                         if(retEntity == null) continue;
 
-                        Executors.newCachedThreadPool().execute(()
+                        Executors.newCachedThreadPool().submit(()
                                 -> refreshOrCacheContext(slaObj, Integer.parseInt(data.getStatus()),
                                 lookup, retEntity.getKey(), data.getMeta(), // Meta can be Empty if it's not an entity.
                                 complexity, retEntity.getValue()));

@@ -57,8 +57,8 @@ public class PerformanceLogHandler {
 
     private static Connection connection;
 
-    private static final int numberOfThreads = 10;
-    private static final int numberOfItemsPerTask = 100;
+    private static final int numberOfThreads = 20;
+    private static final int numberOfItemsPerTask = 10;
 
     private static final Logger log = Logger.getLogger(LogHandler.class.getName());
     private static List<String> all_tables = Stream.of(LogicalContextLevel.values())
@@ -572,7 +572,7 @@ public class PerformanceLogHandler {
         Document persRecord = new Document();
 
         try{
-            ExecutorService executor = Executors.newFixedThreadPool(16);
+            ExecutorService executor = Executors.newFixedThreadPool(numberOfThreads);
             ArrayList<Future<?>> tasks = new ArrayList<>();
 
             tasks.add(executor.submit(() -> { getCSMSPerfromanceSummary(persRecord); }));
@@ -611,7 +611,7 @@ public class PerformanceLogHandler {
                         ConcurrentHashMap<String,BasicDBObject> levelSummary = (ConcurrentHashMap<String,BasicDBObject>) persRecord.get("levels");
 
                         JSONArray vector = new JSONArray();
-                        vector.put((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / Math.pow(1024,1)); // Size in cache (in KB)
+                        vector.put((double) ContextCacheHandler.getCachePerfStat("cacheUtility") / 1024.0); // Size in cache (in KB)
                         vector.put(summary.getDouble("earning")); // Earnings
                         vector.put(summary.getDouble("retrieval_cost")); // Retrieval Cost
                         vector.put(summary.getDouble("penalty_cost")); // Penalties
@@ -767,7 +767,7 @@ public class PerformanceLogHandler {
                 HashMap<String,Double> temp = entry.getValue();
 
                 Double no_success = temp.get("success") == 0 ? 0.000001 : temp.get("success")/1.0;
-                // Using all the successful retreivals to divide the total retrieval latency.
+                // Using all the successful retrievals to divide the total retrieval latency.
                 temp.put("retLatency", temp.get("retLatency")/no_success);
                 // Using only the successful AND timely retrievals to calculate reliability.
                 Double no_success_and_timely = (temp.get("success") - temp.get("delayed"))/1.0;

@@ -45,7 +45,7 @@ public class FetchJob implements Job {
                     new TypeToken<HashMap<String, String>>() {}.getType());
 
             long startTime = 0;
-            double penEarning = 0;
+            double penEarning = 0.0;
             CSIResponse fetch = null;
 
             JSONObject qos = (new JSONObject(contextService)).getJSONObject("sla").getJSONObject("qos");
@@ -65,8 +65,8 @@ public class FetchJob implements Job {
                     long retLatency = int_endTime-startTime;
                     double retDiff = retLatency - qos.getDouble("rtmax");
                     if(retDiff > 0){
-                        penEarning = (((int)(retDiff/1000))+1) * qos.getDouble("rate")
-                                * qos.getDouble("penPct") / 100;
+                        penEarning = (((int)(retDiff/1000.0))+1.0) * qos.getDouble("rate")
+                                * qos.getDouble("penPct") / 100.0;
                     }
 
                     SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub
@@ -76,7 +76,7 @@ public class FetchJob implements Job {
                             .setIsDelayed(retDiff>0).setEarning(penEarning)
                             .setMethod("FetchJob-execute").setStatus(fetch.getStatus())
                             .setTime(int_endTime-startTime).setCs(request).setAge(0)
-                            .setCost(!fetch.getStatus().equals("500")? fetch.getSummary().getPrice() : 0).build());
+                            .setCost(!fetch.getStatus().equals("500")? fetch.getSummary().getPrice() : 0.0).build());
                 }
             }
 
@@ -131,7 +131,7 @@ public class FetchJob implements Job {
                         .setTime(retLatency).setCs(request).setAge(age.longValue())
                         .setIsDelayed(retDiff>0).setEarning(penEarning)
                         .addAllHaskeys(hkeys)
-                        .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
+                        .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0.0).build());
 
                 if(sqemResponse.getStatus().equals("200")){
                     log.info("Fetch Job Successfully completed form : " + dataMap.getString("providerId"));

@@ -27,7 +27,7 @@ public class ConQEngHelper {
         String result = call(baseURL + "context_requests",
                 HttpRequests.POST, cr.toString());
         if(result != null) {
-            Executors.newCachedThreadPool().execute(() -> {
+            Executors.newCachedThreadPool().submit(() -> {
                 if(result.startsWith("{")){
                     JSONObject crRes = new JSONObject(result);
                     String crId = crRes.getString("_id");

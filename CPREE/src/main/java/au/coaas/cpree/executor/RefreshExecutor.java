@@ -442,7 +442,7 @@ public class RefreshExecutor {
         }
 
         // TODO: There should be a better logic to resolve the reliability threshold
-        if((autoFetch && samplingInterval == 0) || reliability < 0.2){
+        if((!autoFetch && samplingInterval == 0) || reliability < 0.2){
             return RefreshLogics.PROACTIVE_SHIFT;
         }
 
@@ -463,7 +463,7 @@ public class RefreshExecutor {
                     return RefreshLogics.PROACTIVE_SHIFT;
                 }
 
-                double exp_prd = resi_lifetime * (1-fthresh);
+                double exp_prd = resi_lifetime * (1.0-fthresh);
                 if(exp_prd >= samplingInterval){
                     // When expiry period is longer than the sampling interval,
                     // context can still be proactively retrieved.

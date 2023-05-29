@@ -72,7 +72,7 @@ public final class CacheDataRegistry{
                         ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
 
                         Stack<Long> remainLife = new Stack<>();
-                        Stack<String> staleEntities = new Stack<>();
+                        Set<String> staleEntities = Collections.synchronizedSet(new HashSet<>());
 
                         List<String> keySet = new ArrayList<>(entities.keySet());
                         for (int factor = 0; factor<numberOfIterations; factor++)
@@ -168,7 +168,7 @@ public final class CacheDataRegistry{
                                         PerformanceLogHandler.insertAccess(
                                                 lookup.getEt().getType() + "-" + keySet.get(i),
                                                 "p_miss", finalAgeLoss*1000);
-                                        staleEntities.push(keySet.get(i));
+                                        staleEntities.add(keySet.get(i));
                                     }
                                     else {
                                         remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
@@ -205,13 +205,24 @@ public final class CacheDataRegistry{
                                     .setIsCached(true)
                                     .setRemainingLife(sumRemLife/stackSize).build();
                         }
-                        else {
+                        else if (stackSize > 0){
                             // Meaning some of the context entities may be stale.
+                            Set<String> allKeySet = new HashSet<>(keySet);
+                            allKeySet.removeAll(staleEntities);
                             return res.setHashkey("service:" + lookup.getServiceId())
-                                    .addAllHashKeys(keySet)
+                                    .addAllHashKeys(allKeySet)
+                                    .addAllMissKeys(staleEntities)
                                     .setIsValid(false)
                                     .setIsCached(true)
                                     .setRemainingLife(sumRemLife/stackSize).build();
+                        }
+                        else {
+                            // Meaning none of the context entities are valid (all stale).
+                            return res.setHashkey("service:" + lookup.getServiceId())
+                                    .addAllMissKeys(keySet)
+                                    .setIsValid(false)
+                                    .setIsCached(true)
+                                    .setRemainingLife(0).build();
                         }
                     }
                     else { // Cache lookup for a specific entity

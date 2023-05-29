@@ -54,8 +54,40 @@ public class SQEMInterceptor implements ServerInterceptor {
                     case "handleContextRequestInCache": {
                         // LogicalContextLevel level, String id, Boolean isHit, long rTime
                         SQEMResponse res = (SQEMResponse) message;
-                        PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY, res.getHashKey(),
-                                res.getStatus().equals("200"), responseTime);
+                        String status = res.getStatus();
+                        if(!status.equals("500")){
+                            if(status.equals("200") || status.equals("404")){
+                                boolean ishit = status.equals("200");
+                                if(res.getHashKey().startsWith("entity")){
+                                    String[] keys = res.getHashKey().split(",");
+                                    for (String hk: keys) {
+                                        PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY,
+                                                hk.replace("entity:",""),
+                                                ishit, responseTime);
+                                    }
+                                }
+                                else if (res.getHashKey().startsWith("service")){
+                                    // Those that start with 'service'.
+
+                                }
+                            }
+                            else if (status.equals("400")){
+                                if(res.getHashKey().startsWith("entity")){
+                                    String[] hits = res.getHashKey().split(",");
+                                    String[] misses = res.getMisskeys().split(",");
+                                    for (String hk: hits) {
+                                        PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY,
+                                                hk.replace("entity:",""),
+                                                true, responseTime);
+                                    }
+                                    for (String hk: misses) {
+                                        PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY,
+                                                hk.replace("entity:",""),
+                                                false, responseTime);
+                                    }
+                                }
+                            }
+                        }
                         break;
                     }
                     case "logPerformanceData": break;

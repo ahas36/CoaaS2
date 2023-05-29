@@ -15,6 +15,7 @@ message SQEMResponse {
     string meta = 3;
     string hashKey = 4;
     CacheLookUpResponse cacheresponse = 5;
+    string misskeys = 6;
 }
 
 message ContextRequest
@@ -102,6 +103,7 @@ message CacheLookUpResponse {
     int64 remainingLife = 4;
     string refreshLogic =5;
     repeated string hashKeys = 6;
+    repeated string missKeys = 7;
 }
 
 message ScheduleTask {

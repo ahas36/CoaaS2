@@ -20,6 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 import au.coaas.sqem.util.Utilty;
 import au.coaas.sqem.util.PubSub.Event;
@@ -276,6 +277,7 @@ public class ContextCacheHandler {
         long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpRegistry(request);
 
+        // Hit from Cache Regustry
         if(!result.getHashkey().equals("") && result.getIsCached() && result.getIsValid()){
             // This means that either the entity or all entities created using a context provider are cached and valid.
             try{
@@ -287,6 +289,9 @@ public class ContextCacheHandler {
                 List<Document> entityContext = Collections.synchronizedList(new ArrayList<>());
                 Map<String, String> paramList = request.getParamsMap();
                 ArrayList<String> keys = new ArrayList<>(paramList.keySet());
+
+                List<String> hitkeys = Collections.synchronizedList(new ArrayList<>());
+                List<String> misskeys = Collections.synchronizedList(new ArrayList<>());
 
                 if(result.getHashkey().startsWith("entity")){
                     RBucket<Document> ent = cacheClient.getBucket((result.getHashkey().split(":"))[1]);
@@ -305,10 +310,12 @@ public class ContextCacheHandler {
                                     request.getUniformFreshness(), endTime - startTime));
 
                             return SQEMResponse.newBuilder().setStatus("404")
+                                    .setHashKey(result.getHashkey())
                                     .setBody("Entity not found.").build();
                         }
                     }
                     entityContext.add(conEntity);
+                    hitkeys.add(result.getHashkey());
                 }
                 else {
 
@@ -338,10 +345,14 @@ public class ContextCacheHandler {
                                     }
                                     else {
                                         isValid = false;
+                                        misskeys.add("entity:" + request.getEt().getType() + "-" + result.getHashKeys(i));
                                         break;
                                     }
                                 }
-                                if(isValid) entityContext.add(conEntity);
+                                if(isValid) {
+                                    entityContext.add(conEntity);
+                                    hitkeys.add("entity:" + request.getEt().getType() + "-" + result.getHashKeys(i));
+                                }
                             }
                         });
                     }
@@ -358,25 +369,40 @@ public class ContextCacheHandler {
 
                 long endTime = System.currentTimeMillis();
 
-                if(entityContext.size() > 0){
+                if(entityContext.size() > 0 && misskeys.isEmpty()){
                     Executors.newCachedThreadPool().submit(()
                             -> logCacheSearch("200", request.getServiceId(),
                             request.getUniformFreshness(), endTime - startTime));
                     // Rest of the meta data is not needed when the context is returned from cache.
                     return SQEMResponse.newBuilder().setStatus("200")
+                            .setHashKey(hitkeys.stream().collect(Collectors.joining(",", "", "")))
                             .setBody((new JSONArray(entityContext)).toString()).build();
                 }
-
-                Executors.newCachedThreadPool().submit(()
-                        -> logCacheSearch("404", request.getServiceId(),
-                        request.getUniformFreshness(), endTime - startTime));
-                return SQEMResponse.newBuilder().setStatus("404")
-                        .setBody("Entity not found.").build();
+                else if(hitkeys.size() > 0 && misskeys.size()>0){
+                    // Partial Miss
+                    Executors.newCachedThreadPool().submit(()
+                            -> logCacheSearch("400", request.getServiceId(),
+                            request.getUniformFreshness(), endTime - startTime));
+                    return SQEMResponse.newBuilder().setStatus("400")
+                            .setHashKey(hitkeys.stream().collect(Collectors.joining(",", "", "")))
+                            .setMisskeys(misskeys.stream().collect(Collectors.joining(",", "", "")))
+                            .setBody("Entity not found.").build();
+                }
+                else {
+                    // Fill miss
+                    Executors.newCachedThreadPool().submit(()
+                            -> logCacheSearch("404", request.getServiceId(),
+                            request.getUniformFreshness(), endTime - startTime));
+                    return SQEMResponse.newBuilder().setStatus("404")
+                            .setHashKey(misskeys.stream().collect(Collectors.joining(",", "", "")))
+                            .setBody("Entity not found.").build();
+                }
             }
             catch(Exception ex){
-                SQEMResponse.newBuilder().setStatus("500").build();
+                return SQEMResponse.newBuilder().setStatus("500").build();
             }
         }
+        // Partial Miss from Cache Registry
         else if(!result.getHashkey().equals("") && result.getIsCached() && !result.getIsValid()){
             // There is some record in cache. But bot valid - Partial Miss.
             long endTime = System.currentTimeMillis();
@@ -385,7 +411,9 @@ public class ContextCacheHandler {
                     request.getUniformFreshness(), endTime - startTime));
             return SQEMResponse.newBuilder().setStatus("400")
                     .setMeta(result.getRefreshLogic()) // This can be null if some entities under a CS were invalid.
-                    .setHashKey(result.getHashkey()).build(); // Remember the hash has a prefix.
+                    .setMisskeys(result.getMissKeysList().stream().collect(Collectors.joining(",", "", "")))
+                    .setHashKey(result.getHashkey().startsWith("entity")? result.getHashkey():
+                            result.getHashKeysList().stream().collect(Collectors.joining(",", "", ""))).build(); // Remember the hash has a prefix.
         }
 
         // Complete Miss

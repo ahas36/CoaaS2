@@ -72,7 +72,7 @@ public class SQEMInterceptor implements ServerInterceptor {
                                 }
                             }
                             else if (status.equals("400")){
-                                if(res.getHashKey().startsWith("entity")){
+                                if(res.getMisskeys().startsWith("entity")){
                                     String[] hits = res.getHashKey().split(",");
                                     String[] misses = res.getMisskeys().split(",");
                                     for (String hk: hits) {

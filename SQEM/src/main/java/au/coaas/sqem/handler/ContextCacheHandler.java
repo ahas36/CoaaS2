@@ -278,7 +278,7 @@ public class ContextCacheHandler {
         CacheLookUpResponse result = registry.lookUpRegistry(request);
 
         // Hit from Cache Regustry
-        if(!result.getHashkey().equals("") && result.getIsCached() && result.getIsValid()){
+        if(!result.getHashkey().isEmpty() && result.getIsCached() && result.getIsValid()){
             // This means that either the entity or all entities created using a context provider are cached and valid.
             try{
                 RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
@@ -333,8 +333,7 @@ public class ContextCacheHandler {
                             // Sending cache hit or miss record to performance monitor.
                             for(int i = start; i < end; i++){
                                 RBucket<Document> ent = cacheClient.getBucket(
-                                        request.getEt().getType() + "-" +
-                                        result.getHashKeys(i));
+                                        (result.getHashKeys(i).split(":"))[1]);
                                 // Should check if conditions meet
                                 boolean isValid = true;
                                 Document conEntity = ent.get().get("data", Document.class);
@@ -345,13 +344,13 @@ public class ContextCacheHandler {
                                     }
                                     else {
                                         isValid = false;
-                                        misskeys.add("entity:" + request.getEt().getType() + "-" + result.getHashKeys(i));
+                                        misskeys.add(result.getHashKeys(i));
                                         break;
                                     }
                                 }
                                 if(isValid) {
                                     entityContext.add(conEntity);
-                                    hitkeys.add("entity:" + request.getEt().getType() + "-" + result.getHashKeys(i));
+                                    hitkeys.add(result.getHashKeys(i));
                                 }
                             }
                         });
@@ -411,9 +410,12 @@ public class ContextCacheHandler {
                     request.getUniformFreshness(), endTime - startTime));
             return SQEMResponse.newBuilder().setStatus("400")
                     .setMeta(result.getRefreshLogic()) // This can be null if some entities under a CS were invalid.
-                    .setMisskeys(result.getMissKeysList().stream().collect(Collectors.joining(",", "", "")))
+                    .setMisskeys(result.getMissKeysList().isEmpty() ? "" : result.getMissKeysList().stream().collect(Collectors.joining(",", "", "")))
                     .setHashKey(result.getHashkey().startsWith("entity")? result.getHashkey():
-                            result.getHashKeysList().stream().collect(Collectors.joining(",", "", ""))).build(); // Remember the hash has a prefix.
+                                    result.getHashKeysList().isEmpty() ? "" :
+                                    result.getHashKeysList().stream()
+                                            .collect(Collectors.joining(",", "", "")))
+                    .build(); // Remember the hash has a prefix.
         }
 
         // Complete Miss

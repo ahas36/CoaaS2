@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 public final class CacheDataRegistry{
 
@@ -52,6 +53,7 @@ public final class CacheDataRegistry{
         if(this.root.containsKey(lookup.getEt().getType())){
             Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).getChildren();
             String serId = lookup.getServiceId();
+            String entType = lookup.getEt().getType();
 
             if(serId.startsWith("{")){
                 JSONObject obj = new JSONObject(serId);
@@ -166,9 +168,9 @@ public final class CacheDataRegistry{
                                         // Store cache access in Time Series DB
                                         double finalAgeLoss = ageLoss;
                                         PerformanceLogHandler.insertAccess(
-                                                lookup.getEt().getType() + "-" + keySet.get(i),
+                                                entType + "-" + keySet.get(i),
                                                 "p_miss", finalAgeLoss*1000);
-                                        staleEntities.add(keySet.get(i));
+                                        staleEntities.add("entity:"+entType+"-"+keySet.get(i));
                                     }
                                     else {
                                         remainingLife = ChronoUnit.MILLIS.between(LocalDateTime.now(), staleTime);
@@ -176,7 +178,7 @@ public final class CacheDataRegistry{
 
                                         double finalAgeLoss = ageLoss;
                                         PerformanceLogHandler.insertAccess(
-                                                lookup.getEt().getType() + "-" + keySet.get(i),
+                                                entType + "-" + keySet.get(i),
                                                 "hit", finalAgeLoss * 1000);
                                     }
                                 }
@@ -200,14 +202,16 @@ public final class CacheDataRegistry{
                         if(staleEntities.isEmpty()){
                             // Meaning all the context entities are valid
                             return res.setHashkey("service:" + lookup.getServiceId())
-                                    .addAllHashKeys(keySet)
+                                    .addAllHashKeys(keySet.stream().map(v -> "entity:"+entType+"-"+v)
+                                            .collect(Collectors.toList()))
                                     .setIsValid(true)
                                     .setIsCached(true)
                                     .setRemainingLife(sumRemLife/stackSize).build();
                         }
                         else if (stackSize > 0){
                             // Meaning some of the context entities may be stale.
-                            Set<String> allKeySet = new HashSet<>(keySet);
+                            Set<String> allKeySet = new HashSet<>(keySet.stream().map(v -> "entity:"+entType+"-"+v)
+                                    .collect(Collectors.toList()));
                             allKeySet.removeAll(staleEntities);
                             return res.setHashkey("service:" + lookup.getServiceId())
                                     .addAllHashKeys(allKeySet)
@@ -219,7 +223,8 @@ public final class CacheDataRegistry{
                         else {
                             // Meaning none of the context entities are valid (all stale).
                             return res.setHashkey("service:" + lookup.getServiceId())
-                                    .addAllMissKeys(keySet)
+                                    .addAllMissKeys(keySet.stream().map(v -> "entity:"+entType+"-"+v)
+                                            .collect(Collectors.toList()))
                                     .setIsValid(false)
                                     .setIsCached(true)
                                     .setRemainingLife(0).build();
@@ -247,7 +252,7 @@ public final class CacheDataRegistry{
                             JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
 
                             ageLoss = PerformanceLogHandler.getLastRetrievalTime(
-                                    lookup.getServiceId(), lookup.getHashKey());
+                                    lookup.getServiceId(), finalHashKey);
 
                             LocalDateTime now = LocalDateTime.now();
                             LocalDateTime updateTime = data.getUpdatedTime();
@@ -317,9 +322,9 @@ public final class CacheDataRegistry{
                                 double finalAgeLoss = ageLoss;
 
                                 PerformanceLogHandler.insertAccess(
-                                        lookup.getEt().getType() + "-" + finalHashKey,
+                                        entType + "-" + finalHashKey,
                                         "p_miss", finalAgeLoss * 1000);
-                                return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                                return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + finalHashKey)
                                         .setIsValid(false)
                                         .setIsCached(true)
                                         .setRefreshLogic(data.getRefreshLogic())
@@ -330,9 +335,9 @@ public final class CacheDataRegistry{
                             double finalAgeLoss = ageLoss;
 
                             PerformanceLogHandler.insertAccess(
-                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    entType + "-" + finalHashKey,
                                     "hit", finalAgeLoss * 1000);
-                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
                                     .setIsValid(true)
                                     .setIsCached(true)
                                     .setRefreshLogic(data.getRefreshLogic())
@@ -340,9 +345,9 @@ public final class CacheDataRegistry{
                         }
                         else {
                             PerformanceLogHandler.insertAccess(
-                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    entType + "-" + finalHashKey,
                                     "miss", 0.0);
-                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
                                     .setIsValid(false)
                                     .setIsCached(false)
                                     .setRemainingLife(0).build();
@@ -367,7 +372,7 @@ public final class CacheDataRegistry{
                                 // Sending cache hit or miss record to performance monitor.
                                 for(int i = start; i < end; i++){
                                     PerformanceLogHandler.insertAccess(
-                                            lookup.getEt().getType() + "-" + keySet.get(i),
+                                            entType + "-" + keySet.get(i),
                                             "hit", 0);
                                 }
                             });
@@ -383,7 +388,8 @@ public final class CacheDataRegistry{
 
                         // Sending the ID is the level above to generalize the cache hit.
                         return res.setHashkey("service:" + lookup.getServiceId())
-                                .addAllHashKeys(keySet)
+                                .addAllHashKeys(keySet.stream().map(v -> "entity:"+entType+"-"+v)
+                                        .collect(Collectors.toList()))
                                 .setIsValid(true)
                                 .setIsCached(true)
                                 .setRemainingLife(-1).build(); // -1 to notify the remaining life is ignored.
@@ -403,9 +409,9 @@ public final class CacheDataRegistry{
                         ContextItem data = entities.get(finalHashKey);
                         if(data != null){
                             PerformanceLogHandler.insertAccess(
-                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    entType + "-" + finalHashKey,
                                     "hit", 0);
-                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
                                     .setIsValid(true)
                                     .setIsCached(true)
                                     .setRefreshLogic(data.getRefreshLogic())
@@ -413,9 +419,9 @@ public final class CacheDataRegistry{
                         }
                         else {
                             PerformanceLogHandler.insertAccess(
-                                    lookup.getEt().getType() + "-" + finalHashKey,
+                                    entType + "-" + finalHashKey,
                                     "miss", 0);
-                            return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + lookup.getHashKey())
+                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
                                     .setIsValid(false)
                                     .setIsCached(false)
                                     .setRemainingLife(0).build();

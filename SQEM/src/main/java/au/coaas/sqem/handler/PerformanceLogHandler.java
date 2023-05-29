@@ -67,7 +67,7 @@ public class PerformanceLogHandler {
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
     private static final int max_history = 10;
-    private static final long max_delay_cache_residence = 3600 * 1000;
+    private static final long max_delay_cache_residence = 180000; // 3 Minutes
     private static boolean registriesReady = false;
     private static final double processPrice = 0.00000024;
 

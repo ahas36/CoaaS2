@@ -202,7 +202,7 @@ public final class CacheDataRegistry{
                         if(staleEntities.isEmpty()){
                             // Meaning all the context entities are valid
                             return res.setHashkey("service:" + lookup.getServiceId())
-                                    .addAllHashKeys(keySet.stream().map(v -> "entity:"+entType+"-"+v)
+                                    .addAllHashKeys(keySet.stream().map(v -> "entity:" + entType + "-" + v)
                                             .collect(Collectors.toList()))
                                     .setIsValid(true)
                                     .setIsCached(true)
@@ -324,7 +324,7 @@ public final class CacheDataRegistry{
                                 PerformanceLogHandler.insertAccess(
                                         entType + "-" + finalHashKey,
                                         "p_miss", finalAgeLoss * 1000);
-                                return res.setHashkey("entity:" + lookup.getEt().getType() + "-" + finalHashKey)
+                                return res.setHashkey("entity:" + entType + "-" + finalHashKey)
                                         .setIsValid(false)
                                         .setIsCached(true)
                                         .setRefreshLogic(data.getRefreshLogic())
@@ -388,7 +388,7 @@ public final class CacheDataRegistry{
 
                         // Sending the ID is the level above to generalize the cache hit.
                         return res.setHashkey("service:" + lookup.getServiceId())
-                                .addAllHashKeys(keySet.stream().map(v -> "entity:"+entType+"-"+v)
+                                .addAllHashKeys(keySet.stream().map(v -> "entity:" + entType + "-" + v)
                                         .collect(Collectors.toList()))
                                 .setIsValid(true)
                                 .setIsCached(true)

@@ -73,17 +73,19 @@ public class SQEMInterceptor implements ServerInterceptor {
                             }
                             else if (status.equals("400")){
                                 if(res.getMisskeys().startsWith("entity")){
-                                    String[] hits = res.getHashKey().split(",");
                                     String[] misses = res.getMisskeys().split(",");
-                                    for (String hk: hits) {
-                                        PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY,
-                                                hk.replace("entity:",""),
-                                                true, responseTime);
-                                    }
                                     for (String hk: misses) {
                                         PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY,
                                                 hk.replace("entity:",""),
                                                 false, responseTime);
+                                    }
+                                    if(!res.getHashKey().isEmpty() && res.getHashKey().startsWith("entity")){
+                                        String[] hits = res.getHashKey().split(",");
+                                        for (String hk: hits) {
+                                            PerformanceLogHandler.insertRecord(LogicalContextLevel.ENTITY,
+                                                    hk.replace("entity:",""),
+                                                    true, responseTime);
+                                        }
                                     }
                                 }
                             }

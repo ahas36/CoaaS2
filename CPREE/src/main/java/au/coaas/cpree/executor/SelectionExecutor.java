@@ -34,7 +34,7 @@ public class SelectionExecutor {
 
     private static final double min_value = 0.001;
     private static final long min_cache_residence = 30000; // 30 Seconds
-    private static final long max_delay_cache_residence = 300000; // 5 Minutes
+    private static final long max_delay_cache_residence = 180000; // 3 Minutes
     private static final long max_threshold = (long) (Math.pow(2,10)-1);
 
     private static final Logger log = Logger.getLogger(SelectionExecutor.class.getName());
@@ -499,10 +499,8 @@ public class SelectionExecutor {
                                         lambda_conf = ((top/bot) - 1.0) * (1.0 / ret_effficiency.getExpPrd());
                                     }
                                     est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
-                                    if(est_delayTime <= 0)
-                                        est_delayTime = Math.abs(est_delayTime);
-                                    if(est_delayTime > max_delay_cache_residence)
-                                        est_delayTime = max_delay_cache_residence;
+                                    est_delayTime = Math.min(Math.abs(est_delayTime),max_delay_cache_residence);
+
                                 }
                                 else {
                                     est_delayTime = min_cache_residence; // default delay
@@ -580,6 +578,8 @@ public class SelectionExecutor {
                 }
 
                 // Logging the delay time
+                est_delayTime = Math.min(Math.abs(est_delayTime),max_delay_cache_residence);
+                lambda_conf = Math.min(Math.abs(lambda_conf),0);
                 sqemStub.logDecisionLatency(DecisionLog.newBuilder()
                         .setLatency(est_delayTime).setLambdaConf(lambda_conf)
                         .setIndefinite(indefinite)

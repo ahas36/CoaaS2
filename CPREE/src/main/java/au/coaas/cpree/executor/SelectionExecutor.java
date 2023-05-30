@@ -507,9 +507,11 @@ public class SelectionExecutor {
                                         double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
                                         lambda_conf = ((top/bot) - 1.0) * (1.0 / ret_effficiency.getExpPrd());
                                     }
-                                    est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
-                                    est_delayTime = Math.min(Math.abs(est_delayTime),max_delay_cache_residence);
-
+                                    if(Double.isFinite(lambda_conf)){
+                                        est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                                        est_delayTime = Math.min(Math.abs(est_delayTime),min_cache_residence);
+                                    }
+                                    else est_delayTime = min_cache_residence;
                                 }
                                 else {
                                     est_delayTime = min_cache_residence; // default delay

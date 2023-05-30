@@ -130,13 +130,12 @@ public class RefreshExecutor {
                 JSONObject entData = entityContext.optJSONObject(i);
                 String hashkey = entData.has("hashkey") ? entData.getString("hashkey") :
                         meta.getHashKeysList().get(i);
-                RefreshLogics refPolicy = RefreshLogics.REACTIVE;
+                RefreshLogics refPolicy = RefreshLogics.PROACTIVE_SHIFT;
 
                 if(prorefRegistery.get(entityType +"-"+ hashkey) != null) {
                     RefreshContext refObj = prorefRegistery.get(entityType +"-"+ hashkey);
                     lookup.setHashKey(hashkey);
                     lookup.setEt(refObj.getEtype());
-                    refPolicy = RefreshLogics.PROACTIVE_SHIFT;
 
                     if(hashkey != (initContextId.split("-"))[1]){
                         // Should reset the next scheduled retrieval for the entity.

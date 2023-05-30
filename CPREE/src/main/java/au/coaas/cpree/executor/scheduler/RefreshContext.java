@@ -41,6 +41,7 @@ public class RefreshContext {
         this.contextProvider = cpObj.toString();
 
         // The parameter, when passed, should be set in seconds.
+        if(initResiLife < 0) initResiLife = 0;
         double adjustment = lifetime - initResiLife;
         if(lifetime > samplingInt){
             this.refreshInterval = (long) (samplingInt + ((lifetime - samplingInt) * (1.0 - fthr))) * 1000;

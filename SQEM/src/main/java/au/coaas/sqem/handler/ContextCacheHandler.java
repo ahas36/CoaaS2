@@ -1,26 +1,24 @@
 package au.coaas.sqem.handler;
 
-import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.sqem.proto.*;
 import au.coaas.cpree.proto.Lookup;
 import au.coaas.grpc.client.CPREEChannel;
-import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.sqem.proto.*;
 import au.coaas.sqem.redis.ConnectionPool;
+import au.coaas.cpree.proto.CPREEServiceGrpc;
 
 import org.bson.Document;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
 import org.redisson.api.*;
+import org.json.JSONObject;
 
-import java.lang.reflect.Array;
 import java.util.*;
 import java.time.Instant;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 import au.coaas.sqem.util.Utilty;
 import au.coaas.sqem.util.PubSub.Event;

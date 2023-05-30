@@ -90,7 +90,7 @@ public class RefreshExecutor {
             SQEMResponse cpInfo = blockingStub.getContextServiceInfo(ContextServiceId.newBuilder()
                     .setId(request.getRequest().getReference().getServiceId()).build());
 
-            if(cpInfo.getStatus() == "200"){
+            if(cpInfo.getStatus().equals("200")){
                 String contextId = request.getRequest().getReference().getEt().getType() + "-" + hashKey;
                 RefreshContext refObject = new RefreshContext(contextId,
                         fthr, request.getRefreshPolicy(),
@@ -263,7 +263,7 @@ public class RefreshExecutor {
                     else {
                         // If the current policy is reactive
                         if(isChanged){
-                            // Shift to the reactive policy
+                            // Shift to the proactive policy
                             synchronized (RefreshExecutor.class){
                                 // Setup proactive refreshing
                                 JSONObject sla = new JSONObject(request.getRequest().getSla());
@@ -272,7 +272,14 @@ public class RefreshExecutor {
                                         sla.getJSONObject("freshness").getDouble("fthresh");
                                 double res_life = sla.getJSONObject("freshness").getDouble("value") - profile.getLastRetLatency();
                                 double lifetime = sla.getJSONObject("freshness").getDouble("value");
-                                setProactiveRefreshing(request, hashKey, fthr, res_life, lifetime, request.getAttributesList());
+
+                                CacheRefreshRequest test = request.getRequest();
+                                test.toBuilder().setRefPolicy("proactive_shift");
+                                ContextRefreshRequest new_request = request.toBuilder()
+                                        .setRequest(test).setRefreshPolicy("proactive_shift").build();
+
+                                setProactiveRefreshing(new_request, hashKey, fthr, res_life,
+                                        lifetime, request.getAttributesList());
                                 // Toggle the refresh policy in the Hashtable in SQEM
                                 blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
                                         .setHashkey(hashKey)

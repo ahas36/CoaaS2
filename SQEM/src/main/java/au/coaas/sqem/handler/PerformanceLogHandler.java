@@ -402,16 +402,16 @@ public class PerformanceLogHandler {
             statement.setQueryTimeout(30);
             LocalDateTime now = LocalDateTime.now();
 
-            if(action.equals(ScheduleTasks.CACHE)){
+            if(action.equals(ScheduleTasks.CACHE) || action.equals(ScheduleTasks.REFRESH)){
                 String queryString = "INSERT INTO cacheActions(action,contextId,refreshPolicy, createdDatetime) " +
-                        "VALUES('%s', %s, '%s', CAST('%s' AS DATETIME2));";
+                        "VALUES('%s', '%s', '%s', CAST('%s' AS DATETIME2));";
                 statement.executeUpdate(String.format(queryString,
                         action.toString().toLowerCase(),
                         contextId, refPolicy, now.format(formatter)));
             }
             else {
                 String queryString = "INSERT INTO cacheActions(action,contextId, createdDatetime) " +
-                        "VALUES('%s', %s, '%s', CAST('%s' AS DATETIME2));";
+                        "VALUES('%s', '%s', CAST('%s' AS DATETIME2));";
                 statement.executeUpdate(String.format(queryString,
                         action.toString().toLowerCase(),
                         contextId, now.format(formatter)));

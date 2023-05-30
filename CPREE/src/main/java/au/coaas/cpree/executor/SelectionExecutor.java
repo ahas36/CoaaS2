@@ -381,7 +381,7 @@ public class SelectionExecutor {
                             json.put("retEff", 0.0);
                             json.put("cacheEff", 0.0);
                             double vec_total = access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
-                                    (1-reliability) < min_value ? 0.0 : Math.pow((1.0-reliability), 2) +
+                                    (1.0-reliability) < min_value ? 0.0 : Math.pow((1.0-reliability), 2) +
                                     complexity < min_value ? 0.0 : Math.pow(complexity, 2);
                             double denom = Math.sqrt(vec_total);
                             json.put("normalizer", denom);
@@ -665,7 +665,7 @@ public class SelectionExecutor {
             case "proactive_shift":
             case "reactive": {
                 // Check whether all the values are of the same unit.
-                double cache_penalties = 0;
+                double cache_penalties = 0.0;
 
                 SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
@@ -703,7 +703,7 @@ public class SelectionExecutor {
                     }
                     else {
                         // Refreshing almost at the sampling rate
-                        cache_cost = (retCost + cache_penalties) * (1/sampleInterval);
+                        cache_cost = (retCost + cache_penalties) * (1.0/sampleInterval);
                         response.setType(3);
                         hits = sampleInterval * lambda;
                         exp_mr = 1.0/(hits + 1.0);

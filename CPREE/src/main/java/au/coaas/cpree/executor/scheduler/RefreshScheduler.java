@@ -55,6 +55,9 @@ public class RefreshScheduler {
             throw new SchedulerException("Scheduler not started");
         }
 
+        // Stopping any existing schedules.
+        stopRefreshing(query.getContextId());
+
         JobDetail job = JobBuilder.newJob(QueryJob.class)
                 .withIdentity(query.getContextId(), "refreshGroup")
                 .usingJobData(query.getJobDataMap())

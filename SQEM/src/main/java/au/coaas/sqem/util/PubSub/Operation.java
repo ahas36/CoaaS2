@@ -6,8 +6,11 @@ import java.lang.reflect.Method;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 public class Operation extends Event{
+    private static final Logger log = Logger.getLogger(Operation.class.getName());
+
     public void subscribe(String channelName, Object subscriber) {
         if (!channels.containsKey(channelName)) {
             channels.put(channelName, new ConcurrentHashMap<>());
@@ -16,17 +19,22 @@ public class Operation extends Event{
     }
 
     public void publish(String channelName, Post message) {
-        for(Map.Entry<Integer, WeakReference<Object>> subs : channels.get(channelName).entrySet()) {
-            WeakReference<Object> subscriberRef = subs.getValue();
+        try {
+            for(Map.Entry<Integer, WeakReference<Object>> subs : channels.get(channelName).entrySet()) {
+                WeakReference<Object> subscriberRef = subs.getValue();
 
-            Object subscriberObj = subscriberRef.get();
+                Object subscriberObj = subscriberRef.get();
 
-            for (final Method method : subscriberObj.getClass().getDeclaredMethods()) {
-                Annotation annotation = method.getAnnotation(OnMessage.class);
-                if (annotation != null) {
-                    deliverMessage(subscriberObj, method, message);
+                for (final Method method : subscriberObj.getClass().getDeclaredMethods()) {
+                    Annotation annotation = method.getAnnotation(OnMessage.class);
+                    if (annotation != null) {
+                        deliverMessage(subscriberObj, method, message);
+                    }
                 }
             }
+        }
+        catch(Exception ex){
+            log.severe("Exception when publishing an event: " + ex.getMessage());
         }
     }
 

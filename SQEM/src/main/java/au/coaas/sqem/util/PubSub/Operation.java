@@ -15,16 +15,13 @@ public class Operation extends Event{
         if (!channels.containsKey(channelName)) {
             channels.put(channelName, new ConcurrentHashMap<>());
         }
-        channels.get(channelName).put(subscriber.hashCode(), new WeakReference<>(subscriber));
+        channels.get(channelName).put(subscriber.hashCode(), subscriber);
     }
 
     public void publish(String channelName, Post message) {
         try {
-            for(Map.Entry<Integer, WeakReference<Object>> subs : channels.get(channelName).entrySet()) {
-                WeakReference<Object> subscriberRef = subs.getValue();
-
-                Object subscriberObj = subscriberRef.get();
-
+            for(Map.Entry<Integer, Object> subs : channels.get(channelName).entrySet()) {
+                Object subscriberObj = subs.getValue();
                 for (final Method method : subscriberObj.getClass().getDeclaredMethods()) {
                     Annotation annotation = method.getAnnotation(OnMessage.class);
                     if (annotation != null) {

@@ -67,6 +67,7 @@ public final class CacheDataRegistry{
                 // Map<String, String> parameters = lookup.getParamsMap();
 
                 if(lookup.getCheckFresh()){
+                    // Cache lookup for unspecified entity
                     if(lookup.getHashKey().isEmpty() && !idAvailable){
                         // I need to parallely check in all the entities whether at least one of them is not fresh.
                         int entitiesCached = entities.size();
@@ -230,7 +231,8 @@ public final class CacheDataRegistry{
                                     .setRemainingLife(0).build();
                         }
                     }
-                    else { // Cache lookup for a specific entity
+                    // Cache lookup for a specific entity
+                    else {
                         double ageLoss = 0.0;
                         long remainingLife = 0;
                         LocalDateTime staleTime;

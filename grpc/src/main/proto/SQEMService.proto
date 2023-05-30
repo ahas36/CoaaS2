@@ -139,6 +139,7 @@ message CacheRefreshRequest
     CacheLookUp reference = 2;
     int64 observedTime = 3;
     string sla = 4;
+    string refPolicy = 5;
 }
 
 message RegisterEntityRequest

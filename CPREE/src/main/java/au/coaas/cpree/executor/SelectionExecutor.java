@@ -124,11 +124,20 @@ public class SelectionExecutor {
                         = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                 sqemStub.cacheEntity(CacheRequest.newBuilder()
                         .setJson(request.getContext())
+                        .setHashkey(request.getHashKey())
                         .setRefreshLogic(reftype.toString().toLowerCase())
                         .setCachelife(-1) // This is in miliseconds
                         .setLambdaConf(0.0) //
                         .setIndefinite(true)
-                        .setReference(request.getReference()).build());
+                        .setReference(CacheLookUp.newBuilder()
+                                .setEt(request.getReference().getEt())
+                                .setServiceId(request.getReference().getServiceId())
+                                .setUniformFreshness(request.getReference().getUniformFreshness())
+                                .setSamplingInterval(request.getReference().getSamplingInterval())
+                                .setCheckFresh(request.getReference().getCheckFresh())
+                                .setKey(request.getReference().getKey())
+                                .setQClass(request.getReference().getQClass())
+                                .setHashKey(request.getHashKey())).build());
 
                 // Configuring refreshing
                 if(reftype.equals(RefreshLogics.PROACTIVE_SHIFT)){

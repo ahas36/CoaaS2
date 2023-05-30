@@ -53,7 +53,7 @@ public class RefreshExecutor {
                             .setId(refreshRequest.getReference().getServiceId()).build());
 
             if(cpInfo.getStatus().equals("200")){
-                String contextId = refreshRequest.getReference().getServiceId() + "-" + refreshRequest.getHashKey();
+                String contextId = refreshRequest.getReference().getEt().getType() + "-" + refreshRequest.getHashKey();
                 RefreshContext refObject = new RefreshContext(contextId,
                         refreshRequest.getFthreh(),
                         refreshRequest.getRefreshPolicy(),
@@ -130,11 +130,13 @@ public class RefreshExecutor {
                 JSONObject entData = entityContext.optJSONObject(i);
                 String hashkey = entData.has("hashkey") ? entData.getString("hashkey") :
                         meta.getHashKeysList().get(i);
+                RefreshLogics refPolicy = RefreshLogics.REACTIVE;
 
                 if(prorefRegistery.get(entityType +"-"+ hashkey) != null) {
                     RefreshContext refObj = prorefRegistery.get(entityType +"-"+ hashkey);
                     lookup.setHashKey(hashkey);
                     lookup.setEt(refObj.getEtype());
+                    refPolicy = RefreshLogics.PROACTIVE_SHIFT;
 
                     if(hashkey != (initContextId.split("-"))[1]){
                         // Should reset the next scheduled retrieval for the entity.
@@ -147,7 +149,7 @@ public class RefreshExecutor {
                             residual_life = meta.getFreshness() - (meta.getRetLatMilis()/1000.0);
                         }
 
-                        // Reset the scheduler with the next lifetime
+                        // Reset the scheduler to the next lifetime
                         synchronized (RefreshExecutor.class){
                             // Update the context item from the registry
                             refObj.setInitInterval(residual_life);
@@ -167,6 +169,7 @@ public class RefreshExecutor {
 
                 asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                         .setReference(lookup)
+                        .setRefPolicy(refPolicy.toString().toLowerCase())
                         .setJson(entData.toString()).build());
             }
         }
@@ -284,6 +287,7 @@ public class RefreshExecutor {
                             = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                     asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                                     .setJson(request.getRequest().getJson())
+                                    .setRefPolicy(refPolicy)
                                     .setReference(CacheLookUp.newBuilder()
                                             .setEt(request.getRequest().getReference().getEt())
                                             .setServiceId(request.getRequest().getReference().getServiceId())
@@ -353,6 +357,7 @@ public class RefreshExecutor {
                                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                         asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                                 .setJson(request.getRequest().getJson())
+                                .setRefPolicy(refPolicy)
                                 .setReference(CacheLookUp.newBuilder()
                                         .setEt(request.getRequest().getReference().getEt())
                                         .setServiceId(request.getRequest().getReference().getServiceId())

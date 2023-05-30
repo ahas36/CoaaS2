@@ -97,6 +97,7 @@ public class ContextCacheHandler {
                 }
             }
 
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.CACHE, contextId, registerRequest.getRefreshLogic());
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity cached.").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
@@ -129,6 +130,7 @@ public class ContextCacheHandler {
                 lock.unlockAsync();
             });
 
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.REFRESH, contextId, updateRequest.getRefPolicy());
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity refreshed.").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
@@ -140,6 +142,8 @@ public class ContextCacheHandler {
         try {
             synchronized (ContextCacheHandler.class) {
                 registry.changeRefreshLogic(request);
+                String contextId = request.getLookup().getEt().getType() + "-" + request.getHashkey();
+                PerformanceLogHandler.logCacheActions(ScheduleTasks.TOGGLE, contextId, request.getRefreshLogic());
             }
         } catch (Exception e) {
             log.severe("Couldn't toggle refresh logic: " + e.getMessage());
@@ -171,6 +175,8 @@ public class ContextCacheHandler {
         evictStatus.whenCompleteAsync((res, exception) -> {
             lock.unlockAsync();
         });
+
+        PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
     }
 
     // Evicts an entity by hash key
@@ -187,7 +193,7 @@ public class ContextCacheHandler {
             RFuture<Boolean> evictStatus;
 
             if(result.getRemainingLife() > 0){
-                // Todo:
+                // TODO:
                 // Check whether there are queries remaining in queue to access this context
                 Instant future = Instant.now().plusSeconds(result.getRemainingLife());
                 evictStatus = cacheClient.getBucket(request.getEt().getType() + "-" +
@@ -211,6 +217,7 @@ public class ContextCacheHandler {
                 }
                 cacheClient.getKeys().deleteAsync(contextId);
                 evictStatus = cacheClient.getBucket(contextId).deleteAsync();
+                PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
             }
 
             evictStatus.whenCompleteAsync((res, exception) -> {
@@ -260,6 +267,7 @@ public class ContextCacheHandler {
             lock.unlockAsync();
         });
 
+        PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
         return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted.").build();
     }
 
@@ -277,7 +285,7 @@ public class ContextCacheHandler {
         long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpRegistry(request);
 
-        // Hit from Cache Regustry
+        // Hit from Cache Registry
         if(!result.getHashkey().isEmpty() && result.getIsCached() && result.getIsValid()){
             // This means that either the entity or all entities created using a context provider are cached and valid.
             try{

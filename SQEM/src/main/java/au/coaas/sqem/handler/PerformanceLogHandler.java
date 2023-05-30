@@ -19,6 +19,7 @@ import au.coaas.sqem.util.enums.DelayCacheLatency;
 import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
 
+import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.AtomicDouble;
 
@@ -388,6 +389,33 @@ public class PerformanceLogHandler {
                     latency = max_delay_cache_residence;
                 statement.executeUpdate(String.format(queryString, type, latency, now.format(formatter),
                         decType.equals(DelayCacheLatency.DEFINITE) ? "definite" : "indefinite"));
+        }
+        catch(SQLException ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
+    // Log all cache actions in summary.
+    public static void logCacheActions(ScheduleTasks action, String contextId, String refPolicy){
+        try{
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            LocalDateTime now = LocalDateTime.now();
+
+            if(action.equals(ScheduleTasks.CACHE)){
+                String queryString = "INSERT INTO cacheActions(action,contextId,refreshPolicy, createdDatetime) " +
+                        "VALUES('%s', %s, '%s', CAST('%s' AS DATETIME2));";
+                statement.executeUpdate(String.format(queryString,
+                        action.toString().toLowerCase(),
+                        contextId, refPolicy, now.format(formatter)));
+            }
+            else {
+                String queryString = "INSERT INTO cacheActions(action,contextId, createdDatetime) " +
+                        "VALUES('%s', %s, '%s', CAST('%s' AS DATETIME2));";
+                statement.executeUpdate(String.format(queryString,
+                        action.toString().toLowerCase(),
+                        contextId, now.format(formatter)));
+            }
         }
         catch(SQLException ex){
             log.severe(ex.getMessage());
@@ -1846,6 +1874,15 @@ public class PerformanceLogHandler {
                             "    latency BIGINT NOT NULL,\n" +
                             "    createdDatetime DATETIME NOT NULL,\n" +
                             "    horizon VARCHAR(10) NOT NULL)");
+
+            statement.execute(
+                    "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cacheActions')\n" +
+                            "CREATE TABLE cacheActions(\n" +
+                            "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                            "    action VARCHAR(15) NOT NULL,\n" +
+                            "    contextId VARCHAR(255) NOT NULL,\n" +
+                            "    refreshPolicy VARCHAR(255) NULL,\n" +
+                            "    createdDatetime DATETIME NOT NULL)");
 
             statement.execute(
                     "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='csms_performance')\n" +

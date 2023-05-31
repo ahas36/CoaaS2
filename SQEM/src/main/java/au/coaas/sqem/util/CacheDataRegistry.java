@@ -253,6 +253,7 @@ public final class CacheDataRegistry{
                             JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
                             JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
 
+                            // This is also wrong becuase the entity could have later been updated by a different CP
                             ageLoss = PerformanceLogHandler.getLastRetrievalTime(
                                     lookup.getServiceId(), finalHashKey);
 
@@ -282,10 +283,10 @@ public final class CacheDataRegistry{
                                 case "s":
                                 default:
                                     if(sampling.equals("")){
-                                        Double residual_life = freshness.getLong("value") - ageLoss;
-                                        Double expPrd = residual_life * (1.0 - freshness.getDouble("fthresh"));
-                                        staleTime = updateTime.plusSeconds(residual_life.longValue());
-                                        expiryTime = updateTime.plusSeconds(expPrd.longValue());
+                                        LocalDateTime sampleTime = updateTime.minusSeconds(Math.round(ageLoss));
+                                        Double expPrd = freshness.getLong("value") * (1.0 - freshness.getDouble("fthresh"));
+                                        staleTime = sampleTime.plusSeconds(freshness.getLong("value"));
+                                        expiryTime = sampleTime.plusSeconds(expPrd.longValue());
                                     }
                                     else {
                                         long samplingInterval = sampling.getLong("value");

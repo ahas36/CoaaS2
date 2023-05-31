@@ -1345,7 +1345,8 @@ public class PerformanceLogHandler {
     // Context Service Performance for retrievals
     public static double getLastRetrievalTime(String csId, String hashKey){
         String queryString = "SELECT TOP 1 response_time, age " +
-                "FROM coass_performance WHERE status = '200' AND identifier = '%s' AND hashKey = '%s' ORDER BY id DESC;";
+                "FROM coass_performance WHERE status = '200' AND identifier = '%s' AND hashKey = '%s' " +
+                "AND method != 'cacheSearch' ORDER BY id DESC;";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);

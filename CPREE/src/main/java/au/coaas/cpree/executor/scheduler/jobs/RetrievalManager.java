@@ -97,6 +97,7 @@ public class RetrievalManager {
                 }
                 else if (ageObj instanceof String) age = Long.valueOf((String) ageObj);
                 else age = Long.valueOf((long) ageObj);
+                response.put("zeroTime", startTime - age*1000);
             }
             else if(response.has("avgAge")){
                 age = (long) response.getDouble("avgAge");
@@ -115,13 +116,29 @@ public class RetrievalManager {
             if(response.has("results")){
                 String hashkey = "";
                 JSONArray entities = response.getJSONArray("results");
+                JSONArray temp_entities = new JSONArray();
                 for(int j=0; j<entities.length(); j++){
+                    JSONObject resEntity = entities.getJSONObject(j);
                     for (int i = 0; i < key.length(); i++) {
-                        Object idValue = entities.getJSONObject(i).get(key.getString(i));
+                        Object idValue = resEntity.get(key.getString(i));
                         hashkey += key.getString(i) + "@" + idValue.toString() + ";";
                     }
-                    hkeys.add(Utilities.getHashKey(hashkey));
+                    String hk = Utilities.getHashKey(hashkey);
+                    hkeys.add(hk);
+
+                    resEntity.put("hashkey", hk);
+                    String unit = resEntity.getJSONObject("age").getString("unit");
+                    Double value = resEntity.getJSONObject("age").getDouble("value");
+
+                    switch(unit){
+                        case "s": value = value*1000; break;
+                        case "h": value = value*60*1000; break;
+                    }
+
+                    resEntity.put("zeroTime", endTime - (value + retLatency));
+                    temp_entities.put(resEntity);
                 }
+                response.put("results", temp_entities);
             }
             else {
                 String hashkey = "";
@@ -129,7 +146,9 @@ public class RetrievalManager {
                     Object idValue = response.get(key.getString(i));
                     hashkey += key.getString(i) + "@" + idValue.toString() + ";";
                 }
-                hkeys.add(Utilities.getHashKey(hashkey));
+                String hk = Utilities.getHashKey(hashkey);
+                hkeys.add(hk);
+                response.put("hashkey", hk);
             }
 
             asyncStub.logPerformanceData(Statistic.newBuilder()
@@ -144,7 +163,7 @@ public class RetrievalManager {
                     .setFreshness(provider.getJSONObject("sla").getJSONObject("freshness").getDouble("value"))
                     .build();
 
-            return new AbstractMap.SimpleEntry(fetch.getBody(),meta);
+            return new AbstractMap.SimpleEntry(response.toString(), meta);
         }
 
         // Returning null means the CMP failed to retrieved context from the provider despite all attempts.

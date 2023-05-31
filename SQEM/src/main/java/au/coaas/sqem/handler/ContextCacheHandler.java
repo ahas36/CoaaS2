@@ -65,7 +65,11 @@ public class ContextCacheHandler {
     // Done
     public static SQEMResponse cacheEntity(CacheRequest registerRequest){
         try {
-            registry.updateRegistry(registerRequest.getReference(), registerRequest.getRefreshLogic());
+            Document contextData = Document.parse(registerRequest.getJson());
+            CacheLookUp.Builder temp = registerRequest.getReference().toBuilder();
+            temp.setZeroTime(contextData.getLong("zeroTime"));
+
+            registry.updateRegistry(temp.build(), registerRequest.getRefreshLogic());
             String contextId = registerRequest.getReference().getEt().getType() + "-"
                     + registerRequest.getReference().getHashKey();
 
@@ -73,7 +77,7 @@ public class ContextCacheHandler {
 
             // Preparing Cache Object
             Document entityJson = new Document();
-            entityJson.put("data", Document.parse(registerRequest.getJson()));
+            entityJson.put("data", contextData);
             entityJson.put("entityType", registerRequest.getReference().getEt().getType());
             entityJson.put("serviceId", registerRequest.getReference().getServiceId());
 
@@ -103,7 +107,6 @@ public class ContextCacheHandler {
     }
 
     // Updating cached context for an entity
-    // Done
     public static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
         try {
             String contextId = updateRequest.getReference().getEt().getType() + "-"
@@ -121,7 +124,8 @@ public class ContextCacheHandler {
                 Document cacheObject = ent.get();
                 cacheObject.replace("data", data);
                 refreshStatus = ent.getAndSetAsync(cacheObject);
-                registry.updateRegistry(updateRequest.getReference());
+                registry.updateRegistry(updateRequest.getReference().toBuilder()
+                        .setZeroTime(data.getLong("zeroTime")).build());
             }
 
             refreshStatus.whenCompleteAsync((res, exception) -> {

@@ -73,6 +73,7 @@ public class RetrievalManager {
         long age = 0;
         if(fetch.getStatus().equals("200")){
             JSONObject response = new JSONObject(fetch.getBody());
+
             if(response.has("age")){
                 Object ageObj = response.get("age");
                 if(ageObj instanceof JSONObject){
@@ -90,6 +91,7 @@ public class RetrievalManager {
                 }
                 else if(ageObj instanceof String) age = Long.valueOf((String) ageObj);
                 else age = Long.valueOf((long) ageObj);
+                response.put("zeroTime", startTime - age*1000);
             }
             else if(response.has("avgAge")){
                 age = (long) response.getDouble("avgAge");
@@ -108,13 +110,28 @@ public class RetrievalManager {
             if(response.has("results")){
                 String hashkey = "";
                 JSONArray entities = response.getJSONArray("results");
+                JSONArray temp_entities = new JSONArray();
+
                 for(int j=0; j<entities.length(); j++){
+                    JSONObject resEntity = entities.getJSONObject(j);
                     for (int i = 0; i < key.length(); i++) {
-                        Object idValue = entities.getJSONObject(j).get(key.getString(i));
+                        Object idValue = response.get(key.getString(i));
                         hashkey += key.getString(i) + "@" + idValue.toString() + ";";
                     }
                     String hk = Utilities.getHashKey(hashkey);
                     hkeys.add(hk);
+
+                    resEntity.put("hashkey", hk);
+                    String unit = resEntity.getJSONObject("age").getString("unit");
+                    Double value = resEntity.getJSONObject("age").getDouble("value");
+
+                    switch(unit){
+                        case "s": value = value*1000; break;
+                        case "h": value = value*60*1000; break;
+                    }
+
+                    resEntity.put("zeroTime", endTime - ( value + retLatency));
+                    temp_entities.put(resEntity);
 
                     if(isFullMiss){
                         JSONObject entage = entities.getJSONObject(j).optJSONObject("age");
@@ -126,6 +143,7 @@ public class RetrievalManager {
                                 .setAge(entage.getDouble("value")*1000 + retLatency).build());
                     }
                 }
+                response.put("results", temp_entities);
             }
             else {
                 String hashkey = "";
@@ -135,6 +153,7 @@ public class RetrievalManager {
                 }
                 String hk = Utilities.getHashKey(hashkey);
                 hkeys.add(hk);
+                response.put("hashkey", hk);
 
                 if(isFullMiss){
                     JSONObject entage = response.optJSONObject("age");
@@ -156,7 +175,7 @@ public class RetrievalManager {
                     .setIsDelayed(retDiff>0).setEarning(penEarning)
                     .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
-            return new AbstractMap.SimpleEntry(fetch.getBody(),hkeys);
+            return new AbstractMap.SimpleEntry(response.toString(),hkeys);
         }
 
         // Returning null means the CMP failed to retrieved context from the provider despite all attempts.

@@ -4,6 +4,7 @@ import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.proto.ScheduleTask;
 import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.hash.Hashing;
+import org.json.JSONObject;
 
 import java.util.Map;
 import java.nio.charset.StandardCharsets;
@@ -62,5 +63,33 @@ public class Utilty {
                 break;
             }
         }
+    }
+
+    public JSONObject getLifetime(String entityType){
+        JSONObject lifetime = new JSONObject();
+        lifetime.put("unit","s");
+        switch(entityType){
+            case "car":
+            case "vehicle": {
+                lifetime.put("value",30.0);
+                break;
+            }
+            case "thing":
+            case "weather": {
+                lifetime.put("value",3600.0);
+                break;
+            }
+            case "place": {
+                lifetime.put("value",1800.0);
+                break;
+            }
+            case "carpark":
+            case "parkingfacility": {
+                lifetime.put("value",60.0);
+                break;
+            }
+            default: lifetime.put("value",1200.0);
+        }
+        return lifetime;
     }
 }

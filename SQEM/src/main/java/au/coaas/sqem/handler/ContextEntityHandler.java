@@ -272,6 +272,7 @@ public class ContextEntityHandler {
             String hk = Utilty.getHashKey(hashkey);
             updateFields.append("hashkey", hk);
             updateFields.append("updatedTime", LocalDateTime.now());
+            updateFields.append("zeroTime", updateRequest.getObservedTime());
 
             //execute the update
             Document queryDoc = new Document();

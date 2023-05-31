@@ -46,20 +46,22 @@ public class RefreshContext {
         if(lifetime > samplingInt){
             this.refreshInterval = (long) (samplingInt + ((lifetime - samplingInt) * (1.0 - fthr))) * 1000;
             if(adjustment < samplingInt) {
-                // If the retrieval latency + age loss is less than the sampling interval
-                this.initInterval = (long) (samplingInt + ((initResiLife - samplingInt) * (1.0 - fthr))) * 1000;
+                // If the retrieval latency + age loss is less than the sampling interval.
+                double diff = samplingInt - adjustment;
+                this.initInterval = (long) (diff + ((initResiLife - samplingInt) * (1.0 - fthr))) * 1000;
             }
             else {
+                // If the retrieval latency + age loss is greater than the sampling interval.
                 double diff = adjustment - samplingInt;
                 double exp_prd = (lifetime - samplingInt) * (1.0 - fthr);
                 // Checking if the exp_prd has already elapsed that the item need immediatly be refreshed.
                 if(exp_prd < diff) this.initInterval = 0;
-                else this.initInterval = (long) (samplingInt + exp_prd) * 1000;
+                else this.initInterval = (long) (exp_prd - diff) * 1000;
             }
         }
         else {
-            this.refreshInterval = (long) (samplingInt) * 1000;
-            this.initInterval = (long) (initResiLife * (1.0 - fthr)) * 1000;
+            this.refreshInterval = (long) samplingInt * 1000;
+            this.initInterval = (long) initResiLife * 1000;
         }
 
     }
@@ -89,12 +91,14 @@ public class RefreshContext {
 
     // Setters
     public void setfthresh(double fthr, double initResiLife) {
+        // This can be wrong now (the initInterval)
         this.fthr = fthr;
         this.refreshInterval = (long) (this.lifetime * 1000 * (1.0 - fthr));
         this.initInterval = (long) (initResiLife * 1000 * (1.0 - fthr));
     }
 
     public void setInitInterval(double initResiLife){
+        // This can be wrong now (the initInterval)
         this.initInterval = (long) (initResiLife * 1000 * (1.0 - this.fthr));
     }
 }

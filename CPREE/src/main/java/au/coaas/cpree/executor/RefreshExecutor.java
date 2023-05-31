@@ -80,7 +80,6 @@ public class RefreshExecutor {
     }
 
     // Setting up proactive refreshing when a context item transition from reactive to proactive
-    // Done
     private static void setProactiveRefreshing(ContextRefreshRequest request, String hashKey, double fthr,
                                                double resiLife, double lifetime, List<String> attributes) {
         try{
@@ -116,7 +115,6 @@ public class RefreshExecutor {
     }
 
     // Refresh context for proactive refreshing with shift when automatically fetched
-    // Done
     public static void refreshContext(String initContextId, String contextString, String providerId,
                                       String entityType, SimpleContainer meta){
         try {
@@ -179,7 +177,6 @@ public class RefreshExecutor {
 
     // Refresh context for both Reactive refreshing and when forcing a Shift in proactive retrieval
     // Toggling the refresh policy
-    // Done
     public static CPREEResponse refreshContext(ContextRefreshRequest request) {
         try {
             String refPolicy = request.getRefreshPolicy();
@@ -203,8 +200,9 @@ public class RefreshExecutor {
                     .build());
 
             if(profile.getStatus().equals("200")){
+                JSONObject lifetime = Utilities.getLifetime(request.getRequest().getReference().getEt().getType());
                 RefreshLogics ref_type = RefreshExecutor.resolveRefreshLogic(
-                        new JSONObject(request.getRequest().getSla()), profile);
+                        new JSONObject(request.getRequest().getSla()), profile, lifetime.getDouble("value"));
 
                 if(refPolicy != null){
                     // RefPolicy is not null when,
@@ -221,7 +219,9 @@ public class RefreshExecutor {
                                 stopProactiveRefreshing(contextId);
                                 // Toggle the refresh policy in the Hashtable in SQEM
                                 blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
-                                        .setLookup(request.getRequest().getReference()).setRefreshLogic("reactive")
+                                        .setLookup(request.getRequest().getReference())
+                                        .setRefreshLogic("reactive")
+                                        .setHashkey(hashKey)
                                         .build());
                             }
                         }
@@ -231,16 +231,16 @@ public class RefreshExecutor {
                             double proffthr = profile.getExpFthr() != "NaN" ?
                                     Double.valueOf(profile.getExpFthr()) : config.getfthresh();
                             if(config.getfthresh() != proffthr){
-                                JSONObject freshReq = (new JSONObject(request.getRequest().getSla())).getJSONObject("freshness");
+                                // JSONObject freshReq = (new JSONObject(request.getRequest().getSla())).getJSONObject("freshness");
 
                                 double residual_life = 0.0;
                                 JSONObject context = new JSONObject(request.getRequest().getJson());
                                 if(context.has("age")){
-                                    residual_life = freshReq.getDouble("value") - profile.getLastRetLatency()
+                                    residual_life = lifetime.getDouble("value") - profile.getLastRetLatency()
                                             - context.getJSONObject("age").getDouble("value");
                                 }
                                 else {
-                                    residual_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+                                    residual_life = lifetime.getDouble("value") - profile.getLastRetLatency();
                                 }
 
                                 // Reset the scheduler with the next lifetime
@@ -270,8 +270,7 @@ public class RefreshExecutor {
                                 double fthr = profile.getExpFthr() != "NaN" ?
                                         Double.valueOf(profile.getExpFthr()) :
                                         sla.getJSONObject("freshness").getDouble("fthresh");
-                                double res_life = sla.getJSONObject("freshness").getDouble("value") - profile.getLastRetLatency();
-                                double lifetime = sla.getJSONObject("freshness").getDouble("value");
+                                double res_life = lifetime.getDouble("value") - profile.getLastRetLatency();
 
                                 CacheRefreshRequest test = request.getRequest();
                                 test.toBuilder().setRefPolicy("proactive_shift");
@@ -279,7 +278,7 @@ public class RefreshExecutor {
                                         .setRequest(test).setRefreshPolicy("proactive_shift").build();
 
                                 setProactiveRefreshing(new_request, hashKey, fthr, res_life,
-                                        lifetime, request.getAttributesList());
+                                        lifetime.getDouble("value"), request.getAttributesList());
                                 // Toggle the refresh policy in the Hashtable in SQEM
                                 blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
                                         .setHashkey(hashKey)
@@ -361,18 +360,11 @@ public class RefreshExecutor {
 
                         SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+
                         asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                                 .setJson(request.getRequest().getJson())
                                 .setRefPolicy(refPolicy)
-                                .setReference(CacheLookUp.newBuilder()
-                                        .setEt(request.getRequest().getReference().getEt())
-                                        .setServiceId(request.getRequest().getReference().getServiceId())
-                                        .setUniformFreshness(request.getRequest().getReference().getUniformFreshness())
-                                        .setSamplingInterval(request.getRequest().getReference().getSamplingInterval())
-                                        .setCheckFresh(request.getRequest().getReference().getCheckFresh())
-                                        .setKey(request.getRequest().getReference().getKey())
-                                        .setQClass(request.getRequest().getReference().getQClass())
-                                        .setHashKey(hashKey))
+                                .setReference(request.getRequest().getReference().toBuilder().setHashKey(hashKey))
                                 .setObservedTime(request.getRequest().getObservedTime())
                                 .setSla(request.getRequest().getSla())
                                 .build());
@@ -397,13 +389,16 @@ public class RefreshExecutor {
                                         Double.valueOf(profile.getExpFthr()) :
                                         freshReq.getDouble("fthresh");
 
-                                double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+                                JSONObject entData = new JSONObject(request.getRequest().getJson());
+                                long zeroTime = entData.getLong("zeroTime");
+                                long now = System.currentTimeMillis();
+                                double res_life =  lifetime.getDouble("value") - (now - zeroTime);
 
                                 setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                         .setEt(request.getRequest().getReference().getEt())
                                         .setReference(request.getRequest().getReference())
                                         .setFthreh(fthresh)
-                                        .setLifetime(freshReq.getDouble("value")) // seconds
+                                        .setLifetime(lifetime.getDouble("value")) // seconds
                                         .setResiLifetime(res_life) // seconds
                                         .setHashKey(hashKey)
                                         .setSamplingInterval(sampling.getDouble("value")) // seconds
@@ -430,11 +425,10 @@ public class RefreshExecutor {
     /** Refreshing Utility */
     // Resolving what the most efficient refreshing policy for the context item
     // Done
-    public static RefreshLogics resolveRefreshLogic(JSONObject sla, ContextProviderProfile profile){
+    public static RefreshLogics resolveRefreshLogic(JSONObject sla, ContextProviderProfile profile, double lifetime){
         // Resolve the best cost-efficient refreshing logic based on lifetime and sampling technique.
+        String life_unit = "s";
         boolean autoFetch = sla.getBoolean("autoFetch");
-        String life_unit = sla.getJSONObject("freshness").getString("unit");
-        double lifetime = sla.getJSONObject("freshness").getDouble("value");
         double samplingInterval = sla.getJSONObject("updateFrequency").getDouble("value");
         double reliability = !profile.getRelaibility().equals("NaN") ? Double.valueOf(profile.getRelaibility()) : 0.5;
 
@@ -447,7 +441,7 @@ public class RefreshExecutor {
             fthresh = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                     sla.getJSONObject("freshness").getDouble("fthresh");
 
-        if(life_unit != sla.getJSONObject("updateFrequency").getString("unit")) {
+        if(!life_unit.equals(sla.getJSONObject("updateFrequency").getString("unit"))) {
             samplingInterval = Utilities.unitConverter(MeasuredProperty.TIME,
                     sla.getJSONObject("updateFrequency").getString("unit"), life_unit, samplingInterval);
         }

@@ -2,6 +2,7 @@ package au.coaas.cpree.utils;
 
 import au.coaas.cpree.utils.enums.MeasuredProperty;
 import com.google.common.hash.Hashing;
+import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
@@ -152,5 +153,33 @@ public class Utilities {
             return Math.sqrt(standard_deviation/(double) array_length);
         }
         return 1.0;
+    }
+
+    public static JSONObject getLifetime(String entityType){
+        JSONObject lifetime = new JSONObject();
+        lifetime.put("unit","s");
+        switch(entityType){
+            case "car":
+            case "vehicle": {
+                lifetime.put("value",30.0);
+                break;
+            }
+            case "thing":
+            case "weather": {
+                lifetime.put("value",3600.0);
+                break;
+            }
+            case "place": {
+                lifetime.put("value",1800.0);
+                break;
+            }
+            case "carpark":
+            case "parkingfacility": {
+                lifetime.put("value",60.0);
+                break;
+            }
+            default: lifetime.put("value",1200.0);
+        }
+        return lifetime;
     }
 }

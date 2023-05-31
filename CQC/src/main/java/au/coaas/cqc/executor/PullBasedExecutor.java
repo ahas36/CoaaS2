@@ -1474,7 +1474,7 @@ public class PullBasedExecutor {
                 }
             }
             else if(cacheStatus == 404 && registerState){
-                // 404 means the item is not at all cached
+                // 404 means all context entities are not at all cached
                 // Trigger Selective Caching Evaluation
                 JSONObject retrievedContext = new JSONObject(retEntity);
                 if(!retrievedContext.has("results")){

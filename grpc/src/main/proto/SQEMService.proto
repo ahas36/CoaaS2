@@ -40,6 +40,7 @@ message CacheLookUp {
     string key = 7;
     string qClass = 8;
     string hashKey = 9;
+    uint64 zeroTime = 10;
 }
 
 message RefreshUpdate {

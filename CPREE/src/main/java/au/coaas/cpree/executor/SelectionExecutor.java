@@ -117,11 +117,16 @@ public class SelectionExecutor {
 
             if(cacheAll){
                 // Block executes the traditional cache-all (leave a copy) policy if configured.
+                JSONObject lifetime = Utilities.getLifetime(request.getReference().getEt().getType());
                 RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(
-                        new JSONObject(request.getSla()), profile);
+                        new JSONObject(request.getSla()), profile, lifetime.getDouble("value"));
 
                 SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
                         = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+
+                CacheLookUp.Builder updatedRef = request.getReference().toBuilder();
+                updatedRef.setHashKey(request.getHashKey());
+
                 sqemStub.cacheEntity(CacheRequest.newBuilder()
                         .setJson(request.getContext())
                         .setHashkey(request.getHashKey())
@@ -129,15 +134,7 @@ public class SelectionExecutor {
                         .setCachelife(-1) // This is in miliseconds
                         .setLambdaConf(0.0) //
                         .setIndefinite(true)
-                        .setReference(CacheLookUp.newBuilder()
-                                .setEt(request.getReference().getEt())
-                                .setServiceId(request.getReference().getServiceId())
-                                .setUniformFreshness(request.getReference().getUniformFreshness())
-                                .setSamplingInterval(request.getReference().getSamplingInterval())
-                                .setCheckFresh(request.getReference().getCheckFresh())
-                                .setKey(request.getReference().getKey())
-                                .setQClass(request.getReference().getQClass())
-                                .setHashKey(request.getHashKey())).build());
+                        .setReference(updatedRef).build());
 
                 // Configuring refreshing
                 if(reftype.equals(RefreshLogics.PROACTIVE_SHIFT)){
@@ -148,13 +145,16 @@ public class SelectionExecutor {
                                 Double.valueOf(profile.getExpFthr()) :
                                 freshReq.getDouble("fthresh");
 
-                        double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+                        JSONObject entData = new JSONObject(request.getContext());
+                        long zeroTime = entData.getLong("zeroTime");
+                        long now = System.currentTimeMillis();
+                        double res_life =  lifetime.getDouble("value") - (now - zeroTime);
 
                         RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                 .setEt(request.getReference().getEt())
                                 .setReference(request.getReference()).setFthreh(fthresh)
-                                .setLifetime(freshReq.getDouble("value")) // seconds
-                                .setResiLifetime(res_life) // seconds
+                                .setLifetime(lifetime.getDouble("value")) // seconds
+                                .setResiLifetime(res_life/1000.0) // seconds
                                 .setHashKey(request.getHashKey())
                                 .setSamplingInterval(sampling.getDouble("value")) // seconds
                                 .setRefreshPolicy(RefreshLogics.PROACTIVE_SHIFT.toString().toLowerCase())
@@ -181,12 +181,17 @@ public class SelectionExecutor {
                                     Double.valueOf(profile.getExpFthr()) :
                                     freshReq.getDouble("fthresh");
 
-                            double res_life = freshReq.getDouble("value") - profile.getLastRetLatency();
+                            JSONObject lifetime = Utilities.getLifetime(request.getReference().getEt().getType());
+                            JSONObject entData = new JSONObject(request.getContext());
+
+                            long zeroTime = entData.getLong("zeroTime");
+                            long now = System.currentTimeMillis();
+                            double res_life =  lifetime.getDouble("value") - (now - zeroTime);
 
                             RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                     .setEt(request.getReference().getEt())
                                     .setReference(request.getReference()).setFthreh(fthresh)
-                                    .setLifetime(freshReq.getDouble("value")) // seconds
+                                    .setLifetime(lifetime.getDouble("value")) // seconds
                                     .setResiLifetime(res_life) // seconds
                                     .setHashKey(request.getHashKey())
                                     .setSamplingInterval(sampling.getDouble("value")) // seconds
@@ -238,7 +243,9 @@ public class SelectionExecutor {
                     LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
                     LookUps.lookup(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda)) {
 
-                ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile);
+                JSONObject lifetime = Utilities.getLifetime(lookup.getEt().getType());
+                ref_type = RefreshExecutor.resolveRefreshLogic(new JSONObject(sla), profile,
+                        lifetime.getDouble("value"));
 
                 double lambda_conf = 0.0;
                 long est_delayTime = 0;
@@ -267,9 +274,8 @@ public class SelectionExecutor {
                         double fthr = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
-                        double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double intercept = c_profile.get().getIntercept().equals("NaN") ? 0 : Double.valueOf(c_profile.get().getIntercept());
-                        double exp_prd = lifetime * (1 - fthr);
+                        double exp_prd = lifetime.getDouble("value") * (1 - fthr);
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
                         // The expiry period should also be greater than the time between 2 access to the item in order to at least have > 0 chance of a hit.
@@ -284,9 +290,10 @@ public class SelectionExecutor {
                         json.put("ar", access_trend);
 
                         if((sampleInterval == 0.0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1.0/lambda)) ||
-                                (sampleInterval > 0.0 && ((sampleInterval > lifetime && sampleInterval > (1.0/lambda)) ||
-                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr)) > (1.0/lambda))))) {
+                                (sampleInterval > 0.0 && ((sampleInterval > lifetime.getDouble("value") && sampleInterval > (1.0/lambda)) ||
+                                        (sampleInterval <= lifetime.getDouble("value") && (sampleInterval + (lifetime.getDouble("value") - sampleInterval) * (1.0 - fthr)) > (1.0/lambda))))) {
                             // 4. Retrieval Efficiency
+                            slaObj.put("lifetime", lifetime.getDouble("value"));
                             RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
                                     cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
                             json.put("retEff", ret_effficiency.getEfficiecy());
@@ -389,11 +396,11 @@ public class SelectionExecutor {
                             if(sampleInterval == 0)
                                 lambda_conf = 1.0/exp_prd;
                             else {
-                                if(sampleInterval > lifetime)
+                                if(sampleInterval > lifetime.getDouble("value"))
                                     lambda_conf = 1.0/sampleInterval;
                                 else {
                                     // This is calculated assuming that the lifetime is constant for the context
-                                    double extd_expPrd = sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr);
+                                    double extd_expPrd = sampleInterval + (lifetime.getDouble("value") - sampleInterval) * (1.0 - fthr);
                                     lambda_conf = 1.0/extd_expPrd;
                                 }
                             }
@@ -420,9 +427,8 @@ public class SelectionExecutor {
                         double fthr = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
-                        double lifetime = slaObj.getJSONObject("freshness").getDouble("value");
                         double intercept = profile.getArIntercept().equals("NaN") ? 0 : Double.valueOf(profile.getArIntercept());
-                        double exp_prd = lifetime * (1.0 - fthr);
+                        double exp_prd = lifetime.getDouble("value") * (1.0 - fthr);
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
                         // The expiry period should also be greater than the time between 2 access to the item in order to at least have > 0 chance of a hit.
@@ -437,9 +443,10 @@ public class SelectionExecutor {
                         json.put("ar", access_trend);
 
                         if((sampleInterval == 0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1.0/lambda)) ||
-                                (sampleInterval > 0 && ((sampleInterval > lifetime && sampleInterval > (1.0/lambda)) ||
-                                        (sampleInterval <= lifetime && (sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr)) > (1.0/lambda))))) {
+                                (sampleInterval > 0 && ((sampleInterval > lifetime.getDouble("value") && sampleInterval > (1.0/lambda)) ||
+                                        (sampleInterval <= lifetime.getDouble("value") && (sampleInterval + (lifetime.getDouble("value") - sampleInterval) * (1.0 - fthr)) > (1.0/lambda))))) {
                             // 4. Retrieval Efficiency
+                            slaObj.put("lifetime", lifetime.getDouble("value"));
                             RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
                                     cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
                             json.put("retEff", ret_effficiency.getEfficiecy());
@@ -534,11 +541,11 @@ public class SelectionExecutor {
                             if(sampleInterval == 0)
                                 lambda_conf = 1.0/exp_prd;
                             else {
-                                if(sampleInterval > lifetime)
+                                if(sampleInterval > lifetime.getDouble("value"))
                                     lambda_conf = 1.0/sampleInterval;
                                 else {
                                     // This is calculated assuming that the lifetime is constant for the context
-                                    double extd_expPrd = sampleInterval + (lifetime - sampleInterval) * (1.0 - fthr);
+                                    double extd_expPrd = sampleInterval + (lifetime.getDouble("value") - sampleInterval) * (1.0 - fthr);
                                     lambda_conf = 1.0/extd_expPrd;
                                 }
                             }
@@ -575,15 +582,7 @@ public class SelectionExecutor {
                             .setCachelife(est_cacheLife) // This is in miliseconds
                             .setLambdaConf(lambda_conf)
                             .setIndefinite(indefinite)
-                            .setReference(CacheLookUp.newBuilder()
-                                    .setEt(lookup.getEt())
-                                    .setServiceId(lookup.getServiceId())
-                                    .setUniformFreshness(lookup.getUniformFreshness())
-                                    .setSamplingInterval(lookup.getSamplingInterval())
-                                    .setCheckFresh(lookup.getCheckFresh())
-                                    .setKey(lookup.getKey())
-                                    .setQClass(lookup.getQClass())
-                                    .setHashKey(hashkey)).build());
+                            .setReference(lookup.toBuilder().setHashKey(hashkey)).build());
                     return new AbstractMap.SimpleEntry<>(response.get().getStatus().equals("200") ? true : false,
                             ref_type);
                 }
@@ -625,7 +624,7 @@ public class SelectionExecutor {
         double retCost = Double.valueOf(profile.getExpCost());
         double penalty = Double.valueOf(cqc_profile.getPenalty());
         double retlatency = Double.valueOf(profile.getExpRetLatency()); // seconds
-        double lifetime = slaObj.getJSONObject("freshness").getDouble("value"); // seconds
+        double lifetime = slaObj.getDouble("lifetime"); // seconds
         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value"); // seconds
 
         RetrievalEfficiency.Builder response = RetrievalEfficiency.newBuilder();

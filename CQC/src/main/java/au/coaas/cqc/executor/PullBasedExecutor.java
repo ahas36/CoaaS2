@@ -276,55 +276,74 @@ public class PullBasedExecutor {
                                                                     criticality, sla, complexity, terms.keySet());
 
                     // Checking if from Stream Read or not.
-                    if(cacheResult.getKey() != null){
-                        JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
-                        ce.put(entity.getEntityID(),resultJson);
-                        if(query.getSelect().getSelectAttrsMap().containsKey(entity.getEntityID()))
-                            executeQueryBlock(rpnConditionList, ce, entityID);
-                        if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
-                    }
-                    else {
-                        AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit,
-                                ((SimpleContainer) cacheResult.getValue()).getContextService());
-                        ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
+                    if(cacheResult != null){
+                        if(cacheResult.getKey() != null){
+                            JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
+                            ce.put(entity.getEntityID(),resultJson);
+                            if(query.getSelect().getSelectAttrsMap().containsKey(entity.getEntityID()))
+                                executeQueryBlock(rpnConditionList, ce, entityID);
+                            if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
+                        }
+                        else {
+                            AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit,
+                                    ((SimpleContainer) cacheResult.getValue()).getContextService());
+                            ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
 
-                        if(cacheEnabled){
-                            if(consumerQoS == null) {
-                                consumerQoS = sla.getJSONObject("sla").getJSONObject("qos");
+                            if(cacheEnabled){
+                                if(consumerQoS == null) {
+                                    consumerQoS = sla.getJSONObject("sla").getJSONObject("qos");
+                                }
+
+                                JSONObject finalConsumerQoS = consumerQoS;
+                                Executors.newCachedThreadPool().submit(() -> {
+                                    JSONObject conSer = new JSONObject(
+                                            ((SimpleContainer) cacheResult.getValue()).getContextService());
+                                    JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
+                                    String keys = "";
+                                    for(Object k : candidate_keys)
+                                        keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
+
+                                    JSONObject freshnessCal = conSer.getJSONObject("sla").getJSONObject("freshness");
+                                    freshnessCal.put("fthresh", finalConsumerQoS.getDouble("fthresh"));
+
+                                    CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
+                                            .setEt(entity.getType())
+                                            .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
+                                            .setCheckFresh(true)
+                                            .setKey(keys).setQClass("1")
+                                            .setUniformFreshness(freshnessCal.toString()) // current lifetime & REQUESTED fthresh for the query
+                                            .setSamplingInterval(conSer.getJSONObject("sla")
+                                                    .getJSONObject("updateFrequency").toString()); // sampling
+
+                                    SimpleContainer summary = (SimpleContainer) cacheResult.getValue();
+                                    refreshOrCacheContext(
+                                            conSer.getJSONObject("sla"),
+                                            Integer.parseInt(summary.getStatus()),
+                                            lookup, rex.getKey().toString(),
+                                            summary.getRefPolicy(),
+                                            complexity, summary.getHashKeysList());
+                                });
                             }
-
-                            JSONObject finalConsumerQoS = consumerQoS;
-                            Executors.newCachedThreadPool().submit(() -> {
-                                JSONObject conSer = new JSONObject(
-                                        ((SimpleContainer) cacheResult.getValue()).getContextService());
-                                JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
-                                String keys = "";
-                                for(Object k : candidate_keys)
-                                    keys = keys.isEmpty() ? k.toString() : keys + "," + k.toString();
-
-                                JSONObject freshnessCal = conSer.getJSONObject("sla").getJSONObject("freshness");
-                                freshnessCal.put("fthresh", finalConsumerQoS.getDouble("fthresh"));
-
-                                CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
-                                        .setEt(entity.getType())
-                                        .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
-                                        .setCheckFresh(true)
-                                        .setKey(keys).setQClass("1")
-                                        .setUniformFreshness(freshnessCal.toString()) // current lifetime & REQUESTED fthresh for the query
-                                        .setSamplingInterval(conSer.getJSONObject("sla")
-                                                .getJSONObject("updateFrequency").toString()); // sampling
-
-                                SimpleContainer summary = (SimpleContainer) cacheResult.getValue();
-                                refreshOrCacheContext(
-                                        conSer.getJSONObject("sla"),
-                                        Integer.parseInt(summary.getStatus()),
-                                        lookup, rex.getKey().toString(),
-                                        summary.getRefPolicy(),
-                                        complexity, summary.getHashKeysList());
-                            });
                         }
                     }
+                    else {
+                        JSONObject resultMessage = new JSONObject();
+                        resultMessage.put("Message", "One or more context requested can not be accessed!");
 
+                        CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("400")
+                                .setQueryId(queryId)
+                                .setBody(resultMessage.toString())
+                                .setAdmin(CdqlAdmin.newBuilder()
+                                        .setRtmax(consumerQoS.getJSONObject("rtmax").getLong("value"))
+                                        .setPrice(consumerQoS.has("price")? consumerQoS.getDouble("price") :
+                                                sla.getJSONObject("sla").getJSONObject("price").getDouble("value"))
+                                        .setRtpenalty(consumerQoS.getJSONObject("rtmax").getJSONObject("penalty")
+                                                .getDouble("value"))
+                                        .build())
+                                .build();
+
+                        return cdqlResponse;
+                    }
                 }
                 else {
                     // Querying from registered entities. This does not guarantee "completeness" of context.
@@ -1329,7 +1348,7 @@ public class PullBasedExecutor {
                 // Look up also considers known refreshing logics
                 SQEMResponse data = sqemStub.handleContextRequestInCache(lookup.build());
 
-                if(data.getBody().equals("") && data.getStatus() != "500"){
+                if(data.getStatus().equals("400") || data.getStatus().equals("404")){
                     // Need to fetch from a different Context Provider for 2 scenarios when partial misses occur when proactively refreshed, and
                     // (1) The data are streamed
                     // (2) The sensor is sampling at a certain rate
@@ -1379,10 +1398,15 @@ public class PullBasedExecutor {
                         continue; // Moving to the next context provider since it is currently unavailable.
                     }
                 }
-                else {
+                else if (data.getStatus().equals("200")){
                     // Complete Hit Return
                     return new AbstractMap.SimpleEntry(data.getBody(),
                             qos.put("price", consumerSLA.getJSONObject("sla").getJSONObject("price").getDouble("value")));
+                }
+                else {
+                    // This could be taken out.
+                    log.severe("Error had occured when fetching from cache and/or storage!");
+                    return null;
                 }
             }
 

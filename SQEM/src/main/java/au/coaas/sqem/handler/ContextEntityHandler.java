@@ -199,8 +199,7 @@ public class ContextEntityHandler {
 
             MongoCollection<Document> collection = db.getCollection(collectionName);
 
-            BasicDBObject query = new BasicDBObject();
-            query.put("hashkey", entIDs.getKeysList());
+            Bson query = Filters.in("hashkey", entIDs.getKeysList());
             MongoCursor<Document> cursor = collection.find(query).cursor();
             JSONArray ja = new JSONArray();
             while (cursor.hasNext()) {

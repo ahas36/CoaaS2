@@ -1,6 +1,10 @@
 package au.coaas.cpree.executor.scheduler;
 
 import au.coaas.cqp.proto.ContextEntityType;
+import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.ContextServiceId;
+import au.coaas.sqem.proto.SQEMResponse;
+import au.coaas.sqem.proto.SQEMServiceGrpc;
 import org.json.JSONObject;
 import org.quartz.JobDataMap;
 
@@ -17,6 +21,7 @@ public class RefreshContext {
     private String contextProvider;
     private ContextEntityType etype;
     private Map<String, String> params;
+    private double currentSamplingInt;
 
     private long initInterval;
     private long refreshInterval; // This is in miliseconds
@@ -37,6 +42,7 @@ public class RefreshContext {
         this.csId = cpObj.getJSONObject("_id").getString("$oid");
         double samplingInt = cpObj.getJSONObject("sla").getJSONObject("updateFrequency").getDouble("value");
 
+        this.currentSamplingInt = samplingInt;
         cpObj.getJSONObject("sla").getJSONObject("freshness").put("fthresh", this.fthr);
         this.contextProvider = cpObj.toString();
 
@@ -91,14 +97,64 @@ public class RefreshContext {
 
     // Setters
     public void setfthresh(double fthr, double initResiLife) {
-        // This can be wrong now (the initInterval)
         this.fthr = fthr;
-        this.refreshInterval = (long) (this.lifetime * 1000 * (1.0 - fthr));
-        this.initInterval = (long) (initResiLife * 1000 * (1.0 - fthr));
+
+        if(initResiLife < 0) initResiLife = 0;
+        double adjustment = lifetime - initResiLife;
+        if(lifetime > currentSamplingInt){
+            this.refreshInterval = (long) (currentSamplingInt + ((lifetime - currentSamplingInt) * (1.0 - fthr))) * 1000;
+            if(adjustment < currentSamplingInt) {
+                // If the retrieval latency + age loss is less than the sampling interval.
+                double diff = currentSamplingInt - adjustment;
+                this.initInterval = (long) (diff + ((initResiLife - currentSamplingInt) * (1.0 - fthr))) * 1000;
+            }
+            else {
+                // If the retrieval latency + age loss is greater than the sampling interval.
+                double diff = adjustment - currentSamplingInt;
+                double exp_prd = (lifetime - currentSamplingInt) * (1.0 - fthr);
+                // Checking if the exp_prd has already elapsed that the item need immediatly be refreshed.
+                if(exp_prd < diff) this.initInterval = 0;
+                else this.initInterval = (long) (exp_prd - diff) * 1000;
+            }
+        }
+        else {
+            this.refreshInterval = (long) currentSamplingInt * 1000;
+            this.initInterval = (long) initResiLife * 1000;
+        }
     }
 
-    public void setInitInterval(double initResiLife){
+    public void setInitInterval(double initResiLife, String cpId){
         // This can be wrong now (the initInterval)
-        this.initInterval = (long) (initResiLife * 1000 * (1.0 - this.fthr));
+        if(!cpId.equals(csId)){
+            this.csId = cpId;
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub =
+                    SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            SQEMResponse csResponse = sqemStub.getContextServiceInfo(ContextServiceId
+                    .newBuilder().setId(cpId).build());
+            this.contextProvider = csResponse.getBody();
+        }
+
+        if(initResiLife < 0) initResiLife = 0;
+        double adjustment = lifetime - initResiLife;
+        if(lifetime > this.currentSamplingInt){
+            this.refreshInterval = (long) (currentSamplingInt + ((lifetime - currentSamplingInt) * (1.0 - fthr))) * 1000;
+            if(adjustment < currentSamplingInt) {
+                // If the retrieval latency + age loss is less than the sampling interval.
+                double diff = currentSamplingInt - adjustment;
+                this.initInterval = (long) (diff + ((initResiLife - currentSamplingInt) * (1.0 - fthr))) * 1000;
+            }
+            else {
+                // If the retrieval latency + age loss is greater than the sampling interval.
+                double diff = adjustment - currentSamplingInt;
+                double exp_prd = (lifetime - currentSamplingInt) * (1.0 - fthr);
+                // Checking if the exp_prd has already elapsed that the item need immediatly be refreshed.
+                if(exp_prd < diff) this.initInterval = 0;
+                else this.initInterval = (long) (exp_prd - diff) * 1000;
+            }
+        }
+        else {
+            this.refreshInterval = (long) currentSamplingInt * 1000;
+            this.initInterval = (long) initResiLife * 1000;
+        }
     }
 }

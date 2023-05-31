@@ -158,9 +158,11 @@ public class RetrievalManager {
                     .setMethod("executeFetch").setStatus(fetch.getStatus())
                     .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0).build());
 
+            JSONObject lifetime = Utilities.getLifetime(provider.getJSONObject("info").getString("name"));
+
             SimpleContainer meta = SimpleContainer.newBuilder().addAllHashKeys(hkeys)
                     .setRetLatMilis(endTime-startTime)
-                    .setFreshness(provider.getJSONObject("sla").getJSONObject("freshness").getDouble("value"))
+                    .setFreshness(lifetime.getDouble("value"))
                     .build();
 
             return new AbstractMap.SimpleEntry(response.toString(), meta);
@@ -192,9 +194,10 @@ public class RetrievalManager {
 
             long endTime = System.currentTimeMillis();
             JSONObject cs = new JSONObject(contextService);
+            JSONObject lifetime = Utilities.getLifetime(entityType);
             SimpleContainer meta = SimpleContainer.newBuilder().addAllHashKeys(fetch.getHashkeysList())
                     .setRetLatMilis(endTime-startTime)
-                    .setFreshness(cs.getJSONObject("sla").getJSONObject("freshness").getDouble("value"))
+                    .setFreshness(lifetime.getDouble("value"))
                     .build();
             return new AbstractMap.SimpleEntry(entities.getBody(),meta);
         }

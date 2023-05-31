@@ -107,6 +107,7 @@ public class ContextCacheHandler {
     }
 
     // Updating cached context for an entity
+    // Done
     public static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
         try {
             String contextId = updateRequest.getReference().getEt().getType() + "-"

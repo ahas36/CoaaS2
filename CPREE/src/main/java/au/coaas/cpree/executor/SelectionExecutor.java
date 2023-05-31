@@ -148,13 +148,13 @@ public class SelectionExecutor {
                         JSONObject entData = new JSONObject(request.getContext());
                         long zeroTime = entData.getLong("zeroTime");
                         long now = System.currentTimeMillis();
-                        double res_life =  lifetime.getDouble("value") - (now - zeroTime);
+                        double res_life =  lifetime.getDouble("value") - ((now - zeroTime)/1000);
 
                         RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                 .setEt(request.getReference().getEt())
                                 .setReference(request.getReference()).setFthreh(fthresh)
                                 .setLifetime(lifetime.getDouble("value")) // seconds
-                                .setResiLifetime(res_life/1000.0) // seconds
+                                .setResiLifetime(res_life) // seconds
                                 .setHashKey(request.getHashKey())
                                 .setSamplingInterval(sampling.getDouble("value")) // seconds
                                 .setRefreshPolicy(RefreshLogics.PROACTIVE_SHIFT.toString().toLowerCase())
@@ -186,7 +186,7 @@ public class SelectionExecutor {
 
                             long zeroTime = entData.getLong("zeroTime");
                             long now = System.currentTimeMillis();
-                            double res_life =  lifetime.getDouble("value") - (now - zeroTime);
+                            double res_life =  lifetime.getDouble("value") - ((now - zeroTime)/1000);
 
                             RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
                                     .setEt(request.getReference().getEt())

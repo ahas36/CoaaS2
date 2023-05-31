@@ -168,17 +168,21 @@ public class PerformanceLogHandler {
         if(!entities.isEmpty()){
             for(Object ent: entities){
                 JSONObject properEntity = (JSONObject) ent;
-
-                Double ageInMS = properEntity.getJSONObject("age").getDouble("value") * 1000;
-                JSONObject updated = properEntity.getJSONObject("updatedTime");
                 Date now = new Date();
                 long nowTime = now.getTime();
-
                 long totalAge = 0;
-                String date = updated.getString("$date").replace("Z","");
-                ZonedDateTime datetime = LocalDateTime.parse(date).atZone(ZoneId.systemDefault());
-                long diff = nowTime - datetime.toInstant().toEpochMilli();
-                totalAge = ageInMS.longValue() + diff;
+                if(properEntity.has("zeroTime")){
+                    long zeroTime = properEntity.getLong("zeroTime");
+                    totalAge = zeroTime - nowTime;
+                }
+                else {
+                    Double ageInMS = properEntity.getJSONObject("age").getDouble("value") * 1000;
+                    JSONObject updated = properEntity.getJSONObject("updatedTime");
+                    String date = updated.getString("$date").replace("Z","");
+                    ZonedDateTime datetime = LocalDateTime.parse(date).atZone(ZoneId.systemDefault());
+                    long diff = nowTime - datetime.toInstant().toEpochMilli();
+                    totalAge = ageInMS.longValue() + diff;
+                }
 
                 coassPerformanceRecord(Statistic.newBuilder()
                         .setMethod("queryRetrieval").setAge(totalAge).build());

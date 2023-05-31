@@ -166,6 +166,7 @@ public class ContextEntityHandler {
                         .setJson(response.toString())
                         .setEt(updateRequest.getEt())
                         .setObservedTime(timestamp)
+                        .setReportAccess(updateRequest.getReportAccess())
                         .setProviderId(updateRequest.getProviderId())
                         .setKey(updateRequest.getKey());
 

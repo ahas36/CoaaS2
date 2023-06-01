@@ -271,7 +271,9 @@ public class RefreshExecutor {
                             synchronized (RefreshExecutor.class){
                                 stopProactiveRefreshing(contextId);
                                 // Toggle the refresh policy in the Hashtable in SQEM
-                                blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
+                                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub_2
+                                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                                asyncStub_2.toggleRefreshLogic(RefreshUpdate.newBuilder()
                                         .setLookup(request.getRequest().getReference())
                                         .setRefreshLogic("reactive")
                                         .setHashkey(hashKey)
@@ -330,7 +332,9 @@ public class RefreshExecutor {
                                 setProactiveRefreshing(new_request, hashKey, fthr, res_life,
                                         lifetime.getDouble("value"), request.getAttributesList());
                                 // Toggle the refresh policy in the Hashtable in SQEM
-                                blockingStub.toggleRefreshLogic(RefreshUpdate.newBuilder()
+                                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub_2
+                                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                                asyncStub_2.toggleRefreshLogic(RefreshUpdate.newBuilder()
                                         .setHashkey(hashKey)
                                         .setLookup(request.getRequest().getReference()).setRefreshLogic("proactive_shift")
                                         .build());
@@ -397,7 +401,6 @@ public class RefreshExecutor {
 
                         SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-
                         asyncStub.refreshContextEntity(CacheRefreshRequest.newBuilder()
                                 .setJson(request.getRequest().getJson())
                                 .setRefPolicy(refPolicy)

@@ -116,7 +116,7 @@ public class RetrievalManager {
                     JSONObject resEntity = entities.getJSONObject(j);
                     for (int i = 0; i < key.length(); i++) {
                         Object idValue = response.get(key.getString(i));
-                        hashkey += key.getString(i) + "@" + idValue.toString() + ";";
+                        hashkey += key.getString(i) + "@" + idValue.toString().replace("\"","") + ";";
                     }
                     String hk = Utilities.getHashKey(hashkey);
                     hkeys.add(hk);
@@ -134,13 +134,12 @@ public class RetrievalManager {
                     temp_entities.put(resEntity);
 
                     if(isFullMiss){
-                        JSONObject entage = entities.getJSONObject(j).optJSONObject("age");
                         SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_2
                                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
                         String contextId = entType + "-" + hk;
                         sqemStub_2.logContextAccess(ContextAccess.newBuilder()
                                 .setContextId(contextId).setOutcome("miss")
-                                .setAge(entage.getDouble("value")*1000 + retLatency).build());
+                                .setAge(value + retLatency).build());
                     }
                 }
                 response.put("results", temp_entities);
@@ -149,7 +148,7 @@ public class RetrievalManager {
                 String hashkey = "";
                 for (int i = 0; i < key.length(); i++) {
                     Object idValue = response.get(key.getString(i));
-                    hashkey += key.getString(i) + "@" + idValue.toString() + ";";
+                    hashkey += key.getString(i) + "@" + idValue.toString().replace("\"","") + ";";
                 }
                 String hk = Utilities.getHashKey(hashkey);
                 hkeys.add(hk);

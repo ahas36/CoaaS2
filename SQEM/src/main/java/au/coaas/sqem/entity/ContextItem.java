@@ -98,7 +98,7 @@ public class ContextItem {
     private void setLifetime(String entityType){
         this.lifetime = new JSONObject();
         this.lifetime.put("unit","s");
-        switch(entityType){
+        switch(entityType.toLowerCase()){
             case "car":
             case "vehicle": {
                 this.lifetime.put("value",30.0);

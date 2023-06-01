@@ -267,7 +267,7 @@ public class ContextEntityHandler {
                 String idKey = key.getString(i);
                 Object idValue = getValueByKey(updateRequest.getJson(), idKey);
                 query.put(idKey, idValue);
-                hashkey += key.getString(i) + "@" + idValue.toString() + ";";
+                hashkey += key.getString(i) + "@" + idValue.toString().replace("\"","") + ";";
             }
             String hk = Utilty.getHashKey(hashkey);
             updateFields.append("hashkey", hk);

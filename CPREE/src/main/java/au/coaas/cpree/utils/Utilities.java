@@ -158,7 +158,7 @@ public class Utilities {
     public static JSONObject getLifetime(String entityType){
         JSONObject lifetime = new JSONObject();
         lifetime.put("unit","s");
-        switch(entityType){
+        switch(entityType.toLowerCase()){
             case "car":
             case "vehicle": {
                 lifetime.put("value",30.0);

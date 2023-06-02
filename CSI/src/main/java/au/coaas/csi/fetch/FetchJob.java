@@ -34,7 +34,7 @@ public class FetchJob implements Job {
         }
     }
 
-    public List<String> execute(JobDataMap dataMap) throws JobExecutionException {
+    public List<String> execute(JobDataMap dataMap) {
         try {
             String contextService = dataMap.getString("cs");
             HashMap<String,String> params = new Gson().fromJson(

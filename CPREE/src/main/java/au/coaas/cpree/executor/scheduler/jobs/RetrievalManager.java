@@ -151,7 +151,9 @@ public class RetrievalManager {
                 response.put("hashkey", hk);
             }
 
-            asyncStub.logPerformanceData(Statistic.newBuilder()
+            SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub_2
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            asyncStub_2.logPerformanceData(Statistic.newBuilder()
                     .addAllHaskeys(hkeys)
                     .setIsDelayed(retDiff>0).setEarning(penEarning)
                     .setCs(fetchRequest).setAge(age).setTime(retLatency)
@@ -193,7 +195,6 @@ public class RetrievalManager {
                             .build());
 
             long endTime = System.currentTimeMillis();
-            JSONObject cs = new JSONObject(contextService);
             JSONObject lifetime = Utilities.getLifetime(entityType);
             SimpleContainer meta = SimpleContainer.newBuilder().addAllHashKeys(fetch.getHashkeysList())
                     .setRetLatMilis(endTime-startTime)

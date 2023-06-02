@@ -2,11 +2,11 @@ package au.coaas.cqc.executor;
 
 import au.coaas.base.proto.ListOfString;
 
+import au.coaas.cpree.proto.SimpleContainer;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.CacheSelectionRequest;
 import au.coaas.cpree.proto.ContextRefreshRequest;
 
-import au.coaas.cpree.proto.SimpleContainer;
 import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.ConQEngHelper;
 import au.coaas.cqc.utils.enums.CacheLevels;
@@ -39,13 +39,12 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
 
-import java.lang.reflect.Array;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Predicate;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 import java.io.IOException;
 import java.net.URLEncoder;
@@ -77,8 +76,6 @@ public class PullBasedExecutor {
         }
         return result;
     }
-
-    private static Gson gson = new Gson();
 
     private static List<FunctionCall> getSubFunctionCalls(FunctionCall fCall) {
         List<FunctionCall> result = new ArrayList<>();

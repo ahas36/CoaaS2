@@ -508,6 +508,7 @@ public class SituationManager {
                                 jsonValues, old, query, subID, stringFcall);
                         fCallTemp.setArguments(iter_index, Operand.newBuilder()
                                         .setType(OperandType.CONTEXT_VALUE_STRING)
+                                        .setContextAttribute(argument.getContextAttribute())
                                         .setStringValue(executeFunctionCall(subFunction, subID, stringFcall).toString())
                                         .build());
                         break;
@@ -529,10 +530,12 @@ public class SituationManager {
 
                                 String value = String.valueOf(item.get(split[split.length - 1]));
                                 fCallTemp.setArguments(iter_index, Operand.newBuilder()
+                                        .setContextAttribute(argument.getContextAttribute())
                                         .setType(OperandType.CONTEXT_VALUE_STRING)
                                         .setStringValue(value).build());
                             } catch (Exception e) {
                                 fCallTemp.setArguments(iter_index, Operand.newBuilder()
+                                        .setContextAttribute(argument.getContextAttribute())
                                         .setType(OperandType.CONTEXT_VALUE_STRING)
                                         .setStringValue(null).build());
                             }

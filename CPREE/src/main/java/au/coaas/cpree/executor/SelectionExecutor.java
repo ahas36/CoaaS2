@@ -254,7 +254,9 @@ public class SelectionExecutor {
                 String pre_json = new Gson().toJson(weightThresholds);
                 JSONObject json = new JSONObject(pre_json);
 
-                ListenableFuture<QueryClassProfile> cqc_profile = sqemStub.getQueryClassProfile(ContextProfileRequest
+                SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_2
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                ListenableFuture<QueryClassProfile> cqc_profile = sqemStub_2.getQueryClassProfile(ContextProfileRequest
                         .newBuilder().setPrimaryKey(lookup.getQClass()).build());
 
                 double access_trend = c_profile.get().getTrend().equals("NaN") ?
@@ -414,7 +416,9 @@ public class SelectionExecutor {
                         }
 
                         // Record decision history
-                        sqemStub.logCacheDecision(ContextCacheDecision.newBuilder()
+                        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_3
+                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                        sqemStub_3.logCacheDecision(ContextCacheDecision.newBuilder()
                                 .setJson(json.toString())
                                 .setLevel(CacheLevels.ENTITY.toString()).build());
                     }
@@ -559,7 +563,9 @@ public class SelectionExecutor {
                         }
 
                         // Recording decision history
-                        sqemStub.logCacheDecision(ContextCacheDecision.newBuilder()
+                        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_4
+                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                        sqemStub_4.logCacheDecision(ContextCacheDecision.newBuilder()
                                 .setJson(json.toString())
                                 .setLevel(CacheLevels.ENTITY.toString()).build());
 
@@ -575,7 +581,9 @@ public class SelectionExecutor {
                 // Actual Caching
                 if(cache) {
                     // Check available cache memory before caching
-                    ListenableFuture<SQEMResponse> response = sqemStub.cacheEntity(CacheRequest.newBuilder()
+                    SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_5
+                            = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                    ListenableFuture<SQEMResponse> response = sqemStub_5.cacheEntity(CacheRequest.newBuilder()
                             .setJson(context)
                             .setHashkey(hashkey)
                             .setRefreshLogic(ref_type.toString().toLowerCase())
@@ -590,7 +598,9 @@ public class SelectionExecutor {
                 // Logging the delay time
                 est_delayTime = Math.min(Math.abs(est_delayTime),max_delay_cache_residence);
                 lambda_conf = Math.min(Math.abs(lambda_conf),0);
-                sqemStub.logDecisionLatency(DecisionLog.newBuilder()
+                SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_6
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                sqemStub_6.logDecisionLatency(DecisionLog.newBuilder()
                         .setLatency(est_delayTime).setLambdaConf(lambda_conf)
                         .setIndefinite(indefinite)
                         .setType("delay").build());

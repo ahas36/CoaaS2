@@ -2,6 +2,7 @@ package au.coaas.csi.fetch;
 
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.ContextService;
+import au.coaas.csi.utils.Utils;
 import org.json.JSONObject;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
@@ -43,7 +44,6 @@ public class JobSchedulerManager {
                     // if instance is null, initialize
                     instance = new JobSchedulerManager();
                 }
-
             }
         }
         return instance;
@@ -101,9 +101,11 @@ public class JobSchedulerManager {
         jobDataMap.put("params", (new JSONObject(cs.getParamsMap())).toString());
         jobDataMap.put("providerId", cs.getMongoID());
 
+        String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
+
         if(cs.getTimes() < 1){
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
-                    .withIdentity(cs.getMongoID(), "cs-fetch-trigger")
+                    .withIdentity(jobId, "cs-fetch-trigger")
                     .forJob("fetch-job", "cs-fetch-job")
                     .usingJobData(jobDataMap)
                     .withSchedule(SimpleScheduleBuilder.simpleSchedule().repeatForever()
@@ -114,7 +116,7 @@ public class JobSchedulerManager {
         }
         else if(cs.getTimes() > 1) {
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
-                    .withIdentity(cs.getMongoID(), "cs-fetch-trigger")
+                    .withIdentity(jobId, "cs-fetch-trigger")
                     .forJob("fetch-job", "cs-fetch-job")
                     .usingJobData(jobDataMap)
                     .withSchedule(SimpleScheduleBuilder.simpleSchedule()
@@ -137,13 +139,15 @@ public class JobSchedulerManager {
     }
 
     public CSIResponse cancelJob(ContextService cs) throws SchedulerException {
-        boolean cs1 = scheduler.unscheduleJob(new TriggerKey(cs.getMongoID(), "cs-fetch-trigger"));
+        String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
+        boolean cs1 = scheduler.unscheduleJob(new TriggerKey(jobId, "cs-fetch-trigger"));
         return CSIResponse.newBuilder().setStatus(cs1 ? "200" : "500").build();
     }
 
     public CSIResponse updateJob(ContextService cs) throws SchedulerException {
         boolean cs1 = true;
-        TriggerKey triggerKey = new TriggerKey(cs.getMongoID(), "cs-fetch-trigger");
+        String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
+        TriggerKey triggerKey = new TriggerKey(jobId, "cs-fetch-trigger");
         if(scheduler.checkExists(triggerKey)){
             cs1 = scheduler.unscheduleJob(triggerKey);
         }

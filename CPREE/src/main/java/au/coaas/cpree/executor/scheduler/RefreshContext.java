@@ -1,5 +1,6 @@
 package au.coaas.cpree.executor.scheduler;
 
+import au.coaas.cpree.utils.Utilities;
 import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.ContextServiceId;
@@ -17,6 +18,7 @@ public class RefreshContext {
     private String csId;
     private double lifetime;
     private String contextId;
+    private String operationId;
     private String refreshPolicy;
     private String contextProvider;
     private ContextEntityType etype;
@@ -40,6 +42,7 @@ public class RefreshContext {
 
         JSONObject cpObj = new JSONObject(contextProvider);
         this.csId = cpObj.getJSONObject("_id").getString("$oid");
+        this.operationId = this.csId + "-" + Utilities.getHashKey(this.params);
         double samplingInt = cpObj.getJSONObject("sla").getJSONObject("updateFrequency").getDouble("value");
 
         this.currentSamplingInt = samplingInt;
@@ -76,16 +79,17 @@ public class RefreshContext {
     public double getfthresh() { return this.fthr; }
     public String getContextId(){ return this.contextId; }
     public ContextEntityType getEtype() { return this.etype; }
+    public String getOperationId() { return this.operationId; }
     public long getInitInterval() { return this.initInterval; }
     public String getRefreshPolicy() { return this.refreshPolicy; }
     public long getRefreshInterval() { return this.refreshInterval; }
-    public Map<String, String> getParams() { return this.params; }
     public String getContextProvider() { return this.contextProvider; }
 
     public JobDataMap getJobDataMap() {
         Map<String, Object> jobMap = new HashMap<>();
 
         jobMap.put("cpId", this.csId);
+        jobMap.put("opId", this.operationId);
         jobMap.put("contextId", this.contextId);
         jobMap.put("fetchMode", this.refreshPolicy);
         jobMap.put("entityType", this.etype.getType());
@@ -124,7 +128,6 @@ public class RefreshContext {
     }
 
     public void setInitInterval(double initResiLife, String cpId){
-        // This can be wrong now (the initInterval)
         if(!cpId.equals(csId)){
             this.csId = cpId;
             SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub =
@@ -132,6 +135,7 @@ public class RefreshContext {
             SQEMResponse csResponse = sqemStub.getContextServiceInfo(ContextServiceId
                     .newBuilder().setId(cpId).build());
             this.contextProvider = csResponse.getBody();
+            this.operationId = this.csId + "-" + Utilities.getHashKey(this.params);
         }
 
         if(initResiLife < 0) initResiLife = 0;

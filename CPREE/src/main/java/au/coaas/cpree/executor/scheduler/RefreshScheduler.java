@@ -55,26 +55,30 @@ public class RefreshScheduler {
             throw new SchedulerException("Scheduler not started");
         }
 
-        // Stopping any existing schedules.
-        stopRefreshing(query.getContextId());
+        TriggerKey triggerKey = TriggerKey.triggerKey(query.getOperationId(), "refreshGroup");
+        Trigger lookUpTrigger = scheduler.getTrigger(triggerKey);
+        if(lookUpTrigger == null) {
+            JobDetail job = JobBuilder.newJob(QueryJob.class)
+                    .withIdentity(query.getContextId(), "refreshGroup")
+                    .usingJobData(query.getJobDataMap())
+                    .build();
 
-        JobDetail job = JobBuilder.newJob(QueryJob.class)
-                .withIdentity(query.getContextId(), "refreshGroup")
-                .usingJobData(query.getJobDataMap())
-                .build();
+            LocalDateTime exe_time = LocalDateTime.now().plus(query.getInitInterval(), ChronoUnit.MILLIS);
+            Date triggerTime = Date.from(exe_time.atZone(ZoneId.systemDefault()).toInstant());
 
-        LocalDateTime exe_time = LocalDateTime.now().plus(query.getInitInterval(), ChronoUnit.MILLIS);
-        Date triggerTime = Date.from(exe_time.atZone(ZoneId.systemDefault()).toInstant());
+            SimpleTrigger trigger = TriggerBuilder.newTrigger()
+                    .withIdentity(query.getContextId(), "refreshGroup")
+                    .startAt(triggerTime)
+                    .withSchedule(SimpleScheduleBuilder.simpleSchedule()
+                            .withIntervalInMilliseconds(query.getRefreshInterval())
+                            .repeatForever())
+                    .build();
 
-        SimpleTrigger trigger = TriggerBuilder.newTrigger()
-                .withIdentity(query.getContextId(), "refreshGroup")
-                .startAt(triggerTime)
-                .withSchedule(SimpleScheduleBuilder.simpleSchedule()
-                        .withIntervalInMilliseconds(query.getRefreshInterval())
-                        .repeatForever())
-                .build();
-
-        scheduler.scheduleJob(job, trigger);
+            scheduler.scheduleJob(job, trigger);
+        }
+        else {
+            log.info("Provided refresh operation " +query.getContextId()+ " already exists!");
+        }
     }
 
     public void stopRefreshing(String jobId) throws SchedulerException {

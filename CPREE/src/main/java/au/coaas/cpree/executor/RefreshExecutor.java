@@ -18,23 +18,16 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.quartz.SchedulerException;
 
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class RefreshExecutor {
     private static Logger log = Logger.getLogger(RefreshExecutor.class.getName());
 
     // Important registers
-    private static HashMap<String,RefreshContext> prorefRegistery = new HashMap<>();
     private static HashSet<String> attemptRegistery = new HashSet<>();
-
+    private static HashMap<String,RefreshContext> prorefRegistery = new HashMap<>();
     private static final RefreshScheduler refreshScheduler = RefreshScheduler.getInstance();
-    private static ExecutorService executor = Executors.newScheduledThreadPool(40);
 
     // Routine
     public static void clearAttemptRegistery(){
@@ -120,7 +113,10 @@ public class RefreshExecutor {
     public static void refreshContext(String initContextId, String contextString, String providerId,
                                       String entityType, SimpleContainer meta){
         try {
+            boolean firstEntity = true;
             JSONObject context = new JSONObject(contextString);
+
+            // Multiple entities refresh
             if(context.has("results")){
                 JSONArray entityContext = context.getJSONArray("results");
                 CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
@@ -151,11 +147,13 @@ public class RefreshExecutor {
 
                             // Reset the scheduler to the next lifetime
                             synchronized (RefreshExecutor.class){
-                                // Update the context item from the registry
-                                refObj.setInitInterval(residual_life, providerId);
-                                prorefRegistery.put(entityType +"-"+ hashkey, refObj);
                                 // Update the scheduler in running
-                                refreshScheduler.updateRefreshing(refObj);
+                                if(firstEntity){
+                                    refObj.setInitInterval(residual_life, providerId);
+                                    prorefRegistery.put(entityType +"-"+ hashkey, refObj);
+                                    refreshScheduler.updateRefreshing(refObj);
+                                    firstEntity = false;
+                                }
                             }
                         }
                     }
@@ -173,15 +171,16 @@ public class RefreshExecutor {
                             .setJson(entData.toString()).build());
                 }
             }
+            // Single entity refresh
             else {
                 CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
                         .setCheckFresh(true).setServiceId(providerId);
 
-                // If the entity was set to proactively refreshed.
                 String hashkey = context.has("hashkey") ? context.getString("hashkey") :
                         meta.getHashKeysList().get(0);
                 RefreshLogics refPolicy = RefreshLogics.PROACTIVE_SHIFT;
 
+                // If the entity was set to proactively refreshed.
                 if(prorefRegistery.get(entityType +"-"+ hashkey) != null) {
                     RefreshContext refObj = prorefRegistery.get(entityType +"-"+ hashkey);
                     lookup.setHashKey(hashkey);
@@ -229,7 +228,6 @@ public class RefreshExecutor {
 
     // Refresh context for both Reactive refreshing and when forcing a Shift in proactive retrieval
     // Toggling the refresh policy
-    // Done
     public static CPREEResponse refreshContext(ContextRefreshRequest request) {
         try {
             String refPolicy = request.getRefreshPolicy();
@@ -295,10 +293,22 @@ public class RefreshExecutor {
                                 synchronized (RefreshExecutor.class){
                                     // Update the context item from the registry
                                     RefreshContext regiItem = prorefRegistery.get(contextId);
-                                    regiItem.setfthresh(proffthr, residual_life);
-                                    prorefRegistery.put(contextId,regiItem);
-                                    // Update the scheduler in running
-                                    refreshScheduler.updateRefreshing(regiItem);
+                                    String tempOpId = regiItem.getOperationId();
+                                    boolean indeOperation = true;
+                                    for(Map.Entry<String, RefreshContext> kv: prorefRegistery.entrySet()){
+                                        if(kv.getValue().getOperationId().equals(tempOpId) &&
+                                                !kv.getKey().equals(contextId)){
+                                            indeOperation = false;
+                                            break;
+                                        }
+                                    }
+
+                                    if(indeOperation) {
+                                        regiItem.setfthresh(proffthr, residual_life);
+                                        prorefRegistery.put(contextId,regiItem);
+                                        // Update the scheduler in running
+                                        refreshScheduler.updateRefreshing(regiItem);
+                                    }
                                 }
                             }
                         }
@@ -392,10 +402,22 @@ public class RefreshExecutor {
                             synchronized (RefreshExecutor.class){
                                 // Update the context item from the registry
                                 RefreshContext regiItem = prorefRegistery.get(contextId);
-                                regiItem.setInitInterval(residual_life, request.getRequest().getReference().getServiceId());
-                                prorefRegistery.put(contextId,regiItem);
-                                // Update the scheduler in running
-                                refreshScheduler.updateRefreshing(regiItem);
+                                String tempOpId = regiItem.getOperationId();
+                                boolean indeOperation = true;
+                                for(Map.Entry<String, RefreshContext> kv: prorefRegistery.entrySet()){
+                                    if(kv.getValue().getOperationId().equals(tempOpId) &&
+                                            !kv.getKey().equals(contextId)){
+                                        indeOperation = false;
+                                        break;
+                                    }
+                                }
+
+                                if(indeOperation) {
+                                    regiItem.setInitInterval(residual_life, request.getRequest().getReference().getServiceId());
+                                    prorefRegistery.put(contextId,regiItem);
+                                    // Update the scheduler in running
+                                    refreshScheduler.scheduleRefresh(regiItem);
+                                }
                             }
                         }
 
@@ -525,12 +547,27 @@ public class RefreshExecutor {
         return RefreshLogics.REACTIVE;
     }
 
-    // Done
     public static Empty stopProactiveRefreshing(String contextId) throws SchedulerException {
+        // Should stop only if only 1 entity is refreshed by this scheduler.
         // Remove the context item from the registry
+        RefreshContext tempRefreshObj = prorefRegistery.get(contextId);
         prorefRegistery.remove(contextId);
-        // Stop the scheduler from running
-        refreshScheduler.stopRefreshing(contextId);
+
+        // Checking if any other entities get refreshed from this job
+        boolean indeOperation = true;
+        String tempOpId = tempRefreshObj.getOperationId();
+        for (Map.Entry<String, RefreshContext> entry : prorefRegistery.entrySet()) {
+            if(entry.getValue().getOperationId().equals(tempOpId)){
+                indeOperation = false;
+                break;
+            }
+        }
+
+        if(indeOperation) {
+            // Stop the scheduler from running
+            refreshScheduler.stopRefreshing(tempOpId);
+        }
+
         return null;
     }
 }

@@ -185,7 +185,7 @@ export class ApiServiceService {
         this.summaryData.exp_pen.push(res.expectedSLA.exp_pen.toFixed(2));
         this.summaryData.exp_rtmax.push((res.expectedSLA.exp_rtmax/1000).toFixed(2));
 
-        this.summaryData.con_age.push(res.avgContextAge.toFixed(2));
+        this.summaryData.con_age.push((res.avgContextAge/1000).toFixed(2));
       });
     }
 

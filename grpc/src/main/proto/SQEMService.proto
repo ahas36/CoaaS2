@@ -41,6 +41,7 @@ message CacheLookUp {
     string qClass = 8;
     string hashKey = 9;
     uint64 zeroTime = 10;
+    repeated string operators = 11;
 }
 
 message RefreshUpdate {

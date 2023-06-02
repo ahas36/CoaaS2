@@ -308,28 +308,28 @@ public class ContextCacheHandler {
                     RBucket<Document> ent = cacheClient.getBucket((result.getHashkey().split(":"))[1]);
                     // Should check if conditions meet
                     Document conEntity = ent.get().get("data", Document.class);
-                    for(int i=0; i < paramList.size(); i++){
-                        if(conEntity.containsKey(keys.get(i)) &&
-                                conEntity.get(keys.get(i)).equals(paramList.get(keys.get(i)))){
-                            continue;
-                        }
-                        else {
-                            lock.unlockAsync();
-                            long endTime = System.currentTimeMillis();
-                            Executors.newCachedThreadPool().submit(()
-                                    -> logCacheSearch("404", request.getServiceId(),
-                                    request.getUniformFreshness(), endTime - startTime));
-
-                            return SQEMResponse.newBuilder().setStatus("404")
-                                    .setHashKey(result.getHashkey())
-                                    .setBody("Entity not found.").build();
-                        }
-                    }
+//                    for(int i=0; i < keys.size(); i++){
+//                        if(conEntity.containsKey(keys.get(i)) &&
+//                                conEntity.get(keys.get(i)).toString()
+//                                        .equals(paramList.get(keys.get(i)).replace("\"",""))){
+//                            continue;
+//                        }
+//                        else {
+//                            lock.unlockAsync();
+//                            long endTime = System.currentTimeMillis();
+//                            Executors.newCachedThreadPool().submit(()
+//                                    -> logCacheSearch("404", request.getServiceId(),
+//                                    request.getUniformFreshness(), endTime - startTime));
+//
+//                            return SQEMResponse.newBuilder().setStatus("404")
+//                                    .setHashKey(result.getHashkey())
+//                                    .setBody("Entity not found.").build();
+//                        }
+//                    }
                     entityContext.add(conEntity);
                     hitkeys.add(result.getHashkey());
                 }
                 else {
-
                     int entitiesCached = result.getHashKeysCount();
                     int numberOfIterations = (int)(entitiesCached/numberOfItemsPerTask) + 1;
                     ExecutorService executorService = Executors.newFixedThreadPool(numberOfThreads);
@@ -348,17 +348,37 @@ public class ContextCacheHandler {
                                 // Should check if conditions meet
                                 boolean isValid = true;
                                 Document conEntity = ent.get().get("data", Document.class);
-                                for(int j=0; j < paramList.size(); j++){
-                                    if(conEntity.containsKey(keys.get(j)) &&
-                                            conEntity.get(keys.get(j)).equals(paramList.get(keys.get(j)))){
-                                        continue;
+                                List<String> ops = request.getOperatorsList();
+                                
+                                for(int j=0; j < keys.size(); j++){
+                                    if(conEntity.containsKey(keys.get(j))) {
+                                        Object entValue = conEntity.get(keys.get(j));
+                                        String paramValue = paramList.get(keys.get(j)).replace("\"", "");
+                                        switch(ops.get(j)){
+                                            case ">":
+                                                if(Double.valueOf(entValue.toString()) > Double.valueOf(paramValue)) continue;
+                                                break;
+                                            case ">=":
+                                                if(Double.valueOf(entValue.toString()) >= Double.valueOf(paramValue)) continue;
+                                                break;
+                                            case "<":
+                                                if(Double.valueOf(entValue.toString()) < Double.valueOf(paramValue)) continue;
+                                                break;
+                                            case "<=":
+                                                if(Double.valueOf(entValue.toString()) <= Double.valueOf(paramValue)) continue;
+                                                break;
+                                            case "=":
+                                            default:
+                                                if(entValue.toString().equals(paramValue)) continue;
+                                                break;
+                                        }
                                     }
-                                    else {
-                                        isValid = false;
-                                        misskeys.add(result.getHashKeys(i));
-                                        break;
-                                    }
+
+                                    isValid = false;
+                                    misskeys.add(result.getHashKeys(i));
+                                    break;
                                 }
+
                                 if(isValid) {
                                     entityContext.add(conEntity);
                                     hitkeys.add(result.getHashKeys(i));

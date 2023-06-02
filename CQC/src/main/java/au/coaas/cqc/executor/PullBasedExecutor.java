@@ -39,6 +39,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
 
+import java.lang.reflect.Array;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
@@ -232,9 +233,15 @@ public class PullBasedExecutor {
                     String key = null;
                     String value = null;
 
-                    HashMap<String,String> params = new HashMap();
+                    LinkedHashMap<String,String> params = new LinkedHashMap();
+                    List<String> operators = new ArrayList<>();
 
+                    LinkedList<CdqlConditionTokenType> proceeded = new LinkedList<>();
                     for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
+                        if(cdqlConditionToken.getType() != CdqlConditionTokenType.Operator){
+                            proceeded.add(cdqlConditionToken.getType());
+                        }
+
                         switch (cdqlConditionToken.getType()) {
                             case Attribute:
                                 key = cdqlConditionToken.getContextAttribute().getAttributeName();
@@ -259,6 +266,18 @@ public class PullBasedExecutor {
                                 }
                                 value = null;
                                 break;
+                            case Operator:
+                                int size = proceeded.size();
+                                if(size>=2){
+                                    CdqlConditionTokenType opnd_1 = proceeded.get(size - 1);
+                                    CdqlConditionTokenType opnd_2 = proceeded.get(size - 2);
+                                    boolean ifAtt_1 = opnd_1 == CdqlConditionTokenType.Attribute || opnd_1 == CdqlConditionTokenType.Constant;
+                                    boolean ifAtt_2 = opnd_2 == CdqlConditionTokenType.Attribute || opnd_2 == CdqlConditionTokenType.Constant;
+                                    if(ifAtt_1 && ifAtt_2) {
+                                        operators.add(cdqlConditionToken.getStringValue());
+                                        proceeded.clear();
+                                    }
+                                }
                         }
                     }
 
@@ -273,13 +292,20 @@ public class PullBasedExecutor {
                     }
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,
-                                                                    criticality, sla, complexity, terms.keySet());
+                                                                    criticality, sla, complexity, terms.keySet(),
+                                                                    operators);
 
                     // Checking if from Stream Read or not.
                     if(cacheResult != null){
                         if(cacheResult.getKey() != null){
-                            JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
-                            ce.put(entity.getEntityID(),resultJson);
+                            if(cacheResult.getKey().toString().startsWith("{")){
+                                JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
+                                ce.put(entity.getEntityID(),resultJson);
+                            }
+                            else {
+                                JSONArray resultJson = new JSONArray((String) cacheResult.getKey());
+                                ce.put(entity.getEntityID(),resultJson.getJSONObject(0));
+                            }
                             if(query.getSelect().getSelectAttrsMap().containsKey(entity.getEntityID()))
                                 executeQueryBlock(rpnConditionList, ce, entityID);
                             if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
@@ -877,15 +903,21 @@ public class PullBasedExecutor {
                     if(appliee == null) {
                         attribute = ca.getAttributeName();
                         resultEntity = ca.getEntityName();
-                        appliee = ce.get(resultEntity).has("results") ?
-                                ce.get(resultEntity).getJSONArray("results") : new JSONArray();
+                        JSONObject appObj = ce.get(resultEntity);
+                        if(appObj.has("results")){
+                            appliee = ce.get(resultEntity).getJSONArray("results");
+                        }
+                        else {
+                            appliee = new JSONArray();
+                            appliee.put(appObj);
+                        }
                     }
                     else {
                         JSONObject comparator = ce.get(ca.getEntityName());
                         if(comparator.has("results"))
-                            comparison = new JSONObject(comparator.getJSONArray("results")
+                            comparison = comparator.getJSONArray("results")
                                     .getJSONObject(0)
-                                    .getString(ca.getAttributeName()));
+                                    .getJSONObject(ca.getAttributeName());
                         else
                             comparison = (JSONObject) comparator.get(ca.getAttributeName());
 
@@ -903,7 +935,7 @@ public class PullBasedExecutor {
                             distanceThreshold = Double.valueOf(value);
 
                         for(Object resItem: appliee){
-                            JSONObject item = new JSONObject(((JSONObject) resItem).getString(attribute));
+                            JSONObject item = ((JSONObject) resItem).getJSONObject(attribute);
                             if(isSatidfied(distance(item.getDouble("latitude"),
                                     item.getDouble("longitude"),lat2,long2), operand, distanceThreshold)){
                                 result.put((JSONObject)resItem);
@@ -1313,7 +1345,8 @@ public class PullBasedExecutor {
 
     private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
                                                            HashMap<String,String> params, int limit, String criticality,
-                                                           JSONObject consumerSLA, double complexity, Set<String> attributes) {
+                                                           JSONObject consumerSLA, double complexity, Set<String> attributes,
+                                                           List<String> operators) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -1337,13 +1370,15 @@ public class PullBasedExecutor {
                 JSONObject slaObj = conSer.getJSONObject("sla");
 
                 // By this line, I should have completed identifying the query class
-                CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
+                CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
+                        .putAllParams(params)
                         .setEt(targetEntity.getType())
                         .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
                         .setCheckFresh(true)
                         .setKey(keys).setQClass("1") // TODO: Assign the correct context query class
                         .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
-                        .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()); // sampling
+                        .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()) // sampling
+                        .addAllOperators(operators); // Operators of the params
 
                 // Look up also considers known refreshing logics
                 SQEMResponse data = sqemStub.handleContextRequestInCache(lookup.build());
@@ -1615,11 +1650,22 @@ public class PullBasedExecutor {
                                 if(ceResult.has("results")){
                                     Object location = ceResult.getJSONArray("results").getJSONObject(0).get(attributeNameTemp);
                                     String handelQuantitativeValue = handelQuantitativeValue(location.toString());
-                                    fCall.setArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
+                                    fCall.setArguments(j, Operand.newBuilder()
+                                            .setContextAttribute(ca)
+                                            .setType(OperandType.CONTEXT_VALUE_JSON)
+                                            .setStringValue(handelQuantitativeValue));
                                 }
                                 else{
                                     String handelQuantitativeValue = handelQuantitativeValue(ceResult.get(attributeNameTemp).toString());
-                                    fCallTemp.addArguments(j, Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(handelQuantitativeValue));
+                                    fCall.setArguments(j, Operand.newBuilder()
+                                            .setContextAttribute(ca)
+                                            .setType(OperandType.CONTEXT_VALUE_JSON)
+                                            .setStringValue(handelQuantitativeValue));
+                                    if(fCallTemp.getArgumentsList().size()>=j)
+                                        fCallTemp.addArguments(j, Operand.newBuilder()
+                                                .setContextAttribute(ca)
+                                                .setType(OperandType.CONTEXT_VALUE_JSON)
+                                                .setStringValue(handelQuantitativeValue));
                                 }
 
                                 requiredArgs--;

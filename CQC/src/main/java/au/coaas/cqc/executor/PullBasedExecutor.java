@@ -26,7 +26,6 @@ import au.coaas.cqc.proto.*;
 import au.coaas.cqp.proto.*;
 import au.coaas.sqem.proto.*;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -924,16 +923,21 @@ public class PullBasedExecutor {
                         double distanceThreshold = 0.0;
                         if(value.startsWith("{")){
                             // TODO:
-                            // Should convert any unit to meters
+                            // Should convert any unit to Km
                             JSONObject val = new JSONObject(value);
                             distanceThreshold = Double.valueOf(val.getDouble("value"));
+                            switch(val.getString("unit")){
+                                case "m": distanceThreshold = distanceThreshold/1000.0; break;
+                                case "mi": distanceThreshold = distanceThreshold * 1.60934; break;
+                            }
                         }
                         else
+                            // Assuming it to be in Km
                             distanceThreshold = Double.valueOf(value);
 
                         for(Object resItem: appliee){
                             JSONObject item = ((JSONObject) resItem).getJSONObject(attribute);
-                            if(isSatidfied(distance(item.getDouble("latitude"),
+                            if(isSatisfied(distance(item.getDouble("latitude"),
                                     item.getDouble("longitude"),lat2,long2), operand, distanceThreshold)){
                                 result.put((JSONObject)resItem);
                             }
@@ -945,7 +949,7 @@ public class PullBasedExecutor {
         return null;
     }
 
-    private static boolean isSatidfied(double distance, String operator, double value) throws WrongOperatorException {
+    private static boolean isSatisfied(double distance, String operator, double value) throws WrongOperatorException {
         switch(operator){
             case "=": return distance == value;
             case "!=": return distance != value;
@@ -973,9 +977,9 @@ public class PullBasedExecutor {
                 + Math.cos(lat1) * Math.cos(lat2)
                 * Math.pow(Math.sin(dlon / 2),2);
 
-        // Radius of the earth in meters.
-        double c = 2 * Math.asin(Math.sqrt(a));
-        double r = 6371000;
+        // Radius of the earth in kilometers.
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        double r = 6371;
         return(c * r);
     }
 

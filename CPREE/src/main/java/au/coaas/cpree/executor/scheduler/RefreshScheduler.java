@@ -3,6 +3,10 @@ package au.coaas.cpree.executor.scheduler;
 import au.coaas.cpree.executor.scheduler.jobs.QueryJob;
 import au.coaas.cpree.executor.scheduler.jobs.RegisterClearJob;
 import au.coaas.cpree.utils.PubSub.Event;
+import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.sqem.proto.CacheRefreshRequest;
+import au.coaas.sqem.proto.SQEMServiceGrpc;
+import au.coaas.sqem.proto.SchedlerInfo;
 import org.quartz.*;
 
 import java.time.ZoneId;
@@ -59,7 +63,7 @@ public class RefreshScheduler {
         Trigger lookUpTrigger = scheduler.getTrigger(triggerKey);
         if(lookUpTrigger == null) {
             JobDetail job = JobBuilder.newJob(QueryJob.class)
-                    .withIdentity(query.getContextId(), "refreshGroup")
+                    .withIdentity(query.getOperationId(), "refreshGroup")
                     .usingJobData(query.getJobDataMap())
                     .build();
 
@@ -67,7 +71,7 @@ public class RefreshScheduler {
             Date triggerTime = Date.from(exe_time.atZone(ZoneId.systemDefault()).toInstant());
 
             SimpleTrigger trigger = TriggerBuilder.newTrigger()
-                    .withIdentity(query.getContextId(), "refreshGroup")
+                    .withIdentity(query.getOperationId(), "refreshGroup")
                     .startAt(triggerTime)
                     .withSchedule(SimpleScheduleBuilder.simpleSchedule()
                             .withIntervalInMilliseconds(query.getRefreshInterval())
@@ -75,12 +79,21 @@ public class RefreshScheduler {
                     .build();
 
             scheduler.scheduleJob(job, trigger);
+
+            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+            asyncStub.logSchedulerAction(SchedlerInfo.newBuilder()
+                    .setContextId(query.getContextId())
+                    .setJobId(query.getOperationId())
+                    .setAction("set")
+                    .build());
         }
         else {
             log.info("Provided refresh operation " +query.getContextId()+ " already exists!");
         }
     }
 
+    // Done
     public void stopRefreshing(String jobId) throws SchedulerException {
         JobKey jobkey = new JobKey(jobId,"refreshGroup");
         TriggerKey triggerKey = TriggerKey.triggerKey(jobId, "refreshGroup");
@@ -90,14 +103,21 @@ public class RefreshScheduler {
             if(scheduler.getJobDetail(jobkey) != null){
                 scheduler.interrupt(jobkey);
                 scheduler.deleteJob(jobkey);
+
+                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                asyncStub.logSchedulerAction(SchedlerInfo.newBuilder()
+                        .setJobId(jobId)
+                        .setAction("delete")
+                        .build());
             }
         }
     }
 
     // Done
     public void updateRefreshing(RefreshContext query) throws SchedulerException {
-        JobKey jobkey = new JobKey(query.getContextId(),"refreshGroup");
-        TriggerKey triggerKey = TriggerKey.triggerKey(query.getContextId(), "refreshGroup");
+        JobKey jobkey = new JobKey(query.getOperationId(),"refreshGroup");
+        TriggerKey triggerKey = TriggerKey.triggerKey(query.getOperationId(), "refreshGroup");
 
         Trigger trigger = scheduler.getTrigger(triggerKey);
         if(trigger != null){
@@ -105,6 +125,13 @@ public class RefreshScheduler {
             if(scheduler.getJobDetail(jobkey) != null){
                 scheduler.interrupt(jobkey);
                 scheduler.deleteJob(jobkey);
+                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                asyncStub.logSchedulerAction(SchedlerInfo.newBuilder()
+                        .setContextId(query.getContextId())
+                        .setJobId(query.getOperationId())
+                        .setAction("reset")
+                        .build());
             }
             scheduleRefresh(query);
         }

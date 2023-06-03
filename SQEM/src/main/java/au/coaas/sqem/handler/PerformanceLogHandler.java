@@ -357,11 +357,51 @@ public class PerformanceLogHandler {
         }
     }
 
+    // Changes in refreshing schedulers
+    public static void insertSchedulerAction(SchedlerInfo request){
+        try {
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+
+            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='scheduler_log')\n" +
+                    "CREATE TABLE scheduler_log(\n" +
+                    "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                    "    jobId VARCHAR(255) NOT NULL,\n" +
+                    "    createdBy VARCHAR(255) NULL,\n" +
+                    "    createdDatetime DATETIME NOT NULL,\n" +
+                    "    action varchar(20) NOT NULL)");
+
+            LocalDateTime now = LocalDateTime.now();
+            String formatted_string = "";
+
+            if(request.equals("set")){
+                String queryString = "INSERT INTO scheduler_log(jobId,createdBy,createdDatetime,action) " +
+                        "VALUES('%s', '%s', CAST('%s' AS DATETIME2), '%s');";
+                formatted_string = String.format(queryString,
+                        request.getJobId(), // Job ID
+                        request.getContextId(), // Created By
+                        now.format(formatter),
+                        request.getAction()); // Action
+            }
+            else {
+                String queryString = "INSERT INTO scheduler_log(jobId,createdDatetime,action) " +
+                        "VALUES('%s', CAST('%s' AS DATETIME2), '%s');";
+                formatted_string = String.format(queryString,
+                        request.getJobId(), // Job ID
+                        now.format(formatter),
+                        request.getAction()); // Action
+            }
+            statement.executeUpdate(formatted_string);
+        }
+        catch (Exception ex){
+            log.severe(ex.getMessage());
+        }
+    }
+
     // CPREE Performance
     public static void cpreePerformanceRecord(Statistic request) {
         String queryString = "INSERT INTO cpree_performance(method,status,response_time,"+
-                "createdDatetime) " +
-                "VALUES('%s', '%s', %d, CAST('%s' AS DATETIME2));";
+                "createdDatetime) VALUES('%s', '%s', %d, CAST('%s' AS DATETIME2));";
         try{
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
@@ -1922,6 +1962,14 @@ public class PerformanceLogHandler {
                     "    identifier VARCHAR(MAX) NOT NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL,\n" +
                     "    isDelayed BIT NOT NULL)");
+
+            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='scheduler_log')\n" +
+                    "CREATE TABLE scheduler_log(\n" +
+                    "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
+                    "    jobId VARCHAR(255) NOT NULL,\n" +
+                    "    createdBy VARCHAR(255) NOT NULL,\n" +
+                    "    createdDatetime DATETIME NOT NULL,\n" +
+                    "    action varchar(20) NOT NULL)");
 
             statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='cpree_performance')\n" +
                     "CREATE TABLE cpree_performance(\n" +

@@ -324,6 +324,12 @@ message ContextAccess {
     double age = 3;
 }
 
+message SchedlerInfo {
+    string contextId = 1;
+    string jobId = 2;
+    string action = 3;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -386,4 +392,5 @@ service SQEMService {
 
     rpc summarizeAge (Statistic) returns (Empty);
     rpc logContextAccess (ContextAccess) returns (Empty);
+    rpc logSchedulerAction (SchedlerInfo) returns (Empty);
 }

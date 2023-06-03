@@ -33,12 +33,14 @@ public class RefreshScheduler {
         Event.operation.subscribe("cq-sim", subscriber);
         scheduler.start();
 
+        JobDetail job = JobBuilder.newJob(QueryJob.class)
+                .withIdentity("context-entity-refreshing", "refreshGroup")
+                .storeDurably()
+                .build();
+        scheduler.addJob(job, true);
+
         // Starting routines
         scheduleRegisterClearance();
-    }
-
-    public static void stopRefreshing() throws SchedulerException {
-        scheduler.shutdown();
     }
 
     public static RefreshScheduler getInstance(){
@@ -59,26 +61,23 @@ public class RefreshScheduler {
             throw new SchedulerException("Scheduler not started");
         }
 
-        TriggerKey triggerKey = TriggerKey.triggerKey(query.getOperationId(), "refreshGroup");
-        Trigger lookUpTrigger = scheduler.getTrigger(triggerKey);
-        if(lookUpTrigger == null) {
-            JobDetail job = JobBuilder.newJob(QueryJob.class)
-                    .withIdentity(query.getOperationId(), "refreshGroup")
-                    .usingJobData(query.getJobDataMap())
-                    .build();
-
+        TriggerKey triggerKey = TriggerKey.triggerKey(query.getOperationId(), "refreshGroup-trigger");
+        if(!scheduler.checkExists(triggerKey)) {
             LocalDateTime exe_time = LocalDateTime.now().plus(query.getInitInterval(), ChronoUnit.MILLIS);
             Date triggerTime = Date.from(exe_time.atZone(ZoneId.systemDefault()).toInstant());
 
             SimpleTrigger trigger = TriggerBuilder.newTrigger()
-                    .withIdentity(query.getOperationId(), "refreshGroup")
-                    .startAt(triggerTime)
+                    .withIdentity(query.getOperationId(), "refreshGroup-trigger")
+                    .forJob("context-entity-refreshing", "refreshGroup")
+                    .usingJobData(query.getJobDataMap())
                     .withSchedule(SimpleScheduleBuilder.simpleSchedule()
                             .withIntervalInMilliseconds(query.getRefreshInterval())
                             .repeatForever())
+                    .startAt(triggerTime)
                     .build();
 
-            scheduler.scheduleJob(job, trigger);
+            scheduler.scheduleJob(trigger);
+            log.info("Refresh scheduled " +query.getOperationId());
 
             SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                     = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
@@ -89,51 +88,46 @@ public class RefreshScheduler {
                     .build());
         }
         else {
-            log.info("Provided refresh operation " +query.getContextId()+ " already exists!");
+            log.info("Provided refresh operation " +query.getOperationId()+ " already exists!");
         }
     }
 
     // Done
     public void stopRefreshing(String jobId) throws SchedulerException {
-        JobKey jobkey = new JobKey(jobId,"refreshGroup");
-        TriggerKey triggerKey = TriggerKey.triggerKey(jobId, "refreshGroup");
-        Trigger trigger = scheduler.getTrigger(triggerKey);
-        if(trigger != null){
+        TriggerKey triggerKey = TriggerKey.triggerKey(jobId, "refreshGroup-trigger");
+        if(scheduler.checkExists(triggerKey)){
             scheduler.unscheduleJob(triggerKey);
-            if(scheduler.getJobDetail(jobkey) != null){
-                scheduler.interrupt(jobkey);
-                scheduler.deleteJob(jobkey);
-
-                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                asyncStub.logSchedulerAction(SchedlerInfo.newBuilder()
-                        .setJobId(jobId)
-                        .setAction("delete")
-                        .build());
-            }
+            log.info("Refresh stopped: " + jobId);
+            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+            asyncStub.logSchedulerAction(SchedlerInfo.newBuilder()
+                    .setJobId(jobId)
+                    .setAction("delete")
+                    .build());
+        }
+        else {
+            log.severe("Couldn't find the trigger in stopRefreshing: " + jobId);
         }
     }
 
     // Done
     public void updateRefreshing(RefreshContext query) throws SchedulerException {
-        JobKey jobkey = new JobKey(query.getOperationId(),"refreshGroup");
-        TriggerKey triggerKey = TriggerKey.triggerKey(query.getOperationId(), "refreshGroup");
-
-        Trigger trigger = scheduler.getTrigger(triggerKey);
-        if(trigger != null){
+        TriggerKey triggerKey = TriggerKey.triggerKey(query.getOperationId(), "refreshGroup-trigger");
+        if(scheduler.checkExists(triggerKey)){
             scheduler.unscheduleJob(triggerKey);
-            if(scheduler.getJobDetail(jobkey) != null){
-                scheduler.interrupt(jobkey);
-                scheduler.deleteJob(jobkey);
-                SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                asyncStub.logSchedulerAction(SchedlerInfo.newBuilder()
-                        .setContextId(query.getContextId())
-                        .setJobId(query.getOperationId())
-                        .setAction("reset")
+            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+            asyncStub.logSchedulerAction(SchedlerInfo.newBuilder()
+                    .setContextId(query.getContextId())
+                    .setJobId(query.getOperationId())
+                    .setAction("reset")
                         .build());
-            }
+
             scheduleRefresh(query);
+            log.info("Refresh updated: " + query.getOperationId());
+        }
+        else {
+            log.severe("Couldn't find the trigger in updateRefreshing: " + query.getOperationId());
         }
     }
 

@@ -363,18 +363,10 @@ public class PerformanceLogHandler {
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
 
-            statement.execute("IF NOT EXISTS (SELECT * FROM sys.tables WHERE name='scheduler_log')\n" +
-                    "CREATE TABLE scheduler_log(\n" +
-                    "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
-                    "    jobId VARCHAR(255) NOT NULL,\n" +
-                    "    createdBy VARCHAR(255) NULL,\n" +
-                    "    createdDatetime DATETIME NOT NULL,\n" +
-                    "    action varchar(20) NOT NULL)");
-
             LocalDateTime now = LocalDateTime.now();
             String formatted_string = "";
 
-            if(request.equals("set")){
+            if(request.getAction().equals("set")){
                 String queryString = "INSERT INTO scheduler_log(jobId,createdBy,createdDatetime,action) " +
                         "VALUES('%s', '%s', CAST('%s' AS DATETIME2), '%s');";
                 formatted_string = String.format(queryString,
@@ -1967,7 +1959,7 @@ public class PerformanceLogHandler {
                     "CREATE TABLE scheduler_log(\n" +
                     "    id INT NOT NULL IDENTITY(1,1) PRIMARY KEY,\n" +
                     "    jobId VARCHAR(255) NOT NULL,\n" +
-                    "    createdBy VARCHAR(255) NOT NULL,\n" +
+                    "    createdBy VARCHAR(255) NULL,\n" +
                     "    createdDatetime DATETIME NOT NULL,\n" +
                     "    action varchar(20) NOT NULL)");
 

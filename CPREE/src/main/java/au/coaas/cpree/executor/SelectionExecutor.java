@@ -121,8 +121,8 @@ public class SelectionExecutor {
                 RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(
                         new JSONObject(request.getSla()), profile, lifetime.getDouble("value"));
 
-                SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
-                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                 CacheLookUp.Builder updatedRef = request.getReference().toBuilder();
                 updatedRef.setHashKey(request.getHashKey());
@@ -230,14 +230,14 @@ public class SelectionExecutor {
             String contextId = lookup.getEt().getType() + "-" + hashkey;
             LocalDateTime curr = LocalDateTime.now();
 
-            SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
-                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-            ListenableFuture<ContextProfile> c_profile = sqemStub.getContextProfile(ContextProfileRequest.newBuilder()
+            ContextProfile c_profile = sqemStub.getContextProfile(ContextProfileRequest.newBuilder()
                     .setPrimaryKey(contextId).build());
 
-            double lambda = c_profile.get().getExpAR().equals("NaN") ? 1.0/60.0 :
-                        Double.valueOf(c_profile.get().getExpAR()); // per second
+            double lambda = c_profile.getExpAR().equals("NaN") ? 1.0/60.0 :
+                        Double.valueOf(c_profile.getExpAR()); // per second
 
             if(!profile.getAccessTrend().equals("NaN") &&
                     LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
@@ -251,16 +251,16 @@ public class SelectionExecutor {
                 long est_delayTime = 0;
                 long est_cacheLife = -1;
                 boolean indefinite = false;
-                String pre_json = new Gson().toJson(weightThresholds);
-                JSONObject json = new JSONObject(pre_json);
+                // String pre_json = new Gson().toJson(weightThresholds);
+                // JSONObject json = new JSONObject(pre_json);
 
-                SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_2
-                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                ListenableFuture<QueryClassProfile> cqc_profile = sqemStub_2.getQueryClassProfile(ContextProfileRequest
+                SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_2
+                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                QueryClassProfile cqc_profile = sqemStub_2.getQueryClassProfile(ContextProfileRequest
                         .newBuilder().setPrimaryKey(lookup.getQClass()).build());
 
-                double access_trend = c_profile.get().getTrend().equals("NaN") ?
-                        0.0 : Double.valueOf(c_profile.get().getTrend());
+                double access_trend = c_profile.getTrend().equals("NaN") ?
+                        0.0 : Double.valueOf(c_profile.getTrend());
 
                 // Access Rate to Context Information Dropping
                 if(access_trend < 0.0){
@@ -271,12 +271,12 @@ public class SelectionExecutor {
                     // This shouldn't be the case. I should rather retrieve the expected value considering all of CQ classes which the item is used
                     // from the context query class network.
 
-                    if(cqc_profile.get().getStatus().equals("200")){
+                    if(cqc_profile.getStatus().equals("200")){
                         JSONObject slaObj = new JSONObject(sla);
                         double fthr = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
                         double sampleInterval = slaObj.getJSONObject("updateFrequency").getDouble("value");
-                        double intercept = c_profile.get().getIntercept().equals("NaN") ? 0 : Double.valueOf(c_profile.get().getIntercept());
+                        double intercept = c_profile.getIntercept().equals("NaN") ? 0 : Double.valueOf(c_profile.getIntercept());
                         double exp_prd = lifetime.getDouble("value") * (1 - fthr);
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
@@ -285,11 +285,11 @@ public class SelectionExecutor {
                         // 1. Reliability of retrieval
                         double reliability = profile.getRelaibility().equals("NaN") ?
                                 0.0 : Double.valueOf(profile.getRelaibility());
-                        json.put("reli", reliability);
+                        // json.put("reli", reliability);
                         // 2. Complexity
-                        json.put("complexity", complexity);
+                        // json.put("complexity", complexity);
                         // 3. Access trend
-                        json.put("ar", access_trend);
+                        // json.put("ar", access_trend);
 
                         if((sampleInterval == 0.0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1.0/lambda)) ||
                                 (sampleInterval > 0.0 && ((sampleInterval > lifetime.getDouble("value") && sampleInterval > (1.0/lambda)) ||
@@ -297,14 +297,14 @@ public class SelectionExecutor {
                             // 4. Retrieval Efficiency
                             slaObj.put("lifetime", lifetime.getDouble("value"));
                             RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
-                                    cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
-                            json.put("retEff", ret_effficiency.getEfficiecy());
+                                    cqc_profile, ref_type.toString().toLowerCase(), slaObj);
+                            // json.put("retEff", ret_effficiency.getEfficiecy());
                             // 5. Caching Efficiency
                             int contextSize = context.getBytes().length;
                             double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getExpMR(),
                                     profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
                                             Double.valueOf(profile.getExpRetLatency()));
-                            json.put("cacheEff", caching_efficiency);
+                            // json.put("cacheEff", caching_efficiency);
 
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
@@ -314,7 +314,7 @@ public class SelectionExecutor {
                                     complexity < min_value ? 0.0 : Math.pow(complexity, 2) +
                                     retEff < min_value ? 0.0 : Math.pow(retEff, 2);
                             double denom = Math.sqrt(vec_total);
-                            json.put("normalizer", denom);
+                            // json.put("normalizer", denom);
 
                             double cacheConfidence = 0.0;
                             double nonRetrievalConfidence = 0.0;
@@ -335,7 +335,7 @@ public class SelectionExecutor {
 
                             if(cacheConfidence > weightThresholds.get("threshold")){
                                 cache = true;
-                                json.put("label", "cache_definite");
+                                // json.put("label", "cache_definite");
                                 // Solving AR for conf(i) = 0
                                 if(weightThresholds.get("pi") > 0 && ret_effficiency.getType() != 1){
                                     // Type 1 is where lambda cancels out in the equation
@@ -349,8 +349,8 @@ public class SelectionExecutor {
                                 if(est_cacheLife < min_cache_residence)
                                     est_cacheLife = min_cache_residence;
 
-                                json.put("definite", true);
-                                json.put("cache_life", est_cacheLife);
+                                // json.put("definite", true);
+                                // json.put("cache_life", est_cacheLife);
                             }
                             else {
                                 // Delay until the AR of the item is at least that could break-even the gain.
@@ -369,17 +369,17 @@ public class SelectionExecutor {
                                     }
                                     // Indefinite delaying until the item reach a better AR
                                     indefinite = true;
-                                    json.put("label", "not_cache_indefinite");
-                                    json.put("definite", false);
-                                    json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
+                                    // json.put("label", "not_cache_indefinite");
+                                    // json.put("definite", false);
+                                    // json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
                                     LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
                                             lambda_conf < 0 ? 0.0 : lambda_conf);
                                 }
                                 else {
                                     est_delayTime = min_cache_residence; // default delay
-                                    json.put("label", "not_cache_definite");
-                                    json.put("definite", true);
-                                    json.put("delay_time", est_delayTime);
+                                    // json.put("label", "not_cache_definite");
+                                    // json.put("definite", true);
+                                    // json.put("delay_time", est_delayTime);
                                     LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId,
                                             curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
                                 }
@@ -387,13 +387,13 @@ public class SelectionExecutor {
                         }
                         else {
                             // Setting decision variables to 0 as they are ignored.
-                            json.put("retEff", 0.0);
-                            json.put("cacheEff", 0.0);
+                            // json.put("retEff", 0.0);
+                            // json.put("cacheEff", 0.0);
                             double vec_total = access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
                                     (1.0-reliability) < min_value ? 0.0 : Math.pow((1.0-reliability), 2) +
                                     complexity < min_value ? 0.0 : Math.pow(complexity, 2);
                             double denom = Math.sqrt(vec_total);
-                            json.put("normalizer", denom);
+                            // json.put("normalizer", denom);
 
                             if(sampleInterval == 0)
                                 lambda_conf = 1.0/exp_prd;
@@ -408,25 +408,25 @@ public class SelectionExecutor {
                             }
                             // Indefinite delaying until the item reach a better AR
                             indefinite = true;
-                            json.put("label", "not_cache_indefinite");
-                            json.put("definite", false);
-                            json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
+                            // json.put("label", "not_cache_indefinite");
+                            // json.put("definite", false);
+                            // json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
                             LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
                                     lambda_conf < 0 ? 0.0 : lambda_conf);
                         }
 
                         // Record decision history
-                        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_3
-                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                        sqemStub_3.logCacheDecision(ContextCacheDecision.newBuilder()
-                                .setJson(json.toString())
-                                .setLevel(CacheLevels.ENTITY.toString()).build());
+//                        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_3
+//                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+//                        sqemStub_3.logCacheDecision(ContextCacheDecision.newBuilder()
+//                                .setJson(json.toString())
+//                                .setLevel(CacheLevels.ENTITY.toString()).build());
                     }
                 }
                 else {
                     // When the access trend is positive, the item would be cached for a longer period until evicted by
                     // the eviction algorithm.
-                    if(cqc_profile.get().getStatus().equals("200")) {
+                    if(cqc_profile.getStatus().equals("200")) {
                         JSONObject slaObj = new JSONObject(sla);
                         double fthr = !profile.getExpFthr().equals("NaN") ? Double.valueOf(profile.getExpFthr()) :
                                 slaObj.getJSONObject("freshness").getDouble("fthresh");
@@ -440,11 +440,11 @@ public class SelectionExecutor {
                         // 1. Reliability of retrieval
                         double reliability = profile.getRelaibility().equals("NaN") ?
                                 0.0 : Double.valueOf(profile.getRelaibility());
-                        json.put("reli", reliability);
+                        // json.put("reli", reliability);
                         // 2. Complexity
-                        json.put("complexity", complexity);
+                        // json.put("complexity", complexity);
                         // 3. Access trend
-                        json.put("ar", access_trend);
+                        // json.put("ar", access_trend);
 
                         if((sampleInterval == 0 && exp_prd > Double.valueOf(profile.getExpRetLatency()) && exp_prd > (1.0/lambda)) ||
                                 (sampleInterval > 0 && ((sampleInterval > lifetime.getDouble("value") && sampleInterval > (1.0/lambda)) ||
@@ -452,14 +452,14 @@ public class SelectionExecutor {
                             // 4. Retrieval Efficiency
                             slaObj.put("lifetime", lifetime.getDouble("value"));
                             RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lookup.getServiceId(), profile, lambda,
-                                    cqc_profile.get(), ref_type.toString().toLowerCase(), slaObj);
-                            json.put("retEff", ret_effficiency.getEfficiecy());
+                                    cqc_profile, ref_type.toString().toLowerCase(), slaObj);
+                            // json.put("retEff", ret_effficiency.getEfficiecy());
                             // 5. Caching Efficiency
                             int contextSize = context.getBytes().length;
                             double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getExpMR(),
                                     profile.getExpRetLatency().equals("NaN") ? profile.getLastRetLatency() :
                                             Double.valueOf(profile.getExpRetLatency()));
-                            json.put("cacheEff", caching_efficiency);
+                            // json.put("cacheEff", caching_efficiency);
 
                             // Unit Vector Creation
                             double retEff = ret_effficiency.getEfficiecy();
@@ -469,7 +469,7 @@ public class SelectionExecutor {
                                     (retEff < min_value ? 0.0 : Math.pow(retEff, 2)) +
                                     ((1-reliability) < min_value ? 0.0 : Math.pow((1.0 - reliability), 2));
                             double denom = Math.sqrt(vec_total);
-                            json.put("normalizer", denom);
+                            // json.put("normalizer", denom);
 
                             double cacheConfidence = 0;
                             double nonRetrievalConfidence = 0;
@@ -493,19 +493,19 @@ public class SelectionExecutor {
                                 // Wait for eviction at least until the AR is below a threshold.
                                 cache = true;
                                 indefinite = true;
-                                json.put("label", "cache_indefinite");
+                                // json.put("label", "cache_indefinite");
                                 if(weightThresholds.get("pi") > 0 && ret_effficiency.getType() != 1){
                                     // Type 1 is where lambda cancels out in the equation
                                     // If retrieval efficiency weight is not zero (if the parameter is important)
                                     double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
                                     lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
                                 }
-                                json.put("definite", false);
-                                json.put("lambda_conf", lambda_conf < 0 ? 0.0:lambda_conf);
+                                // json.put("definite", false);
+                                // json.put("lambda_conf", lambda_conf < 0 ? 0.0:lambda_conf);
                             }
                             else {
                                 // Need to delay until the AR is such that it could at least break-even the cost.
-                                json.put("label", "not_cache_definite");
+                                // json.put("label", "not_cache_definite");
                                 if(weightThresholds.get("pi") > 0){
                                     if(ret_effficiency.getType() != 1){
                                         // Type 1 is where lambda cancels out in the equation
@@ -528,19 +528,19 @@ public class SelectionExecutor {
                                     est_delayTime = min_cache_residence; // default delay
                                 }
                                 LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
-                                json.put("definite", true);
-                                json.put("delay_time", est_delayTime);
+                                // json.put("definite", true);
+                                // json.put("delay_time", est_delayTime);
                             }
                         }
                         else {
                             // Setting decision variables to 0 as they are ignored.
-                            json.put("retEff", 0.0);
-                            json.put("cacheEff", 0.0);
+                            // json.put("retEff", 0.0);
+                            // json.put("cacheEff", 0.0);
                             double vec_total = access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
                                     (1-reliability) < min_value ? 0.0 : Math.pow((1.0-reliability), 2) +
                                     complexity < min_value ? 0.0 : Math.pow(complexity, 2);
                             double denom = Math.sqrt(vec_total);
-                            json.put("normalizer", denom);
+                            // json.put("normalizer", denom);
 
                             if(sampleInterval == 0)
                                 lambda_conf = 1.0/exp_prd;
@@ -555,19 +555,19 @@ public class SelectionExecutor {
                             }
                             // Indefinite delaying until the item reach a better AR
                             indefinite = true;
-                            json.put("definite", false);
-                            json.put("label", "not_cache_indefinite");
-                            json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
+                            // json.put("definite", false);
+                            // json.put("label", "not_cache_indefinite");
+                            // json.put("lambda_conf", lambda_conf < 0 ? 0.0 : lambda_conf);
                             LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
                                     lambda_conf < 0 ? 0.0 : lambda_conf);
                         }
 
                         // Recording decision history
-                        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_4
-                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                        sqemStub_4.logCacheDecision(ContextCacheDecision.newBuilder()
-                                .setJson(json.toString())
-                                .setLevel(CacheLevels.ENTITY.toString()).build());
+//                        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_4
+//                                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+//                        sqemStub_4.logCacheDecision(ContextCacheDecision.newBuilder()
+//                                .setJson(json.toString())
+//                                .setLevel(CacheLevels.ENTITY.toString()).build());
 
                         // The expiry period should be more than the Retrieval latency to not be stale by the time the item is retrieved.
                         // The expiry period should also be greater than the time between 2 access to the item in order to at least have > 0 chance of a hit.
@@ -581,9 +581,9 @@ public class SelectionExecutor {
                 // Actual Caching
                 if(cache) {
                     // Check available cache memory before caching
-                    SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_5
-                            = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                    ListenableFuture<SQEMResponse> response = sqemStub_5.cacheEntity(CacheRequest.newBuilder()
+                    SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_5
+                            = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                    SQEMResponse response = sqemStub_5.cacheEntity(CacheRequest.newBuilder()
                             .setJson(context)
                             .setHashkey(hashkey)
                             .setRefreshLogic(ref_type.toString().toLowerCase())
@@ -591,7 +591,7 @@ public class SelectionExecutor {
                             .setLambdaConf(lambda_conf)
                             .setIndefinite(indefinite)
                             .setReference(lookup.toBuilder().setHashKey(hashkey)).build());
-                    return new AbstractMap.SimpleEntry<>(response.get().getStatus().equals("200") ? true : false,
+                    return new AbstractMap.SimpleEntry<>(response.getStatus().equals("200") ? true : false,
                             ref_type);
                 }
 

@@ -166,6 +166,7 @@ public class ContextEntityHandler {
                         .setJson(response.toString())
                         .setEt(updateRequest.getEt())
                         .setObservedTime(timestamp)
+                        .setRetLatency(updateRequest.getRetLatency())
                         .setReportAccess(updateRequest.getReportAccess())
                         .setProviderId(updateRequest.getProviderId())
                         .setKey(updateRequest.getKey());
@@ -227,14 +228,14 @@ public class ContextEntityHandler {
 
             MongoCollection<Document> collection = db.getCollection(collectionName);
 
-            BasicDBObject updateFields = new BasicDBObject();
+            Document updateFields = new Document();
 
-            JSONObject attributes = new JSONObject(updateRequest.getJson());
+            JSONObject entityData = new JSONObject(updateRequest.getJson());
             String hashkey = "";
 
             //Matching the entities by unique keys
-            for (String attributeName : attributes.keySet()) {
-                Object item = attributes.get(attributeName);
+            for (String attributeName : entityData.keySet()) {
+                Object item = entityData.get(attributeName);
                 String stringItem = item.toString();
 
                 if(stringItem.startsWith("{")){
@@ -283,19 +284,22 @@ public class ContextEntityHandler {
             if(updateRequest.getReportAccess().equals("True")){
                 Executors.newCachedThreadPool().execute(() -> {
                     String contextId = updateRequest.getEt().getType() + "-" + hk;
-                    double entage = attributes.getJSONObject("age").getDouble("value")*1000
+                    double entage = entityData.getJSONObject("age").getDouble("value")*1000
                             + updateRequest.getRetLatency();
                     PerformanceLogHandler.insertAccess(contextId, "miss", entage);
                 });
             }
 
             //todo it might be better to create a separate thread and update the historical db there instead of blocking main thread
-            ContextEntityHandler.updateHistoricalDatabase(collectionName, key, attributes, query, updateRequest.getObservedTime());
+            ContextEntityHandler.updateHistoricalDatabase(collectionName, key, entityData, query, updateRequest.getObservedTime());
 
             //if not row is updated, it means no matching. Create a new one.
             if (ur.getMatchedCount() == 0) {
-                Document myDoc = Document.parse(updateRequest.getJson());
-                collection.insertOne(myDoc);
+                List<String> providers = new ArrayList<>();
+                providers.add(updateRequest.getProviderId());
+                updateFields.put("providers", providers);
+
+                collection.insertOne(updateFields);
                 JSONObject res = new JSONObject();
                 res.put("message", "Created a new context entity");
                 res.put("hashkey", Utilty.getHashKey(hashkey));

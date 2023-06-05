@@ -697,12 +697,7 @@ public class SituationManager {
             return (new JSONObject()).put("value", res);
         }
         catch (IOException | NumberFormatException | JSONException e) {
-            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
-                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-            SituationFunction situationFunction = sqemStub.findSituationByTitle(SituationFunctionRequest.newBuilder()
-                    .setName(fCall.getFunctionName()).build());
-
-            Object execute = PullBasedExecutor.executeSituationFunction(situationFunction,fCall);
+            Object execute = PullBasedExecutor.executeSituationFunction(fCall);
 
             if (execute.toString().trim().startsWith("[")) {
                 return (new JSONObject()).put("results",

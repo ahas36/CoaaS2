@@ -44,6 +44,12 @@ message CacheLookUp {
     repeated string operators = 11;
 }
 
+message SituationLookUp {
+    au.coaas.cqp.proto.SituationFunction situation = 1;
+    au.coaas.cqp.proto.FunctionCall function = 2;
+    string uniquehashkey = 3;
+}
+
 message RefreshUpdate {
     CacheLookUp lookup = 1;
     string refreshLogic = 2;
@@ -344,6 +350,7 @@ service SQEMService {
     rpc simpleLookup (CacheLookUp) returns (SQEMResponse);
     rpc getcachePerformance(Empty) returns (CachePerformance);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
+    rpc handleSituationInCache (SituationLookUp) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
     rpc evictContextEntityByHashKey (ContextServiceId) returns (SQEMResponse);

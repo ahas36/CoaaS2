@@ -1027,11 +1027,7 @@ public class PullBasedExecutor {
         } else if (fCall.getFunctionName().equals("embed")) {
             return embedSituation(fCallTemp.build(), ce, query);
         } else {
-            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
-                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-            SituationFunction situationFunction = sqemStub.findSituationByTitle(SituationFunctionRequest.newBuilder().setName(fCall.getFunctionName()).build());
-
-            return executeSituationFunction(situationFunction, fCallTemp.build());
+            return executeSituationFunction(fCallTemp.build());
 
 //            if (execute.trim().startsWith("[")) {
 //                return new JSONArray(execute.replaceAll("\"", ""));
@@ -1221,34 +1217,71 @@ public class PullBasedExecutor {
         return jo2;
     }
 
-    public static Object executeSituationFunction(SituationFunction function, FunctionCall fCall) {
+    public static Object executeSituationFunction(FunctionCall fCall) {
 
-        CREServiceGrpc.CREServiceBlockingStub creStub
-                = CREServiceGrpc.newBlockingStub(CREChannel.getInstance().getChannel());
+        // Checking cache for the situation
+        String situId = Utilities.combineHashKeys(fCall.getArgumentsList().stream().map(x -> {
+            String strValue = x.getStringValue();
+            return (new JSONObject(strValue)).getString("hashkey");
+        }).collect(Collectors.toList()));
 
-        List<Operand> arguments = fCall.getArgumentsList();
+        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        SQEMResponse situCacheRes = sqemStub.handleSituationInCache(SituationLookUp.newBuilder()
+                .setFunction(fCall).setUniquehashkey(situId).build());
 
-        Map<String, ContextEntityType> tempList = new LinkedHashMap(function.getRelatedEntitiesMap());
+        if(situCacheRes.getStatus().equals("200")){
+            return situCacheRes.getBody();
+        }
+        else {
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_2
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            CREServiceGrpc.CREServiceBlockingStub creStub
+                    = CREServiceGrpc.newBlockingStub(CREChannel.getInstance().getChannel());
 
-        List<List<AttributeValue>> allAttributeValues = new ArrayList<>();
-        for (Operand argument : arguments) {
-            List<List<AttributeValue>> attributeValues = new ArrayList<>();
-            String entityKey = null;
-            if (argument.getType().equals(OperandType.CONTEXT_VALUE_JSON)) {
-                JSONObject entities = new JSONObject(argument.getStringValue());
-                if (entities.has("results")) {
-                    JSONArray results = entities.getJSONArray("results");
-                    String entityType = entities.getString("entityType");
-                    for (int i = 0; i < results.length(); i++) {
-                        JSONObject entity = results.getJSONObject(i);
+            List<Operand> arguments = fCall.getArgumentsList();
 
+            SituationFunction function = sqemStub_2.findSituationByTitle(SituationFunctionRequest.newBuilder()
+                    .setName(fCall.getFunctionName()).build());
+            Map<String, ContextEntityType> tempList = new LinkedHashMap(function.getRelatedEntitiesMap());
+
+            List<List<AttributeValue>> allAttributeValues = new ArrayList<>();
+            for (Operand argument : arguments) {
+                List<List<AttributeValue>> attributeValues = new ArrayList<>();
+                String entityKey = null;
+                if (argument.getType().equals(OperandType.CONTEXT_VALUE_JSON)) {
+                    JSONObject entities = new JSONObject(argument.getStringValue());
+                    if (entities.has("results")) {
+                        JSONArray results = entities.getJSONArray("results");
+                        String entityType = entities.getString("entityType");
+                        for (int i = 0; i < results.length(); i++) {
+                            JSONObject entity = results.getJSONObject(i);
+
+                            Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
+                            String prefix = findEntity.getKey();
+                            entityKey = findEntity.getKey();
+                            List<AttributeValue> entityAttributeValues = new ArrayList<>();
+                            for (String key : entity.keySet()) {
+                                if (function.getAllAttributesList().contains(prefix + "." + key)) {
+                                    Object get = entity.get(key);
+                                    String value = get.toString();
+                                    if (get instanceof JSONObject) {
+                                        value = ((JSONObject) get).get("value").toString();
+                                    }
+                                    entityAttributeValues.add(AttributeValue.newBuilder().setAttributeName(prefix + "." + key).setValue(value).build());
+                                }
+                            }
+                            attributeValues.add(entityAttributeValues);
+                        }
+                    } else {
+                        String entityType = entities.getString("entityType");
                         Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
                         String prefix = findEntity.getKey();
                         entityKey = findEntity.getKey();
                         List<AttributeValue> entityAttributeValues = new ArrayList<>();
-                        for (String key : entity.keySet()) {
+                        for (String key : entities.keySet()) {
                             if (function.getAllAttributesList().contains(prefix + "." + key)) {
-                                Object get = entity.get(key);
+                                Object get = entities.get(key);
                                 String value = get.toString();
                                 if (get instanceof JSONObject) {
                                     value = ((JSONObject) get).get("value").toString();
@@ -1258,89 +1291,72 @@ public class PullBasedExecutor {
                         }
                         attributeValues.add(entityAttributeValues);
                     }
+                    tempList.remove(entityKey);
+                }
+
+                if (allAttributeValues.isEmpty()) {
+                    allAttributeValues.addAll(attributeValues);
                 } else {
-                    String entityType = entities.getString("entityType");
-                    Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
-                    String prefix = findEntity.getKey();
-                    entityKey = findEntity.getKey();
-                    List<AttributeValue> entityAttributeValues = new ArrayList<>();
-                    for (String key : entities.keySet()) {
-                        if (function.getAllAttributesList().contains(prefix + "." + key)) {
-                            Object get = entities.get(key);
-                            String value = get.toString();
-                            if (get instanceof JSONObject) {
-                                value = ((JSONObject) get).get("value").toString();
-                            }
-                            entityAttributeValues.add(AttributeValue.newBuilder().setAttributeName(prefix + "." + key).setValue(value).build());
+                    for (int j = 0; j < allAttributeValues.size(); j++) {
+                        for (List<AttributeValue> av : attributeValues
+                        ) {
+                            allAttributeValues.get(j).addAll(av);
                         }
                     }
-                    attributeValues.add(entityAttributeValues);
-                }
-                tempList.remove(entityKey);
-            }
-
-            if (allAttributeValues.isEmpty()) {
-                allAttributeValues.addAll(attributeValues);
-            } else {
-                for (int j = 0; j < allAttributeValues.size(); j++) {
-                    for (List<AttributeValue> av : attributeValues
-                    ) {
-                        allAttributeValues.get(j).addAll(av);
-                    }
                 }
             }
-        }
 
-        JSONArray finalResult = new JSONArray();
-        for (List<AttributeValue> attributeValue :
-                allAttributeValues) {
-            JSONObject itemResult = new JSONObject();
-            SituationInferenceRequest.Builder request = SituationInferenceRequest.newBuilder();
-            request.addAllSituationDescriptions(function.getSituationsList());
-            request.addAllAttributeValues(attributeValue);
-            JSONArray avs = new JSONArray();
-            for (AttributeValue av :
-                    attributeValue) {
-                JSONObject jo = new JSONObject();
-                jo.put(av.getAttributeName(), av.getValue());
-                avs.put(jo);
-            }
-            itemResult.put("attributeValues", avs);
-            try {
-                CREResponse creResponse = creStub.infer(request.build());
-                if (fCall.getSubItemsList().isEmpty()) {
+            JSONArray finalResult = new JSONArray();
+            for (List<AttributeValue> attributeValue :
+                    allAttributeValues) {
+                JSONObject itemResult = new JSONObject();
+                SituationInferenceRequest.Builder request = SituationInferenceRequest.newBuilder();
+                request.addAllSituationDescriptions(function.getSituationsList());
+                request.addAllAttributeValues(attributeValue);
+                JSONArray avs = new JSONArray();
+                for (AttributeValue av :
+                        attributeValue) {
                     JSONObject jo = new JSONObject();
-                    for (ReasoningResponse rr : creResponse.getBodyList()) {
-                        jo.put(rr.getSituationTitle(), rr.getConfidence());
-                    }
-                    itemResult.put("outcome", jo);
-                } else {
-                    String situation = fCall.getSubItemsList().get(0);
-                    Optional<ReasoningResponse> rr = creResponse.getBodyList().stream().filter(p -> p.getSituationTitle().equalsIgnoreCase(situation)).findFirst();
-                    if (rr.isPresent()) {
-                        itemResult.put("outcome", rr.get().getConfidence());
-                    } else {
-                        itemResult.put("outcome", 0);
-                    }
+                    jo.put(av.getAttributeName(), av.getValue());
+                    avs.put(jo);
                 }
-            } catch (Exception ex) {
-                log.log(Level.SEVERE, null, ex);
+                itemResult.put("attributeValues", avs);
+                try {
+                    CREResponse creResponse = creStub.infer(request.build());
+                    if (fCall.getSubItemsList().isEmpty()) {
+                        JSONObject jo = new JSONObject();
+                        for (ReasoningResponse rr : creResponse.getBodyList()) {
+                            jo.put(rr.getSituationTitle(), rr.getConfidence());
+                        }
+                        itemResult.put("outcome", jo);
+                    } else {
+                        String situation = fCall.getSubItemsList().get(0);
+                        Optional<ReasoningResponse> rr = creResponse.getBodyList().stream().filter(p -> p.getSituationTitle().equalsIgnoreCase(situation)).findFirst();
+                        if (rr.isPresent()) {
+                            itemResult.put("outcome", rr.get().getConfidence());
+                        } else {
+                            itemResult.put("outcome", 0);
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.log(Level.SEVERE, null, ex);
+                }
+                finalResult.put(itemResult);
             }
-            finalResult.put(itemResult);
-        }
-        if (finalResult.length() == 1) {
-            // This is a quick fix
-            Object outcome = finalResult.getJSONObject(0).get("outcome");
-            if(outcome instanceof JSONObject){
-                String situationName = function.getSituations(0).getSituationName();
-                return ((JSONObject) outcome).get(situationName);
+            if (finalResult.length() == 1) {
+                // This is a quick fix
+                Object outcome = finalResult.getJSONObject(0).get("outcome");
+                if(outcome instanceof JSONObject){
+                    String situationName = function.getSituations(0).getSituationName();
+                    return ((JSONObject) outcome).get(situationName);
+                }
+                return outcome;
+                // return finalResult.getJSONObject(0).get("outcome");
+            } else {
+                JSONObject resultWrapper = new JSONObject();
+                resultWrapper.put("results", finalResult);
+                return resultWrapper;
             }
-            return outcome;
-            // return finalResult.getJSONObject(0).get("outcome");
-        } else {
-            JSONObject resultWrapper = new JSONObject();
-            resultWrapper.put("results", finalResult);
-            return resultWrapper;
         }
     }
 
@@ -1632,7 +1648,8 @@ public class PullBasedExecutor {
                             ContextEntity object = argument.getContextEntity();
                             String entityID = object.getEntityID();
                             if (!entityID.equals(targetEntity.getEntityID())) {
-                                ContextEntity findEntity = query.getDefine().getDefinedEntitiesList().stream().filter(e -> e.getEntityID().equals(entityID)).findFirst().get();
+                                ContextEntity findEntity = query.getDefine().getDefinedEntitiesList().stream()
+                                        .filter(e -> e.getEntityID().equals(entityID)).findFirst().get();
                                 String entityTypeString = findEntity.getType().getType();
                                 JSONObject operandEntity = ce.get(entityID);
                                 operandEntity.put("entityType", entityTypeString);

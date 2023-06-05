@@ -8,28 +8,27 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Locale;
 
-public class ContextItem {
+public class ContextItem implements ContextCacheItem {
     private String id;
     private String refreshLogic;
     private JSONObject lifetime;
     private LocalDateTime zeroTime;
     private LocalDateTime createdTime;
     private LocalDateTime updatedTime;
-    private HashMap<String, ContextItem> parents;
-    private HashMap<String, ContextItem> children;
+    private HashMap<String, ContextCacheItem> parents;
+    private HashMap<String, ContextCacheItem> children;
 
-    private String getId() {return this.id;}
+    public String getId() {return this.id;}
     public JSONObject getlifetime() {return this.lifetime;}
     public LocalDateTime getZeroTime() {return this.zeroTime;}
     public String getRefreshLogic() {return this.refreshLogic;}
-    public LocalDateTime getUpdatedTime() {return this.updatedTime;}
-    public HashMap<String, ContextItem> getParents() {return this.parents;}
-    public HashMap<String, ContextItem> getChildren() {return this.children;}
+    public HashMap<String, ContextCacheItem> getParents() {return this.parents;}
+    public HashMap<String, ContextCacheItem> getChildren() {return this.children;}
 
     public void setZeroTime(LocalDateTime time) {this.zeroTime = time;}
     public void setRefreshLogic(String logic) {this.refreshLogic = logic;}
     public void setUpdatedTime(LocalDateTime time) {this.updatedTime = time;}
-    public void setParents(String id, ContextItem entity) {this.parents.put(id, entity);}
+    public void setParents(String id, ContextCacheItem entity) {this.parents.put(id, entity);}
 
     // Context Entity Node
     public ContextItem(CacheLookUp lookup, String hashKey, String refreshLogic, LocalDateTime zeroTime){

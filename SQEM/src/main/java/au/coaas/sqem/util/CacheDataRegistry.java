@@ -1,5 +1,7 @@
 package au.coaas.sqem.util;
 
+import au.coaas.sqem.entity.ContextCacheItem;
+import au.coaas.sqem.entity.SituationItem;
 import au.coaas.sqem.proto.CacheLookUp;
 import au.coaas.sqem.entity.ContextItem;
 import au.coaas.sqem.proto.RefreshUpdate;
@@ -7,6 +9,7 @@ import au.coaas.sqem.proto.CacheLookUpResponse;
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.handler.PerformanceLogHandler;
 
+import au.coaas.sqem.proto.SituationLookUp;
 import org.json.JSONObject;
 
 import java.time.Instant;
@@ -21,7 +24,7 @@ import java.util.stream.Collectors;
 
 public final class CacheDataRegistry{
 
-    private HashMap<String, ContextItem> root;
+    private HashMap<String, ContextCacheItem> root;
     private static CacheDataRegistry singleton = null;
     private static Logger log = Logger.getLogger(ContextCacheHandler.class.getName());
 
@@ -52,7 +55,7 @@ public final class CacheDataRegistry{
 
         // Check if the entity type is cached.
         if(this.root.containsKey(lookup.getEt().getType())){
-            Map<String,ContextItem> cs = this.root.get(lookup.getEt().getType()).getChildren();
+            HashMap<String, ContextCacheItem> cs = this.root.get(lookup.getEt().getType()).getChildren();
             String serId = lookup.getServiceId();
             String entType = lookup.getEt().getType();
 
@@ -64,7 +67,7 @@ public final class CacheDataRegistry{
             // Check if originating from a context provider is available
             // This is because of the context provider selection.
             if(cs.containsKey(serId)){
-                Map<String,ContextItem> entities = cs.get(serId).getChildren();
+                HashMap<String, ContextCacheItem> entities = cs.get(serId).getChildren();
                 // Map<String, String> parameters = lookup.getParamsMap();
 
                 if(lookup.getCheckFresh()){
@@ -92,7 +95,7 @@ public final class CacheDataRegistry{
                                     LocalDateTime staleTime;
                                     LocalDateTime expiryTime;
 
-                                    ContextItem data = entities.get(keySet.get(i));
+                                    ContextItem data = (ContextItem) entities.get(keySet.get(i));
 
                                     JSONObject lifetime = data.getlifetime();
                                     LocalDateTime zeroTime = data.getZeroTime();
@@ -241,7 +244,7 @@ public final class CacheDataRegistry{
                         }
                         else finalHashKey = lookup.getHashKey();
 
-                        ContextItem data = entities.get(finalHashKey);
+                        ContextItem data = (ContextItem) entities.get(finalHashKey);
 
                         if(data != null){
                             JSONObject lifetime = data.getlifetime();
@@ -404,7 +407,7 @@ public final class CacheDataRegistry{
                         }
                         else finalHashKey = lookup.getHashKey();
 
-                        ContextItem data = entities.get(finalHashKey);
+                        ContextItem data = (ContextItem) entities.get(finalHashKey);
                         if(data != null){
                             PerformanceLogHandler.insertAccess(
                                     entType + "-" + finalHashKey,
@@ -446,6 +449,74 @@ public final class CacheDataRegistry{
         return res.build();
     }
 
+    public CacheLookUpResponse lookUpSituation(SituationLookUp lookup) {
+        // Initializing
+        CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
+
+        if(this.root.containsKey(lookup.getFunction().getFunctionName())){
+            HashMap<String, ContextCacheItem> situs = this.root.get(lookup.getFunction()
+                                                            .getFunctionName()).getChildren();
+
+            if(situs.containsKey(lookup.getUniquehashkey())){
+                long remainingLife = 0;
+                LocalDateTime expiryTime;
+
+                SituationItem data = (SituationItem) situs.get(lookup.getUniquehashkey());
+
+                JSONObject lifetime = data.getlifetime();
+                LocalDateTime zeroTime = data.getZeroTime();
+                LocalDateTime now = LocalDateTime.now(TimeZone.getDefault().toZoneId());
+
+                // This freshness should be from the response coming from lifetime profiler
+                switch(lifetime.optString("unit")){
+                    case "m": {
+                        long lifetimeValue = (long)lifetime.getDouble("value") * 60;
+                        expiryTime = zeroTime.plusSeconds(lifetimeValue);
+                        break;
+                    }
+                    case "s":
+                    default:
+                        expiryTime = zeroTime.plusSeconds((long)lifetime.getDouble("value"));
+                        break;
+                }
+
+                double finalAgeLoss = ChronoUnit.MILLIS.between(zeroTime,now);
+                if(now.isAfter(expiryTime)){
+                    PerformanceLogHandler.insertAccess(
+                            lookup.getUniquehashkey(),
+                            "p_miss", finalAgeLoss);
+                    return res.setHashkey(lookup.getUniquehashkey())
+                            .setIsValid(false)
+                            .setIsCached(true)
+                            .setRefreshLogic(data.getRefreshLogic())
+                            .setRemainingLife(remainingLife).build();
+                }
+
+                remainingLife = ChronoUnit.MILLIS.between(now, expiryTime);
+                PerformanceLogHandler.insertAccess(
+                        lookup.getUniquehashkey(),
+                        "hit", finalAgeLoss);
+                return res.setHashkey(lookup.getUniquehashkey())
+                        .setIsValid(true)
+                        .setIsCached(true)
+                        .setRefreshLogic(data.getRefreshLogic())
+                        .setRemainingLife(remainingLife).build();
+            }
+        }
+
+        res.setIsCached(false).setIsValid(false).setRemainingLife(0);
+
+        // Store cache access in Time Series DB
+        if(!lookup.getUniquehashkey().isEmpty()){
+            Executors.newCachedThreadPool().submit(()
+                    -> PerformanceLogHandler.insertAccess(
+                    lookup.getFunction().getFunctionName() + "-" + lookup.getUniquehashkey(),
+                    "miss", 0));
+        }
+
+        return res.build();
+    }
+
     // Adds or updates the cached context repository
     // Done
     public synchronized String updateRegistry(CacheLookUp lookup){
@@ -481,10 +552,10 @@ public final class CacheDataRegistry{
                                     // Add a new entity by hash key if not available.
                                     if(!stat.getChildren().containsKey(lookup.getHashKey())){
                                         ContextItem sharedEntity = null;
-                                        HashMap<String, ContextItem> siblingCPs = v.getChildren();
-                                        for(Map.Entry<String, ContextItem> sibling : siblingCPs.entrySet()){
+                                        HashMap<String, ContextCacheItem> siblingCPs = v.getChildren();
+                                        for(Map.Entry<String, ContextCacheItem> sibling : siblingCPs.entrySet()){
                                             if(sibling.getValue().getChildren().containsKey(lookup.getHashKey())){
-                                                sharedEntity = sibling.getValue()
+                                                sharedEntity = (ContextItem) sibling.getValue()
                                                         .getChildren().get(lookup.getHashKey());
                                                 break;
                                             }
@@ -496,8 +567,8 @@ public final class CacheDataRegistry{
                                             // No shared entity.
                                             stat.getChildren().put(lookup.getHashKey(),
                                                     refreshLogic != null ?
-                                                            new ContextItem(stat, lookup.getHashKey(), refreshLogic, zeroTime, entType)
-                                                            : new ContextItem(stat, lookup.getHashKey(), zeroTime, entType));
+                                                            new ContextItem((ContextItem) stat, lookup.getHashKey(), refreshLogic, zeroTime, entType)
+                                                            : new ContextItem((ContextItem) stat, lookup.getHashKey(), zeroTime, entType));
                                         }
                                         else {
                                             // Already existing shared entity.
@@ -515,7 +586,7 @@ public final class CacheDataRegistry{
                                                 v1.setZeroTime(zeroTime);
                                                 v1.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
                                                 if(refreshLogic != null)
-                                                    v1.setRefreshLogic(refreshLogic);
+                                                    ((ContextItem)v1).setRefreshLogic(refreshLogic);
                                             }
                                             return v1;
                                         });
@@ -527,7 +598,7 @@ public final class CacheDataRegistry{
                         else {
                             LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
                                     TimeZone.getDefault().toZoneId());
-                            v.getChildren().put(serId,new ContextItem(v, serId, lookup.getHashKey(), refreshLogic, zeroTime));
+                            v.getChildren().put(serId,new ContextItem((ContextItem) v, serId, lookup.getHashKey(), refreshLogic, zeroTime));
                         }
                     }
                     return v;
@@ -563,7 +634,7 @@ public final class CacheDataRegistry{
                                 if(stat.getChildren().containsKey(lookup.getHashkey())){
                                     stat.getChildren().compute(lookup.getHashkey(), (k1,v1) -> {
                                         if(v1!=null)
-                                            v1.setRefreshLogic(lookup.getRefreshLogic());
+                                            ((ContextItem)v1).setRefreshLogic(lookup.getRefreshLogic());
                                         return v1;
                                     });
                                 }
@@ -592,8 +663,8 @@ public final class CacheDataRegistry{
                 if(v.getChildren().containsKey(serId)){
                     v.getChildren().compute(serId, (id,stat) -> {
                         if(stat.getChildren().containsKey(lookup.getHashKey())){
-                            ContextItem entity = stat.getChildren().get(lookup.getHashKey());
-                            for(Map.Entry<String, ContextItem> parent: entity.getParents().entrySet()){
+                            ContextItem entity = (ContextItem) stat.getChildren().get(lookup.getHashKey());
+                            for(Map.Entry<String, ContextCacheItem> parent: entity.getParents().entrySet()){
                                 parent.getValue().getChildren().remove(lookup.getHashKey());
                             }
                         }
@@ -629,8 +700,8 @@ public final class CacheDataRegistry{
                 if(v.getChildren().containsKey(serId)){
                     v.getChildren().compute(serId, (id,stat) -> {
                         if(stat.getChildren().containsKey(hashKey)){
-                            ContextItem entity = stat.getChildren().get(hashKey);
-                            for(Map.Entry<String, ContextItem> parent: entity.getParents().entrySet()){
+                            ContextItem entity = (ContextItem) stat.getChildren().get(hashKey);
+                            for(Map.Entry<String, ContextCacheItem> parent: entity.getParents().entrySet()){
                                 parent.getValue().getChildren().remove(hashKey);
                             }
                         }

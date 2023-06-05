@@ -14,6 +14,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.List;
 import java.util.Map;
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -280,4 +282,29 @@ public class Utilities {
             + "  \"auth_provider_x509_cert_url\": \"https://www.googleapis.com/oauth2/v1/certs\",\n"
             + "  \"client_x509_cert_url\": \"https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-mpgsf%40zippy-tiger-550.iam.gserviceaccount.com\"\n"
             + "}";
+
+    public static String combineHashKeys(List<String> hashkeys) {
+        String result = "";
+        for(int i=0; i < hashkeys.size(); i++){
+            if(i == 0){
+                result = hashkeys.get(0);
+                continue;
+            }
+            result = base64Encode(xorWithKey(result.getBytes(), hashkeys.get(i).getBytes())) ;
+        }
+        return result;
+    }
+
+    private static byte[] xorWithKey(byte[] a, byte[] key) {
+        byte[] out = new byte[a.length];
+        for (int i = 0; i < a.length; i++) {
+            out[i] = (byte) (a[i] ^ key[i%key.length]);
+        }
+        return out;
+    }
+
+    private static String base64Encode(byte[] bytes) {
+        Base64.Encoder enc = Base64.getEncoder();
+        return new String(enc.encode(bytes)).replaceAll("\\s", "");
+    }
 }

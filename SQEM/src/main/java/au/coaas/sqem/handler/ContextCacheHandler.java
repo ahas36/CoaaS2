@@ -458,11 +458,64 @@ public class ContextCacheHandler {
                 .setHashKey(result.getHashkey()).build();
     }
 
+    public static SQEMResponse retrieveFromCache(SituationLookUp request) {
+        long startTime = System.currentTimeMillis();
+        CacheLookUpResponse result = registry.lookUpSituation(request);
+        String hashkey = request.getFunction().getFunctionName() + "-" + request.getUniquehashkey();
+
+        // Hit from Cache Registry
+        if(result.getIsCached() && result.getIsValid()){
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+            RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
+
+            RLock lock = rwLock.readLock();
+            RBucket<Document> situ = cacheClient.getBucket(hashkey);
+            Document conSituation = situ.get().get("data", Document.class);
+            lock.unlockAsync();
+
+            long endTime = System.currentTimeMillis();
+
+            Executors.newCachedThreadPool().submit(()
+                    -> logCacheSearch("200", request.getFunction().getFunctionName(),
+                    null, endTime - startTime));
+            // Rest of the metadata is not needed when the context is returned from cache.
+            return SQEMResponse.newBuilder().setStatus("200")
+                    .setHashKey(hashkey)
+                    .setBody(conSituation.toString()).build();
+        }
+        else if(result.getIsCached() && !result.getIsValid()) {
+            long endTime = System.currentTimeMillis();
+
+            Executors.newCachedThreadPool().submit(()
+                    -> logCacheSearch("400", request.getFunction().getFunctionName(),
+                    null, endTime - startTime));
+
+            return SQEMResponse.newBuilder().setStatus("400")
+                    .setMisskeys(hashkey)
+                    .setBody("Situation is not up to date.").build();
+        }
+
+        // Complete Miss
+        long endTime = System.currentTimeMillis();
+        Executors.newCachedThreadPool().submit(()
+                -> logCacheSearch("404", request.getFunction().getFunctionName(),
+                null, endTime - startTime));
+        return SQEMResponse.newBuilder().setStatus("404").build();
+    }
+
     // Done
     private static void logCacheSearch(String status, String csId, String freshness, long responseTime){
-        JSONObject frsh = new JSONObject(freshness);
-        Statistic stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status).setTime(responseTime)
-                .setIdentifier(csId).setEarning(frsh.getDouble("fthresh")).build();
+        Statistic stat;
+        if(freshness != null){
+            JSONObject frsh = new JSONObject(freshness);
+            stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status).setTime(responseTime)
+                    .setIdentifier(csId).setEarning(frsh.getDouble("fthresh")).build();
+
+        }
+        else {
+            stat = Statistic.newBuilder().setMethod("cacheSearch").setStatus(status).setTime(responseTime)
+                    .setIdentifier(csId).setEarning(0.0).build(); // here csId is the function name.
+        }
         PerformanceLogHandler.coassPerformanceRecord(stat);
     }
 

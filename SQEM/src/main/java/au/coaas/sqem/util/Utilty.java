@@ -6,10 +6,8 @@ import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.hash.Hashing;
 import org.json.JSONObject;
 
-import java.util.Map;
+import java.util.*;
 import java.nio.charset.StandardCharsets;
-import java.util.Timer;
-import java.util.TimerTask;
 
 // General utility functions used by the service
 public class Utilty {
@@ -91,5 +89,30 @@ public class Utilty {
             default: lifetime.put("value",1200.0);
         }
         return lifetime;
+    }
+
+    public static String combineHashKeys(List<String> hashkeys) {
+        String result = "";
+        for(int i=0; i < hashkeys.size(); i++){
+            if(i == 0){
+                result = hashkeys.get(0);
+                continue;
+            }
+            result = base64Encode(xorWithKey(result.getBytes(), hashkeys.get(i).getBytes())) ;
+        }
+        return result;
+    }
+
+    private static byte[] xorWithKey(byte[] a, byte[] key) {
+        byte[] out = new byte[a.length];
+        for (int i = 0; i < a.length; i++) {
+            out[i] = (byte) (a[i] ^ key[i%key.length]);
+        }
+        return out;
+    }
+
+    private static String base64Encode(byte[] bytes) {
+        Base64.Encoder enc = Base64.getEncoder();
+        return new String(enc.encode(bytes)).replaceAll("\\s", "");
     }
 }

@@ -1225,15 +1225,29 @@ public class PullBasedExecutor {
             return (new JSONObject(strValue)).getString("hashkey");
         }).collect(Collectors.toList()));
 
+        SituationLookUp situLookup = SituationLookUp.newBuilder().setFunction(fCall)
+                .setUniquehashkey(situId).build();
+
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-        SQEMResponse situCacheRes = sqemStub.handleSituationInCache(SituationLookUp.newBuilder()
-                .setFunction(fCall).setUniquehashkey(situId).build());
+        SQEMResponse situCacheRes = sqemStub.handleSituationInCache(situLookup);
 
         if(situCacheRes.getStatus().equals("200")){
-            return situCacheRes.getBody();
+            JSONArray finalResult = new JSONArray(situCacheRes.getBody());
+            if (finalResult.length() == 1) {
+                Object outcome = finalResult.getJSONObject(0).get("outcome");
+                if(outcome instanceof JSONObject){
+                    return ((JSONObject) outcome).get(fCall.getFunctionName());
+                }
+                return outcome;
+            } else {
+                JSONObject resultWrapper = new JSONObject();
+                resultWrapper.put("results", finalResult);
+                return resultWrapper;
+            }
         }
         else {
+            long zeroTime = 0;
             SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_2
                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
             CREServiceGrpc.CREServiceBlockingStub creStub
@@ -1271,6 +1285,10 @@ public class PullBasedExecutor {
                                     entityAttributeValues.add(AttributeValue.newBuilder().setAttributeName(prefix + "." + key).setValue(value).build());
                                 }
                             }
+                            if(entity.has("zeroTime")) {
+                                if(zeroTime == 0 || entity.getLong("zeroTime") < zeroTime)
+                                    zeroTime = entity.getLong("zeroTime");
+                            }
                             attributeValues.add(entityAttributeValues);
                         }
                     } else {
@@ -1288,6 +1306,10 @@ public class PullBasedExecutor {
                                 }
                                 entityAttributeValues.add(AttributeValue.newBuilder().setAttributeName(prefix + "." + key).setValue(value).build());
                             }
+                        }
+                        if(entities.has("zeroTime")) {
+                            if(zeroTime == 0 || entities.getLong("zeroTime") < zeroTime)
+                                zeroTime = entities.getLong("zeroTime");
                         }
                         attributeValues.add(entityAttributeValues);
                     }
@@ -1343,15 +1365,23 @@ public class PullBasedExecutor {
                 }
                 finalResult.put(itemResult);
             }
+
+            // Refreshing the context
+            long finalZeroTime = zeroTime;
+            Executors.newCachedThreadPool().submit(() -> {
+                JSONObject situCacheObj = new JSONObject();
+                situCacheObj.put("outcome", finalResult);
+                situCacheObj.put("zeroTime", finalZeroTime > 0? finalZeroTime : System.currentTimeMillis());
+                refreshOrCacheContext(Integer.parseInt(situCacheRes.getStatus()), situLookup, situCacheObj);
+            });
+
             if (finalResult.length() == 1) {
-                // This is a quick fix
                 Object outcome = finalResult.getJSONObject(0).get("outcome");
                 if(outcome instanceof JSONObject){
                     String situationName = function.getSituations(0).getSituationName();
                     return ((JSONObject) outcome).get(situationName);
                 }
                 return outcome;
-                // return finalResult.getJSONObject(0).get("outcome");
             } else {
                 JSONObject resultWrapper = new JSONObject();
                 resultWrapper.put("results", finalResult);
@@ -1593,6 +1623,36 @@ public class PullBasedExecutor {
         }
         catch (Exception ex){
             log.severe("Error occured in Refresh Or Cache Context method. See message for details.");
+            log.severe("Error: " + ex.getMessage());
+        }
+    }
+
+    private static void refreshOrCacheContext(int cacheStatus, SituationLookUp lookup, Object inferedSituation){
+        try {
+            CPREEServiceGrpc.CPREEServiceFutureStub asynStub
+                    = CPREEServiceGrpc.newFutureStub(CPREEChannel.getInstance().getChannel());
+
+            if(cacheStatus == 400){
+                // 400 means the cache missed due to invalidity
+                // The cached context needs to be refreshed.
+                asynStub.refreshContext(ContextRefreshRequest.newBuilder()
+                        .setRequest(CacheRefreshRequest.newBuilder()
+                                .setSituReference(lookup)
+                                .setContextLevel(CacheLevels.SITU_FUNCTION.toString().toLowerCase())
+                                .setJson(inferedSituation.toString())).build());
+            }
+            else if(cacheStatus == 404 && registerState){
+                // 404 means all context entities are not at all cached
+                // Trigger Selective Caching Evaluation
+                asynStub.evaluateAndCacheContext(CacheSelectionRequest.newBuilder()
+                        .setContext(inferedSituation.toString())
+                        .setContextLevel(CacheLevels.SITU_FUNCTION.toString().toLowerCase())
+                        .setSituReference(lookup)
+                        .build());
+            }
+        }
+        catch (Exception ex){
+            log.severe("Error occured in Refresh Or Cache Context method for situations.");
             log.severe("Error: " + ex.getMessage());
         }
     }

@@ -32,6 +32,7 @@ public class SituationItem implements ContextCacheItem {
     public void setZeroTime(LocalDateTime time) {this.zeroTime = time;}
     public void setLifetime(JSONObject lifetime) {this.lifetime = lifetime;}
     public void setUpdatedTime(LocalDateTime time) {this.updatedTime = time;}
+    public void setOperands(List<Operand> operands) {this.operands = operands;}
     public void setChildren(ContextItem entity) {this.children.put(entity.getId(), entity);}
     public void setParents(String id, ContextCacheItem entity) {this.parents.put(id, entity);}
 

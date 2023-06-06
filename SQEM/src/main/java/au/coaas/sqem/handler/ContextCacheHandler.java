@@ -108,7 +108,15 @@ public class ContextCacheHandler {
 
     // Updating cached context for an entity
     // Done
-    public static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
+    public static SQEMResponse refreshContext(CacheRefreshRequest updateRequest) {
+        switch(updateRequest.getContextLevel().toLowerCase()){
+            case "situ_function": return refreshSituation(updateRequest);
+            case "entity":
+            default: return refreshEntity(updateRequest);
+        }
+    }
+
+    private static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
         try {
             String contextId = updateRequest.getReference().getEt().getType() + "-"
                     + updateRequest.getReference().getHashKey();
@@ -135,6 +143,37 @@ public class ContextCacheHandler {
 
             PerformanceLogHandler.logCacheActions(ScheduleTasks.REFRESH, contextId, updateRequest.getRefPolicy());
             return SQEMResponse.newBuilder().setStatus("200").setBody("Entity refreshed.").build();
+        } catch (Exception e) {
+            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
+        }
+    }
+
+    private static SQEMResponse refreshSituation(CacheRefreshRequest updateRequest) {
+        try {
+            String contextId = updateRequest.getSituReference().getFunction().getFunctionName() + "-"+
+                    updateRequest.getSituReference().getUniquehashkey();
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+            Document data =  Document.parse(updateRequest.getJson());
+            RBucket<Document> situ = cacheClient.getBucket(contextId);
+
+            RLock lock;
+            RFuture<Document> refreshStatus;
+
+            synchronized (ContextCacheHandler.class){
+                lock = cacheClient.getFairLock("refreshLock");
+                Document cacheObject = situ.get();
+                cacheObject.replace("data", data.get("outcome"));
+                refreshStatus = situ.getAndSetAsync(cacheObject);
+                registry.updateRegistry(updateRequest.getSituReference().toBuilder()
+                        .setZeroTime(data.getLong("zeroTime")).build());
+            }
+
+            refreshStatus.whenCompleteAsync((res, exception) -> {
+                lock.unlockAsync();
+            });
+
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.REFRESH, contextId, "reactive");
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Situation refreshed.").build();
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
@@ -458,6 +497,7 @@ public class ContextCacheHandler {
                 .setHashKey(result.getHashkey()).build();
     }
 
+    // Retrive situation from cache
     public static SQEMResponse retrieveFromCache(SituationLookUp request) {
         long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpSituation(request);

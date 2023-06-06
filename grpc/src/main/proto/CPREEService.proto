@@ -27,10 +27,11 @@ message CacheSelectionRequest {
   double complexity = 5;
   repeated string attributes = 6;
   string hashKey = 7;
+  au.coaas.sqem.proto.SituationLookUp situReference = 8;
 }
 
 message ProactiveRefreshRequest {
-  au.coaas.sqem.proto.CacheLookUp reference = 1;
+    au.coaas.sqem.proto.CacheLookUp reference = 1;
     double fthreh = 2;
     double resiLifetime = 3;
     double lifetime = 4;

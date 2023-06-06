@@ -65,7 +65,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     public void refreshContextEntity(au.coaas.sqem.proto.CacheRefreshRequest request,
                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
-            responseObserver.onNext(ContextCacheHandler.refreshEntity(request));
+            responseObserver.onNext(ContextCacheHandler.refreshContext(request));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

@@ -48,6 +48,7 @@ message SituationLookUp {
     au.coaas.cqp.proto.SituationFunction situation = 1;
     au.coaas.cqp.proto.FunctionCall function = 2;
     string uniquehashkey = 3;
+    uint64 zeroTime = 4;
 }
 
 message RefreshUpdate {
@@ -148,6 +149,8 @@ message CacheRefreshRequest
     int64 observedTime = 3;
     string sla = 4;
     string refPolicy = 5;
+    string contextLevel = 6;
+    SituationLookUp situReference = 7;
 }
 
 message RegisterEntityRequest

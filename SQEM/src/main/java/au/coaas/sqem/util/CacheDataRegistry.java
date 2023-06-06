@@ -519,99 +519,128 @@ public final class CacheDataRegistry{
 
     // Adds or updates the cached context repository
     // Done
-    public synchronized String updateRegistry(CacheLookUp lookup){
+    public synchronized String updateRegistry(Object lookup){
         return updateRegistry(lookup, null);
     }
 
     // Done
-    public synchronized String updateRegistry(CacheLookUp lookup, String refreshLogic){
+    public synchronized String updateRegistry(Object lookup, String refreshLogic){
         try {
-            String entType = lookup.getEt().getType();
-            if(this.root.containsKey(entType)){
-                // Updating the last update time of the entity type
-                this.root.compute(entType, (k,v) -> {
-                    if(v != null){
-                        v.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
-
-                        // Updating the last update time of the context service
-                        // Add a new context service if any available.
-
-                        String serId = lookup.getServiceId();
-                        if(serId.startsWith("{")){
-                            JSONObject obj = new JSONObject(serId);
-                            serId = obj.getString("$oid");
-                        }
-
-                        if(v.getChildren().containsKey(serId)){
-                            String finalSerId = serId;
-                            v.getChildren().compute(serId, (id, stat) -> {
-                                if(stat != null){
-                                    stat.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
-
-                                    // Updating the last update time of the entity by hash key
-                                    // Add a new entity by hash key if not available.
-                                    if(!stat.getChildren().containsKey(lookup.getHashKey())){
-                                        ContextItem sharedEntity = null;
-                                        HashMap<String, ContextCacheItem> siblingCPs = v.getChildren();
-                                        for(Map.Entry<String, ContextCacheItem> sibling : siblingCPs.entrySet()){
-                                            if(sibling.getValue().getChildren().containsKey(lookup.getHashKey())){
-                                                sharedEntity = (ContextItem) sibling.getValue()
-                                                        .getChildren().get(lookup.getHashKey());
-                                                break;
-                                            }
-                                        }
-
-                                        LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
-                                                TimeZone.getDefault().toZoneId());
-                                        if(sharedEntity == null){
-                                            // No shared entity.
-                                            stat.getChildren().put(lookup.getHashKey(),
-                                                    refreshLogic != null ?
-                                                            new ContextItem((ContextItem) stat, lookup.getHashKey(), refreshLogic, zeroTime, entType)
-                                                            : new ContextItem((ContextItem) stat, lookup.getHashKey(), zeroTime, entType));
-                                        }
-                                        else {
-                                            // Already existing shared entity.
-                                            sharedEntity.setZeroTime(zeroTime);
-                                            sharedEntity.setParents(finalSerId, stat);
-                                            sharedEntity.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
-                                            stat.getChildren().put(lookup.getHashKey(),sharedEntity);
-                                        }
-                                    }
-                                    else {
-                                        stat.getChildren().compute(lookup.getHashKey(), (k1,v1) -> {
-                                            if(v1!=null){
-                                                LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
-                                                        TimeZone.getDefault().toZoneId());
-                                                v1.setZeroTime(zeroTime);
-                                                v1.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
-                                                if(refreshLogic != null)
-                                                    ((ContextItem)v1).setRefreshLogic(refreshLogic);
-                                            }
-                                            return v1;
-                                        });
-                                    }
-                                }
-                                return stat;
-                            });
-                        }
-                        else {
-                            LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
-                                    TimeZone.getDefault().toZoneId());
-                            v.getChildren().put(serId,new ContextItem((ContextItem) v, serId, lookup.getHashKey(), refreshLogic, zeroTime));
-                        }
-                    }
-                    return v;
-                });
-            }
-            else {
-                LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
-                        TimeZone.getDefault().toZoneId());
-                this.root.put(lookup.getEt().getType(), new ContextItem(lookup,lookup.getHashKey(), refreshLogic, zeroTime));
-            }
+            if(lookup instanceof CacheLookUp) return updateCachedEntity((CacheLookUp)lookup, refreshLogic);
+            else if(lookup instanceof SituationLookUp) return updateCachedSituation((SituationLookUp)lookup);
         }
         catch(Exception ex) {
             log.severe("Error in update registry: " + ex.getMessage());
+        }
+        return "Failed.";
+    }
+
+    // Updating a cached situation only at the moment
+    private String updateCachedSituation(SituationLookUp lookup){
+        String situName = lookup.getFunction().getFunctionName();
+        if(this.root.containsKey(situName)){
+            this.root.compute(situName, (k,v) -> {
+                v.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
+                if(v.getChildren().containsKey(lookup.getUniquehashkey())) {
+                    v.getChildren().compute(lookup.getUniquehashkey(), (id, stat) -> {
+                        LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
+                                TimeZone.getDefault().toZoneId());
+                        stat.setZeroTime(zeroTime);
+                        stat.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
+                        ((SituationItem)stat).setOperands(lookup.getFunction().getArgumentsList());
+                        return stat;
+                    });
+                }
+                return v;
+            });
+        }
+        return lookup.getUniquehashkey();
+    }
+
+    // Caching and updating a cached entity
+    private String updateCachedEntity(CacheLookUp lookup, String refreshLogic){
+        String entType = lookup.getEt().getType();
+        if(this.root.containsKey(entType)){
+            // Updating the last update time of the entity type
+            this.root.compute(entType, (k,v) -> {
+                if(v != null){
+                    v.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
+
+                    // Updating the last update time of the context service
+                    // Add a new context service if any available.
+
+                    String serId = lookup.getServiceId();
+                    if(serId.startsWith("{")){
+                        JSONObject obj = new JSONObject(serId);
+                        serId = obj.getString("$oid");
+                    }
+
+                    if(v.getChildren().containsKey(serId)){
+                        String finalSerId = serId;
+                        v.getChildren().compute(serId, (id, stat) -> {
+                            if(stat != null){
+                                stat.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
+
+                                // Updating the last update time of the entity by hash key
+                                // Add a new entity by hash key if not available.
+                                if(!stat.getChildren().containsKey(lookup.getHashKey())){
+                                    ContextItem sharedEntity = null;
+                                    HashMap<String, ContextCacheItem> siblingCPs = v.getChildren();
+                                    for(Map.Entry<String, ContextCacheItem> sibling : siblingCPs.entrySet()){
+                                        if(sibling.getValue().getChildren().containsKey(lookup.getHashKey())){
+                                            sharedEntity = (ContextItem) sibling.getValue()
+                                                    .getChildren().get(lookup.getHashKey());
+                                            break;
+                                        }
+                                    }
+
+                                    LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
+                                            TimeZone.getDefault().toZoneId());
+                                    if(sharedEntity == null){
+                                        // No shared entity.
+                                        stat.getChildren().put(lookup.getHashKey(),
+                                                refreshLogic != null ?
+                                                        new ContextItem((ContextItem) stat, lookup.getHashKey(), refreshLogic, zeroTime, entType)
+                                                        : new ContextItem((ContextItem) stat, lookup.getHashKey(), zeroTime, entType));
+                                    }
+                                    else {
+                                        // Already existing shared entity.
+                                        sharedEntity.setZeroTime(zeroTime);
+                                        sharedEntity.setParents(finalSerId, stat);
+                                        sharedEntity.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
+                                        stat.getChildren().put(lookup.getHashKey(),sharedEntity);
+                                    }
+                                }
+                                else {
+                                    stat.getChildren().compute(lookup.getHashKey(), (k1,v1) -> {
+                                        if(v1!=null){
+                                            LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
+                                                    TimeZone.getDefault().toZoneId());
+                                            v1.setZeroTime(zeroTime);
+                                            v1.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
+                                            if(refreshLogic != null)
+                                                ((ContextItem)v1).setRefreshLogic(refreshLogic);
+                                        }
+                                        return v1;
+                                    });
+                                }
+                            }
+                            return stat;
+                        });
+                    }
+                    else {
+                        LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
+                                TimeZone.getDefault().toZoneId());
+                        v.getChildren().put(serId,new ContextItem((ContextItem) v, serId, lookup.getHashKey(), refreshLogic, zeroTime));
+                    }
+                }
+                return v;
+            });
+        }
+        else {
+            LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
+                    TimeZone.getDefault().toZoneId());
+            this.root.put(lookup.getEt().getType(), new ContextItem(lookup,lookup.getHashKey(), refreshLogic, zeroTime));
         }
         return lookup.getHashKey();
     }

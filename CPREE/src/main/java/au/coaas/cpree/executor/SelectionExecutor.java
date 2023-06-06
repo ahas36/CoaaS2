@@ -104,48 +104,106 @@ public class SelectionExecutor {
 
     // Done
     public static CPREEResponse execute(CacheSelectionRequest request) {
+        String returnMessage = null;
         try {
-            // Get Context Provider's Profile
-            SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
+            switch (request.getContextLevel().toLowerCase()){
+                case "situ_function": cacheSituation(request);
+                case "entity":
+                default: cacheContextEntity(request);
+            }
+        }
+        catch(Exception ex){
+            log.severe("Error occured when evaluating to cache!");
+            log.info("Cause: " + ex.getMessage());
+            returnMessage = ex.getMessage();
+        }
+        return CPREEResponse.newBuilder().setStatus("500")
+                .setBody(returnMessage != null? returnMessage
+                        : "Could not cache context for UNKNOWN reason.").build();
+    }
+    
+    // Caching Context Entities.
+    private static  CPREEResponse cacheContextEntity(CacheSelectionRequest request) {
+        // Get Context Provider's Profile
+        SQEMServiceGrpc.SQEMServiceBlockingStub blockingStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+        ContextProviderProfile profile = blockingStub.getContextProviderProfile(ContextProfileRequest.newBuilder()
+                .setPrimaryKey(request.getReference().getServiceId())
+                .setHashKey(request.getHashKey())
+                .setLevel(CacheLevels.ENTITY.toString().toLowerCase())
+                .build());
+
+        if(cacheAll){
+            // Block executes the traditional cache-all (leave a copy) policy if configured.
+            JSONObject lifetime = Utilities.getLifetime(request.getReference().getEt().getType());
+            RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(
+                    new JSONObject(request.getSla()), profile, lifetime.getDouble("value"));
+
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-            ContextProviderProfile profile = blockingStub.getContextProviderProfile(ContextProfileRequest.newBuilder()
-                    .setPrimaryKey(request.getReference().getServiceId())
-                    .setHashKey(request.getHashKey())
-                    .setLevel(CacheLevels.ENTITY.toString().toLowerCase())
-                    .build());
+            CacheLookUp.Builder updatedRef = request.getReference().toBuilder();
+            updatedRef.setHashKey(request.getHashKey());
 
-            if(cacheAll){
-                // Block executes the traditional cache-all (leave a copy) policy if configured.
-                JSONObject lifetime = Utilities.getLifetime(request.getReference().getEt().getType());
-                RefreshLogics reftype = RefreshExecutor.resolveRefreshLogic(
-                        new JSONObject(request.getSla()), profile, lifetime.getDouble("value"));
+            sqemStub.cacheContext(CacheRequest.newBuilder()
+                    .setJson(request.getContext())
+                    .setHashkey(request.getHashKey())
+                    .setCacheLevel(CacheLevels.ENTITY.toString())
+                    .setRefreshLogic(reftype.toString().toLowerCase())
+                    .setCachelife(-1) // This is in miliseconds
+                    .setLambdaConf(0.0) //
+                    .setIndefinite(true)
+                    .setReference(updatedRef).build());
 
-                SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
-                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            // Configuring refreshing
+            if(reftype.equals(RefreshLogics.PROACTIVE_SHIFT)){
+                executor.submit(() -> {
+                    JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
+                    JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
+                    double fthresh = !profile.getExpFthr().equals("NaN") ?
+                            Double.valueOf(profile.getExpFthr()) :
+                            freshReq.getDouble("fthresh");
 
-                CacheLookUp.Builder updatedRef = request.getReference().toBuilder();
-                updatedRef.setHashKey(request.getHashKey());
+                    JSONObject entData = new JSONObject(request.getContext());
+                    long zeroTime = entData.getLong("zeroTime");
+                    long now = System.currentTimeMillis();
+                    double res_life =  lifetime.getDouble("value") - ((now - zeroTime)/1000);
 
-                sqemStub.cacheEntity(CacheRequest.newBuilder()
-                        .setJson(request.getContext())
-                        .setHashkey(request.getHashKey())
-                        .setRefreshLogic(reftype.toString().toLowerCase())
-                        .setCachelife(-1) // This is in miliseconds
-                        .setLambdaConf(0.0) //
-                        .setIndefinite(true)
-                        .setReference(updatedRef).build());
+                    RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
+                            .setEt(request.getReference().getEt())
+                            .setReference(request.getReference()).setFthreh(fthresh)
+                            .setLifetime(lifetime.getDouble("value")) // seconds
+                            .setResiLifetime(res_life) // seconds
+                            .setHashKey(request.getHashKey())
+                            .setSamplingInterval(sampling.getDouble("value")) // seconds
+                            .setRefreshPolicy(RefreshLogics.PROACTIVE_SHIFT.toString().toLowerCase())
+                            .build());
+                });
+            }
 
+            return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
+        }
+
+        // When not caching context as in traditional techniques.
+        if (profile.getStatus().equals("200")) {
+            // Evaluate and Cache if selected
+            AbstractMap.SimpleEntry<Boolean, RefreshLogics> result = evaluateAndCache(request.getContext(),
+                    request.getReference(), request.getSla(), profile, request.getHashKey(), request.getComplexity());
+
+            if(result.getKey()){
                 // Configuring refreshing
-                if(reftype.equals(RefreshLogics.PROACTIVE_SHIFT)){
-                    executor.submit(() -> {
+                executor.submit(() -> {
+                    if (result.getValue().equals(RefreshLogics.PROACTIVE_SHIFT)) {
                         JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
                         JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
                         double fthresh = !profile.getExpFthr().equals("NaN") ?
                                 Double.valueOf(profile.getExpFthr()) :
                                 freshReq.getDouble("fthresh");
 
+                        JSONObject lifetime = Utilities.getLifetime(request.getReference().getEt().getType());
                         JSONObject entData = new JSONObject(request.getContext());
+
                         long zeroTime = entData.getLong("zeroTime");
                         long now = System.currentTimeMillis();
                         double res_life =  lifetime.getDouble("value") - ((now - zeroTime)/1000);
@@ -157,65 +215,51 @@ public class SelectionExecutor {
                                 .setResiLifetime(res_life) // seconds
                                 .setHashKey(request.getHashKey())
                                 .setSamplingInterval(sampling.getDouble("value")) // seconds
-                                .setRefreshPolicy(RefreshLogics.PROACTIVE_SHIFT.toString().toLowerCase())
+                                .setRefreshPolicy(result.getValue().toString().toLowerCase())
                                 .build());
-                    });
-                }
+                    }
+                });
 
+                // Using 200 considering the creation of the hash key and successfully caching.
                 return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
             }
+            // Returning 204 (No Response) to indicate no has key to return since not cached.
+            return CPREEResponse.newBuilder().setStatus("204").setBody("Not Cached").build();
+        } else
+            // Returning any other errors.
+            return CPREEResponse.newBuilder().setStatus(profile.getStatus())
+                    .setBody("Failed to fetch context provider profile.").build();
+    }
+    
+    // Caching Situations
+    private static  CPREEResponse cacheSituation(CacheSelectionRequest request) {
+        if(cacheAll){
+            // Block executes the traditional cache-all (leave a copy) policy if configured.
+            JSONObject lifetime = Utilities.getLifetime(request.getSituReference().getFunction().getFunctionName());
 
-            // When not caching context as in traditional techniques.
-            if (profile.getStatus().equals("200")) {
-                // Evaluate and Cache if selected
-                AbstractMap.SimpleEntry<Boolean, RefreshLogics> result = evaluateAndCache(request.getContext(),
-                        request.getReference(), request.getSla(), profile, request.getHashKey(), request.getComplexity());
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-                if(result.getKey()){
-                    // Configuring refreshing
-                    executor.submit(() -> {
-                        if (result.getValue().equals(RefreshLogics.PROACTIVE_SHIFT)) {
-                            JSONObject freshReq = (new JSONObject(request.getSla())).getJSONObject("freshness");
-                            JSONObject sampling = (new JSONObject(request.getSla())).getJSONObject("updateFrequency");
-                            double fthresh = !profile.getExpFthr().equals("NaN") ?
-                                    Double.valueOf(profile.getExpFthr()) :
-                                    freshReq.getDouble("fthresh");
+            sqemStub.cacheContext(CacheRequest.newBuilder()
+                    .setJson(request.getContext())
+                    .setRefreshLogic("reactive")
+                    .setCacheLevel(CacheLevels.ENTITY.toString())
+                    .setCachelife(-1) // This is in miliseconds
+                    .setIndefinite(true)
+                    .setSituReference(request.getSituReference()).build());
 
-                            JSONObject lifetime = Utilities.getLifetime(request.getReference().getEt().getType());
-                            JSONObject entData = new JSONObject(request.getContext());
-
-                            long zeroTime = entData.getLong("zeroTime");
-                            long now = System.currentTimeMillis();
-                            double res_life =  lifetime.getDouble("value") - ((now - zeroTime)/1000);
-
-                            RefreshExecutor.setProactiveRefreshing(ProactiveRefreshRequest.newBuilder()
-                                    .setEt(request.getReference().getEt())
-                                    .setReference(request.getReference()).setFthreh(fthresh)
-                                    .setLifetime(lifetime.getDouble("value")) // seconds
-                                    .setResiLifetime(res_life) // seconds
-                                    .setHashKey(request.getHashKey())
-                                    .setSamplingInterval(sampling.getDouble("value")) // seconds
-                                    .setRefreshPolicy(result.getValue().toString().toLowerCase())
-                                    .build());
-                        }
-                    });
-
-                    // Using 200 considering the creation of the hash key and successfully caching.
-                    return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
-                }
-                // Returning 204 (No Response) to indicate no has key to return since not cached.
-                return CPREEResponse.newBuilder().setStatus("204").setBody("Not Cached").build();
-            } else
-                // Returning any other errors.
-                return CPREEResponse.newBuilder().setStatus(profile.getStatus())
-                        .setBody("Failed to fetch context provider profile.").build();
+            return CPREEResponse.newBuilder().setStatus("200").setBody("Cached").build();
         }
-        catch(Exception ex){
-            log.severe("Error occured when evaluating to cache!");
-            log.info("Cause: " + ex.getMessage());
-            return CPREEResponse.newBuilder().setStatus("500")
-                    .setBody(ex.getMessage()).build();
+
+        // When not caching context as in traditional techniques.
+        // Evaluate and Cache if selected
+        Boolean result = evaluateAndCache(request.getContext(), request.getSituReference(), request.getComplexity());
+        if(result){
+            // Using 200 considering the creation of the hash key and successfully caching.
+            return CPREEResponse.newBuilder().setStatus("200").setBody("Situation Cached").build();
         }
+        // Returning 204 (No Response) to indicate no has key to return since not cached.
+        return CPREEResponse.newBuilder().setStatus("204").setBody("Situation Not Cached").build();
     }
 
     // Done
@@ -583,13 +627,14 @@ public class SelectionExecutor {
                     // Check available cache memory before caching
                     SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_5
                             = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-                    SQEMResponse response = sqemStub_5.cacheEntity(CacheRequest.newBuilder()
+                    SQEMResponse response = sqemStub_5.cacheContext(CacheRequest.newBuilder()
                             .setJson(context)
                             .setHashkey(hashkey)
-                            .setRefreshLogic(ref_type.toString().toLowerCase())
-                            .setCachelife(est_cacheLife) // This is in miliseconds
-                            .setLambdaConf(lambda_conf)
                             .setIndefinite(indefinite)
+                            .setLambdaConf(lambda_conf)
+                            .setCachelife(est_cacheLife) // This is in miliseconds
+                            .setCacheLevel(CacheLevels.ENTITY.toString())
+                            .setRefreshLogic(ref_type.toString().toLowerCase())
                             .setReference(lookup.toBuilder().setHashKey(hashkey)).build());
                     return new AbstractMap.SimpleEntry<>(response.getStatus().equals("200") ? true : false,
                             ref_type);
@@ -611,6 +656,191 @@ public class SelectionExecutor {
         }
 
         return new AbstractMap.SimpleEntry<>(false, null);
+    }
+
+    private static Boolean evaluateAndCache(String context, SituationLookUp lookup, double complexity){
+        try {
+            boolean cache = false;
+            if(cacheLookupLatency.isEmpty()) updateCacheRecord();
+            if(weightThresholds.isEmpty()) defaultWeights();
+
+            String contextId = lookup.getFunction().getFunctionName() + "-" + lookup.getUniquehashkey();
+            LocalDateTime curr = LocalDateTime.now();
+
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+
+            ContextProfile c_profile = sqemStub.getContextProfile(ContextProfileRequest.newBuilder()
+                    .setPrimaryKey(contextId).build());
+
+            double lambda = c_profile.getExpAR().equals("NaN") ? 1.0/60.0 :
+                    Double.valueOf(c_profile.getExpAR()); // per second
+
+            // 1. Reliability of retrieval.
+            // Assigning this a constant value for now based on it being an internal process outcome.
+            // However, based on CP availability and process reliability, this should practically be < 1.
+            double reliability = 1.0;
+
+            if(LookUps.lookup(DynamicRegistry.DELAYREGISTRY, contextId, curr) &&
+                    LookUps.lookup(DynamicRegistry.INDEFDELAYREGISTRY, contextId, lambda)) {
+
+                JSONObject lifetime = Utilities.getLifetime(lookup.getFunction().getFunctionName());
+
+                double lambda_conf = 0.0;
+                long est_delayTime = 0;
+                long est_cacheLife = -1;
+                boolean indefinite = false;
+
+                SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_2
+                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                QueryClassProfile cqc_profile = sqemStub_2.getQueryClassProfile(ContextProfileRequest
+                        .newBuilder().setPrimaryKey("1").build()); // TODO: get the actual query class
+
+                SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_3
+                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                SituationProfile situ_profile = sqemStub_3.getSituationProfile(ContextProfileRequest
+                        .newBuilder().setPrimaryKey(lookup.getFunction().getFunctionName()).build());
+
+                double access_trend = c_profile.getTrend().equals("NaN") ?
+                        0.0 : Double.valueOf(c_profile.getTrend());
+
+                double intercept = c_profile.getIntercept().equals("NaN") ? 0 :
+                        Double.valueOf(c_profile.getIntercept());
+
+                // 4. Retrieval Efficiency
+                RetrievalEfficiency ret_effficiency = getRetrievalEfficiency(lambda, cqc_profile,
+                        lifetime, situ_profile);
+
+                // 5. Caching Efficiency
+                int contextSize = context.getBytes().length;
+                double caching_efficiency = getCacheEfficiency(contextSize, ret_effficiency.getExpMR(),
+                        situ_profile.getInferLatency()/1000.0);
+
+                // Unit Vector Creation
+                double retEff = ret_effficiency.getEfficiecy();
+                double vec_total = caching_efficiency < min_value ? 0.0 : Math.pow(caching_efficiency, 2) +
+                        (1-reliability) < min_value ? 0.0 : Math.pow((1-reliability), 2) +
+                        access_trend < min_value ? 0.0 : Math.pow(access_trend, 2) +
+                        complexity < min_value ? 0.0 : Math.pow(complexity, 2) +
+                        retEff < min_value ? 0.0 : Math.pow(retEff, 2);
+                double denom = Math.sqrt(vec_total);
+
+                double cacheConfidence = 0.0;
+                double nonRetrievalConfidence = 0.0;
+                if(denom != 0){
+                    nonRetrievalConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * caching_efficiency) +
+                            complexity < min_value ? 0.0 : (weightThresholds.get("row") * complexity) +
+                            access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * access_trend) +
+                            (1.0 - reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * (1.0 - reliability));
+
+                    cacheConfidence = caching_efficiency < min_value ? 0.0 : (weightThresholds.get("mu") * (caching_efficiency/denom)) +
+                            (1.0 - reliability) < min_value ? 0.0 : (weightThresholds.get("delta") * ((1.0 - reliability)/denom)) +
+                            access_trend < min_value ? 0.0 : (weightThresholds.get("kappa") * (access_trend/denom)) +
+                            complexity < min_value ? 0.0 : (weightThresholds.get("row") * (complexity/denom)) +
+                            retEff < min_value ? 0.0 : (weightThresholds.get("pi") * (retEff/denom));
+                }
+
+                valueHistory.add(cacheConfidence);
+
+                // Access Rate to Context Information Dropping
+                if(access_trend < 0.0){
+                    if(cacheConfidence > weightThresholds.get("threshold")){
+                        cache = true;
+                        // Solving AR for conf(i) = 0
+                        if(weightThresholds.get("pi") > 0){
+                            double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
+                            lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
+                        }
+                        est_cacheLife = lambda_conf < 0 ?
+                                Math.round(((-intercept)/access_trend) * 1000) :
+                                Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                        if(est_cacheLife < min_cache_residence)
+                            est_cacheLife = min_cache_residence;
+                    }
+                    else {
+                        // Delay until the AR of the item is at least that could break-even the gain.
+                        // Solving AR for conf(i) = 0
+                        if(weightThresholds.get("pi") > 0){
+                            double top = (ret_effficiency.getCacheCost()/ret_effficiency.getExpMR()) * weightThresholds.get("pi");
+                            double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
+                            lambda_conf = ((top/bot) - 1.0) * (1.0 / ret_effficiency.getExpPrd());
+
+                            // Indefinite delaying until the item reach a better AR
+                            indefinite = true;
+                            LookUps.write(DynamicRegistry.INDEFDELAYREGISTRY, contextId,
+                                    lambda_conf < 0 ? 0.0 : lambda_conf);
+                        }
+                        else {
+                            est_delayTime = min_cache_residence; // default delay
+                            LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId,
+                                    curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                        }
+                    }
+
+                }
+                else {
+                    if(cacheConfidence >= weightThresholds.get("threshold")){
+                        // No change to estimated lifetime.
+                        // Wait for eviction at least until the AR is below a threshold.
+                        cache = true;
+                        indefinite = true;
+                        if(weightThresholds.get("pi") > 0){
+                            double redRatio = -nonRetrievalConfidence/weightThresholds.get("pi");
+                            lambda_conf = ret_effficiency.getCacheCost()/(ret_effficiency.getRedCost() * redRatio);
+                        }
+                    }
+                    else {
+                        // Need to delay until the AR is such that it could at least break-even the cost.
+                        if(weightThresholds.get("pi") > 0){
+                            double top = (ret_effficiency.getCacheCost()/ret_effficiency.getExpMR()) * weightThresholds.get("pi");
+                            double bot = ret_effficiency.getRedCost() * (-nonRetrievalConfidence);
+                            lambda_conf = ((top/bot) - 1.0) * (1.0 / ret_effficiency.getExpPrd());
+
+                            if(Double.isFinite(lambda_conf)){
+                                est_delayTime = Math.round(((lambda_conf - intercept)/access_trend) * 1000);
+                                est_delayTime = Math.min(Math.abs(est_delayTime),min_cache_residence);
+                            }
+                            else est_delayTime = min_cache_residence;
+                        }
+                        else {
+                            est_delayTime = min_cache_residence; // default delay
+                        }
+                        LookUps.write(DynamicRegistry.DELAYREGISTRY, contextId, curr.plus(est_delayTime, ChronoUnit.MILLIS)); // miliseconds
+                    }
+                }
+
+                // Actual Caching
+                if(cache) {
+                    // Check available cache memory before caching
+                    SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_5
+                            = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                    SQEMResponse response = sqemStub_5.cacheContext(CacheRequest.newBuilder()
+                            .setJson(context)
+                            .setIndefinite(indefinite)
+                            .setLambdaConf(lambda_conf)
+                            .setRefreshLogic("reactive")
+                            .setHashkey(lookup.getUniquehashkey())
+                            .setCachelife(est_cacheLife) // This is in miliseconds
+                            .setCacheLevel(CacheLevels.SITU_FUNCTION.toString())
+                            .setSituReference(lookup).build());
+                    return response.getStatus().equals("200") ? true : false;
+                }
+
+                // Logging the delay time
+                est_delayTime = Math.min(Math.abs(est_delayTime),max_delay_cache_residence);
+                lambda_conf = Math.min(Math.abs(lambda_conf),0);
+                SQEMServiceGrpc.SQEMServiceFutureStub sqemStub_6
+                        = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                sqemStub_6.logDecisionLatency(DecisionLog.newBuilder()
+                        .setLatency(est_delayTime).setLambdaConf(lambda_conf)
+                        .setIndefinite(indefinite)
+                        .setType("delay").build());
+            }
+        }
+        catch(Exception ex){
+            log.severe("Situation Caching failed due to: " + ex.getMessage());
+        }
+        return false;
     }
 
     // Done
@@ -724,6 +954,48 @@ public class SelectionExecutor {
 
         // Retrieval efficiency is the ratio between the cost of totally retrieving from the CPs in an adhoc manner
         // called the redirector mode, and the cost of serving from a cache
+        double retEff = red_cost/cache_cost;
+        return response.setEfficiecy(retEff > max_threshold ? max_threshold : retEff)
+                .setCacheCost(cache_cost).setExpMR(exp_mr).build();
+    }
+
+    private static RetrievalEfficiency getRetrievalEfficiency(double expLambda, QueryClassProfile cqc_profile,
+                                                              JSONObject lifetimeObj, SituationProfile situProfile){
+        /** Initializing the variables **/
+        double lambda = expLambda; // per second
+        double rtmax = Double.valueOf(cqc_profile.getRtmax()); // seconds
+        double penalty = Double.valueOf(cqc_profile.getPenalty());
+        double retlatency = situProfile.getInferLatency()/1000.0; // seconds
+        double lifetime = lifetimeObj.getDouble("value"); // seconds
+
+        RetrievalEfficiency.Builder response = RetrievalEfficiency.newBuilder();
+
+        /** Redirector Mode **/
+        // Total cost of retrieval
+        double red_ret_cost = situProfile.getRetCost();
+        // Penalties if not cached
+        double red_penalties;
+        if(retlatency >= rtmax) red_penalties = penalty;
+        else red_penalties = situProfile.getProbDelay() * penalty;
+
+        double red_cost = (red_ret_cost + red_penalties) * lambda;
+        response.setRedCost(red_ret_cost + red_penalties);
+
+        /** Retrieval costs if cached **/
+        // Check whether all the values are of the same unit.
+        double cache_penalties = 0.0;
+        double exp_prd = (lifetime - retlatency);
+        response.setExpPrd(exp_prd);
+        double hits = exp_prd * lambda;
+        double exp_mr = 1.0/(hits + 1.0);
+
+        // Penalties when needing to refresh
+        if(retlatency >= rtmax) cache_penalties = penalty;
+        else cache_penalties = red_penalties;
+
+        double cache_cost = (situProfile.getRetCost() + cache_penalties) * lambda * exp_mr;
+        response.setType(1);
+
         double retEff = red_cost/cache_cost;
         return response.setEfficiecy(retEff > max_threshold ? max_threshold : retEff)
                 .setCacheCost(cache_cost).setExpMR(exp_mr).build();

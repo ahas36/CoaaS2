@@ -165,7 +165,8 @@ public class Utilities {
                 break;
             }
             case "thing":
-            case "weather": {
+            case "weather":
+            case "goodforwalking": {
                 lifetime.put("value",3600.0);
                 break;
             }

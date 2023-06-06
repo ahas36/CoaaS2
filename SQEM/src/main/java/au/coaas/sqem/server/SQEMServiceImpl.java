@@ -51,10 +51,10 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
 
     ///// Context Cache /////
     @Override
-    public void cacheEntity(au.coaas.sqem.proto.CacheRequest request,
+    public void cacheContext(au.coaas.sqem.proto.CacheRequest request,
                                       io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
-            responseObserver.onNext(ContextCacheHandler.cacheEntity(request));
+            responseObserver.onNext(ContextCacheHandler.cacheContext(request));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }
@@ -594,8 +594,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     public void getQueryClassProfile(au.coaas.sqem.proto.ContextProfileRequest request,
                                           io.grpc.stub.StreamObserver<au.coaas.sqem.proto.QueryClassProfile> responseObserver) {
         try {
-            responseObserver.onNext(PerformanceLogHandler
-                    .getQueryClassProfile(request.getPrimaryKey()));
+            responseObserver.onNext(PerformanceLogHandler.getQueryClassProfile(request.getPrimaryKey()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getSituationProfile(au.coaas.sqem.proto.ContextProfileRequest request,
+                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SituationProfile> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getSituationProfile(request.getPrimaryKey()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

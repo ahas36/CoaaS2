@@ -16,6 +16,7 @@ message SQEMResponse {
     string hashKey = 4;
     CacheLookUpResponse cacheresponse = 5;
     string misskeys = 6;
+    au.coaas.cqp.proto.SituationFunction situation = 7;
 }
 
 message ContextRequest
@@ -113,6 +114,12 @@ message CacheLookUpResponse {
     string refreshLogic =5;
     repeated string hashKeys = 6;
     repeated string missKeys = 7;
+    au.coaas.cqp.proto.SituationFunction situation = 8;
+}
+
+message SimpleEntityLookUp {
+    string hashkey = 1;
+    string entType = 2;
 }
 
 message ScheduleTask {
@@ -140,6 +147,8 @@ message CacheRequest
     CacheLookUp reference = 5;
     bool indefinite = 6;
     string hashkey = 7;
+    SituationLookUp situReference = 8;
+    string cacheLevel = 9;
 }
 
 message CacheRefreshRequest
@@ -339,6 +348,13 @@ message SchedlerInfo {
     string action = 3;
 }
 
+message SituationProfile {
+    uint64 inferLatency = 1;
+    double retCost = 2;
+    double prob_delay = 3;
+    string status = 4;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -349,7 +365,7 @@ service SQEMService {
 
     rpc clearCache (Empty) returns (SQEMResponse);
     rpc toggleRefreshLogic(RefreshUpdate) returns (Empty);
-    rpc cacheEntity (CacheRequest) returns (SQEMResponse);
+    rpc cacheContext (CacheRequest) returns (SQEMResponse);
     rpc simpleLookup (CacheLookUp) returns (SQEMResponse);
     rpc getcachePerformance(Empty) returns (CachePerformance);
     rpc evictContextEntity (CacheLookUp) returns (SQEMResponse);
@@ -397,6 +413,7 @@ service SQEMService {
     rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
     rpc logCacheDecision (ContextCacheDecision) returns (Empty);
     rpc getContextProfile(ContextProfileRequest) returns (ContextProfile);
+    rpc getSituationProfile(ContextProfileRequest) returns (SituationProfile);
     rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);
     rpc getContextProviderProfile (ContextProfileRequest) returns (ContextProviderProfile);
 

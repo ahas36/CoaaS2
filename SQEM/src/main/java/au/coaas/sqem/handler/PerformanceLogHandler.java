@@ -231,7 +231,7 @@ public class PerformanceLogHandler {
 
                     if(request.getStatus().equals("200")){
                         String queryString = "INSERT INTO coass_performance(method,status,response_time,earning,"+
-                                "cost,identifier,hashkey, createdDatetime,isDelayed,age,fthresh) " +
+                                "cost,identifier,hashkey,createdDatetime,isDelayed,age,fthresh) " +
                                 "VALUES('%s', '%s', %d, %f, %f, '%s', '%s', CAST('%s' AS DATETIME2), %d, %d, %f);";
 
                         int numberOfIterations = (int)(request.getHaskeysCount()/numberOfItemsPerTask) + 1;
@@ -943,7 +943,6 @@ public class PerformanceLogHandler {
         }
         return null;
     }
-
 
     // Summarizing the performance of each context cache level
     private static Runnable getLevelPerformanceSummary(Document persRecord){
@@ -1692,6 +1691,53 @@ public class PerformanceLogHandler {
         return new AbstractMap.SimpleEntry<>(0.0,0.0);
     }
 
+    public static SituationProfile getSituationProfile(String situationName){
+        try {
+            double retCost = 0.0;
+            long inferLatency = (long) getSituationInferenceTime(situationName);
+
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            ResultSet rs_2 = statement.executeQuery("SELECT method, " +
+                    "count(id) AS cnt, avg(response_time) AS average, sum(cost) AS tcost, " +
+                    "sum(CASE WHEN isDelayed = 1 THEN 1 ELSE 0 END) AS tdelay " +
+                    "FROM coass_performance WHERE status = '200' AND (method = 'executeFetch' OR method = 'executeStreamRead') " +
+                    "GROUP BY method;");
+
+            int count = 0;
+            int delayed = 0;
+            long retLatency = 0;
+            while(rs_2.next()){
+                count += rs_2.getInt("cnt");
+                delayed += rs_2.getInt("tdelay");
+                retCost += rs_2.getDouble("tcost");
+                retLatency += (long) rs_2.getDouble("average") * rs_2.getInt("cnt");
+            }
+
+            double cost = (inferLatency * processPrice) + (retCost/count);
+            return SituationProfile.newBuilder().setStatus("200")
+                    .setInferLatency(inferLatency + (retLatency/count))
+                    .setProbDelay(delayed/count)
+                    .setRetCost(cost).build();
+        }
+        catch(Exception ex){
+            log.severe("Error in situation profiler.");
+        }
+        return SituationProfile.newBuilder().setStatus("500").build();
+    }
+
+    private static double getSituationInferenceTime(String situationName) throws SQLException {
+        double latency = 0;
+        Statement statement = connection.createStatement();
+        statement.setQueryTimeout(30);
+        ResultSet rs_2 = statement.executeQuery("SELECT avg(response_time) AS average " +
+                "FROM coass_performance WHERE method = 'infer' AND status = '200' " +
+                "AND identifier = '" + situationName + "' GROUP BY method;");
+        while(rs_2.next()){
+            latency = rs_2.getDouble("average");
+        }
+        return latency;
+    }
 
     public static QueryClassProfile getQueryClassProfile(String classId){
         try{

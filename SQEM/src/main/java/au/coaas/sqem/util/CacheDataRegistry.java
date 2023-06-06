@@ -1,15 +1,15 @@
 package au.coaas.sqem.util;
 
+import au.coaas.cqp.proto.ContextEntityType;
+import au.coaas.cqp.proto.Operand;
+import au.coaas.cqp.proto.OperandType;
 import au.coaas.sqem.entity.ContextCacheItem;
 import au.coaas.sqem.entity.SituationItem;
-import au.coaas.sqem.proto.CacheLookUp;
+import au.coaas.sqem.proto.*;
 import au.coaas.sqem.entity.ContextItem;
-import au.coaas.sqem.proto.RefreshUpdate;
-import au.coaas.sqem.proto.CacheLookUpResponse;
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.handler.PerformanceLogHandler;
 
-import au.coaas.sqem.proto.SituationLookUp;
 import org.json.JSONObject;
 
 import java.time.Instant;
@@ -517,6 +517,20 @@ public final class CacheDataRegistry{
         return res.build();
     }
 
+    private ContextItem lookupEntity(String entityType, String hashkey){
+        if(this.root.containsKey(entityType)){
+            ContextItem entType = (ContextItem) this.root.get(entityType);
+            Collection<ContextCacheItem> css = entType.getChildren().values();
+            for(ContextCacheItem ent: css){
+                if(ent.getChildren().containsKey(hashkey)){
+                    return (ContextItem) ent.getChildren().get(hashkey);
+                }
+            }
+            return null;
+        }
+        return null;
+    }
+
     // Adds or updates the cached context repository
     // Done
     public synchronized String updateRegistry(Object lookup){
@@ -535,7 +549,7 @@ public final class CacheDataRegistry{
         return "Failed.";
     }
 
-    // Updating a cached situation only at the moment
+    // Updating a cached situation or introducing a new cached situation.
     private String updateCachedSituation(SituationLookUp lookup){
         String situName = lookup.getFunction().getFunctionName();
         if(this.root.containsKey(situName)){
@@ -551,8 +565,47 @@ public final class CacheDataRegistry{
                         return stat;
                     });
                 }
+                else {
+                    LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
+                            TimeZone.getDefault().toZoneId());
+                    SituationItem newSituationInstance = new SituationItem((SituationItem) v, lookup.getUniquehashkey(),
+                            lookup.getFunction().getArgumentsList(), zeroTime);
+                    // Setting the entities related to the situation
+                    for(Operand ope: lookup.getFunction().getArgumentsList()){
+                        if(ope.getType().equals(OperandType.CONTEXT_VALUE_JSON)){
+                            String entityName  = ope.getContextAttribute().getEntityName();
+                            ContextEntityType entType = lookup.getSituation().getRelatedEntitiesMap().get(entityName);
+                            JSONObject value = new JSONObject(ope.getStringValue());
+
+                            ContextItem ents = lookupEntity(entType.getType(), value.getString("hashkey"));
+                            if(ents != null)
+                                newSituationInstance.setChildren(ents);
+                        }
+                    }
+                    v.getChildren().put(lookup.getUniquehashkey(), newSituationInstance);
+                }
                 return v;
             });
+        }
+        else {
+            SituationItem rootSitu = new SituationItem(lookup);
+            LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
+                    TimeZone.getDefault().toZoneId());
+            SituationItem newSituationInstance = new SituationItem(rootSitu, lookup.getUniquehashkey(),
+                    lookup.getFunction().getArgumentsList(), zeroTime);
+            // Setting the entities related to the situation
+            for(Operand ope: lookup.getFunction().getArgumentsList()){
+                if(ope.getType().equals(OperandType.CONTEXT_VALUE_JSON)){
+                    String entityName  = ope.getContextAttribute().getEntityName();
+                    ContextEntityType entType = lookup.getSituation().getRelatedEntitiesMap().get(entityName);
+                    JSONObject value = new JSONObject(ope.getStringValue());
+
+                    ContextItem ents = lookupEntity(entType.getType(), value.getString("hashkey"));
+                    if(ents != null)
+                        newSituationInstance.setChildren(ents);
+                }
+            }
+            this.root.put(lookup.getFunction().getFunctionName(), rootSitu);
         }
         return lookup.getUniquehashkey();
     }

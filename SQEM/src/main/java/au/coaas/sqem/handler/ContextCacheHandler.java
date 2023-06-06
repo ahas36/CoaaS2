@@ -1,11 +1,14 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cqp.proto.SituationFunction;
 import au.coaas.sqem.proto.*;
 import au.coaas.cpree.proto.Lookup;
 import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.sqem.redis.ConnectionPool;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import org.bson.Document;
 
 import org.json.JSONArray;
@@ -63,7 +66,60 @@ public class ContextCacheHandler {
 
     // Caches all context under an entity
     // Done
-    public static SQEMResponse cacheEntity(CacheRequest registerRequest){
+    public static SQEMResponse cacheContext(CacheRequest registerRequest){
+        switch(registerRequest.getCacheLevel().toLowerCase()){
+            case "situ_function": return cacheSituation(registerRequest);
+            case "entity":
+            default: return cacheEntity(registerRequest);
+        }
+    }
+
+    private static SQEMResponse cacheSituation(CacheRequest registerRequest){
+        try {
+            Document contextData = Document.parse(registerRequest.getJson());
+            registry.updateRegistry(registerRequest.getSituReference());
+            String contextId = registerRequest.getSituReference().getFunction().getFunctionName() + "-"
+                    + registerRequest.getHashkey();
+
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+
+            // Preparing Cache Object
+            Document entityJson = new Document();
+            entityJson.put("data", contextData);
+            entityJson.put("situName", registerRequest.getSituReference().getFunction().getFunctionName());
+
+            RBucket<Document> ent = cacheClient.getBucket(contextId);
+            synchronized (ContextCacheHandler.class){
+                if(!registerRequest.getIndefinite()){
+                    // Cached with definite lifetime
+                    ent.set(entityJson, registerRequest.getCachelife(), TimeUnit.MILLISECONDS);
+                    PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife(), DelayCacheLatency.DEFINITE);
+                }
+                else {
+                    // Cached with an indefinite lifetime
+                    ent.set(entityJson);
+                    if(!traditionalCaching){ // This prevents preemptive evictions as done in context caching
+                        Subscriber subscriber = new Subscriber(contextId, registerRequest.getLambdaConf());
+                        Event.operation.subscribe(contextId, subscriber);
+                    }
+                    PerformanceLogHandler.logDecisionLatency("cachelife", Long.MAX_VALUE, DelayCacheLatency.INDEFINITE);
+                }
+
+                // Also caching the situation definition to access it faster.
+                RBucket<Document> situation = cacheClient.getBucket(registerRequest.getSituReference().getFunction().getFunctionName());
+                if(!situation.isExists()){
+                    String situJson = JsonFormat.printer().print(registerRequest.getSituReference().getSituation());
+                    situation.set(Document.parse(situJson));
+                }
+            }
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.CACHE, contextId, "reactive");
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Situation Cached").build();
+        } catch (Exception e) {
+            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
+        }
+    }
+
+    private static SQEMResponse cacheEntity(CacheRequest registerRequest){
         try {
             Document contextData = Document.parse(registerRequest.getJson());
             CacheLookUp.Builder temp = registerRequest.getReference().toBuilder();
@@ -498,7 +554,7 @@ public class ContextCacheHandler {
     }
 
     // Retrive situation from cache
-    public static SQEMResponse retrieveFromCache(SituationLookUp request) {
+    public static SQEMResponse retrieveFromCache(SituationLookUp request) throws InvalidProtocolBufferException {
         long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpSituation(request);
         String hashkey = request.getFunction().getFunctionName() + "-" + request.getUniquehashkey();
@@ -524,23 +580,57 @@ public class ContextCacheHandler {
                     .setBody(conSituation.toString()).build();
         }
         else if(result.getIsCached() && !result.getIsValid()) {
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+            RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
+
+            RLock lock = rwLock.readLock();
+            RBucket<Document> situ = cacheClient.getBucket(request.getFunction().getFunctionName());
+
+            SQEMResponse.Builder response = SQEMResponse.newBuilder().setStatus("400")
+                    .setMisskeys(hashkey)
+                    .setBody("Situation is not up to date.");
+
             long endTime = System.currentTimeMillis();
+            if(situ.isExists()){
+                String json = situ.get().toJson();
+                SituationFunction.Builder structBuilder = SituationFunction.newBuilder();
+                JsonFormat.parser().ignoringUnknownFields().merge(json, structBuilder);
+                response.setSituation(structBuilder);
+            }
+            lock.unlockAsync();
 
             Executors.newCachedThreadPool().submit(()
                     -> logCacheSearch("400", request.getFunction().getFunctionName(),
                     null, endTime - startTime));
 
-            return SQEMResponse.newBuilder().setStatus("400")
-                    .setMisskeys(hashkey)
-                    .setBody("Situation is not up to date.").build();
+            return response.build();
         }
 
         // Complete Miss
+        RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+        RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
+
+        RLock lock = rwLock.readLock();
+        RBucket<Document> situ = cacheClient.getBucket(request.getFunction().getFunctionName());
+
+        SQEMResponse.Builder response = SQEMResponse.newBuilder().setStatus("404")
+                .setMisskeys(hashkey)
+                .setBody("Situation is not cached.");
+
         long endTime = System.currentTimeMillis();
+        if(situ.isExists()){
+            String json = situ.get().toJson();
+            SituationFunction.Builder structBuilder = SituationFunction.newBuilder();
+            JsonFormat.parser().ignoringUnknownFields().merge(json, structBuilder);
+            response.setSituation(structBuilder);
+        }
+        lock.unlockAsync();
+
         Executors.newCachedThreadPool().submit(()
                 -> logCacheSearch("404", request.getFunction().getFunctionName(),
                 null, endTime - startTime));
-        return SQEMResponse.newBuilder().setStatus("404").build();
+
+        return response.build();
     }
 
     // Done

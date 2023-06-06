@@ -37,7 +37,7 @@ public class SituationItem implements ContextCacheItem {
     public void setParents(String id, ContextCacheItem entity) {this.parents.put(id, entity);}
 
     // Situation Reference Node
-    public SituationItem(SituationLookUp lookUp){
+    public SituationItem(SituationLookUp lookUp, LocalDateTime zeroTime){
         this.createdTime = LocalDateTime.now();
         this.updatedTime = LocalDateTime.now();
         this.id = lookUp.getFunction().getFunctionName();
@@ -46,22 +46,31 @@ public class SituationItem implements ContextCacheItem {
         // Multiple specific instances of the same situation
         this.children = new HashMap<>();
 
-//        String situId = Utilty.combineHashKeys(lookUp.getFunction().getArgumentsList().stream().map(x -> {
-//            String strValue = x.getStringValue();
-//            return (new JSONObject(strValue)).getString("hashkey");
-//        }).collect(Collectors.toList()));
-
         this.children.put(lookUp.getUniquehashkey(),
-                new SituationItem(this, lookUp.getUniquehashkey(), lookUp.getFunction().getArgumentsList()));
+                new SituationItem(this, lookUp.getUniquehashkey(),
+                        lookUp.getFunction().getArgumentsList(), zeroTime));
+    }
+
+    public SituationItem(SituationLookUp lookUp){
+        this.createdTime = LocalDateTime.now();
+        this.updatedTime = LocalDateTime.now();
+        this.id = lookUp.getFunction().getFunctionName();
+        // No parents because of being the root
+        this.parents = null;
+        // Multiple specific instances of the same situation
+        this.children = new HashMap<>();
     }
 
     // Situation Node
-    public SituationItem(SituationItem parent, String ownId, List<Operand> operands){
+    public SituationItem(SituationItem parent, String ownId, List<Operand> operands, LocalDateTime zeroTime){
         this.id = ownId;
         this.operands = operands;
+        this.zeroTime = zeroTime;
         this.refreshLogic = "reactive";
         this.createdTime = LocalDateTime.now();
         this.updatedTime = LocalDateTime.now();
+
+        setLifetime(parent.getId());
         // Situation Type is the parent
         this.parents = new HashMap<>();
         this.parents.put(parent.id, parent);
@@ -69,5 +78,17 @@ public class SituationItem implements ContextCacheItem {
         // Not yet resolved here since the tree needs to be breadth searched
         // to find the entities from the other sub-tree when creating a cache reference.
         this.children = new HashMap<>();
+    }
+
+    private void setLifetime(String functionName){
+        this.lifetime = new JSONObject();
+        this.lifetime.put("unit","s");
+        switch(functionName.toLowerCase()){
+            case "goodforwalking": {
+                this.lifetime.put("value",3600.0);
+                break;
+            }
+            default: this.lifetime.put("value",1800.0);
+        }
     }
 }

@@ -140,7 +140,8 @@ public class SituationManager {
                 Queue<CdqlConditionToken> tempQueue = new LinkedList<>(subscription.getSituationList());
                 boolean flag = false;
                 try {
-                    flag = evaluate(subscription.getId(), jsonObject, oldValue, tempQueue, subscription.getQuery());
+                    flag = evaluate(subscription.getId(), jsonObject, oldValue, tempQueue,
+                            subscription.getQuery(), subscription.getComplexity());
                 } catch (Exception ex) {
                     log.severe("Error occured when evaluating the situations: " + ex.getMessage());
                     log.severe(String.valueOf(ex.getStackTrace()));
@@ -260,7 +261,8 @@ public class SituationManager {
         return constantType;
     }
 
-    public static boolean evaluate(String subscriptionID, JSONObject values, JSONObject old, Queue<CdqlConditionToken> RPNCondition, CDQLQuery query) throws WrongOperatorException {
+    public static boolean evaluate(String subscriptionID, JSONObject values, JSONObject old,
+                                   Queue<CdqlConditionToken> RPNCondition, CDQLQuery query, double complexity) throws WrongOperatorException {
         Stack<CdqlConditionToken> stack = new Stack<>();
         while (RPNCondition.size() > 0) {
             CdqlConditionToken token = RPNCondition.poll();
@@ -279,11 +281,12 @@ public class SituationManager {
                     break;
                 case Function:
                     String funcName = token.getFunctionCall().getFunctionName();
-                    FunctionCall functionCall = preproccessFunctionCall(token.getFunctionCall(), values, old, query, subscriptionID, funcName);
+                    FunctionCall functionCall = preproccessFunctionCall(token.getFunctionCall(), values, old, query,
+                            subscriptionID, funcName, complexity);
                     stack.push(CdqlConditionToken.newBuilder()
                             .setConstantTokenType(CdqlConstantConditionTokenType.Json)
                             .setType(CdqlConditionTokenType.Constant)
-                            .setStringValue(executeFunctionCall(functionCall, subscriptionID, funcName).toString())
+                            .setStringValue(executeFunctionCall(functionCall, subscriptionID, funcName, complexity).toString())
                             .build());
                     break;
                 default:
@@ -490,7 +493,8 @@ public class SituationManager {
 
     private static Gson gson = new Gson();
 
-    private static FunctionCall preproccessFunctionCall(FunctionCall fCall, JSONObject jsonValues, JSONObject old, CDQLQuery query, String subID, String stringFcall) {
+    private static FunctionCall preproccessFunctionCall(FunctionCall fCall, JSONObject jsonValues, JSONObject old, CDQLQuery query,
+                                                        String subID, String stringFcall, double complexity) {
         FunctionCall.Builder fCallTemp = FunctionCall.newBuilder()
                 .setFunctionName(fCall.getFunctionName());
         AtomicInteger index = new AtomicInteger();
@@ -505,11 +509,11 @@ public class SituationManager {
                 switch (argument.getType()) {
                     case FUNCTION_CALL: {
                         FunctionCall subFunction = preproccessFunctionCall(gson.fromJson(gson.toJson(argument.getStringValue()), FunctionCall.class),
-                                jsonValues, old, query, subID, stringFcall);
+                                jsonValues, old, query, subID, stringFcall, complexity);
                         fCallTemp.setArguments(iter_index, Operand.newBuilder()
                                         .setType(OperandType.CONTEXT_VALUE_STRING)
                                         .setContextAttribute(argument.getContextAttribute())
-                                        .setStringValue(executeFunctionCall(subFunction, subID, stringFcall).toString())
+                                        .setStringValue(executeFunctionCall(subFunction, subID, stringFcall, complexity).toString())
                                         .build());
                         break;
                     }
@@ -580,7 +584,7 @@ public class SituationManager {
         return fCallTemp.build();
     }
 
-    private static JSONObject executeFunctionCall(FunctionCall fCall, String subID, String stringFcall) {
+    private static JSONObject executeFunctionCall(FunctionCall fCall, String subID, String stringFcall, double complexity) {
         try {
             if (fCall.getFunctionName().equals("change")) {
                 String val1 = fCall.getArguments(0).getStringValue();
@@ -697,7 +701,7 @@ public class SituationManager {
             return (new JSONObject()).put("value", res);
         }
         catch (IOException | NumberFormatException | JSONException e) {
-            Object execute = PullBasedExecutor.executeSituationFunction(fCall);
+            Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity);
 
             if (execute.toString().trim().startsWith("[")) {
                 return (new JSONObject()).put("results",

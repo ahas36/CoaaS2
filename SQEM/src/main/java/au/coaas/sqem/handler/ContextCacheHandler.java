@@ -235,6 +235,10 @@ public class ContextCacheHandler {
         }
     }
 
+    public static boolean updateSituation(String entType, String entHash, String situName, String situHash) {
+        return registry.setMissingEntityRefs(entType, entHash, situName, situHash);
+    }
+
     // Done
     public static Empty toggleRefreshLogic(RefreshUpdate request) {
         try {

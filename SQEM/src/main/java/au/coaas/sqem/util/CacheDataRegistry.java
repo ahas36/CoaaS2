@@ -10,6 +10,9 @@ import au.coaas.sqem.entity.ContextItem;
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.handler.PerformanceLogHandler;
 
+import au.coaas.sqem.util.PubSub.Event;
+import au.coaas.sqem.util.PubSub.Message;
+import au.coaas.sqem.util.PubSub.Subscriber;
 import org.json.JSONObject;
 
 import java.time.Instant;
@@ -549,6 +552,23 @@ public final class CacheDataRegistry{
         return "Failed.";
     }
 
+    public synchronized boolean setMissingEntityRefs(String entType, String entHash, String situName, String situHash) {
+        try {
+            if(this.root.containsKey(situName)){
+                if(this.root.get(situName).getChildren().containsKey(situHash)){
+                    SituationItem situ = (SituationItem) this.root.get(situName).getChildren().get(situHash);
+                    situ.setChildren(lookupEntity(entType, entHash));
+                }
+                // Missing block. But, unsubscribing the subscriber.
+            }
+        }
+        catch(Exception ex) {
+            log.severe("Error in update registry: " + ex.getMessage());
+            return false;
+        }
+        return true;
+    }
+
     // Updating a cached situation or introducing a new cached situation.
     private String updateCachedSituation(SituationLookUp lookup){
         String situName = lookup.getFunction().getFunctionName();
@@ -578,9 +598,20 @@ public final class CacheDataRegistry{
                             JSONObject value = new JSONObject(ope.getStringValue());
 
                             ContextItem ents = lookupEntity(entType.getType(), value.getString("hashkey"));
-                            ents.setParents(situName + "-" + lookup.getUniquehashkey(), newSituationInstance);
-                            if(ents != null)
+
+                            String entId = entType.getType() + "-" + value.getString("hashkey");
+                            String situId = situName + "-" + lookup.getUniquehashkey();
+
+                            if(ents != null){
+                                ents.setParents(situId, newSituationInstance);
                                 newSituationInstance.setChildren(ents);
+                            }
+                            else{
+                                // Cached Situation subscribing to when the context could be cached in the future
+                                // to set the situation-entity reference.
+                                Subscriber subscriber = new Subscriber("situ:"+entId, situId);
+                                Event.operation.subscribe("situationUpdate", subscriber);
+                            }
                         }
                     }
                     v.getChildren().put(lookup.getUniquehashkey(), newSituationInstance);
@@ -602,9 +633,20 @@ public final class CacheDataRegistry{
                     JSONObject value = new JSONObject(ope.getStringValue());
 
                     ContextItem ents = lookupEntity(entType.getType(), value.getString("hashkey"));
-                    ents.setParents(situName + "-" + lookup.getUniquehashkey(), newSituationInstance);
-                    if(ents != null)
+
+                    String entId = entType.getType() + "-" + value.getString("hashkey");
+                    String situId = situName + "-" + lookup.getUniquehashkey();
+
+                    if(ents != null){
+                        ents.setParents(situName + "-" + lookup.getUniquehashkey(), newSituationInstance);
                         newSituationInstance.setChildren(ents);
+                    }
+                    else{
+                        // Cached Situation subscribing to when the context could be cached in the future
+                        // to set the situation-entity reference.
+                        Subscriber subscriber = new Subscriber("situ:"+entId, situId);
+                        Event.operation.subscribe("situationUpdate", subscriber);
+                    }
                 }
             }
             this.root.put(lookup.getFunction().getFunctionName(), rootSitu);
@@ -697,6 +739,11 @@ public final class CacheDataRegistry{
                     TimeZone.getDefault().toZoneId());
             this.root.put(lookup.getEt().getType(), new ContextItem(lookup,lookup.getHashKey(), refreshLogic, zeroTime));
         }
+
+        if(Event.operation.checkChannel("situationUpdate")){
+            Message message = new Message(entType, lookup.getHashKey());
+            Event.operation.publish("situationUpdate", message);
+        }
         return lookup.getHashKey();
     }
 
@@ -755,6 +802,12 @@ public final class CacheDataRegistry{
                                     ContextCacheItem func = this.root.get(situNames[0]).getChildren()
                                             .get(situNames[1]);
                                     ((SituationItem) func).removeChild(entity.getId());
+
+                                    // Cached Situtaion subscribing to make a reference to this entity
+                                    // in case it gets cashed again.
+                                    String entId = lookup.getEt().getType() + "-" + lookup.getHashKey();
+                                    Subscriber subscriber = new Subscriber("situ:"+ entId, situId);
+                                    Event.operation.subscribe("situationUpdate", subscriber);
                                 }
                             }
                             entity.removeAllParents();
@@ -808,6 +861,12 @@ public final class CacheDataRegistry{
                                     ContextCacheItem func = this.root.get(situNames[0]).getChildren()
                                             .get(situNames[1]);
                                     ((SituationItem) func).removeChild(entity.getId());
+
+                                    // Cached Situtaion subscribing to make a reference to this entity
+                                    // in case it gets cashed again.
+                                    String entId = entityType + "-" + hashKey;
+                                    Subscriber subscriber = new Subscriber("situ:"+ entId, situId);
+                                    Event.operation.subscribe("situationUpdate", subscriber);
                                 }
                             }
                             entity.removeAllParents();
@@ -854,6 +913,13 @@ public final class CacheDataRegistry{
                         }
                         ((SituationItem) stat).removeAllChildren();
                         ((SituationItem) stat).removeAllParents();
+
+                        // Following is a known improvement. Existing subscriptions are not removed at this time.
+                        // But, in case any of the entity gets cached, and the event triggers, it will remove the
+                        // Subscription at that point. So, then the subscription gets removed.
+                        // Subscriber subscriber = new Subscriber("situ:"+entId, situId);
+                        // Event.operation.subscribe("situationUpdate", subscriber);
+
                         return stat;
                     });
                     ((SituationItem) v).removeChild(hashKey);

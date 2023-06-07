@@ -92,6 +92,22 @@ public class SQEMInterceptor implements ServerInterceptor {
                         }
                         break;
                     }
+                    case "handleSituationInCache": {
+                        // LogicalContextLevel level, String id, Boolean isHit, long rTime
+                        SQEMResponse res = (SQEMResponse) message;
+                        String status = res.getStatus();
+                        if(!status.equals("500")){
+                            if(status.equals("200")){
+                                PerformanceLogHandler.insertRecord(LogicalContextLevel.SITUFUNCTION,
+                                        res.getHashKey(), true, responseTime);
+                            }
+                            else {
+                                PerformanceLogHandler.insertRecord(LogicalContextLevel.SITUFUNCTION,
+                                        res.getMisskeys(), false, responseTime);
+                            }
+                        }
+                        break;
+                    }
                     case "logPerformanceData": break;
                     default:
                         log(String.format("%s responded in %d ms.", method, responseTime));

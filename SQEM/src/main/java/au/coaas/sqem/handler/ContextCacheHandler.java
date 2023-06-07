@@ -249,7 +249,7 @@ public class ContextCacheHandler {
         return null;
     }
 
-    // Done
+    // Evicts an entity after a delay (remaining lifetime) set by the next method.
     public static void fullyEvict(ScheduleTask request){
         // Remove from registry
         String contextId = request.getLookup().getEt().getType() + "-"
@@ -277,8 +277,7 @@ public class ContextCacheHandler {
         PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
     }
 
-    // Evicts an entity by hash key
-    // Done
+    // Evicts an entity by lookup.
     public static SQEMResponse evictEntity(CacheLookUp request) {
         // Ideally the initial evict should push the context into ghost cache
         CacheLookUpResponse result= registry.lookUpRegistry(request);
@@ -328,45 +327,85 @@ public class ContextCacheHandler {
         return SQEMResponse.newBuilder().setStatus("404").setBody("Nothing to Evict.").build();
     }
 
-    // Done
-    public static SQEMResponse evictEntity(String hashkey) {
-        return evictEntity(hashkey, !Event.operation.checkChannel(hashkey));
+    // Evicts an entity by hashkey.
+    // This is called to evict an entity when it fails to refresh it.
+    public static SQEMResponse evictContext(String hashkey) {
+        return evictContext(hashkey, !Event.operation.checkChannel(hashkey));
     }
 
-    // Done
-    public static SQEMResponse evictEntity(String contextId, boolean definite) {
-        // This hashkey is entityType-hash format.
-        // This function assumes that the hash key is unique across all the contexts (irrespective of the context service, etc.)
-        // Ideally the initial evict should push the context into ghost cache
-        RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+    // Evicts any context by hashkey.
+    // Execution point for keyspace events, AR less than a threshold event, or from above.
+    public static SQEMResponse evictContext(String contextId, boolean definite) {
+        // Entity Eviction
+        if(Utilty.isEntity(contextId)) {
+            // This hashkey is entityType-hash format.
+            // This function assumes that the hash key is unique across all the contexts (irrespective of the context service, etc.)
+            // Ideally the initial evict should push the context into ghost cache
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
-        RBucket<Object> bucket = cacheClient.getBucket(contextId);
-        Document cacheObject = (Document) bucket.get();
+            RBucket<Object> bucket = cacheClient.getBucket(contextId);
+            Document cacheObject = (Document) bucket.get();
 
-        RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
-        RLock lock = rwLock.writeLock();
-        RFuture<Boolean> evictStatus;
+            RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
+            RLock lock = rwLock.writeLock();
+            RFuture<Boolean> evictStatus;
 
-        synchronized (ContextCacheHandler.class){
-            CPREEServiceGrpc.CPREEServiceBlockingStub stub
-                    = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
-            stub.stopRefreshing(Lookup.newBuilder()
-                    .setContextId(contextId).build());
+            synchronized (ContextCacheHandler.class){
+                CPREEServiceGrpc.CPREEServiceBlockingStub stub
+                        = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+                stub.stopRefreshing(Lookup.newBuilder()
+                        .setContextId(contextId).build());
 
-            registry.removeFromRegistry(cacheObject.getString("serviceId"),
-                    (contextId.split("-"))[1], cacheObject.getString("entityType"));
-            if(!definite) Event.operation.deleteChannel(contextId);
+                registry.removeFromRegistry(cacheObject.getString("serviceId"),
+                        (contextId.split("-"))[1], cacheObject.getString("entityType"));
+                if(!definite) Event.operation.deleteChannel(contextId);
+            }
+
+            cacheClient.getKeys().deleteAsync(contextId);
+            evictStatus = bucket.deleteAsync();
+
+            evictStatus.whenCompleteAsync((res, exception) -> {
+                lock.unlockAsync();
+            });
+
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted.").build();
         }
+        // Situation Eviction
+        else {
+            // This hashkey is situationName-hash format.
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
-        cacheClient.getKeys().deleteAsync(contextId);
-        evictStatus = bucket.deleteAsync();
+            RBucket<Object> bucket = cacheClient.getBucket(contextId);
+            Document cacheObject = (Document) bucket.get();
 
-        evictStatus.whenCompleteAsync((res, exception) -> {
-            lock.unlockAsync();
-        });
+            RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
+            RLock lock = rwLock.writeLock();
+            RFuture<Boolean> evictStatus;
 
-        PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
-        return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted.").build();
+            boolean evictType;
+            synchronized (ContextCacheHandler.class){
+                evictType = registry.removeFromRegistry(cacheObject.getString("situName"), (contextId.split("-"))[1]);
+                if(!definite) Event.operation.deleteChannel(contextId);
+            }
+
+            cacheClient.getKeys().deleteAsync(contextId);
+            evictStatus = bucket.deleteAsync();
+
+            // Evicting the situation type
+            if(evictType) {
+                RBucket<Object> defBucket = cacheClient.getBucket(cacheObject.getString("situName"));
+                cacheClient.getKeys().deleteAsync(cacheObject.getString("situName"));
+                defBucket.deleteAsync();
+            }
+
+            evictStatus.whenCompleteAsync((res, exception) -> {
+                lock.unlockAsync();
+            });
+
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Situation evicted.").build();
+        }
     }
 
     // Lookup in  context registry whether the entity is cached

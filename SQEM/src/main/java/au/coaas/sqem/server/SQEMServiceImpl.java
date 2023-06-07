@@ -95,10 +95,10 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     @Override
-    public void evictContextEntityByHashKey(au.coaas.sqem.proto.ContextServiceId request,
+    public void evictContextByHashKey(au.coaas.sqem.proto.ContextServiceId request,
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
-            responseObserver.onNext(ContextCacheHandler.evictEntity(request.getId()));
+            responseObserver.onNext(ContextCacheHandler.evictContext(request.getId()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

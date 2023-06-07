@@ -372,7 +372,7 @@ service SQEMService {
     rpc handleSituationInCache (SituationLookUp) returns (SQEMResponse);
     rpc handleContextRequestInCache (CacheLookUp) returns (SQEMResponse);
     rpc refreshContextEntity (CacheRefreshRequest) returns (SQEMResponse);
-    rpc evictContextEntityByHashKey (ContextServiceId) returns (SQEMResponse);
+    rpc evictContextByHashKey (ContextServiceId) returns (SQEMResponse);
 
     rpc handleContextRequest (ContextRequest) returns (stream Chunk);
 

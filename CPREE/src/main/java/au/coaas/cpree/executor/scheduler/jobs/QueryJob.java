@@ -68,7 +68,7 @@ public class QueryJob implements Job {
                 // 2) ConQEng should be updated of this nature and not to OR minimize attempting to retrieving from this CP.
                 SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                         = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                asyncStub.evictContextEntityByHashKey(ContextServiceId.newBuilder().setId(contextId).build());
+                asyncStub.evictContextByHashKey(ContextServiceId.newBuilder().setId(contextId).build());
 
                 throw new RuntimeException("Couldn't retrieve the context for refreshing. Evicted the entity as a result.");
             }

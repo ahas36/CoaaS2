@@ -483,7 +483,7 @@ public final class CacheDataRegistry{
                 double finalAgeLoss = ChronoUnit.MILLIS.between(zeroTime,now);
                 if(now.isAfter(expiryTime)){
                     PerformanceLogHandler.insertAccess(
-                            lookup.getUniquehashkey(),
+                            lookup.getFunction().getFunctionName() + "-" + lookup.getUniquehashkey(),
                             "p_miss", finalAgeLoss);
                     return res.setHashkey(lookup.getUniquehashkey())
                             .setIsValid(false)
@@ -494,7 +494,7 @@ public final class CacheDataRegistry{
 
                 remainingLife = ChronoUnit.MILLIS.between(now, expiryTime);
                 PerformanceLogHandler.insertAccess(
-                        lookup.getUniquehashkey(),
+                        lookup.getFunction().getFunctionName() + "-" + lookup.getUniquehashkey(),
                         "hit", finalAgeLoss);
                 return res.setHashkey(lookup.getUniquehashkey())
                         .setIsValid(true)
@@ -578,6 +578,7 @@ public final class CacheDataRegistry{
                             JSONObject value = new JSONObject(ope.getStringValue());
 
                             ContextItem ents = lookupEntity(entType.getType(), value.getString("hashkey"));
+                            ents.setParents(situName + "-" + lookup.getUniquehashkey(), newSituationInstance);
                             if(ents != null)
                                 newSituationInstance.setChildren(ents);
                         }
@@ -601,6 +602,7 @@ public final class CacheDataRegistry{
                     JSONObject value = new JSONObject(ope.getStringValue());
 
                     ContextItem ents = lookupEntity(entType.getType(), value.getString("hashkey"));
+                    ents.setParents(situName + "-" + lookup.getUniquehashkey(), newSituationInstance);
                     if(ents != null)
                         newSituationInstance.setChildren(ents);
                 }
@@ -730,8 +732,8 @@ public final class CacheDataRegistry{
         }
     }
 
-    // Removes context items from the cached context registry
     // Done
+    // Removes context items from the cached context registry
     public String removeFromRegistry(CacheLookUp lookup){
         if(this.root.containsKey(lookup.getEt().getType())){
             this.root.compute(lookup.getEt().getType(), (k,v) -> {
@@ -743,18 +745,30 @@ public final class CacheDataRegistry{
                 }
 
                 if(v.getChildren().containsKey(serId)){
-                    v.getChildren().compute(serId, (id,stat) -> {
+                    ContextItem statTemp = (ContextItem) v.getChildren().compute(serId, (id,stat) -> {
                         if(stat.getChildren().containsKey(lookup.getHashKey())){
                             ContextItem entity = (ContextItem) stat.getChildren().get(lookup.getHashKey());
-                            for(Map.Entry<String, ContextCacheItem> parent: entity.getParents().entrySet()){
-                                parent.getValue().getChildren().remove(lookup.getHashKey());
+                            for(String situId: entity.getParents().keySet()){
+                                if(!Utilty.isEntity(situId)){
+                                    // When situation
+                                    String[] situNames = situId.split("-");
+                                    ContextCacheItem func = this.root.get(situNames[0]).getChildren()
+                                            .get(situNames[1]);
+                                    ((SituationItem) func).removeChild(entity.getId());
+                                }
                             }
+                            entity.removeAllParents();
+                        }
+
+                        ((ContextItem) stat).removeChild(lookup.getHashKey());
+                        if(stat.getChildren().isEmpty()){
+                            ((ContextItem) stat).removeAllParents();
                         }
                         return stat;
                     });
 
-                    if(v.getChildren().get(serId).getChildren().isEmpty()){
-                        v.getChildren().remove(serId);
+                    if(statTemp.getParents().isEmpty()){
+                        ((ContextItem) v).removeChild(serId);
                     }
                 }
 
@@ -770,6 +784,7 @@ public final class CacheDataRegistry{
     }
 
     // Done
+    // Evicts entities
     public void removeFromRegistry(String serviceId, String hashKey, String entityType){
         if(this.root.containsKey(entityType)){
             this.root.compute(entityType, (k,v) -> {
@@ -779,23 +794,35 @@ public final class CacheDataRegistry{
                     serId = obj.getString("$oid");
                 }
 
+                // Context Service Reference
                 if(v.getChildren().containsKey(serId)){
-                    v.getChildren().compute(serId, (id,stat) -> {
+                    ContextItem statTemp = (ContextItem) v.getChildren().compute(serId, (id,stat) -> {
+                        // Specific Entities
                         if(stat.getChildren().containsKey(hashKey)){
                             ContextItem entity = (ContextItem) stat.getChildren().get(hashKey);
-                            for(Map.Entry<String, ContextCacheItem> parent: entity.getParents().entrySet()){
-                                parent.getValue().getChildren().remove(hashKey);
+                            //Checking if the entity is a related to any situations
+                            for(String situId: entity.getParents().keySet()){
+                                if(!Utilty.isEntity(situId)){
+                                    // When situation
+                                    String[] situNames = situId.split("-");
+                                    ContextCacheItem func = this.root.get(situNames[0]).getChildren()
+                                            .get(situNames[1]);
+                                    ((SituationItem) func).removeChild(entity.getId());
+                                }
                             }
+                            entity.removeAllParents();
                         }
-
+                        ((ContextItem) stat).removeChild(hashKey);
+                        if(stat.getChildren().isEmpty()){
+                            ((ContextItem) stat).removeAllParents();
+                        }
                         return stat;
                     });
 
-                    if(v.getChildren().get(serId).getChildren().isEmpty()){
-                        v.getChildren().remove(serId);
+                    if(statTemp.getParents().isEmpty()){
+                        ((ContextItem) v).removeChild(serId);
                     }
                 }
-
                 return v;
             });
 
@@ -803,6 +830,43 @@ public final class CacheDataRegistry{
                 this.root.remove(entityType);
             }
         }
+    }
+
+    // Done
+    // Evicts Situations
+    public boolean removeFromRegistry(String situName, String hashKey){
+        // Return indicates the relevant situation Type should be evicted from cache.
+        boolean shouldEvict = false;
+        String contextId = situName + "-" + hashKey;
+
+        // Situation Type
+        if(this.root.containsKey(situName)){
+            ContextCacheItem situType = this.root.compute(situName, (k, v) -> {
+                // Specific instance of a situation
+                if (v.getChildren().containsKey(hashKey)) {
+                    v.getChildren().compute(hashKey, (id, stat) -> {
+                        // Related entities in cache
+                        if (!stat.getChildren().isEmpty()) {
+                            for (Map.Entry<String, ContextCacheItem> ent : stat.getChildren().entrySet()) {
+                                ContextItem currEnt = (ContextItem) ent.getValue();
+                                currEnt.removeParent(contextId);
+                            }
+                        }
+                        ((SituationItem) stat).removeAllChildren();
+                        ((SituationItem) stat).removeAllParents();
+                        return stat;
+                    });
+                    ((SituationItem) v).removeChild(hashKey);
+                }
+                return v;
+            });
+
+            if(situType.getChildren().isEmpty()){
+                this.root.remove(situName);
+                return true;
+            }
+        }
+        return shouldEvict;
     }
 }
 

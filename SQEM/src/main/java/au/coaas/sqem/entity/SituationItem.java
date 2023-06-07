@@ -36,6 +36,10 @@ public class SituationItem implements ContextCacheItem {
     public void setChildren(ContextItem entity) {this.children.put(entity.getId(), entity);}
     public void setParents(String id, ContextCacheItem entity) {this.parents.put(id, entity);}
 
+    public void removeChild(String id) {this.children.remove(id);}
+    public void removeAllChildren() {this.children.clear();}
+    public void removeAllParents() {this.parents.clear();}
+
     // Situation Reference Node
     public SituationItem(SituationLookUp lookUp, LocalDateTime zeroTime){
         this.createdTime = LocalDateTime.now();

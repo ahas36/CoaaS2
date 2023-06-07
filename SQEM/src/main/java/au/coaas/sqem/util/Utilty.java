@@ -11,6 +11,8 @@ import java.nio.charset.StandardCharsets;
 
 // General utility functions used by the service
 public class Utilty {
+    final static String[] entityTypes = {"car", "vehicle", "thing", "weather", "place", "carpark", "parkingfacility"};
+
     public static long convertTime2MilliSecond(String unit, int value) {
         switch (unit.toLowerCase()) {
             case "s":
@@ -63,7 +65,16 @@ public class Utilty {
         }
     }
 
-    public JSONObject getLifetime(String entityType){
+    public static boolean isEntity(String contextId){
+        // This is a quick fix
+        String prefix = (contextId.split("-"))[0];
+        if(Arrays.stream(entityTypes).anyMatch(x -> x.equals(prefix.toLowerCase()))){
+            return true;
+        }
+        return false;
+    }
+
+    public static JSONObject getLifetime(String entityType){
         JSONObject lifetime = new JSONObject();
         lifetime.put("unit","s");
         switch(entityType.toLowerCase()){

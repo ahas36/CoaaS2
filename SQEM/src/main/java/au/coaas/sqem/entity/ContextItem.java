@@ -30,6 +30,11 @@ public class ContextItem implements ContextCacheItem {
     public void setUpdatedTime(LocalDateTime time) {this.updatedTime = time;}
     public void setParents(String id, ContextCacheItem entity) {this.parents.put(id, entity);}
 
+    public void removeChild(String id) {this.children.remove(id);}
+    public void removeParent(String id) {this.parents.remove(id);}
+    public void removeAllChildren() {this.children.clear();}
+    public void removeAllParents() {this.parents.clear();}
+
     // Context Entity Node
     public ContextItem(CacheLookUp lookup, String hashKey, String refreshLogic, LocalDateTime zeroTime){
         this.id = lookup.getEt().getType();

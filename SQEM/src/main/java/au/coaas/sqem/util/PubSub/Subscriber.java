@@ -14,7 +14,7 @@ public class Subscriber {
     @OnMessage
     private void onMessage(Message message) {
         if(message.getAccessRate() <= lambda){
-            ContextCacheHandler.evictEntity(message.getHashkey(), false);
+            ContextCacheHandler.evictContext(message.getHashkey(), false);
         }
     }
 }

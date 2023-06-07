@@ -54,7 +54,7 @@ public class ConnectionPool {
                         @Override
                         public void onMessage(CharSequence pattern, CharSequence channel, String key) {
                             log.info(key + "expired in cache. Starting to evict item.");
-                            ContextCacheHandler.evictEntity(key, true);
+                            ContextCacheHandler.evictContext(key, true);
                         }
                     });
 

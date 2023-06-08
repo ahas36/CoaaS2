@@ -1483,7 +1483,7 @@ public class PullBasedExecutor {
                         if(status.getKey().equals("200"))
                             return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
                                 .addAllHashKeys(status.getValue())
-                                .setStatus(data.getStatus()).setContextService(((JSONObject) ctSer).toString())
+                                .setStatus(data.getStatus()).setContextService(conSer.toString())
                                 .setRefPolicy(data.getMeta()).build());
                         continue; // Moving to the next context provider since it is currently unavailable.
                     }
@@ -1508,6 +1508,7 @@ public class PullBasedExecutor {
                         conSer.getJSONObject("_id").getString("$oid"), params, cacheEnabled);
                 if(status.getKey().equals("200"))
                     return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
+                            .setContextService(conSer.toString())
                             .addAllHashKeys(status.getValue()).build());
                 continue; // Moving to the next context provider since it is currently unavailable.
             }
@@ -1863,18 +1864,23 @@ public class PullBasedExecutor {
 
         try {
             SQEMResponse sqemResponse = SQEMResponse.parseFrom(output.toByteString());
+            entityCollection = sqemResponse.getBody();
             if (sqemResponse.getMeta() != null) {
-                invoke.put("results", new JSONArray(sqemResponse.getBody()));
+                invoke.put("results", new JSONArray(entityCollection));
                 invoke.put("meta", new JSONObject(sqemResponse.getMeta()));
             }
-            entityCollection = sqemResponse.getBody();
         } catch (InvalidProtocolBufferException e) {
             e.printStackTrace();
         }
 
+        JSONObject slaObj = new JSONObject(contextService);
+        String entType = slaObj.getJSONObject("info").getString("name");
+        Double fthresh = slaObj.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh");
+
         SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-        asyncStub.summarizeAge(Statistic.newBuilder().setMethod(entityCollection).build());
+        asyncStub.summarizeAge(Statistic.newBuilder().setMethod(entityCollection)
+                .setStatus(entType).setEarning(fthresh).build());
 
         if(contextService != null) {
             JSONObject cs = new JSONObject(contextService);

@@ -165,15 +165,24 @@ public class PerformanceLogHandler {
 
     public static void summarizeAge (Statistic ents){
         JSONArray entities = new JSONArray(ents.getMethod());
+
+        String entyType = ents.getStatus();
+        Double fthresh = ents.getEarning();
+        long lifetime = (long) Utilty.getLifetime(entyType).getDouble("value") * 1000;
+        double expPrd = lifetime * (1 - fthresh);
+
         if(!entities.isEmpty()){
             for(Object ent: entities){
                 JSONObject properEntity = (JSONObject) ent;
                 Date now = new Date();
                 long nowTime = now.getTime();
                 long totalAge = 0;
+                boolean isInvalid = false;
+
                 if(properEntity.has("zeroTime")){
                     long zeroTime = properEntity.getLong("zeroTime");
                     totalAge = zeroTime - nowTime;
+                    if(totalAge < expPrd) isInvalid = true;
                 }
                 else {
                     Double ageInMS = properEntity.getJSONObject("age").getDouble("value") * 1000;
@@ -182,10 +191,12 @@ public class PerformanceLogHandler {
                     ZonedDateTime datetime = LocalDateTime.parse(date).atZone(ZoneId.systemDefault());
                     long diff = nowTime - datetime.toInstant().toEpochMilli();
                     totalAge = ageInMS.longValue() + diff;
+                    if(totalAge < expPrd) isInvalid = true;
                 }
 
                 coassPerformanceRecord(Statistic.newBuilder()
-                        .setMethod("queryRetrieval").setAge(totalAge).build());
+                        .setMethod("queryRetrieval").setAge(totalAge)
+                        .setIsDelayed(isInvalid).build());
             }
         }
     }
@@ -316,7 +327,7 @@ public class PerformanceLogHandler {
                             0.0, // Cost of retrieval
                             "coaas", // Context Service Identifier
                             now.format(formatter),
-                            0); // is Delayed?
+                            request.getIsDelayed() ? 1:0); // is Delayed?
                     statement.executeUpdate(formatted_string_2);
                     break;
                 }

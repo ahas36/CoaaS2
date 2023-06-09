@@ -427,6 +427,10 @@ public class PullBasedExecutor {
 
         //String queryOuptput = OutputHandler.handle(result, query.getConfig().getOutputConfig());
         // If this response need to be cached, this is where the caching action should happen.
+        if(consumerQoS == null){
+            consumerQoS = sla.getJSONObject("sla").getJSONObject("qos");
+        }
+
         CdqlResponse cdqlResponse = CdqlResponse.newBuilder().setStatus("200")
                 .setQueryId(queryId)
                 .setBody(result.toString())
@@ -1873,21 +1877,27 @@ public class PullBasedExecutor {
             e.printStackTrace();
         }
 
-        JSONObject slaObj = new JSONObject(contextService);
-        String entType = slaObj.getJSONObject("info").getString("name");
-        Double fthresh = slaObj.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh");
-
-        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
-                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-        asyncStub.summarizeAge(Statistic.newBuilder().setMethod(entityCollection)
-                .setStatus(entType).setEarning(fthresh).build());
-
         if(contextService != null) {
+            JSONObject slaObj = new JSONObject(contextService);
+            String entType = slaObj.getJSONObject("info").getString("name");
+            Double fthresh = slaObj.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh");
+
+            SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                    = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+            asyncStub.summarizeAge(Statistic.newBuilder().setMethod(entityCollection)
+                    .setStatus(entType).setEarning(fthresh).build());
+
             JSONObject cs = new JSONObject(contextService);
             JSONObject qos = cs.getJSONObject("sla").getJSONObject("qos");
             return new AbstractMap.SimpleEntry(invoke,
                     qos.put("price", cs.getJSONObject("sla").getJSONObject("cost").getDouble("value")));
         }
+
+        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        asyncStub.summarizeAge(Statistic.newBuilder().setMethod(entityCollection)
+                .setStatus(targetEntity.getType().getType())
+                .setEarning(0.7).build()); // Setting the default
 
         return new AbstractMap.SimpleEntry(invoke, null);
     }

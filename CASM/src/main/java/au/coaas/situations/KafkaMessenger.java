@@ -19,7 +19,7 @@ import java.util.logging.Logger;
         maxPoolSize=2000,
         transactionSupport = TransactionSupport.TransactionSupportLevel.NoTransaction,
         properties = {
-                "bootstrapServersConfig=docker.host.internal:9092",
+                "bootstrapServersConfig=localhost:9092",
                 "clientId=PayaraMicroMessenger"
         })
 

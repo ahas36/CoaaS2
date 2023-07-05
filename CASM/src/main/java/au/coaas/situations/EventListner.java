@@ -29,7 +29,7 @@ import java.util.logging.Logger;
         @ActivationConfigProperty(propertyName = "groupIdConfig",
                 propertyValue = "test-consumer-group"),
         @ActivationConfigProperty(propertyName = "bootstrapServersConfig",
-                propertyValue = "docker.host.internal:9092"),
+                propertyValue = "localhost:9092"),
         @ActivationConfigProperty(propertyName = "keyDeserializer",
                 propertyValue = "org.apache.kafka.common.serialization.StringDeserializer"),
         @ActivationConfigProperty(propertyName = "valueDeserializer",
@@ -43,6 +43,8 @@ public class EventListner implements KafkaListener {
     @OnRecord(topics = {"event"})
     public CdqlResponse handelEvent(ConsumerRecord record){
         String eventString = record.value().toString();
+        // TODO: Provider is currently set to null but could be set in the header if possible.
+        // record.headers().headers("provider")
         String provider = "";
 
         CQCServiceGrpc.CQCServiceBlockingStub stub

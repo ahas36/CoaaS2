@@ -16,6 +16,8 @@ import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.logging.Logger;
@@ -38,23 +40,31 @@ public class EntityInterface {
 
     @POST
     @Path("create")
-    @Consumes(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response createEntity(String entity) {
+    public Response createEntity(@Context HttpHeaders headers, String entity) {
+        // It is assumed that the context provider will use its unique signature to indicate from where the data is sent from.
+        String providerId = headers.getHeaderString("provider");
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
-        CdqlResponse cdql = stub.registerContextEntity(ExecutionRequest.newBuilder().setCdql(entity).build());
+        // Value set in QueryId is the Context Provider ID.
+        CdqlResponse cdql = stub.registerContextEntity(ExecutionRequest.newBuilder()
+                .setCdql(entity).setQueryid(providerId).build());
         return Response.ok(cdql.getBody()).build();
     }
 
     @POST
     @Path("update")
-    @Consumes(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.TEXT_PLAIN)
-    public Response updateEntity(String entity) {
+    public Response updateEntity(@Context HttpHeaders headers, String entity) {
+        // It is assumed that the context provider will use its unique signature to indicate from where the data is sent from.
+        String providerId = headers.getHeaderString("provider");
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
-        CdqlResponse cdql = stub.updateContextEntity(ExecutionRequest.newBuilder().setCdql(entity).build());
+        // Value set in QueryId is the Context Provider ID.
+        CdqlResponse cdql = stub.updateContextEntity(ExecutionRequest.newBuilder()
+                .setCdql(entity).setQueryid(providerId).build());
         return Response.ok(cdql.getBody()).build();
     }
 
@@ -71,7 +81,6 @@ public class EntityInterface {
         } else {
             return Response.status(500).entity(res.getBody()).build();
         }
-
     }
 
     @PUT

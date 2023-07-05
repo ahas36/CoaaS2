@@ -164,6 +164,7 @@ public class SituationManager {
             new Thread(() -> {
                 SQEMServiceGrpc.SQEMServiceBlockingStub sqemstub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                // Might need to check if the entity update happens correctly.
                 sqemstub.updateEventRegistry(event);
             }).start();
 

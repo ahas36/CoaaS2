@@ -116,7 +116,7 @@ public class PushBasedExecutor {
                             situations.put(functionName, situationFunction);
                     }
                     catch (Exception ex) {
-                        log.severe("Not a valid function for push queries or some error occurred in" +
+                        log.severe("Not a valid function for push queries or some error occurred in " +
                                 queryId + ": " + ex.getMessage());
                     }
                 }
@@ -152,6 +152,7 @@ public class PushBasedExecutor {
                     .getDefinedEntitiesList().stream()
                     .filter(ent -> ent.getEntityID().equals(entityID))
                     .findFirst();
+
             if(contextEntity.isPresent()){
                 ContextEntity.Builder csEntity = ContextEntity.newBuilder();
                 csEntity.setEntityID(entityID);
@@ -383,6 +384,7 @@ public class PushBasedExecutor {
 
     private static void handelSubscription(SubscribedQuery subscription) {
         try {
+            // Executing the push query periodically using a background thread and
             CdqlResponse executePullBaseQuery = PullBasedExecutor.executePullBaseQuery(
                     subscription.getQuery(), subscription.getToken(),-1, -1,
                     subscription.getQueryId(), subscription.getCriticality(),

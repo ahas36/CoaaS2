@@ -393,7 +393,7 @@ service SQEMService {
     rpc getAllSubscriptions (Empty) returns (SQEMResponse);
     rpc registerPushQuery (RegisterPushQuery) returns (RegisterPushQuery);
     rpc registerSituationFunction (RegisterSituationRequest) returns (SQEMResponse);
-    rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunction);
+    rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunctionResponse);
 
     rpc getRelatedSubscriptions (Situation) returns (CdqlSubscription);
     rpc updateEventRegistry (au.coaas.cre.proto.ContextEvent) returns (Empty);

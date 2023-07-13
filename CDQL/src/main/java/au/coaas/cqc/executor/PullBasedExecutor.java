@@ -202,7 +202,8 @@ public class PullBasedExecutor {
                 }
             }
 
-            SituationFunction situationFunction = sqemStub.findSituationByTitle(SituationFunctionRequest.newBuilder().setName(fCall.getFunctionName()).build());
+            SituationFunction situationFunction = sqemStub.findSituationByTitle(SituationFunctionRequest.newBuilder()
+                    .setName(fCall.getFunctionName()).build());
 
             String execute = executeSituationFunction(situationFunction, fCallTemp.build());
 

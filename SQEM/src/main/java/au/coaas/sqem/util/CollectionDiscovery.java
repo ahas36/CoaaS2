@@ -24,8 +24,6 @@ public class CollectionDiscovery {
             case "Vehicle":
             case "BusOrCoach":
             case "Car":
-            case "Motorcycle":
-            case "MotorizedBicycle":
                 return "Vehicle";
             case "Weather":
                 return "Weather";
@@ -38,6 +36,21 @@ public class CollectionDiscovery {
             case "TouristAttraction":
             case "TouristDestination":
                 return "Place";
+            case "Bike":
+            case "Motorcycle":
+            case "MotorizedBicycle":
+                return "Bike";
+            case "LinearExtension":
+            case "Road":
+                return "Road";
+            case "Rider":
+            case "Driver":
+            case "Person":
+            case "Girl":
+            case "Boy":
+            case "Man":
+            case "Woman":
+                return "Person";
             default:
                 return entityType.toLowerCase();
         }

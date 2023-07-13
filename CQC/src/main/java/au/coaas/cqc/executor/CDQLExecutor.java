@@ -42,7 +42,7 @@ public class CDQLExecutor {
                     return PullBasedExecutor.executePullBaseQuery(query, request.getToken(),
                             request.getPage(), request.getLimit(), request.getQueryid(),
                             request.getCriticality(), cdqlConstruct.getComplexity());
-                }else {
+                } else {
                     return PushBasedExecutor.executePushBaseQuery(query, request.getToken(),
                             request.getQueryid(), request.getCriticality(), cdqlConstruct.getComplexity());
                 }

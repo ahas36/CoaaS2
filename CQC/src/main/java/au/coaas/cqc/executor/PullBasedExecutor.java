@@ -1264,8 +1264,13 @@ public class PullBasedExecutor {
             SituationFunction function;
             if(situCacheRes.getSituation() != null)
                 function = situCacheRes.getSituation();
-            else function= sqemStub_2.findSituationByTitle(SituationFunctionRequest.newBuilder()
-                    .setName(fCall.getFunctionName()).build());
+            else {
+                SituationFunctionResponse response = sqemStub_2.findSituationByTitle(
+                        SituationFunctionRequest.newBuilder()
+                        .setName(fCall.getFunctionName()).build());
+                if(response.getStatus().equals("200")) function = response.getSFunction();
+                else throw new RuntimeException("Provided situation function: " + fCall.getFunctionName() + " can not be found.");
+            }
 
             Map<String, ContextEntityType> tempList = new LinkedHashMap(function.getRelatedEntitiesMap());
 

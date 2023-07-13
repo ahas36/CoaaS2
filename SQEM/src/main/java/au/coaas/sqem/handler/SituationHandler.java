@@ -2,6 +2,7 @@ package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.ContextFunction;
 import au.coaas.cqp.proto.SituationFunction;
+import au.coaas.cqp.proto.SituationFunctionResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextServiceRequest;
 import au.coaas.sqem.proto.RegisterContextServiceRequest;
@@ -26,7 +27,7 @@ import java.util.logging.Logger;
 
 
 public class SituationHandler {
-    private static final Logger LOG = Logger.getLogger(SituationHandler.class.getName());
+    private static final Logger log = Logger.getLogger(SituationHandler.class.getName());
 
     public static SQEMResponse getAllSituationFunctions() {
         try {
@@ -80,26 +81,28 @@ public class SituationHandler {
         }
     }
 
-    public static SituationFunction findSituationByTitle(String title) {
+    public static SituationFunctionResponse findSituationByTitle(String title) {
+        SituationFunctionResponse.Builder response = SituationFunctionResponse.newBuilder();
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+
             MongoDatabase db = mongoClient.getDatabase("coaas_situation");
-
             MongoCollection<Document> collection = db.getCollection("situations");
-
-            JSONArray finalResultJsonArr = new JSONArray();
 
             Document res = collection.find(new Document("title", title)).first();
 
-            SituationFunction.Builder builder = SituationFunction.newBuilder();
-
-            JsonFormat.parser().ignoringUnknownFields().merge(res.getString("parsed"),builder);
-
-            return builder.build();
-
+            if(res != null){
+                SituationFunction.Builder builder = SituationFunction.newBuilder();
+                JsonFormat.parser().ignoringUnknownFields().merge(res.getString("parsed"), builder);
+                response.setStatus("200");
+                response.setSFunction(builder.build());
+            }
+            else response.setStatus("404");
         } catch (Exception e) {
-            return null;
+            log.severe(e.getMessage());
+            response.setStatus("500");
         }
+        return response.build();
     }
 
 }

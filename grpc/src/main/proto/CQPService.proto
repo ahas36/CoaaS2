@@ -270,11 +270,16 @@ message ContextFunction {
     AggregationFunction aFunction = 5;
 }
 
+message SituationFunctionResponse {
+    SituationFunction sFunction = 1;
+    string status = 2;
+}
+
 message SituationFunction {
-    map<string, string> nameSpaces = 3;
-    map<string, ContextEntityType> relatedEntities = 4;
-    repeated SituationDescription situations = 5;
-    repeated string allAttributes = 6;
+    map<string, string> nameSpaces = 1;
+    map<string, ContextEntityType> relatedEntities = 2;
+    repeated SituationDescription situations = 3;
+    repeated string allAttributes = 4;
 }
 
 message SituationDescription {

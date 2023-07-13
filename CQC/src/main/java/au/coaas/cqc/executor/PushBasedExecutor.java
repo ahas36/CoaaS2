@@ -82,7 +82,7 @@ public class PushBasedExecutor {
                     usedSiddhifunctions.add("decrease");
                     siddhiQueryBody.append(
                             generateQueries("decrease",
-                                    Double.valueOf(functionCall.getArguments(1).getStringValue()),
+                                    functionCall.getArguments(1).getStringValue(),
                                     Utilities.messageToJson(functionCall)));
                     break;
                 }
@@ -90,7 +90,7 @@ public class PushBasedExecutor {
                     usedSiddhifunctions.add("increase");
                     siddhiQueryBody.append(
                             generateQueries("increase",
-                                    Double.valueOf(functionCall.getArguments(1).getStringValue()),
+                                    functionCall.getArguments(1).getStringValue(),
                                     Utilities.messageToJson(functionCall)));
                     break;
                 }
@@ -98,7 +98,7 @@ public class PushBasedExecutor {
                     usedSiddhifunctions.add("isValid");
                     siddhiQueryBody.append(
                             generateQueries("isValid",
-                                    Double.valueOf(functionCall.getArguments(1).getStringValue()),
+                                    functionCall.getArguments(1).getStringValue(),
                                     Utilities.messageToJson(functionCall)));
                     break;
                 }
@@ -110,10 +110,12 @@ public class PushBasedExecutor {
                     try {
                         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-                        SituationFunction situationFunction = sqemStub.findSituationByTitle(
+                        SituationFunctionResponse situationFunction = sqemStub.findSituationByTitle(
                                 SituationFunctionRequest.newBuilder().setName(functionName).build());
-                        if (situationFunction != null)
-                            situations.put(functionName, situationFunction);
+                        if (situationFunction.getStatus().equals("200"))
+                            situations.put(functionName, situationFunction.getSFunction());
+                        // Otherwise, the provided function is not a situation function (aggregate function),
+                        // the situation doesn't exist, or there has been an error.
                     }
                     catch (Exception ex) {
                         log.severe("Not a valid function for push queries or some error occurred in " +
@@ -256,13 +258,12 @@ public class PushBasedExecutor {
         return result;
     }
 
-    private static Gson gson = new Gson();
     private static List<FunctionCall> getSubFunctionCalls(FunctionCall fCall) {
         List<FunctionCall> result = new ArrayList<>();
         for (Operand argument : fCall.getArgumentsList()) {
             if (argument.getType() == OperandType.FUNCTION_CALL) {
-                FunctionCall subFCall = gson.fromJson(gson.toJson(argument.getStringValue()), FunctionCall.class);
-                result.add(subFCall);
+                FunctionCall subFCall = argument.getFunctioncall();
+                result.add(argument.getFunctioncall());
                 result.addAll(getSubFunctionCalls(subFCall));
             }
         }

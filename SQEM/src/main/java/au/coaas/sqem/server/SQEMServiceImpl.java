@@ -382,7 +382,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
 
     @Override
     public void findSituationByTitle(au.coaas.sqem.proto.SituationFunctionRequest request,
-                                     io.grpc.stub.StreamObserver<au.coaas.cqp.proto.SituationFunction> responseObserver) {
+                                     io.grpc.stub.StreamObserver<au.coaas.cqp.proto.SituationFunctionResponse> responseObserver) {
         try {
             responseObserver.onNext(SituationHandler.findSituationByTitle(request.getName()));
         } catch (Exception ex) {

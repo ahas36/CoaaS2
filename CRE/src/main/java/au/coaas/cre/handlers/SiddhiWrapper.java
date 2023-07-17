@@ -2,12 +2,12 @@ package au.coaas.cre.handlers;
 
 import au.coaas.cre.proto.CRESituation;
 import au.coaas.cre.proto.SiddhiRegister;
-import org.wso2.siddhi.core.event.Event;
-import org.wso2.siddhi.core.SiddhiManager;
-import org.wso2.siddhi.core.SiddhiAppRuntime;
-import org.wso2.siddhi.core.util.EventPrinter;
-import org.wso2.siddhi.core.stream.input.InputHandler;
-import org.wso2.siddhi.core.stream.output.StreamCallback;
+import io.siddhi.core.event.Event;
+import io.siddhi.core.SiddhiManager;
+import io.siddhi.core.SiddhiAppRuntime;
+import io.siddhi.core.util.EventPrinter;
+import io.siddhi.core.stream.input.InputHandler;
+import io.siddhi.core.stream.output.StreamCallback;
 
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -22,6 +22,7 @@ public class SiddhiWrapper {
         public void receive(Event[] events) {
             EventPrinter.print(events);
             log.info("Testing the increase callback!");
+            // This should trigger all the nessecary actions
         }
     };
 
@@ -30,6 +31,7 @@ public class SiddhiWrapper {
         public void receive(Event[] events) {
             EventPrinter.print(events);
             log.info("Testing the stable callback!");
+            // This should trigger all the nessecary actions
         }
     };
 
@@ -38,6 +40,7 @@ public class SiddhiWrapper {
         public void receive(Event[] events) {
             EventPrinter.print(events);
             log.info("Testing the decreasing callback!");
+            // This should trigger all the nessecary actions
         }
     };
 
@@ -51,20 +54,21 @@ public class SiddhiWrapper {
 
     public static CRESituation createSiddhiApp(SiddhiRegister specs) {
         try{
-            SiddhiAppRuntime siddhiAppRuntime = getSiddhiManager().createSiddhiAppRuntime(specs.getJson());
-            for (String usedFunction : specs.getUsedFunctionsList()) {
-                switch (usedFunction) {
-                    case "decrease":
-                        siddhiAppRuntime.addCallback("DecreaseTrendAlertStream", decreaseCallback);
-                        break;
-                    case "increase":
-                        siddhiAppRuntime.addCallback("IncreaseTrendAlertStream", increaseCallback);
-                        break;
-                    case "isValid":
-                        siddhiAppRuntime.addCallback("stableTrendAlertStream", stableCallback);
-                        break;
-                }
-            }
+            SiddhiManager smgr = getSiddhiManager();
+            SiddhiAppRuntime siddhiAppRuntime = smgr.createSiddhiAppRuntime(specs.getJson());
+//            for (String usedFunction : specs.getUsedFunctionsList()) {
+//                switch (usedFunction) {
+//                    case "decrease":
+//                        siddhiAppRuntime.addCallback("DecreaseTrendAlertStream", decreaseCallback);
+//                        break;
+//                    case "increase":
+//                        siddhiAppRuntime.addCallback("IncreaseTrendAlertStream", increaseCallback);
+//                        break;
+//                    case "isValid":
+//                        siddhiAppRuntime.addCallback("stableTrendAlertStream", stableCallback);
+//                        break;
+//                }
+//            }
 
             siddhiAppRuntime.start();
             return CRESituation.newBuilder().setStatus("200").build();
@@ -78,7 +82,7 @@ public class SiddhiWrapper {
 
     public static Event getResults(String appName, String functionSignature) {
         Event[] events = getSiddhiManager().getSiddhiAppRuntime(appName).query(""
-                + " from eventResultTable on  functionSignature == '" + functionSignature
+                + " from eventResultTable on functionSignature == '" + functionSignature
                 + "' select * order by timestamp desc\n limit 1");
         return events == null ? null : events[0];
     }

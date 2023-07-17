@@ -1,3 +1,14 @@
-au/coaas/cre/server/CREServiceImpl.class
-au/coaas/cre/reasoner/SituationReasoner.class
+au/coaas/cre/handlers/SituationHandler.class
+au/coaas/cre/handlers/SiddhiWrapper$2.class
+au/coaas/cre/handlers/SiddhiWrapper$3.class
 au/coaas/cre/server/CREServer.class
+au/coaas/cre/handlers/cst/CSTManagerSingleton.class
+au/coaas/cre/server/CREServiceImpl.class
+au/coaas/cre/handlers/SiddhiWrapper$1.class
+au/coaas/cre/handlers/cst/Situation.class
+au/coaas/cre/handlers/cst/Attribute.class
+au/coaas/cre/handlers/SiddhiWrapper.class
+au/coaas/cre/server/CREInterceptor.class
+au/coaas/cre/handlers/cst/Event.class
+au/coaas/cre/reasoner/SituationReasoner.class
+au/coaas/cre/server/CREInterceptor$1.class

@@ -652,6 +652,7 @@ public class SituationManager {
                         .setSubscriptionValue(value)
                         .setTimestamp(String.valueOf(System.currentTimeMillis()))
                         .setFunctionString(stringFcall)
+                        .setFunctionName(fCall.getFunctionName())
                         .build();
 
                 PushBasedExecutor.sendEvent(ev);

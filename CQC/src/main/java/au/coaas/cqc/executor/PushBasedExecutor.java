@@ -114,6 +114,8 @@ public class PushBasedExecutor {
                                 SituationFunctionRequest.newBuilder().setName(functionName).build());
                         if (situationFunction.getStatus().equals("200"))
                             situations.put(functionName, situationFunction.getSFunction());
+                        else if(situationFunction.getStatus().equals("404"))
+                            log.severe("Function:" + functionName + " is an aggregate function or not registered.");
                         // Otherwise, the provided function is not a situation function (aggregate function),
                         // the situation doesn't exist, or there has been an error.
                     }
@@ -136,7 +138,8 @@ public class PushBasedExecutor {
                         .filter(ent -> ent.getEntityID().equals(entityID))
                         .findFirst();
                 if(findEntity.isPresent()){
-                    for (String tempEntityID : findEntity.get().getCondition().getDependencyMap().keySet()) {
+                    Set<String> keySet = findEntity.get().getCondition().getDependencyMap().keySet();
+                    for (String tempEntityID : keySet) {
                         if (!relatedEntitiesTitles.contains(tempEntityID)) {
                             newEntities.add(tempEntityID);
                         }

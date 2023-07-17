@@ -4,7 +4,7 @@ import au.coaas.cre.proto.CRESituation;
 import au.coaas.cre.proto.ContextEvent;
 import au.coaas.cre.proto.SituationRequest;
 
-import org.wso2.siddhi.core.event.Event;
+import io.siddhi.core.event.Event;
 
 import org.json.JSONObject;
 import java.util.logging.Logger;
@@ -26,7 +26,7 @@ public class SituationHandler {
         if (persEvent.has("subscriptionID") && persEvent.getString("subscriptionID") != null) {
             try {
                 SiddhiWrapper.addEvent(new Object[]{"event", Double.valueOf(persEvent.getString("subscriptionValue")),
-                        persEvent.getString("timestamp")},"sub_" + persEvent.getString("subscriptionID"));
+                        persEvent.getLong("timestamp")},"sub_" + persEvent.getString("subscriptionID"));
             } catch (InterruptedException ex) {
                 log.severe("Error when adding event: " + ex.getStackTrace());
             }
@@ -38,7 +38,9 @@ public class SituationHandler {
     }
 
     public static CRESituation getResults(ContextEvent event){
-        Event eventList = SiddhiWrapper.getResults(event.getSubscriptionID(), event.getFunctionString());
+        // Event eventList = SiddhiWrapper.getResults("sub_" + event.getSubscriptionID(), event.getFunctionString());
+        Event eventList = SiddhiWrapper.getResults("sub_" + event.getSubscriptionID(),
+                event.getFunctionName());
         try{
             return CRESituation.newBuilder().setStatus("200")
                     .setBody(eventList.getData().toString()).build();

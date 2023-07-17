@@ -70,4 +70,17 @@ public class CSIServiceImpl extends CSIServiceGrpc.CSIServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void mapToEntity(au.coaas.csi.proto.ContextMappingRequest request,
+                               io.grpc.stub.StreamObserver<CSIResponse> responseObserver) {
+        try {
+            CSIResponse response = FetchManager.mappingService(request.getJsonResponse(),
+                    request.getAttributes());
+            responseObserver.onNext(response);
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 }

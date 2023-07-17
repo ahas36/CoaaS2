@@ -355,10 +355,17 @@ public class FetchManager {
                 sum = sum + ageArrary.get(i);
             finalResult.put("avgAge", ageArrary.size()>0?(sum*1000.0)/ageArrary.size():0.0);
             return finalResult;
-        }else {
+        } else {
             return mapJsonObject(attributes,service);
         }
     }
 
+    public static CSIResponse mappingService (String jsonResponse, String attributes) {
+        JSONObject csAttributes = new JSONObject(attributes);
+        JSONObject result = semanticMapper(csAttributes.getJSONArray("attributes"), jsonResponse, null);
+        return CSIResponse.newBuilder().setStatus("200")
+                .setBody(result.toString())
+                .build();
+    }
 }
 

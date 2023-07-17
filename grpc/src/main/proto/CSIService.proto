@@ -36,10 +36,16 @@ message ContextServiceInvokerRequest
     map<string,string> params = 2;
 }
 
+message ContextMappingRequest {
+    string jsonResponse = 1;
+    string attributes = 2;
+}
+
 
 service CSIService {
     rpc fetch (ContextServiceInvokerRequest) returns (CSIResponse);
     rpc createFetchJob (ContextService) returns (CSIResponse);
     rpc updateFetchJob (ContextService) returns (CSIResponse);
     rpc cancelFetchJob (ContextService) returns (CSIResponse);
+    rpc mapToEntity (ContextMappingRequest) returns (CSIResponse);
 }

@@ -53,6 +53,18 @@ public class ContextEntityHandler {
 
             Document entDoc = Document.parse(registerRequest.getJson());
             entDoc.put("providers", new String[]{registerRequest.getProviderId()});
+            entDoc.put("zeroTime", registerRequest.getObservedTime());
+            entDoc.put("updatedTime", LocalDateTime.now());
+            entDoc.remove("ObservedTime");
+
+            String hashkey = "";
+            JSONArray key = new JSONArray(registerRequest.getKey());
+            for (int i = 0; i < key.length(); i++) {
+                String idKey = key.getString(i);
+                Object idValue = getValueByKey(registerRequest.getJson(), idKey);
+                hashkey += key.getString(i) + "@" + idValue.toString().replace("\"","") + ";";
+            }
+            entDoc.put("hashkey", Utilty.getHashKey(hashkey));
 
             collection.insertOne(entDoc);
 
@@ -103,6 +115,14 @@ public class ContextEntityHandler {
                                 case "h": age = value*60*1000; break;
                             }
                             timestamp -= (age + updateRequest.getRetLatency());
+                        }
+                        else {
+                            // Means the observed time is already available
+                            timestamp = updateRequest.getObservedTime();
+                            JSONObject ageObj = new JSONObject();
+                            ageObj.put("value", (System.currentTimeMillis() - timestamp)/1000.0);
+                            ageObj.put("unitText", "s");
+                            data.put("age", ageObj);
                         }
 
                         UpdateEntityRequest.Builder builder = UpdateEntityRequest.newBuilder()
@@ -173,8 +193,15 @@ public class ContextEntityHandler {
 
                 return updateEntity(builder.build());
             }
+            else {
+                JSONObject ageObj = new JSONObject();
+                ageObj.put("value", (System.currentTimeMillis() - updateRequest.getObservedTime())/1000.0);
+                ageObj.put("unitText", "s");
 
-            return updateEntity(updateRequest);
+                response.put("age", ageObj);
+                return updateEntity(updateRequest.toBuilder()
+                        .setJson(response.toString()).build());
+            }
         }
     }
 

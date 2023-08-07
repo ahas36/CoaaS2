@@ -289,6 +289,12 @@ public class FetchManager {
             if(response.has("age")){
                 result.put("age",response.getJSONObject("age"));
             }
+            else if (response.has("observedTime")){
+                long ageInMilis = System.currentTimeMillis() - response.getLong("observedTime");
+                JSONObject ageObj = new JSONObject();
+                ageObj.put("value", ageInMilis/1000.0);
+                ageObj.put("unitText", "s");
+            }
 
             return result;
         }

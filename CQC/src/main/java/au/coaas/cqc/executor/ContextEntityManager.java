@@ -46,6 +46,8 @@ public class ContextEntityManager {
         else {
             SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_2
                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            // TODO: This is also a cachable information if the context provider is pushing data more frequently.
+            // Get context provider details using the provider ID details from the header
             SQEMResponse providerDetails = sqemStub_2.getContextServiceInfo(ContextServiceId.newBuilder()
                     .setId(request.getQueryid()).build());
             JSONObject cpsla = new JSONObject(providerDetails.getBody());

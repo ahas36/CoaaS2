@@ -2,6 +2,11 @@ package au.coaas.cqc.executor;
 
 import au.coaas.cqc.utils.ConQEngHelper;
 import au.coaas.cqc.utils.Utilities;
+import au.coaas.cqc.utils.enums.HttpRequests;
+import au.coaas.cqc.utils.enums.RequestDataType;
+import au.coaas.cqp.proto.ContextEntity;
+import au.coaas.cqp.proto.ContextEntityType;
+import au.coaas.cre.proto.ContextEvent;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
@@ -12,6 +17,8 @@ import au.coaas.sqem.proto.ContextAccess;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.Statistic;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -20,6 +27,10 @@ import java.util.logging.Logger;
 
 public class RetrievalManager {
 
+    // Temporary hack to flag context retrievals from certain context providers
+    // to create events for monitoring.
+    private static HashSet<String> monitored = new HashSet<>();
+
     private static final int retrys = 20;
     private static Logger log = Logger.getLogger(RetrievalManager.class.getName());
 
@@ -27,7 +38,7 @@ public class RetrievalManager {
     // Done
     public static AbstractMap.SimpleEntry<String,List<String>> executeFetch(String contextService, JSONObject qos,
                              HashMap<String,String> params, String cpId, String ccId, String entType,
-                             Set<String> attributes, Boolean isFullMiss) {
+                             Set<String> attributes, Boolean isFullMiss, ContextEntity subEnt) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
@@ -49,7 +60,7 @@ public class RetrievalManager {
                 long int_endTime = System.currentTimeMillis();
 
                 // Should penalties be earned if the CP fails to respond at all (non 200 responses, timeouts)
-                long retLatency = int_endTime-startTime;
+                long retLatency = int_endTime - startTime;
                 double retDiff = retLatency - qos.getDouble("rtmax");
                 if(retDiff > 0){
                     penEarning = (((int)(retDiff/1000.0))+1.0) * qos.getDouble("rate")
@@ -162,6 +173,25 @@ public class RetrievalManager {
                     sqemStub_2.logContextAccess(ContextAccess.newBuilder()
                             .setContextId(contextId).setOutcome("miss")
                             .setAge(entage.getDouble("value")*1000 + retLatency).build());
+                }
+            }
+
+            if(subEnt != null && !monitored.contains(cpId)) {
+                monitored.add(cpId);
+                // Propagating the change to other retrieval managers as well
+
+            }
+
+            if(monitored.contains(cpId)){
+                // Creating the event
+                try {
+                    PushBasedExecutor.sendEvent(ContextEvent.newBuilder()
+                            .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                            .setContextEntity(subEnt) // Context entity
+                            .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                            .build());
+                } catch(Exception ex) {
+                    log.severe("failed to create an event for the retrieval: " + ex.getMessage());
                 }
             }
 

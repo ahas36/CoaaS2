@@ -1,11 +1,16 @@
 package au.coaas.sqem.util;
 
+import au.coaas.cqp.proto.CdqlConditionToken;
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.proto.ScheduleTask;
 import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.hash.Hashing;
+import com.google.protobuf.MessageOrBuilder;
+import com.google.protobuf.util.JsonFormat;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.IOException;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
 
@@ -126,5 +131,13 @@ public class Utilty {
     private static String base64Encode(byte[] bytes) {
         Base64.Encoder enc = Base64.getEncoder();
         return new String(enc.encode(bytes)).replaceAll("\\s", "");
+    }
+
+    public static JSONArray messageToJsonArray(List<CdqlConditionToken> messageList) throws IOException {
+        JSONArray output = new JSONArray();
+        for(MessageOrBuilder message : messageList) {
+            output.put(new JSONObject(JsonFormat.printer().print(message)));
+        }
+        return output;
     }
 }

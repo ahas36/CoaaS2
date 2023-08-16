@@ -25,6 +25,7 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
             responseObserver.onNext(CDQLExecutor.execute(request));
         } catch (Exception ex) {
             responseObserver.onError(ex);
+            log.severe(ex.getMessage());
         }
         responseObserver.onCompleted();
     }

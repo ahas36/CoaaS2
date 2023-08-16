@@ -25,9 +25,11 @@ public class ContextServiceManager {
         try {
             sqemStub = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
             String service = request.getCdql();
-            sqemResponse = sqemStub.registerContextService(RegisterContextServiceRequest.newBuilder().setJson(service).build());
+            sqemResponse = sqemStub.registerContextService(
+                    RegisterContextServiceRequest.newBuilder().setJson(service).build());
 
-            if(sqemResponse.getStatus().equals("200") && new JSONObject(service).getJSONObject("sla").getBoolean("autoFetch"))
+            if(sqemResponse.getStatus().equals("200") &&
+                    new JSONObject(service).getJSONObject("sla").getBoolean("autoFetch"))
             {
                 CSIServiceGrpc.CSIServiceBlockingStub csiStub
                         = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
@@ -36,7 +38,9 @@ public class ContextServiceManager {
                 String id = sqemBody.getString("id");
 
                 CSIResponse fetchJob = csiStub.createFetchJob(
-                        ContextService.newBuilder().setMongoID(id).setJson(service).build());
+                        ContextService.newBuilder()
+                                .setMongoID(id)
+                                .setJson(service).setTimes(-1).build());
 
                 if(!fetchJob.getStatus().equals("200"))
                 {

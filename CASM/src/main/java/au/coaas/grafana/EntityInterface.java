@@ -44,6 +44,7 @@ public class EntityInterface {
     @Produces(MediaType.TEXT_PLAIN)
     public Response createEntity(@Context HttpHeaders headers, String entity) {
         // It is assumed that the context provider will use its unique signature to indicate from where the data is sent from.
+        // Given the context service will use the returned id in the header.
         String providerId = headers.getHeaderString("provider");
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());

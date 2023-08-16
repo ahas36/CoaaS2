@@ -15,9 +15,8 @@ import au.coaas.cqc.utils.enums.RequestDataType;
 import au.coaas.cre.proto.SiddhiRegister;
 import au.coaas.grpc.client.CREChannel;
 import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.sqem.proto.RegisterPushQuery;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
-import au.coaas.sqem.proto.SituationFunctionRequest;
+import au.coaas.sqem.proto.*;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.firebase.FirebaseApp;
 import com.google.gson.Gson;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -27,10 +26,12 @@ import com.google.firebase.messaging.Message;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.messaging.FirebaseMessaging;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -54,7 +55,7 @@ public class PushBasedExecutor {
     private static Logger log = Logger.getLogger(PushBasedExecutor.class.getName());
 
     public static CdqlResponse executePushBaseQuery(CDQLQuery query, String token, String queryId,
-                                                    String criticality, double complexity) throws IOException {
+                                                    String criticality, double complexity) throws Exception {
 
         SubscribedQuery.Builder cdqlSubscription = SubscribedQuery.newBuilder();
         cdqlSubscription.setCallback(query.getCallback());
@@ -112,6 +113,7 @@ public class PushBasedExecutor {
                                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
                         SituationFunctionResponse situationFunction = sqemStub.findSituationByTitle(
                                 SituationFunctionRequest.newBuilder().setName(functionName).build());
+
                         if (situationFunction.getStatus().equals("200"))
                             situations.put(functionName, situationFunction.getSFunction());
                         else if(situationFunction.getStatus().equals("404"))
@@ -238,11 +240,21 @@ public class PushBasedExecutor {
             }
         }
 
+        // QUERY EXECUTION FORMAT #1
+        // Set query execution on a periodic basis if the need is to execute periodically.
+        // This is the simplest form of push query execution rather than monitoring.
         if (addTimer) {
             ScheduledFuture<?> sf = execService.scheduleAtFixedRate(() -> {
                 handelSubscription(cdqlSubscription.build());
             }, 0, 60000L, TimeUnit.MILLISECONDS);
             scheduledJobs.put(cdqlSubscription.getId(), sf);
+        }
+        else {
+            // QUERY EXECUTION FORMAT #2
+            // Setting up query execution based on monitored context attribute values
+            // Setting up dynamic context provider subscriptions for that through PullQueryExecutor.
+            return PullBasedExecutor.executePullBaseQuery(query, token, 0, -1,
+                    queryId, criticality, complexity, relateCdqlSubscriptionEntities);
         }
 
         return CdqlResponse.newBuilder().setStatus("200")
@@ -392,7 +404,7 @@ public class PushBasedExecutor {
             CdqlResponse executePullBaseQuery = PullBasedExecutor.executePullBaseQuery(
                     subscription.getQuery(), subscription.getToken(),-1, -1,
                     subscription.getQueryId(), subscription.getCriticality(),
-                    subscription.getComplexity());
+                    subscription.getComplexity(), null);
 
             if(executePullBaseQuery.getStatus().equals("200")){
                 JSONObject jsonObject = new JSONObject(executePullBaseQuery.getBody());

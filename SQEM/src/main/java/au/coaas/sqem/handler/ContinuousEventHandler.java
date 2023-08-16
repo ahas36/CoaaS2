@@ -7,6 +7,7 @@ import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.CdqlSubscription;
 
 import au.coaas.sqem.util.CollectionDiscovery;
+import au.coaas.sqem.util.Utilty;
 import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
@@ -43,28 +44,30 @@ public class ContinuousEventHandler {
 
             JSONArray finalResultJsonArr = new JSONArray();
 
-            Set<String> keySet = event.getContextEntity().getContextAttributesMap().keySet();
-            String attributes = "[\"" + Joiner.on("\",\"").join(keySet) + "\",\"*\"]";
+            // Set<String> keySet = event.getContextEntity().getContextAttributesMap().keySet();
+            // String attributes = "[\"" + Joiner.on("\",\"").join(keySet) + "\",\"*\"]";
 
             Document matchElems = new Document();
-            matchElems.put("entityType.type", event.getContextEntity().getType().getType());
-            matchElems.put("entityType.vocabURI", event.getContextEntity().getType().getVocabURI());
-            Document attrs = new Document();
-            attrs.put("$in", attributes);
-            matchElems.put("attributes", attrs);
+            matchElems.put("type.type", event.getContextEntity().getType().getType());
+            matchElems.put("type.vocabURI", event.getContextEntity().getType().getVocabURI());
+            matchElems.put("condition.RPNCondition",
+                    Utilty.messageToJsonArray(event.getContextEntity()
+                            .getCondition().getRPNConditionList()));
+
             Document relEntities = new Document();
-            attrs.put("$elemMatch", matchElems);
+            relEntities.put("$elemMatch", matchElems);
+
             Document mongoQuery = new Document();
             mongoQuery.put("relatedEntities", relEntities);
 
             Document projection = new Document();
             projection.put("_id", 1);
-            projection.put("situation", 1);
-            projection.put("callback", 1);
             projection.put("query", 1);
             projection.put("token", 1);
+            projection.put("callback", 1);
+            projection.put("situation", 1);
             projection.put("criticality", 1);
-            projection.put("relatedEntities", relEntities);
+            projection.put("relatedEntities", 1);
 
             Block<Document> printBlock = document -> {
                 JSONObject resultJSON = new JSONObject(document.toJson());

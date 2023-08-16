@@ -95,7 +95,8 @@ public class PullBasedExecutor {
 
     // This method executes the query plan for pull based queries
     public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit,
-                                                    String queryId, String criticality, double complexity) throws Exception{
+                                                    String queryId, String criticality, double complexity,
+                                                    List<ContextEntity> subEntities) throws Exception{
 
         // Initialize values
         Map<String, JSONObject> ce = new HashMap<>();
@@ -287,9 +288,17 @@ public class PullBasedExecutor {
                         }
                     }
 
+                    // Checking if context provider subscriptions need to be done.
+                    ContextEntity subscribeEntity = null;
+                    if(subEntities != null){
+                        Optional<ContextEntity> tempEnt = subEntities.stream()
+                                .filter(v -> v.getEntityID().equals(entityID)).findFirst();
+                        if(tempEnt.isPresent()) subscribeEntity = tempEnt.get();
+                    }
+
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,
                                                                     criticality, sla, complexity, terms.keySet(),
-                                                                    operators);
+                                                                    operators, subscribeEntity);
 
                     // Checking if from Stream Read or not.
                     if(cacheResult != null){
@@ -1410,7 +1419,7 @@ public class PullBasedExecutor {
     private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
                                                            HashMap<String,String> params, int limit, String criticality,
                                                            JSONObject consumerSLA, double complexity, Set<String> attributes,
-                                                           List<String> operators) {
+                                                           List<String> operators, ContextEntity subEnt) {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
@@ -1425,6 +1434,7 @@ public class PullBasedExecutor {
             // Mapping context service with SLA constraints
             JSONObject conSer = mapServiceWithSLA((JSONObject) ctSer, qos, targetEntity.getType(), criticality.toLowerCase());
 
+            // When the context provider allows for caching and the CMP does caching too.
             if(conSer.getJSONObject("sla").getBoolean("cache") && cacheEnabled){
                 JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
                 String keys = "";
@@ -1470,7 +1480,8 @@ public class PullBasedExecutor {
                                 conSer.getJSONObject("_id").getString("$oid"),
                                 consumerSLA.getJSONObject("_id").getString("$oid"),
                                 targetEntity.getType().getType(), attributes,
-                                cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty()) ;
+                                cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty(),
+                                        subEnt) ;
 
                         // There is problem with the current context provider which makes it unsuitable for retrieving now.
                         // Therefore, has to move to the next context provider
@@ -1485,6 +1496,8 @@ public class PullBasedExecutor {
                     }
                     else {
                         // This  means the context retrieval occurs in to the storage.
+                        // Meaning either the context provider push data via the endpoint, subscribed with the Kafka broker
+                        // the periodic retrieval scheduler is executing.
                         AbstractMap.SimpleEntry<String,List<String>> status =
                                 RetrievalManager.executeStreamRead(conSer.toString(),
                                 conSer.getJSONObject("_id").getString("$oid"), params,
@@ -1512,6 +1525,7 @@ public class PullBasedExecutor {
             // No caching block
             JSONObject slaObj = conSer.getJSONObject("sla");
             if(conSer.getJSONObject("sla").getBoolean("autoFetch")){
+                // Fully redirector mode of operation
                 AbstractMap.SimpleEntry<String,List<String>> status =
                         RetrievalManager.executeStreamRead(conSer.toString(),
                         conSer.getJSONObject("_id").getString("$oid"), params, cacheEnabled);
@@ -1522,10 +1536,11 @@ public class PullBasedExecutor {
                 continue; // Moving to the next context provider since it is currently unavailable.
             }
             else {
-                AbstractMap.SimpleEntry retEntity = RetrievalManager.executeFetch(conSer.toString(), slaObj.getJSONObject("qos"), params,
+                AbstractMap.SimpleEntry retEntity = RetrievalManager.executeFetch(conSer.toString(),
+                        slaObj.getJSONObject("qos"), params,
                         conSer.getJSONObject("_id").getString("$oid"),
                         consumerSLA.getJSONObject("_id").getString("$oid"),
-                        targetEntity.getType().getType(), attributes, cacheEnabled);
+                        targetEntity.getType().getType(), attributes, cacheEnabled, subEnt);
 
                 if(retEntity != null)
                     return new AbstractMap.SimpleEntry(retEntity.getKey(),

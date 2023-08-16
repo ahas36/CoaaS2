@@ -45,7 +45,7 @@ public class EventInterface {
         String queryId = headers.getHeaderString("query-id");
         String critical_level = headers.getHeaderString("critical-level");
 
-        CdqlResponse cdql =  stub.execute(ExecutionRequest.newBuilder()
+        CdqlResponse cdql = stub.execute(ExecutionRequest.newBuilder()
                 .setCdql(query).setPage(page).setLimit(limit)
                 .setQueryid(queryId)
                 .setToken(authToken)

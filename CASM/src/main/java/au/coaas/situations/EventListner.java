@@ -43,9 +43,7 @@ public class EventListner implements KafkaListener {
     @OnRecord(topics = {"event"})
     public CdqlResponse handelEvent(ConsumerRecord record){
         String eventString = record.value().toString();
-        // TODO: Provider is currently set to null but could be set in the header if possible.
-        // record.headers().headers("provider")
-        String provider = "";
+        String provider = String.valueOf(record.headers().headers("provider"));
 
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());

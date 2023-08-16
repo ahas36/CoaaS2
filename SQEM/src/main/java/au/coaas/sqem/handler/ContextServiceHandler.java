@@ -35,7 +35,7 @@ public class ContextServiceHandler {
             collection.insertOne(myDoc);
 
             JSONObject body = new JSONObject();
-            body.put("message","A Context Service is Registered.");
+            body.put("message","A Context Service has been registered.");
             body.put("id",myDoc.get("_id").toString());
 
             return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();

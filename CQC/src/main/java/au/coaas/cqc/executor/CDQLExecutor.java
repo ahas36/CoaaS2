@@ -41,7 +41,7 @@ public class CDQLExecutor {
                 {
                     return PullBasedExecutor.executePullBaseQuery(query, request.getToken(),
                             request.getPage(), request.getLimit(), request.getQueryid(),
-                            request.getCriticality(), cdqlConstruct.getComplexity());
+                            request.getCriticality(), cdqlConstruct.getComplexity(), null);
                 } else {
                     return PushBasedExecutor.executePushBaseQuery(query, request.getToken(),
                             request.getQueryid(), request.getCriticality(), cdqlConstruct.getComplexity());
@@ -50,7 +50,7 @@ public class CDQLExecutor {
                 ContextFunction cFunction = cdqlConstruct.getFunction();
                 if(cFunction.getType().equals(ContextFunctionType.SITUATION))
                 {
-                    return SituationRegistrationManager.register(request.getCdql(),cFunction, request.getQueryid());
+                    return SituationRegistrationManager.register(request.getCdql(), cFunction, request.getQueryid());
                 }else {
                     return null;
                 }

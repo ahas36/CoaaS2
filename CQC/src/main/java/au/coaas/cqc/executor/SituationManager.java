@@ -66,13 +66,15 @@ public class SituationManager {
             ObjectMapper mapper = new ObjectMapper();
             ContextEvent.Builder eventBuilder = ContextEvent.newBuilder()
                     .setKey(persEvent.getString("key"))
-                    .setProviderID(eventRequest.getProvider())
+                    .setProviderID(persEvent.has("providerID") ?
+                            persEvent.getString("providerID") : eventRequest.getProvider())
                     // Following are commented because they should be null.
                     // .setSubscriptionID(persEvent.getString("subscriptionID"))
                     // .setSubscriptionValue(persEvent.getString("subscriptionValue"))
                     .setTimestamp(persEvent.getString("timestamp"))
                     .setContextEntity(mapper.readValue(persEvent.getJSONObject("contextEntity").toString(),
                             ContextEntity.class));
+
             if(persEvent.has("attributes"))
                 eventBuilder.setAttributes(persEvent.getJSONObject("attributes").toString());
 
@@ -101,7 +103,7 @@ public class SituationManager {
 
                 CdqlResponse pullResponse = PullBasedExecutor.executePullBaseQuery(subscription.getQuery(),
                         subscription.getToken(), -1, -1, subscription.getQueryId(),
-                        subscription.getCriticality(), subscription.getComplexity());
+                        subscription.getCriticality(), subscription.getComplexity(), null);
 
                 String body = pullResponse.getBody();
                 JSONObject jsonObject = new JSONObject(body);

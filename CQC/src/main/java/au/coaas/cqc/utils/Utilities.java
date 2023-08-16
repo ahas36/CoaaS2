@@ -208,11 +208,12 @@ public class Utilities {
             if(response.isSuccessful())
                 return response.body().string().trim();
             else {
-                SQEMServiceGrpc.SQEMServiceFutureStub future =
-                        SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
-                future.logConQEngCR(ConQEngLog.newBuilder()
-                        .setStatus(response.code()).setCr(body)
-                        .setMessage(response.body().string().trim()).build());
+                // Following lines commented temporarily until ConQCEng is usefully integrated.
+                // SQEMServiceGrpc.SQEMServiceFutureStub future =
+                //         SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+                // future.logConQEngCR(ConQEngLog.newBuilder()
+                //         .setStatus(response.code()).setCr(body)
+                //         .setMessage(response.body().string().trim()).build());
             }
         }
         catch (IOException | ExecutionException | InterruptedException e) {

@@ -6,6 +6,8 @@
 package au.coaas.csi.server;
 
 
+import au.coaas.csi.proto.Empty;
+import au.coaas.csi.fetch.FetchJob;
 import au.coaas.csi.fetch.FetchManager;
 import au.coaas.csi.fetch.JobSchedulerManager;
 import au.coaas.csi.proto.CSIResponse;
@@ -80,6 +82,20 @@ public class CSIServiceImpl extends CSIServiceGrpc.CSIServiceImplBase {
             responseObserver.onNext(response);
         } catch (Exception ex) {
             responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void modifyCPMonitor(au.coaas.csi.proto.CPMonitor request,
+                                io.grpc.stub.StreamObserver<au.coaas.csi.proto.Empty> responseObserver){
+        try {
+            FetchJob.updateMonitored(request.getContextID(),
+                    request.getContextEntity(), request.getDelete());
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
         }
         responseObserver.onCompleted();
     }

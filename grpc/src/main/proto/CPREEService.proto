@@ -19,6 +19,12 @@ message ContextQueryPlan {
   string parseTree = 1;
 }
 
+message CPMonitor {
+  string contextID = 1;
+  au.coaas.cqp.proto.ContextEntity contextEntity = 2;
+  bool  delete = 3;
+}
+
 message CacheSelectionRequest {
   string context = 1;
   string contextLevel = 2;
@@ -85,6 +91,7 @@ service CPREEService {
   rpc evaluateAndCacheContext (CacheSelectionRequest) returns (CPREEResponse);
   rpc refreshContext (ContextRefreshRequest) returns (CPREEResponse);
   rpc updateWeights (LearnedWeights) returns (Empty);
-  rpc stopRefreshing(Lookup) returns (Empty);
+  rpc stopRefreshing (Lookup) returns (Empty);
+  rpc modifyCPMonitor (CPMonitor) returns (Empty);
 }
 

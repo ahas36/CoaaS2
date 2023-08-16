@@ -1,6 +1,9 @@
 package au.coaas.csi.fetch;
 
+import au.coaas.cqp.proto.ContextEntity;
 import au.coaas.cqp.proto.ContextEntityType;
+import au.coaas.cre.proto.ContextEvent;
+import au.coaas.csi.utils.HttpResponseFuture;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.ContextService;
@@ -8,6 +11,9 @@ import au.coaas.csi.proto.ContextServiceInvokerRequest;
 import au.coaas.sqem.proto.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
+import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.quartz.Job;
@@ -15,12 +21,20 @@ import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 public class FetchJob implements Job {
+
+    private static HashMap<String, ContextEntity> monitored = new HashMap<>();
 
     private static final int retrys = 20;
     private static Logger log = Logger.getLogger(FetchJob.class.getName());
@@ -121,6 +135,20 @@ public class FetchJob implements Job {
                 }
                 else {
                     hkeys.add(sqemResBody.getString("hashkey"));
+
+                    // The following part regards to entity monitoring is strictly single entity only.
+                    if(monitored.containsKey(sqemResBody.getString("hashkey"))){
+                        // Creating the event if it should be monitored.
+                        try {
+                            sendEvent(ContextEvent.newBuilder()
+                                    .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                                    .setContextEntity(monitored.get(sqemResBody.getString("hashkey"))) // Context entity
+                                    .setAttributes(fetch.getBody()) // JSON attribute values from the retrieval
+                                    .build());
+                        } catch(Exception ex) {
+                            log.severe("Failed to create an event for the retrieval: " + ex.getMessage());
+                        }
+                    }
                 }
 
                 SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
@@ -148,5 +176,41 @@ public class FetchJob implements Job {
             e.printStackTrace();
         }
         return null;
+    }
+
+    // Triggers a recursive event to CoaaS
+    public static void sendEvent(ContextEvent event) throws InvalidProtocolBufferException {
+        String eventURI = "http://localhost:8070/CASM-2.0.1/api/event/create";
+
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        builder.connectTimeout(10, TimeUnit.SECONDS);
+        builder.writeTimeout(10, TimeUnit.SECONDS);
+        builder.readTimeout(10, TimeUnit.SECONDS);
+        OkHttpClient client = builder.build();
+
+        HttpResponseFuture fu_res = new HttpResponseFuture();
+
+        MediaType dataType = MediaType.parse("application/json; charset=utf-8");
+        Request.Builder request = new Request.Builder().url(eventURI);
+
+        RequestBody formBody = RequestBody.create(dataType, JsonFormat.printer().print(event));
+        request.post(formBody);
+
+        try{
+            Call call = client.newCall(request.build());
+            call.enqueue(fu_res);
+            Response response = fu_res.future.get();
+            response.close();
+        }
+        catch (ExecutionException | InterruptedException ex) {
+            log.info(ex.getMessage());
+        }
+    }
+
+    public static void updateMonitored (String contextId, ContextEntity subEntity, boolean delete) {
+        if(delete && monitored.containsKey(contextId)){
+            monitored.remove(contextId);
+        }
+        monitored.put(contextId, subEntity);
     }
 }

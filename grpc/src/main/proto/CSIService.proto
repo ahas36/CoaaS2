@@ -6,6 +6,9 @@ option java_generic_services = true;
 
 package au.coaas.csi.proto;
 
+import "CQPService.proto";
+
+message Empty {}
 
 message CSIResponse {
     string status = 1;
@@ -41,6 +44,11 @@ message ContextMappingRequest {
     string attributes = 2;
 }
 
+message CPMonitor {
+    string contextID = 1;
+    au.coaas.cqp.proto.ContextEntity contextEntity = 2;
+    bool  delete = 3;
+}
 
 service CSIService {
     rpc fetch (ContextServiceInvokerRequest) returns (CSIResponse);
@@ -48,4 +56,5 @@ service CSIService {
     rpc updateFetchJob (ContextService) returns (CSIResponse);
     rpc cancelFetchJob (ContextService) returns (CSIResponse);
     rpc mapToEntity (ContextMappingRequest) returns (CSIResponse);
+    rpc modifyCPMonitor (CPMonitor) returns (Empty);
 }

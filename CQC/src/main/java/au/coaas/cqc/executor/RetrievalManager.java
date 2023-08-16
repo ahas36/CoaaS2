@@ -1,5 +1,6 @@
 package au.coaas.cqc.executor;
 
+import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cqc.utils.ConQEngHelper;
 import au.coaas.cqc.utils.Utilities;
 import au.coaas.cqc.utils.enums.HttpRequests;
@@ -11,6 +12,7 @@ import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.proto.ContextServiceInvokerRequest;
+import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.ContextAccess;
@@ -23,6 +25,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 public class RetrievalManager {
@@ -176,24 +179,10 @@ public class RetrievalManager {
                 }
             }
 
-            if(subEnt != null && !monitored.contains(cpId)) {
-                monitored.add(cpId);
-                // Propagating the change to other retrieval managers as well
-
-            }
-
-            if(monitored.contains(cpId)){
-                // Creating the event
-                try {
-                    PushBasedExecutor.sendEvent(ContextEvent.newBuilder()
-                            .setTimestamp(String.valueOf(System.currentTimeMillis()))
-                            .setContextEntity(subEnt) // Context entity
-                            .setAttributes(response.toString()) // JSON attribute values from the retrieval
-                            .build());
-                } catch(Exception ex) {
-                    log.severe("failed to create an event for the retrieval: " + ex.getMessage());
-                }
-            }
+            // Creating event and context provider monitoring.
+            Executors.newCachedThreadPool().execute(() -> {
+                propagateChanges(subEnt, response);
+            });
 
             SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                     = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
@@ -209,6 +198,38 @@ public class RetrievalManager {
 
         // Returning null means the CMP failed to retrieved context from the provider despite all attempts.
         return null;
+    }
+
+    private static void propagateChanges(ContextEntity subEnt, JSONObject response) {
+        // This function is assuming only a single entity because the monitoring need to happen on a
+        // single entity only (theorotically).
+        String entId = response.getString("hashkey");
+        if(subEnt != null && !monitored.contains(entId)) {
+            monitored.add(entId);
+            // Propagating the change to other retrieval managers as well
+            CPREEServiceGrpc.CPREEServiceBlockingStub cpreeStub
+                    = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+            CSIServiceGrpc.CSIServiceBlockingStub csiStub
+                    = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
+
+            cpreeStub.modifyCPMonitor(au.coaas.cpree.proto.CPMonitor.newBuilder()
+                    .setContextEntity(subEnt).setContextID(entId).setDelete(false).build());
+            csiStub.modifyCPMonitor(au.coaas.csi.proto.CPMonitor.newBuilder()
+                    .setContextEntity(subEnt).setContextID(entId).setDelete(false).build());
+        }
+
+        if(monitored.contains(entId)){
+            // Creating the event
+            try {
+                PushBasedExecutor.sendEvent(ContextEvent.newBuilder()
+                        .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                        .setContextEntity(subEnt) // Context entity
+                        .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                        .build());
+            } catch(Exception ex) {
+                log.severe("failed to create an event for the retrieval: " + ex.getMessage());
+            }
+        }
     }
 
     // Retrieval from streaming Context Providers

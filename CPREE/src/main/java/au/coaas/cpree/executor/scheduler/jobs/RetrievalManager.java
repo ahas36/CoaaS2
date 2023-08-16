@@ -2,6 +2,9 @@ package au.coaas.cpree.executor.scheduler.jobs;
 
 import au.coaas.cpree.proto.SimpleContainer;
 import au.coaas.cpree.utils.Utilities;
+import au.coaas.cqc.executor.PushBasedExecutor;
+import au.coaas.cqp.proto.ContextEntity;
+import au.coaas.cre.proto.ContextEvent;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextService;
@@ -18,14 +21,13 @@ import au.coaas.grpc.client.SQEMChannel;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class RetrievalManager {
-    
+
+    private static HashMap<String, ContextEntity> monitored = new HashMap<>();
+
     private static final int retrys = 20;
     private static Logger log = Logger.getLogger(RetrievalManager.class.getName());
 
@@ -149,6 +151,20 @@ public class RetrievalManager {
                 String hk = Utilities.getHashKey(hashkey);
                 hkeys.add(hk);
                 response.put("hashkey", hk);
+
+                // The following part regards to entity monitoring is strictly single entity only.
+                if(monitored.containsKey(hk)){
+                    // Creating the event if it should be monitored.
+                    try {
+                        PushBasedExecutor.sendEvent(ContextEvent.newBuilder()
+                                .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                                .setContextEntity(monitored.get(hk)) // Context entity
+                                .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                                .build());
+                    } catch(Exception ex) {
+                        log.severe("Failed to create an event for the retrieval: " + ex.getMessage());
+                    }
+                }
             }
 
             SQEMServiceGrpc.SQEMServiceBlockingStub asyncStub_2
@@ -172,6 +188,13 @@ public class RetrievalManager {
 
         // Returning null means the CMP failed to retrieved context from the provider despite all attempts.
         return null;
+    }
+
+    public static void updateMonitored (String contextId, ContextEntity subEntity, boolean delete) {
+        if(delete && monitored.containsKey(contextId)){
+            monitored.remove(contextId);
+        }
+        monitored.put(contextId, subEntity);
     }
 
     // Retrieval from streaming Context Providers

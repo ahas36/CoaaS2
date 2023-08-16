@@ -1,10 +1,12 @@
 package au.coaas.cpree.server;
 
+import au.coaas.cpree.executor.scheduler.jobs.RetrievalManager;
 import au.coaas.cpree.proto.CPREEResponse;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.executor.SelectionExecutor;
 import au.coaas.cpree.executor.ClusteringExecutor;
 import au.coaas.cpree.executor.RefreshExecutor;
+import au.coaas.cpree.proto.Empty;
 
 import java.util.logging.Logger;
 
@@ -70,4 +72,19 @@ public class CPREEServiceImpl extends CPREEServiceGrpc.CPREEServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void modifyCPMonitor(au.coaas.cpree.proto.CPMonitor request,
+                               io.grpc.stub.StreamObserver<au.coaas.cpree.proto.Empty> responseObserver){
+        try {
+            RetrievalManager.updateMonitored(request.getContextID(),
+                    request.getContextEntity(), request.getDelete());
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
+
 }

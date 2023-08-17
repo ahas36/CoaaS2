@@ -6,6 +6,8 @@ option java_generic_services = true;
 
 package au.coaas.cqc.proto;
 
+import "CQPService.proto";
+
 message CdqlResponse {
     string status = 1;
     string body = 2;
@@ -49,11 +51,18 @@ message Subscription {
     string id = 1;
 }
 
+message CPMonitor {
+    string contextID = 1;
+    au.coaas.cqp.proto.ContextEntity contextEntity = 2;
+}
+
 service CQCService {
     rpc resetEventStats (Empty) returns (Empty);
+    rpc removeMonitor (CPMonitor) returns (Empty);
     rpc getEventStats (Empty) returns (EventStats);
     rpc execute (ExecutionRequest) returns (CdqlResponse);
     rpc changeRegisterState (RegisterState) returns (Empty);
+    rpc unsubscribe (ExecutionRequest) returns (CdqlResponse);
     rpc handleSituation (EventRequest) returns (CdqlResponse);
     rpc cancelSubscription (Subscription) returns (RegisterState);
     rpc UpdateContextEntity (ExecutionRequest) returns (CdqlResponse);

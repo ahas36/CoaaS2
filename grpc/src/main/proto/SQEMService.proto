@@ -395,6 +395,7 @@ service SQEMService {
     rpc getAllSituations (Empty) returns (SQEMResponse);
     rpc getAllSubscriptions (Empty) returns (SQEMResponse);
     rpc registerPushQuery (RegisterPushQuery) returns (RegisterPushQuery);
+    rpc unsubscribePushQuery (RegisterPushQuery) returns (RegisterPushQuery);
     rpc registerSituationFunction (RegisterSituationRequest) returns (SQEMResponse);
     rpc findSituationByTitle (SituationFunctionRequest) returns (au.coaas.cqp.proto.SituationFunctionResponse);
 

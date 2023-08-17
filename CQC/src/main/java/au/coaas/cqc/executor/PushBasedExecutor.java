@@ -253,12 +253,20 @@ public class PushBasedExecutor {
             // QUERY EXECUTION FORMAT #2
             // Setting up query execution based on monitored context attribute values
             // Setting up dynamic context provider subscriptions for that through PullQueryExecutor.
-            return PullBasedExecutor.executePullBaseQuery(query, token, 0, -1,
-                    queryId, criticality, complexity, relateCdqlSubscriptionEntities);
+            Executors.newCachedThreadPool().execute(() -> {
+                try {
+                    PullBasedExecutor.executePullBaseQuery(query, token, 0, -1,
+                            queryId, criticality, complexity, relateCdqlSubscriptionEntities);
+                } catch (Exception e) {
+                    log.severe("Error occured when executing the push query: " + e.getMessage());
+                    log.info(e.getStackTrace().toString());
+                }
+            });
         }
 
         return CdqlResponse.newBuilder().setStatus("200")
-                .setBody("Push query "+ sub_id.getMessage() +" successfully subscribed!").build();
+                .setBody("Push query "+ sub_id.getMessage() +" successfully subscribed!")
+                .setQueryId(sub_id.getMessage()).build();
     }
 
     private static List<FunctionCall> getFunctionCalls(Queue<CdqlConditionToken> tokens) {

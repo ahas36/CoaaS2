@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 
 public class RetrievalManager {
 
-    private static HashMap<String, ContextEntity> monitored = new HashMap<>();
+    private static HashMap<String, HashSet<ContextEntity>> monitored = new HashMap<>();
 
     private static final int retrys = 20;
     private static Logger log = Logger.getLogger(RetrievalManager.class.getName());
@@ -156,11 +156,15 @@ public class RetrievalManager {
                 if(monitored.containsKey(hk)){
                     // Creating the event if it should be monitored.
                     try {
-                        PushBasedExecutor.sendEvent(ContextEvent.newBuilder()
-                                .setTimestamp(String.valueOf(System.currentTimeMillis()))
-                                .setContextEntity(monitored.get(hk)) // Context entity
-                                .setAttributes(response.toString()) // JSON attribute values from the retrieval
-                                .build());
+                        HashSet<ContextEntity> ents = monitored.get(hk);
+                        for(ContextEntity ent : ents) {
+                            PushBasedExecutor.sendEvent(ContextEvent.newBuilder().setKey(hk)
+                                    .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                                    .setProviderID(provider.getJSONObject("_id").getString("$oid"))
+                                    .setContextEntity(ent) // Context entity
+                                    .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                                    .build());
+                        }
                     } catch(Exception ex) {
                         log.severe("Failed to create an event for the retrieval: " + ex.getMessage());
                     }
@@ -192,9 +196,27 @@ public class RetrievalManager {
 
     public static void updateMonitored (String contextId, ContextEntity subEntity, boolean delete) {
         if(delete && monitored.containsKey(contextId)){
-            monitored.remove(contextId);
+            HashSet<ContextEntity> tmp = monitored.get(contextId);
+            tmp.remove(subEntity);
+            if(tmp.isEmpty()){
+                monitored.remove(contextId);
+            }
+            else {
+                monitored.put(contextId, tmp);
+            }
         }
-        monitored.put(contextId, subEntity);
+        else {
+            if(!monitored.containsKey(contextId)){
+                HashSet<ContextEntity> tmpSet = new HashSet<>();
+                tmpSet.add(subEntity);
+                monitored.put(contextId, tmpSet);
+            }
+            else {
+                HashSet<ContextEntity> tmpSet = monitored.get(contextId);
+                tmpSet.add(subEntity);
+                monitored.put(contextId, tmpSet);
+            }
+        }
     }
 
     // Retrieval from streaming Context Providers

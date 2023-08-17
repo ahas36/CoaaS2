@@ -31,6 +31,19 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
     }
 
     @Override
+    public void unsubscribe(au.coaas.cqc.proto.ExecutionRequest request,
+                        io.grpc.stub.StreamObserver<CdqlResponse> responseObserver){
+        try {
+            // Unsubscribe from a push query
+            responseObserver.onNext(CDQLExecutor.unsubscribe(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void registerContextEntity(au.coaas.cqc.proto.ExecutionRequest request,
                                       io.grpc.stub.StreamObserver<CdqlResponse> responseObserver) {
         try {
@@ -120,12 +133,25 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
     }
 
     @Override
-    public void cancelSubscription(au.coaas.cqc.proto.Subscription request,
+    public void cancelSubscription (au.coaas.cqc.proto.Subscription request,
                                 io.grpc.stub.StreamObserver<RegisterState> responseObserver) {
         try {
             responseObserver.onNext(PushBasedExecutor.cancelJob(request.getId()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void removeMonitor (au.coaas.cqc.proto.CPMonitor request,
+                                io.grpc.stub.StreamObserver<au.coaas.cqc.proto.Empty> responseObserver){
+        try {
+            RetrievalManager.removeMonitored(request.getContextID(),request.getContextEntity());
+            responseObserver.onNext(au.coaas.cqc.proto.Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
         }
         responseObserver.onCompleted();
     }

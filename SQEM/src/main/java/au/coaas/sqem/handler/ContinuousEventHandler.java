@@ -59,6 +59,7 @@ public class ContinuousEventHandler {
 
             Document mongoQuery = new Document();
             mongoQuery.put("relatedEntities", relEntities);
+            mongoQuery.put("active", true);
 
             Document projection = new Document();
             projection.put("_id", 1);

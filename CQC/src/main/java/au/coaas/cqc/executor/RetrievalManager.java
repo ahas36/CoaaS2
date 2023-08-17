@@ -32,7 +32,7 @@ public class RetrievalManager {
 
     // Temporary hack to flag context retrievals from certain context providers
     // to create events for monitoring.
-    private static HashSet<String> monitored = new HashSet<>();
+    private static HashMap<String, HashSet<ContextEntity>> monitored = new HashMap<>();
 
     private static final int retrys = 20;
     private static Logger log = Logger.getLogger(RetrievalManager.class.getName());
@@ -140,8 +140,8 @@ public class RetrievalManager {
                     Double value = resEntity.getJSONObject("age").getDouble("value");
 
                     switch(unit){
-                        case "s": value = value*1000; break;
-                        case "h": value = value*60*1000; break;
+                        case "s": value = value * 1000; break;
+                        case "h": value = value * 60 * 1000; break;
                     }
 
                     resEntity.put("zeroTime", endTime - ( value + retLatency));
@@ -181,7 +181,7 @@ public class RetrievalManager {
 
             // Creating event and context provider monitoring.
             Executors.newCachedThreadPool().execute(() -> {
-                propagateChanges(subEnt, response);
+                propagateChanges(subEnt, cpId, response);
             });
 
             SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
@@ -200,12 +200,22 @@ public class RetrievalManager {
         return null;
     }
 
-    private static void propagateChanges(ContextEntity subEnt, JSONObject response) {
+    private static void propagateChanges(ContextEntity subEnt, String cpId, JSONObject response) {
         // This function is assuming only a single entity because the monitoring need to happen on a
         // single entity only (theorotically).
         String entId = response.getString("hashkey");
-        if(subEnt != null && !monitored.contains(entId)) {
-            monitored.add(entId);
+        if(subEnt != null) {
+            if(!monitored.containsKey(entId)){
+                HashSet<ContextEntity> entList = new HashSet<>();
+                entList.add(subEnt);
+                monitored.put(entId, entList);
+            }
+            else {
+                HashSet<ContextEntity> tmpSet = monitored.get(entId);
+                tmpSet.add(subEnt);
+                monitored.put(entId, tmpSet);
+            }
+
             // Propagating the change to other retrieval managers as well
             CPREEServiceGrpc.CPREEServiceBlockingStub cpreeStub
                     = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
@@ -218,22 +228,52 @@ public class RetrievalManager {
                     .setContextEntity(subEnt).setContextID(entId).setDelete(false).build());
         }
 
-        if(monitored.contains(entId)){
+        if(monitored.containsKey(entId)){
             // Creating the event
             try {
-                PushBasedExecutor.sendEvent(ContextEvent.newBuilder()
-                        .setTimestamp(String.valueOf(System.currentTimeMillis()))
-                        .setContextEntity(subEnt) // Context entity
-                        .setAttributes(response.toString()) // JSON attribute values from the retrieval
-                        .build());
+                if(subEnt != null) {
+                    // Specific event creation only relevant to the current push query registration.
+                    PushBasedExecutor.sendEvent(ContextEvent.newBuilder()
+                            .setKey(entId)
+                            .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                            .setProviderID(cpId)
+                            .setContextEntity(subEnt) // Context entity
+                            .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                            .build());
+                }
+                else {
+                    // Generic event creation for all subscriptions.
+                    HashSet<ContextEntity> ents = monitored.get(entId);
+                    for(ContextEntity ent : ents) {
+                        PushBasedExecutor.sendEvent(ContextEvent.newBuilder().setKey(entId)
+                                .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                                .setProviderID(cpId)
+                                .setContextEntity(ent) // Context entity
+                                .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                                .build());
+                    }
+                }
             } catch(Exception ex) {
                 log.severe("failed to create an event for the retrieval: " + ex.getMessage());
             }
         }
     }
 
+    // Remove entities from monitored set.
+    public static void removeMonitored (String contextId, ContextEntity subEntity) {
+        if(monitored.containsKey(contextId)){
+            HashSet<ContextEntity> tmp = monitored.get(contextId);
+            tmp.remove(subEntity);
+            if(tmp.isEmpty()){
+                monitored.remove(contextId);
+            }
+            else {
+                monitored.put(contextId, tmp);
+            }
+        }
+    }
+
     // Retrieval from streaming Context Providers
-    // Done
     public static AbstractMap.SimpleEntry<String,List<String>> executeStreamRead(String contextService, String csID,
                                            HashMap<String,String> params, Boolean isFullMiss){
         CSIServiceGrpc.CSIServiceBlockingStub csiStub

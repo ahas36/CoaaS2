@@ -52,4 +52,19 @@ public class QueryInterface {
         return Response.ok(cdql.getBody()).header("query-id", queryId).build();
     }
 
+    @GET
+    @Secured
+    @Produces(MediaType.TEXT_PLAIN)
+    public Response unsubscribe (String query, @QueryParam("id") String subscriptionId,
+                               @Context HttpHeaders headers) {
+        CQCServiceGrpc.CQCServiceBlockingStub stub
+                = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
+
+        String authToken = headers.getHeaderString(HttpHeaders.AUTHORIZATION);
+        CdqlResponse cdql = stub.unsubscribe(ExecutionRequest.newBuilder()
+                .setQueryid(subscriptionId)
+                .setToken(authToken).build());
+
+        return Response.ok(cdql.getBody()).build();
+    }
 }

@@ -8,6 +8,7 @@ import au.coaas.grpc.client.CQPChannel;
 import au.coaas.grpc.client.SQEMChannel;
 
 import au.coaas.sqem.proto.CDQLLog;
+import au.coaas.sqem.proto.RegisterPushQuery;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -21,6 +22,7 @@ public class CDQLExecutor {
 
     private static Logger log = Logger.getLogger(CDQLExecutor.class.getName());
 
+    // Execute a PULL based query or make a subscription using a PUSH based query.
     public static CdqlResponse execute(ExecutionRequest request) throws Exception{
 
         // First logs the entire query as it is
@@ -36,7 +38,7 @@ public class CDQLExecutor {
             case QUERY:
                 CDQLQuery query = cdqlConstruct.getQuery();
 
-                // Then execute based on whether the query is Push or Pull.
+                // Then execute based on whether the query is PUSH or PULL.
                 if(query.getQueryType().equals(QueryType.PULL_BASED))
                 {
                     return PullBasedExecutor.executePullBaseQuery(query, request.getToken(),
@@ -58,6 +60,15 @@ public class CDQLExecutor {
         }
 
         return null;
+    }
+
+    // Unsubscribe from an existing push query subscription.
+    public static CdqlResponse unsubscribe (ExecutionRequest request) {
+        SQEMServiceGrpc.SQEMServiceBlockingStub stub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        RegisterPushQuery response = stub.unsubscribePushQuery(
+                RegisterPushQuery.newBuilder().setMessage(request.getQueryid()).build());
+        return CdqlResponse.newBuilder().setStatus(response.getStatus()).build();
     }
 
     public static void logQuery(String query, String queryId) {

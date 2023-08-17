@@ -1476,12 +1476,12 @@ public class PullBasedExecutor {
                         // Fetching from an API
                         AbstractMap.SimpleEntry<String,List<String>> retEntity =
                                 RetrievalManager.executeFetch(
-                                conSer.toString(), slaObj.getJSONObject("qos"), params,
-                                conSer.getJSONObject("_id").getString("$oid"),
-                                consumerSLA.getJSONObject("_id").getString("$oid"),
-                                targetEntity.getType().getType(), attributes,
-                                cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty(),
-                                        subEnt) ;
+                                    conSer.toString(), slaObj.getJSONObject("qos"), params,
+                                    conSer.getJSONObject("_id").getString("$oid"),
+                                    consumerSLA.getJSONObject("_id").getString("$oid"),
+                                    targetEntity.getType().getType(), attributes,
+                                    cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty(),
+                                            subEnt) ;
 
                         // There is problem with the current context provider which makes it unsuitable for retrieving now.
                         // Therefore, has to move to the next context provider

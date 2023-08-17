@@ -1,9 +1,7 @@
 package au.coaas.cqc.executor;
 
-import au.coaas.cqc.proto.CdqlResponse;
-import au.coaas.cqc.proto.Empty;
-import au.coaas.cqc.proto.EventRequest;
-import au.coaas.cqc.proto.EventStats;
+import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cqc.proto.*;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
 import au.coaas.cqp.proto.*;
@@ -13,8 +11,8 @@ import au.coaas.cre.proto.ContextEvent;
 import au.coaas.cre.proto.CREServiceGrpc;
 import au.coaas.cre.proto.SituationRequest;
 
-import au.coaas.grpc.client.CREChannel;
-import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.csi.proto.CSIServiceGrpc;
+import au.coaas.grpc.client.*;
 
 import au.coaas.sqem.proto.Situation;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
@@ -205,9 +203,26 @@ public class SituationManager {
             return mapper.readValue(subs.toString(), new TypeReference<List<SubscribedQuery>>(){});
         }
 
-        // TODO: Should unsubscribe from the event since there are no context queries that are interested in the event.
+        removeSubscriptions(event.getKey(), event.getContextEntity());
         log.info("No relevant subscriptions found");
         return null;
+    }
+
+    private static void removeSubscriptions (String contextId, ContextEntity entity) {
+        CSIServiceGrpc.CSIServiceBlockingStub csiStub
+                = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
+        csiStub.modifyCPMonitor(au.coaas.csi.proto.CPMonitor.newBuilder()
+                .setContextEntity(entity).setContextID(contextId).setDelete(true).build());
+
+        CPREEServiceGrpc.CPREEServiceBlockingStub cpreeStub
+                = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+        cpreeStub.modifyCPMonitor(au.coaas.cpree.proto.CPMonitor.newBuilder()
+                .setContextEntity(entity).setContextID(contextId).setDelete(true).build());
+
+        CQCServiceGrpc.CQCServiceBlockingStub cqcStub
+                = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
+        cqcStub.removeMonitor(au.coaas.cqc.proto.CPMonitor.newBuilder()
+                .setContextEntity(entity).setContextID(contextId).build());
     }
 
     private static boolean evaluateNonDeterministic(JSONObject values, Queue<CdqlConditionToken> RPNCondition) throws WrongOperatorException {

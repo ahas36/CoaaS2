@@ -303,6 +303,7 @@ public class PullBasedExecutor {
                     // Checking if from Stream Read or not.
                     if(cacheResult != null){
                         if(cacheResult.getKey() != null){
+                            // Has been from non-auto fetched methods. Data in the previous response.
                             if(cacheResult.getKey().toString().startsWith("{")){
                                 JSONObject resultJson = new JSONObject((String) cacheResult.getKey());
                                 ce.put(entity.getEntityID(),resultJson);
@@ -316,6 +317,7 @@ public class PullBasedExecutor {
                             if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                         }
                         else {
+                            // Has been a stream read. So, retrieving from the context storage.
                             AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit,
                                     ((SimpleContainer) cacheResult.getValue()).getContextService(), complexity);
                             ce.put(entity.getEntityID(), (JSONObject) rex.getKey());

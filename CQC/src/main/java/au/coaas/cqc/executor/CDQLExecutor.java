@@ -58,7 +58,6 @@ public class CDQLExecutor {
                 }
             default:
         }
-
         return null;
     }
 

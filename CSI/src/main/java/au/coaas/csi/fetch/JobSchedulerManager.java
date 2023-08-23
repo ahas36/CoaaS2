@@ -7,6 +7,8 @@ import org.json.JSONObject;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class JobSchedulerManager {
@@ -146,17 +148,37 @@ public class JobSchedulerManager {
 
     public CSIResponse updateJob(ContextService cs) throws SchedulerException {
         boolean cs1 = true;
-        String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
+        String hashkey = Utils.getHashKey(cs.getParamsMap());
+        String jobId = cs.getMongoID() + "-" + hashkey;
         TriggerKey triggerKey = new TriggerKey(jobId, "cs-fetch-trigger");
-        if(scheduler.checkExists(triggerKey)){
-            cs1 = scheduler.unscheduleJob(triggerKey);
-        }
 
-        if (cs1) {
-            return registerJob(cs);
-        }
+        // Checking if any retrievals had happend in between.
+        Date lastFire = scheduler.getTrigger(triggerKey).getPreviousFireTime();
+        long duration = System.currentTimeMillis() - lastFire.getTime(); // Time since the last retrieval in ms
 
-        return CSIResponse.newBuilder().setStatus("500").build();
+        // Following is a simple hack.
+        // This should have fetched the last retrieval time, the age as well and then make the retrieval decision.
+        // In this hack, only the last update has happend is checked.
+        JSONObject csObj = new JSONObject(cs.getJson());
+        double updateFreq = csObj.getJSONObject("sla").getJSONObject("updateFrequency")
+                .getDouble("value") * 1000; // assuming seconds and converting to ms
+
+        if(duration > updateFreq) {
+            if(scheduler.checkExists(triggerKey)){
+                cs1 = scheduler.unscheduleJob(triggerKey);
+            }
+
+            if (cs1) {
+                return registerJob(cs);
+            }
+
+            return CSIResponse.newBuilder().setStatus("500").build();
+        }
+        else {
+            // Returns that a fetch has happend in a recent history. Sufficient lifetime should remain in storage.
+            return CSIResponse.newBuilder().setStatus("200")
+                    .addHashkeys(hashkey).build();
+        }
     }
 
     public void start() throws SchedulerException {

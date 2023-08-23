@@ -596,7 +596,7 @@ public class ContextCacheHandler {
                 .setHashKey(result.getHashkey()).build();
     }
 
-    // Retrive situation from cache
+    // Retrieve situation from cache
     public static SQEMResponse retrieveFromCache(SituationLookUp request) throws InvalidProtocolBufferException {
         long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpSituation(request);

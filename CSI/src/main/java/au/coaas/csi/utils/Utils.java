@@ -1,19 +1,13 @@
 package au.coaas.csi.utils;
 
-import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.sqem.proto.ConQEngLog;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
 import com.google.common.hash.Hashing;
-import okhttp3.*;
-import org.json.JSONObject;
+import com.google.protobuf.Message;
+import com.google.protobuf.Struct;
+import com.google.protobuf.util.JsonFormat;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 public class Utils {
     public static String getHashKey(Map<String,String> params){
@@ -23,5 +17,10 @@ public class Utils {
         }
 
         return Hashing.sha256().hashString(hashKey, StandardCharsets.UTF_8).toString();
+    }
+
+    public static Message fromJson(String json, Message.Builder structBuilder) throws IOException {
+        JsonFormat.parser().ignoringUnknownFields().merge(json, structBuilder);
+        return structBuilder.build();
     }
 }

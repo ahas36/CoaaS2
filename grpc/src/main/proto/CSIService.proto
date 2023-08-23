@@ -31,6 +31,7 @@ message ContextService
     int32 times = 3;
     map<string,string> params = 4;
     string reportAccess = 5;
+    au.coaas.cqp.proto.ContextEntity subEntity = 6;
 }
 
 message ContextServiceInvokerRequest

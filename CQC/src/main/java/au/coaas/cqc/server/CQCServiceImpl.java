@@ -155,4 +155,18 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void modifyCPMonitor(au.coaas.cqc.proto.CPMonitor request,
+                                io.grpc.stub.StreamObserver<au.coaas.cqc.proto.Empty> responseObserver){
+        try {
+            RetrievalManager.updateMonitored(request.getContextID(),
+                    request.getContextEntity());
+            responseObserver.onNext(au.coaas.cqc.proto.Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
 }

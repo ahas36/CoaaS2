@@ -3,6 +3,8 @@ package au.coaas.csi.fetch;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.csi.utils.Utils;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import org.json.JSONObject;
 import org.quartz.*;
 import org.quartz.impl.StdSchedulerFactory;
@@ -71,7 +73,7 @@ public class JobSchedulerManager {
         }
     }
 
-    public CSIResponse registerJob(ContextService cs) throws SchedulerException {
+    public CSIResponse registerJob(ContextService cs) throws SchedulerException, InvalidProtocolBufferException {
         if (!scheduler.isStarted()) {
             throw new SchedulerException("Scheduler not started");
         }
@@ -106,6 +108,7 @@ public class JobSchedulerManager {
         String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
 
         if(cs.getTimes() < 1){
+            jobDataMap.put("subscriptionEntity", JsonFormat.printer().print(cs.getSubEntity()));
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
                     .withIdentity(jobId, "cs-fetch-trigger")
                     .forJob("fetch-job", "cs-fetch-job")
@@ -146,39 +149,48 @@ public class JobSchedulerManager {
         return CSIResponse.newBuilder().setStatus(cs1 ? "200" : "500").build();
     }
 
-    public CSIResponse updateJob(ContextService cs) throws SchedulerException {
-        boolean cs1 = true;
+    public CSIResponse updateJob(ContextService cs) throws SchedulerException, InvalidProtocolBufferException {
+        boolean cs1;
         String hashkey = Utils.getHashKey(cs.getParamsMap());
         String jobId = cs.getMongoID() + "-" + hashkey;
         TriggerKey triggerKey = new TriggerKey(jobId, "cs-fetch-trigger");
 
-        // Checking if any retrievals had happend in between.
-        Date lastFire = scheduler.getTrigger(triggerKey).getPreviousFireTime();
-        long duration = System.currentTimeMillis() - lastFire.getTime(); // Time since the last retrieval in ms
+        if(scheduler.checkExists(triggerKey)){
+            // Checking if any retrievals had happend in between.
+            Date lastFire = scheduler.getTrigger(triggerKey).getPreviousFireTime();
+            long duration = System.currentTimeMillis() - lastFire.getTime(); // Time since the last retrieval in ms
 
-        // Following is a simple hack.
-        // This should have fetched the last retrieval time, the age as well and then make the retrieval decision.
-        // In this hack, only the last update has happend is checked.
-        JSONObject csObj = new JSONObject(cs.getJson());
-        double updateFreq = csObj.getJSONObject("sla").getJSONObject("updateFrequency")
-                .getDouble("value") * 1000; // assuming seconds and converting to ms
+            // Following is a simple hack.
+            // This should have fetched the last retrieval time, the age as well and then make the retrieval decision.
+            // In this hack, only the last update has happend is checked.
+            JSONObject csObj = new JSONObject(cs.getJson());
+            double updateFreq = csObj.getJSONObject("sla").getJSONObject("updateFrequency")
+                    .getDouble("value") * 1000; // assuming seconds and converting to ms
 
-        if(duration > updateFreq) {
-            if(scheduler.checkExists(triggerKey)){
+            if(duration < updateFreq) {
+                // Returns that a fetch has happend in a recent history. Sufficient lifetime should remain in storage.
+                return CSIResponse.newBuilder().setStatus("200")
+                        .addHashkeys(hashkey).build();
+            }
+
+            // If the scheduler is expected to run only for refreshing (and implicitly synchronizing).
+            // Then only unschedule.
+            if(cs.getTimes() > 0){
                 cs1 = scheduler.unscheduleJob(triggerKey);
             }
-
-            if (cs1) {
-                return registerJob(cs);
+            else {
+                // -1 means another push query is trying to access the context information of the same entity.
+                return CSIResponse.newBuilder().setStatus("200")
+                        .addHashkeys(hashkey).build();
             }
+        }
+        else cs1 = true;
 
-            return CSIResponse.newBuilder().setStatus("500").build();
+        if (cs1) {
+            return registerJob(cs);
         }
-        else {
-            // Returns that a fetch has happend in a recent history. Sufficient lifetime should remain in storage.
-            return CSIResponse.newBuilder().setStatus("200")
-                    .addHashkeys(hashkey).build();
-        }
+
+        return CSIResponse.newBuilder().setStatus("500").build();
     }
 
     public void start() throws SchedulerException {

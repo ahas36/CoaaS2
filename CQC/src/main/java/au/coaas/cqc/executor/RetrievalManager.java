@@ -19,8 +19,6 @@ import au.coaas.sqem.proto.ContextAccess;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import au.coaas.sqem.proto.Statistic;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -275,13 +273,14 @@ public class RetrievalManager {
 
     // Retrieval from streaming Context Providers
     public static AbstractMap.SimpleEntry<String,List<String>> executeStreamRead(String contextService, String csID,
-                                           HashMap<String,String> params, Boolean isFullMiss){
+                                           HashMap<String,String> params, ContextEntity subEnt, int times, Boolean isFullMiss){
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
         CSIResponse fetch = csiStub.updateFetchJob(ContextService.newBuilder()
                         .setJson(contextService).setMongoID(csID)
-                        .setTimes(1).putAllParams(params).setReportAccess(isFullMiss?"True":"False")
+                        .setTimes(times).putAllParams(params).setReportAccess(isFullMiss?"True":"False")
+                        .setSubEntity(subEnt)
                         .build());
 
         if(fetch.getStatus().equals("200"))
@@ -289,6 +288,19 @@ public class RetrievalManager {
         else{
             log.severe("Error occurred when trying to refresh in Storage");
             return new AbstractMap.SimpleEntry(fetch.getStatus(), null);
+        }
+    }
+
+    public static void updateMonitored (String contextId, ContextEntity subEntity) {
+        if(!monitored.containsKey(contextId)){
+            HashSet<ContextEntity> tmpSet = new HashSet<>();
+            tmpSet.add(subEntity);
+            monitored.put(contextId, tmpSet);
+        }
+        else {
+            HashSet<ContextEntity> tmpSet = monitored.get(contextId);
+            tmpSet.add(subEntity);
+            monitored.put(contextId, tmpSet);
         }
     }
 }

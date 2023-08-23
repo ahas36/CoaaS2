@@ -1,9 +1,16 @@
 package au.coaas.csi.fetch;
 
+import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cqc.proto.CQCServiceGrpc;
 import au.coaas.cqp.proto.ContextEntity;
 import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.cre.proto.ContextEvent;
+import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.utils.HttpResponseFuture;
+import au.coaas.csi.utils.Utils;
+import au.coaas.grpc.client.CPREEChannel;
+import au.coaas.grpc.client.CQCChannel;
+import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.csi.proto.CSIResponse;
 import au.coaas.csi.proto.ContextService;
@@ -12,6 +19,7 @@ import au.coaas.sqem.proto.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Message;
 import com.google.protobuf.util.JsonFormat;
 import okhttp3.*;
 import org.json.JSONArray;
@@ -26,6 +34,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -134,24 +143,17 @@ public class FetchJob implements Job {
                     hkeys.add(sqemResBody.getString("hashkey"));
 
                     // The following part regards to entity monitoring is strictly single entity only.
-                    String entId = dataMap.getString("ontClass") + "-" + sqemResBody.getString("hashkey");
-                    if(monitored.containsKey(entId)){
-                        // Creating the event if it should be monitored.
+                    CSIResponse finalFetch = fetch;
+                    Executors.newCachedThreadPool().execute(() -> {
                         try {
-                            HashSet<ContextEntity> ents = monitored.get(entId);
-                            for(ContextEntity ent : ents) {
-                                sendEvent(ContextEvent.newBuilder()
-                                        .setKey(sqemResBody.getString("hashkey"))
-                                        .setTimestamp(String.valueOf(System.currentTimeMillis()))
-                                        .setProviderID(dataMap.getString("providerId"))
-                                        .setContextEntity(ent) // Context entity
-                                        .setAttributes(fetch.getBody()) // JSON attribute values from the retrieval
-                                        .build());
-                            }
-                        } catch(Exception ex) {
-                            log.severe("Failed to create an event for the retrieval: " + ex.getMessage());
+                            Message subEnt = Utils.fromJson(dataMap.getString("subscriptionEntity"), ContextEntity.newBuilder());
+                            propagateChanges((ContextEntity) subEnt, dataMap.getString("providerId"),
+                                    dataMap.getString("ontClass") + "-" + sqemResBody.getString("hashkey"),
+                                    new JSONObject(finalFetch.getBody()));
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                    }
+                    });
                 }
 
                 SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
@@ -181,6 +183,85 @@ public class FetchJob implements Job {
         return null;
     }
 
+    public static void updateMonitored (String contextId, ContextEntity subEntity, boolean delete) {
+        if(delete && monitored.containsKey(contextId)){
+            HashSet<ContextEntity> tmp = monitored.get(contextId);
+            tmp.remove(subEntity);
+            if(tmp.isEmpty()){
+                monitored.remove(contextId);
+            }
+            else {
+                monitored.put(contextId, tmp);
+            }
+        }
+        else changeRegistry(subEntity, contextId);
+    }
+
+    private static boolean changeRegistry(ContextEntity subEntity, String contextId) {
+        if(!monitored.containsKey(contextId)){
+            HashSet<ContextEntity> tmpSet = new HashSet<>();
+            tmpSet.add(subEntity);
+            monitored.put(contextId, tmpSet);
+            return true;
+        }
+        else {
+            HashSet<ContextEntity> tmpSet = monitored.get(contextId);
+            int init_count = tmpSet.size();
+            tmpSet.add(subEntity);
+            monitored.put(contextId, tmpSet);
+            return init_count != tmpSet.size() ? true : false;
+        }
+    }
+
+    private static void propagateChanges(ContextEntity subEnt, String cpId, String entId, JSONObject response) {
+        // This function is assuming only a single entity because the monitoring need to happen on a
+        // single entity only (theorotically).
+        if(subEnt != null) {
+            if(changeRegistry(subEnt, entId)) {
+                // Propagating the change to other retrieval managers as well
+                CPREEServiceGrpc.CPREEServiceBlockingStub cpreeStub
+                        = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+                CQCServiceGrpc.CQCServiceBlockingStub cqcStub
+                        = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
+
+                cpreeStub.modifyCPMonitor(au.coaas.cpree.proto.CPMonitor.newBuilder()
+                        .setContextEntity(subEnt).setContextID(entId).setDelete(false).build());
+                cqcStub.modifyCPMonitor(au.coaas.cqc.proto.CPMonitor.newBuilder()
+                        .setContextEntity(subEnt).setContextID(entId).build());
+            }
+        }
+
+        if(monitored.containsKey(entId)){
+            // Creating the event
+            try {
+                if(subEnt != null) {
+                    // Specific event creation only relevant to the current push query registration.
+                    sendEvent(ContextEvent.newBuilder()
+                            .setKey(entId)
+                            .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                            .setProviderID(cpId)
+                            .setContextEntity(subEnt) // Context entity
+                            .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                            .build());
+                }
+                else {
+                    // Generic event creation for all subscriptions.
+                    HashSet<ContextEntity> ents = monitored.get(entId);
+                    for(ContextEntity ent : ents) {
+                        sendEvent(ContextEvent.newBuilder().setKey(entId)
+                                .setTimestamp(String.valueOf(System.currentTimeMillis()))
+                                .setProviderID(cpId)
+                                .setContextEntity(ent) // Context entity
+                                .setAttributes(response.toString()) // JSON attribute values from the retrieval
+                                .build());
+                    }
+                }
+            } catch(Exception ex) {
+                log.severe("failed to create an event for the retrieval: " + ex.getMessage());
+            }
+        }
+    }
+
     // Triggers a recursive event to CoaaS
     public static void sendEvent(ContextEvent event) throws InvalidProtocolBufferException {
         String eventURI = "http://localhost:8070/CASM-2.0.1/api/event/create";
@@ -207,31 +288,6 @@ public class FetchJob implements Job {
         }
         catch (ExecutionException | InterruptedException ex) {
             log.info(ex.getMessage());
-        }
-    }
-
-    public static void updateMonitored (String contextId, ContextEntity subEntity, boolean delete) {
-        if(delete && monitored.containsKey(contextId)){
-            HashSet<ContextEntity> tmp = monitored.get(contextId);
-            tmp.remove(subEntity);
-            if(tmp.isEmpty()){
-                monitored.remove(contextId);
-            }
-            else {
-                monitored.put(contextId, tmp);
-            }
-        }
-        else {
-            if(!monitored.containsKey(contextId)){
-                HashSet<ContextEntity> tmpSet = new HashSet<>();
-                tmpSet.add(subEntity);
-                monitored.put(contextId, tmpSet);
-            }
-            else {
-                HashSet<ContextEntity> tmpSet = monitored.get(contextId);
-                tmpSet.add(subEntity);
-                monitored.put(contextId, tmpSet);
-            }
         }
     }
 }

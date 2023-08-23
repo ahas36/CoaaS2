@@ -60,6 +60,7 @@ service CQCService {
     rpc resetEventStats (Empty) returns (Empty);
     rpc removeMonitor (CPMonitor) returns (Empty);
     rpc getEventStats (Empty) returns (EventStats);
+    rpc modifyCPMonitor (CPMonitor) returns (Empty);
     rpc execute (ExecutionRequest) returns (CdqlResponse);
     rpc changeRegisterState (RegisterState) returns (Empty);
     rpc unsubscribe (ExecutionRequest) returns (CdqlResponse);

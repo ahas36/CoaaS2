@@ -1502,8 +1502,8 @@ public class PullBasedExecutor {
                         // the periodic retrieval scheduler is executing.
                         AbstractMap.SimpleEntry<String,List<String>> status =
                                 RetrievalManager.executeStreamRead(conSer.toString(),
-                                conSer.getJSONObject("_id").getString("$oid"), params,
-                                cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty());
+                                conSer.getJSONObject("_id").getString("$oid"), params, subEnt,
+                                        subEnt != null ? -1 : 1, cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty());
                         if(status.getKey().equals("200"))
                             return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
                                 .addAllHashKeys(status.getValue())
@@ -1527,10 +1527,11 @@ public class PullBasedExecutor {
             // No caching block
             JSONObject slaObj = conSer.getJSONObject("sla");
             if(conSer.getJSONObject("sla").getBoolean("autoFetch")){
-                // Fully redirector mode of operation
+                // Fully redirector mode of operation.
                 AbstractMap.SimpleEntry<String,List<String>> status =
                         RetrievalManager.executeStreamRead(conSer.toString(),
-                        conSer.getJSONObject("_id").getString("$oid"), params, cacheEnabled);
+                            conSer.getJSONObject("_id").getString("$oid"),
+                                params, subEnt, subEnt != null ? -1 : 1, cacheEnabled);
                 if(status.getKey().equals("200"))
                     return new AbstractMap.SimpleEntry(null, SimpleContainer.newBuilder()
                             .setContextService(conSer.toString())

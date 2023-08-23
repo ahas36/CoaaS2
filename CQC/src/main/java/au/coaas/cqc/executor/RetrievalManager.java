@@ -203,7 +203,7 @@ public class RetrievalManager {
     private static void propagateChanges(ContextEntity subEnt, String cpId, JSONObject response) {
         // This function is assuming only a single entity because the monitoring need to happen on a
         // single entity only (theorotically).
-        String entId = response.getString("hashkey");
+        String entId = subEnt.getType().getType() + "-" + response.getString("hashkey");
         if(subEnt != null) {
             if(!monitored.containsKey(entId)){
                 HashSet<ContextEntity> entList = new HashSet<>();

@@ -50,7 +50,7 @@ public class QueryJob implements Job {
                                 cs.getJSONObject("_id").getString("$oid"), entityType);
                     }
                     else {
-                        fetchResponse = RetrievalManager.executeFetch(contextProvider, params);
+                        fetchResponse = RetrievalManager.executeFetch(contextProvider, params, entityType);
                     }
                     break;
             }

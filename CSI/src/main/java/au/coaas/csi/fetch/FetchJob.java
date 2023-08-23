@@ -134,10 +134,11 @@ public class FetchJob implements Job {
                     hkeys.add(sqemResBody.getString("hashkey"));
 
                     // The following part regards to entity monitoring is strictly single entity only.
-                    if(monitored.containsKey(sqemResBody.getString("hashkey"))){
+                    String entId = dataMap.getString("ontClass") + "-" + sqemResBody.getString("hashkey");
+                    if(monitored.containsKey(entId)){
                         // Creating the event if it should be monitored.
                         try {
-                            HashSet<ContextEntity> ents = monitored.get(sqemResBody.getString("hashkey"));
+                            HashSet<ContextEntity> ents = monitored.get(entId);
                             for(ContextEntity ent : ents) {
                                 sendEvent(ContextEvent.newBuilder()
                                         .setKey(sqemResBody.getString("hashkey"))

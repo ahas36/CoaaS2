@@ -32,7 +32,8 @@ public class RetrievalManager {
     private static Logger log = Logger.getLogger(RetrievalManager.class.getName());
 
     // Retrieval from non-streaming Context Providers
-    public static AbstractMap.SimpleEntry<String,SimpleContainer> executeFetch(String contextService, HashMap<String,String> params) {
+    public static AbstractMap.SimpleEntry<String,SimpleContainer> executeFetch(String contextService,
+                                                                               HashMap<String,String> params, String entType) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
@@ -153,10 +154,11 @@ public class RetrievalManager {
                 response.put("hashkey", hk);
 
                 // The following part regards to entity monitoring is strictly single entity only.
-                if(monitored.containsKey(hk)){
+                String entId = entType + "-" + hk;
+                if(monitored.containsKey(entId)){
                     // Creating the event if it should be monitored.
                     try {
-                        HashSet<ContextEntity> ents = monitored.get(hk);
+                        HashSet<ContextEntity> ents = monitored.get(entId);
                         for(ContextEntity ent : ents) {
                             PushBasedExecutor.sendEvent(ContextEvent.newBuilder().setKey(hk)
                                     .setTimestamp(String.valueOf(System.currentTimeMillis()))

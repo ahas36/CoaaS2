@@ -52,7 +52,7 @@ public class QueryInterface {
         return Response.ok(cdql.getBody()).header("query-id", queryId).build();
     }
 
-    @GET
+    @DELETE
     @Secured
     @Produces(MediaType.TEXT_PLAIN)
     public Response unsubscribe (String query, @QueryParam("id") String subscriptionId,

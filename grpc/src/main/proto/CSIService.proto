@@ -49,6 +49,7 @@ message CPMonitor {
     string contextID = 1;
     au.coaas.cqp.proto.ContextEntity contextEntity = 2;
     bool  delete = 3;
+    string providerID = 4;
 }
 
 service CSIService {

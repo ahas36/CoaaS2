@@ -203,16 +203,17 @@ public class SituationManager {
             return mapper.readValue(subs.toString(), new TypeReference<List<SubscribedQuery>>(){});
         }
 
-        removeSubscriptions(event.getKey(), event.getContextEntity());
+        removeSubscriptions(event.getKey(), event.getContextEntity(), event.getProviderID());
         log.info("No relevant subscriptions found");
         return null;
     }
 
-    private static void removeSubscriptions (String contextId, ContextEntity entity) {
+    private static void removeSubscriptions (String contextId, ContextEntity entity, String providerID) {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
         csiStub.modifyCPMonitor(au.coaas.csi.proto.CPMonitor.newBuilder()
-                .setContextEntity(entity).setContextID(contextId).setDelete(true).build());
+                .setContextEntity(entity).setContextID(contextId)
+                .setProviderID(providerID).setDelete(true).build());
 
         CPREEServiceGrpc.CPREEServiceBlockingStub cpreeStub
                 = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());

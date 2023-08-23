@@ -5,16 +5,13 @@ import au.coaas.cqc.proto.CQCServiceGrpc;
 import au.coaas.cqp.proto.ContextEntity;
 import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.cre.proto.ContextEvent;
-import au.coaas.csi.proto.CSIServiceGrpc;
+import au.coaas.csi.proto.*;
 import au.coaas.csi.utils.HttpResponseFuture;
 import au.coaas.csi.utils.Utils;
 import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.grpc.client.CQCChannel;
 import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.csi.proto.CSIResponse;
-import au.coaas.csi.proto.ContextService;
-import au.coaas.csi.proto.ContextServiceInvokerRequest;
 import au.coaas.sqem.proto.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -183,18 +180,26 @@ public class FetchJob implements Job {
         return null;
     }
 
-    public static void updateMonitored (String contextId, ContextEntity subEntity, boolean delete) {
-        if(delete && monitored.containsKey(contextId)){
-            HashSet<ContextEntity> tmp = monitored.get(contextId);
-            tmp.remove(subEntity);
+    public static void updateMonitored (CPMonitor request) {
+        if(request.getDelete() && monitored.containsKey(request.getContextID())){
+            HashSet<ContextEntity> tmp = monitored.get(request.getContextID());
+            tmp.remove(request.getContextEntity());
             if(tmp.isEmpty()){
-                monitored.remove(contextId);
+                monitored.remove(request.getContextID());
+                try {
+                    String providerID = request.getProviderID();
+                    String hashkey = (request.getContextID().split("-"))[1];
+                    JobSchedulerManager.getInstance().cancelJob(providerID + "-" + hashkey);
+                }
+                catch(Exception ex) {
+                    log.severe(ex.getMessage());
+                }
             }
             else {
-                monitored.put(contextId, tmp);
+                monitored.put(request.getContextID(), tmp);
             }
         }
-        else changeRegistry(subEntity, contextId);
+        else changeRegistry(request.getContextEntity(), request.getContextID());
     }
 
     private static boolean changeRegistry(ContextEntity subEntity, String contextId) {

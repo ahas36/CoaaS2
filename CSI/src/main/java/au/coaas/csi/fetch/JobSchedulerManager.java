@@ -149,6 +149,11 @@ public class JobSchedulerManager {
         return CSIResponse.newBuilder().setStatus(cs1 ? "200" : "500").build();
     }
 
+    public CSIResponse cancelJob(String jobId) throws SchedulerException {
+        boolean cs1 = scheduler.unscheduleJob(new TriggerKey(jobId, "cs-fetch-trigger"));
+        return CSIResponse.newBuilder().setStatus(cs1 ? "200" : "500").build();
+    }
+
     public CSIResponse updateJob(ContextService cs) throws SchedulerException, InvalidProtocolBufferException {
         boolean cs1;
         String hashkey = Utils.getHashKey(cs.getParamsMap());

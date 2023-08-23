@@ -90,8 +90,7 @@ public class CSIServiceImpl extends CSIServiceGrpc.CSIServiceImplBase {
     public void modifyCPMonitor(au.coaas.csi.proto.CPMonitor request,
                                 io.grpc.stub.StreamObserver<au.coaas.csi.proto.Empty> responseObserver){
         try {
-            FetchJob.updateMonitored(request.getContextID(),
-                    request.getContextEntity(), request.getDelete());
+            FetchJob.updateMonitored(request);
             responseObserver.onNext(Empty.newBuilder().build());
         } catch (Exception ex) {
             responseObserver.onError(ex);

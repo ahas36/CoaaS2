@@ -10,3 +10,4 @@ Docker push shakthiw/acoca:latest
 Docker push shakthiw/cpree:latest
 Docker push shakthiw/reactive-agent:latest
 Docker push shakthiw/service-simulator:latest
+Docker push shakthiw/situation-predictor:latest

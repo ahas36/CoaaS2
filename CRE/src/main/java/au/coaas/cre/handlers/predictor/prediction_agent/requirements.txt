@@ -1,0 +1,9 @@
+configparser
+Flask
+Flask_restful
+numpy
+matplotlib
+pymongo
+requests
+torch
+pyarrow

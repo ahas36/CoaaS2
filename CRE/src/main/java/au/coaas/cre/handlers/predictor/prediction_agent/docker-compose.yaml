@@ -1,0 +1,8 @@
+services:
+  service-simulator:
+    image: shakthiw/situation-predictor:latest
+    container_name: "situation-predictor"
+    restart: always
+    build: .
+    ports:
+      - '9797:9797'

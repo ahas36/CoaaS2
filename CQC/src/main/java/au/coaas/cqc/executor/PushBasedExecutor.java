@@ -302,8 +302,35 @@ public class PushBasedExecutor {
 
     // PUSH Context Information to the Context Consumers
     public static void pushContext(CDQLCallback callBack, JSONObject result, String subsID) throws IOException, InterruptedException, ExecutionException {
-        switch (callBack.getCallbackMethod()) {
-            case FCM:
+        if(callBack != null) {
+            switch (callBack.getCallbackMethod()) {
+                case FCM:
+                    if (FirebaseApp.getApps().size() == 0) {
+                        InputStream serviceAccount = new ByteArrayInputStream(Utilities.serverConfig.getBytes(StandardCharsets.UTF_8));
+                        FirebaseOptions options = new FirebaseOptions.Builder()
+                                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                                .setDatabaseUrl("https://zippy-tiger-550.firebaseio.com")
+                                .build();
+                        FirebaseApp.initializeApp(options);
+                    }
+                    Message.Builder message = Message.builder()
+                            .putData("body", callBack.getBody() == null ?
+                                    ("push from CoaaS with subID : " + subsID) : callBack.getBody())
+                            .putData("results", result.toString());
+
+                    if (callBack.getFcmTopic() != null)
+                        message.setTopic(callBack.getFcmTopic());
+                    else
+                        message.setToken(callBack.getFcmID());
+
+                    FirebaseMessaging.getInstance().sendAsync(message.build()).get();
+                    break;
+                case HTTPPOST:
+                    sendODFWrite(callBack.getHttpURL(), callBack.getBody(), callBack.getHeaders(), callBack);
+                    break;
+            }
+
+            if (isDebugMode) {
                 if (FirebaseApp.getApps().size() == 0) {
                     InputStream serviceAccount = new ByteArrayInputStream(Utilities.serverConfig.getBytes(StandardCharsets.UTF_8));
                     FirebaseOptions options = new FirebaseOptions.Builder()
@@ -312,69 +339,48 @@ public class PushBasedExecutor {
                             .build();
                     FirebaseApp.initializeApp(options);
                 }
-                Message.Builder message = Message.builder()
-                        .putData("body", callBack.getBody() == null ?
-                                ("push from CoaaS with subID : " + subsID) : callBack.getBody())
-                        .putData("results", result.toString());
 
-                if (callBack.getFcmTopic() != null)
-                    message.setTopic(callBack.getFcmTopic());
-                else
-                    message.setToken(callBack.getFcmID());
-
-                FirebaseMessaging.getInstance().sendAsync(message.build()).get();
-                break;
-            case HTTPPOST:
-                sendODFWrite(callBack.getHttpURL(), callBack.getBody(), callBack.getHeaders(), callBack);
-                break;
-        }
-
-        if (isDebugMode) {
-            if (FirebaseApp.getApps().size() == 0) {
-                InputStream serviceAccount = new ByteArrayInputStream(Utilities.serverConfig.getBytes(StandardCharsets.UTF_8));
-                FirebaseOptions options = new FirebaseOptions.Builder()
-                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                        .setDatabaseUrl("https://zippy-tiger-550.firebaseio.com")
+                Message message = Message.builder()
+                        .putData("body", callBack.getBody() == null ? "push from CoaaS" : callBack.getBody())
+                        .setTopic("news")
                         .build();
-                FirebaseApp.initializeApp(options);
+                FirebaseMessaging.getInstance().sendAsync(message).get();
+
+                String odfMsg = "<omiEnvelope xmlns=\"http://www.opengroup.org/xsd/omi/1.0/\" version=\"1.0\" ttl=\"0\">\n"
+                        + "  <write msgformat=\"odf\">\n"
+                        + "    <msg>\n"
+                        + "      <Objects xmlns=\"http://www.opengroup.org/xsd/odf/1.0/\">\n"
+                        + "        <Object name = \"push log\">\n"
+                        + "          <id>push_log</id>\n"
+                        + "          	<Object name = \"sub" + subsID + "\">\n"
+                        + "              <id>sub_" + subsID + "</id>\n"
+                        + "              <InfoItem name=\"push msg\">\n"
+                        + ("push from CoaaS with subID : " + subsID)
+                        + "              </InfoItem>\n"
+                        + "            </Object>\n"
+                        + "          </Object>\n"
+                        + "        </Object>\n"
+                        + "      </Objects>\n"
+                        + "    </msg>\n"
+                        + "  </write>\n"
+                        + "</omiEnvelope>";
+
+                sendODFWrite("http://localhost:8282", odfMsg, null, callBack); // Assuming the application is running on port 8282.
             }
-            Message message = Message.builder()
-                    .putData("body", callBack.getBody() == null ? "push from CoaaS" : callBack.getBody())
-                    .setTopic("news")
-                    .build();
-            FirebaseMessaging.getInstance().sendAsync(message).get();
 
-            String odfMsg = "<omiEnvelope xmlns=\"http://www.opengroup.org/xsd/omi/1.0/\" version=\"1.0\" ttl=\"0\">\n"
-                    + "  <write msgformat=\"odf\">\n"
-                    + "    <msg>\n"
-                    + "      <Objects xmlns=\"http://www.opengroup.org/xsd/odf/1.0/\">\n"
-                    + "        <Object name = \"push log\">\n"
-                    + "          <id>push_log</id>\n"
-                    + "          	<Object name = \"sub" + subsID + "\">\n"
-                    + "              <id>sub_" + subsID + "</id>\n"
-                    + "              <InfoItem name=\"push msg\">\n"
-                    + ("push from CoaaS with subID : " + subsID)
-                    + "              </InfoItem>\n"
-                    + "            </Object>\n"
-                    + "          </Object>\n"
-                    + "        </Object>\n"
-                    + "      </Objects>\n"
-                    + "    </msg>\n"
-                    + "  </write>\n"
-                    + "</omiEnvelope>";
+            Date now = new Date();
+            SimpleDateFormat dateFormatUTC = new SimpleDateFormat("yyyy-MMM-dd HH:mm:ss");
+            dateFormatUTC.setTimeZone(TimeZone.getTimeZone("UTC"));
 
-            sendODFWrite("http://localhost:8282", odfMsg, null, callBack);
+            log.info("Subscription with subscription ID : " + subsID + " triggred. \n"
+                    + "Localtime : " + now.toString() + " \n"
+                    + "UTC time : " + dateFormatUTC.format(now) + "\n");
+
+            cancelJob(subsID);
         }
+        else {
 
-        Date now = new Date();
-        SimpleDateFormat dateFormatUTC = new SimpleDateFormat("yyyy-MMM-dd HH:mm:ss");
-        dateFormatUTC.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-        log.info("Subscription with subscription ID : " + subsID + " triggred. \n"
-                + "Localtime : " + now.toString() + " \n"
-                + "UTC time : " + dateFormatUTC.format(now) + "\n");
-
-        cancelJob(subsID);
+        }
     }
 
     private static void sendODFWrite(String URI, String msg, Map<String, String> headers, CDQLCallback callback) {

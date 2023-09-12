@@ -16,12 +16,12 @@ class LSTMModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.lstm = nn.LSTM(input_size=1, hidden_size=64, num_layers=1, batch_first=True)
-        self.linear = nn.Linear(50,1)
+        self.linear = nn.Linear(64,1)
 
-    def forward(self, x):
-        x,_ = self.lstm(x)
-        x = self.linear(x)
-        return x
+    def forward(self, input):
+        x_out,_ = self.lstm(input)
+        output = self.linear(x_out)
+        return output
     
 class LSTMExecutor():
     __ready = False

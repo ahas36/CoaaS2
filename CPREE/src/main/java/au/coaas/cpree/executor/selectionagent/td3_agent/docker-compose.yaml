@@ -1,5 +1,5 @@
 services:
-  service-simulator:
+  reactive-agent:
     image: shakthiw/reactive-agent:latest
     container_name: "reactive-agent"
     restart: always

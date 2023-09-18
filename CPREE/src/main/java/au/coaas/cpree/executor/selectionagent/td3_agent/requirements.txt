@@ -7,3 +7,4 @@ scipy
 pymongo
 requests
 tensorflow
+tensorflow-probability

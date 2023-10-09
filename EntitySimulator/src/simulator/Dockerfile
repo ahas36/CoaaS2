@@ -5,6 +5,7 @@ COPY . /app/
 WORKDIR /app/
 
 # Installing python
+RUN apt clean
 RUN apt-get update -y
 RUN apt-get install -y python3 python3-pip
 RUN pip3 install --upgrade setuptools

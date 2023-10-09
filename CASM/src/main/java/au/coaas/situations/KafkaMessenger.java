@@ -11,10 +11,10 @@ import javax.resource.ConnectionFactoryDefinition;
 
 import java.util.logging.Logger;
 
-@ConnectionFactoryDefinition(name = "java:comp/env/KafkaConnectionFactory",
+@ConnectionFactoryDefinition(name = "java:app/kafka/factory",
         description = "Kafka Connection Factory",
         interfaceName = "fish.payara.cloud.connectors.kafka.KafkaConnectionFactory",
-        resourceAdapter = "kafka-rar-0.3.0",
+        resourceAdapter = "kafka-rar-0.5.0",
         minPoolSize = 200,
         maxPoolSize=2000,
         transactionSupport = TransactionSupport.TransactionSupportLevel.NoTransaction,
@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 public class KafkaMessenger {
     private static Logger log = Logger.getLogger(EventListner.class.getName());
 
-    @Resource(lookup = "java:comp/env/KafkaConnectionFactory")
+    @Resource(lookup = "java:app/kafka/factory")
     static KafkaConnectionFactory factory;
 
     public static void sendMessage(String msg, String topic) {

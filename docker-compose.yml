@@ -130,7 +130,7 @@ services:
 
     acoca:
       image: shakthiw/acoca:latest
-      container_name: "acoca"
+      container_name: "dashboard"
       ports:
         - "4200"
         - "4200:80"
@@ -171,7 +171,7 @@ services:
           - mongodb
 
     fuseki:
-        container_name: fuseki
+        container_name: "fuseki"
         image: stain/jena-fuseki
         environment:
           - ADMIN_PASSWORD=admin
@@ -230,6 +230,7 @@ services:
     # Kafka brokers and IoT stream processing
     zookeeper:
       image: confluentinc/cp-zookeeper:latest
+      container_name: "zookeeper"
       environment:
         ZOOKEEPER_CLIENT_PORT: 2181
         ZOOKEEPER_TICK_TIME: 2000
@@ -238,6 +239,7 @@ services:
 
     kafka:
       image: confluentinc/cp-kafka:latest
+      container_name: "kafka"
       depends_on:
         - zookeeper
       ports:

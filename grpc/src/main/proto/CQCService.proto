@@ -56,6 +56,13 @@ message CPMonitor {
     au.coaas.cqp.proto.ContextEntity contextEntity = 2;
 }
 
+message CordinatesIndex {
+    string h3Address = 1;
+    uint64 index = 2;
+    double lat = 3;
+    double lng = 4;
+}
+
 service CQCService {
     rpc resetEventStats (Empty) returns (Empty);
     rpc removeMonitor (CPMonitor) returns (Empty);

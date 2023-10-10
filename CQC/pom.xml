@@ -17,17 +17,11 @@
             <version>20180813</version>
         </dependency>
         <dependency>
-            <groupId>com.uber</groupId>
-            <artifactId>h3</artifactId>
-            <version>4.1.1</version>
-        </dependency>
-        <dependency>
             <groupId>org.quartz-scheduler</groupId>
             <artifactId>quartz</artifactId>
             <version>2.3.2</version>
             <scope>compile</scope>
         </dependency>
-
         <dependency>
             <groupId>au.coaas</groupId>
             <artifactId>grpc</artifactId>
@@ -39,7 +33,7 @@
         <dependency>
             <groupId>com.uber</groupId>
             <artifactId>h3</artifactId>
-            <version>3.6.4</version>
+            <version>3.7.3</version>
         </dependency>
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>

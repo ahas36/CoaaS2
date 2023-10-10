@@ -2,13 +2,12 @@ package au.coaas.cqc.utils;
 
 import au.coaas.cqc.proto.CordinatesIndex;
 
+import au.coaas.cqc.proto.Path;
 import com.uber.h3core.H3Core;
-import com.uber.h3core.util.GeoCoord;
-import com.uber.h3core.exceptions.LineUndefinedException;
-import com.uber.h3core.exceptions.PentagonEncounteredException;
+import com.uber.h3core.LengthUnit;
+import com.uber.h3core.util.LatLng;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 public class GeoIndexer {
@@ -44,7 +43,7 @@ public class GeoIndexer {
 
     public static CordinatesIndex getH3Address (double lat, double lng, int res) {
         return CordinatesIndex.newBuilder().setLat(lat)
-                .setLng(lng).setH3Address(h3Client.geoToH3Address(lat, lng, res))
+                .setLng(lng).setH3Address(h3Client.latLngToCellAddress(lat, lng, res))
                 .build();
     }
 
@@ -55,21 +54,21 @@ public class GeoIndexer {
 
     public static CordinatesIndex getGeoIndex (double lat, double lng, int res) {
         return CordinatesIndex.newBuilder().setLat(lat)
-                .setLng(lng).setIndex(h3Client.geoToH3(lat, lng, res))
+                .setLng(lng).setIndex(h3Client.latLngToCell(lat, lng, res))
                 .build();
     }
 
     // Convert an address or an index to coordinates.
     // But this coordinate is the center of the index cell.
     public static CordinatesIndex getCordinates (String address) {
-        GeoCoord cordinates = h3Client.h3ToGeo(address);
+        LatLng cordinates = h3Client.cellToLatLng(address);
         return CordinatesIndex.newBuilder().setLat(cordinates.lat)
                 .setLng(cordinates.lng).setH3Address(address)
                 .build();
     }
 
     public static CordinatesIndex getCordinates (long index) {
-        GeoCoord cordinates = h3Client.h3ToGeo(index);
+        LatLng cordinates = h3Client.cellToLatLng(index);
         return CordinatesIndex.newBuilder().setLat(cordinates.lat)
                 .setLng(cordinates.lng).setIndex(index)
                 .build();
@@ -78,11 +77,11 @@ public class GeoIndexer {
     // Inspection functions.
     // Get the current resolution of an index. Useful when changing between resolutions.
     public static int getResolution(long index) {
-        return h3Client.h3GetResolution(index);
+        return h3Client.getResolution(index);
     }
 
     public static int getResolution(String index) {
-        return h3Client.h3GetResolution(index);
+        return h3Client.getResolution(index);
     }
 
     // Complete the indexed coordinates object when only address is present.
@@ -92,49 +91,22 @@ public class GeoIndexer {
                 .build();
     }
 
-    // Get all the indices k-levels around a given cell. The output is a hollow circle.
-    public static List<Long> getKRing (long index, int k) {
-        try {
-            return h3Client.hexRing(index, k);
-        } catch (PentagonEncounteredException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
     // Get all the indices with in the given distance from a given cell.
-    public static List<Long> getKRange (long index, int k) {
-        try {
-            List<Long> kRange = new ArrayList<>();
-            List<List<Long>> indexesList = h3Client.hexRange(index, k);
-            for(List<Long> indexes : indexesList) {
-                for(long idx : indexes) {
-                    kRange.add(idx);
-                }
-            }
-            return kRange;
-        } catch (PentagonEncounteredException e) {
-            e.printStackTrace();
-        }
-        return null;
+    public static List<Long> getArea (long index, int k) {
+        return h3Client.gridDisk(index, k);
     }
 
-    // Returns the indexed line between 2 indexes of the same resolution.
-    public static List<Long> getLine (long indexA, long indexB) {
-        try {
-            return h3Client.h3Line(indexA, indexB);
-        } catch (LineUndefinedException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    public static long getEdge (long index1, long index2) {
-        return h3Client.getH3UnidirectionalEdge(index1, index2);
+    // Returns all the indexes in the path of 2 indexes and the directed edge.
+    public static Path getPath (long origin, long destination) {
+        long edge = h3Client.cellsToDirectedEdge(origin, destination);
+        return Path.newBuilder().setOrigin(origin).setDestination(destination)
+                .addAllPath(h3Client.gridPathCells(origin, destination))
+                .setEdge(edge).setDistace(h3Client.edgeLength(edge, LengthUnit.km))
+                .build();
     }
 
     // Returns the higher level index that the provided index belongs to in the hierachy.
     public static long getParentIndex (long index, int targetRes) {
-        return h3Client.h3ToParent(index, targetRes);
+        return h3Client.cellToParent(index, targetRes);
     }
 }

@@ -63,6 +63,14 @@ message CordinatesIndex {
     double lng = 4;
 }
 
+message Path {
+    repeated uint64 path = 1;
+    uint64 edge = 2;
+    uint64 origin = 3;
+    uint64 destination = 4;
+    double distace = 5;
+}
+
 service CQCService {
     rpc resetEventStats (Empty) returns (Empty);
     rpc removeMonitor (CPMonitor) returns (Empty);

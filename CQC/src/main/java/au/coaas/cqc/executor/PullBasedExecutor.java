@@ -32,8 +32,8 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import com.uber.h3core.H3Core;
-import com.uber.h3core.util.GeoCoord;
 
+import com.uber.h3core.util.LatLng;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
@@ -1105,7 +1105,7 @@ public class PullBasedExecutor {
                 continue;
             }
             JSONObject geo = entity.getJSONObject("geo");
-            String h3Id = h3.geoToH3Address(geo.getDouble("latitude"), geo.getDouble("longitude"), res);
+            String h3Id = h3.latLngToCellAddress(geo.getDouble("latitude"), geo.getDouble("longitude"), res);
             if (cluster.containsKey(h3Id)) {
                 cluster.get(h3Id).add(entity);
             } else {
@@ -1120,7 +1120,7 @@ public class PullBasedExecutor {
             Map<String, Integer> numberOfInstances = new HashMap<>();
             JSONObject geo = new JSONObject();
             geo.put("type", "Point");
-            GeoCoord geoCoord = h3.h3ToGeo(entry.getKey());
+            LatLng geoCoord = h3.cellToLatLng(entry.getKey());
             geo.put("latitude", geoCoord.lat);
             geo.put("longitude", geoCoord.lng);
             JSONArray coordinates = new JSONArray();

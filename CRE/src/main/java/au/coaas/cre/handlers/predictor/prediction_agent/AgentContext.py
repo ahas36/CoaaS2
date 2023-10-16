@@ -1,6 +1,7 @@
 import sys, os
 import traceback
 import configparser
+from flask import request
 
 from networks.lstm import LSTMExecutor
 sys.path.append(os.path.abspath(os.path.join('.')))
@@ -18,16 +19,16 @@ top_config = config['DEFAULT']
 db = MongoClient(top_config['ConnectionString'], top_config['DBName'])
 
 class AgentContext(Resource):
-    __executor = None
+    __executor = LSTMExecutor(db, top_config['Lookback'], top_config['Epochs'])
 
     def get(self):
-        try:         
-            if self.__executor == None:
-                self.__executor = LSTMExecutor(db, top_config['Lookback'], top_config['Epochs'])
-            
-            self.__executor.init_training()
-            result = self.__executor.predict(top_config['Horizon'])
-
+        try:     
+            # Accepts consumer id and the situation name as inputs from the parameters
+            args = request.args    
+            consumer_id = args['consumer']
+            situation_name = args['situation']
+            # Predict the results
+            result = self.__executor.predict(consumer_id, situation_name, top_config['Horizon'])
             # Return data and 200 OK code
             return result, 200
 

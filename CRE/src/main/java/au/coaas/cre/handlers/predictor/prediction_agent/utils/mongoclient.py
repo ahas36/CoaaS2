@@ -29,15 +29,25 @@ class MongoClient:
       print('Insertion into mongo db failed!')
       return -1
     
-  # Retrieve all the items in the collection
+  # Retrieve all the items (upro 10,000 records) in the collection
   def read_all(self, collection, condition, projection = None, sorting_col = '_id'):
     col = self.__db[collection]
     if projection != None:
-      return list(col.find(condition, projection).sort(sorting_col,1))
+      return list(col.find(condition, projection).sort(sorting_col,1).limit(10000))
     else:
-      return list(col.find(condition).sort(sorting_col,1))
+      return list(col.find(condition).sort(sorting_col,1).limit(10000))
     
   # Read only the distinct values of a property from a collection
-  def read_distinct(self, collection, condition):
+  def read_distinct(self, collection, field):
     col = self.__db[collection]
-    return list(col.distinct(condition))
+    return list(col.distinct(field))
+  
+  def read_distinct(self, collection, conditions):
+    col = self.__db[collection]
+    condition_obj = {}
+    for cond in conditions:
+      condition_obj[cond] = '$'+cond
+    
+    return list(col.aggregate([
+      {'$group': {'_id' : condition_obj}}
+    ]))

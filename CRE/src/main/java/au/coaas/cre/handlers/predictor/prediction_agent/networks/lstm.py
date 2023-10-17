@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 
 import os.path
+import threading
 
 from utils.observers import Data
 
@@ -14,6 +15,8 @@ import torch.utils.data as data
 import matplotlib.pyplot  as plt
 
 from utils.trainedmodel import TrainedModel
+
+from statsmodels.tsa.api import SimpleExpSmoothing
 
 LSTM_EXTN = "-lstm.pth"
 LINE_EXTN = "-linear.pth"
@@ -52,6 +55,7 @@ class LSTMExecutor():
         print('Creating new LSTM models for each consumer-event pairs.')
         self.__db = db
         self.__refs = {}
+        self.__wipset = set()
 
         self.__lookback = lookback
         self.__epochs = epochs
@@ -120,67 +124,81 @@ class LSTMExecutor():
 
         for sub in subscribers:
             pair = sub['_id']
-            timeseries = self.get_dataset_mongo(pair['consumerId'], pair['situationName'])
-
-            # Initial train-test split
-            train_size = int(len(timeseries) * 0.9) 
-            train, test = timeseries[:train_size], timeseries[train_size:]
-
-            x_train, y_train = self.create_dataset(train)
-            x_test, y_test = self.create_dataset(test)
-
-            path = pair['consumerId'] + '-' + pair['situationName']
-
-            model = LSTMModel(path)
-            optimizer = optim.Adam(model.parameters())
-            loss_fn = nn.MSELoss()
-            loader = data.DataLoader(data.TensorDataset(x_train, y_train), shuffle=False, batch_size=self.__lookback) 
-
-            test_rmse = 0 # Final RMSE for prediction
-            for epoch in range(self.__epochs):
-                model.train()
-                for x_batch,y_batch in loader:
-                    y_pred = model(x_batch)
-                    loss = loss_fn(y_pred, y_batch)
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-
-                #Validation
-                if epoch%100 != 0:
-                    continue
-                model.eval()
-                with torch.no_grad():
-                    y_pred = model(x_train)
-                    train_rmse = np.sqrt(loss_fn(y_pred, y_train))
-                    
-                    y_pred = model(x_test)
-                    test_rmse = np.sqrt(loss_fn(y_pred, y_test))
-                
-                print("Epoch %d: train RMSE %.4f, test RMSE %.4f" % (epoch, train_rmse, test_rmse))
+            self.__learn(pair['consumerId'], pair['situationName'])
             
-            # Save the model with a path
-            model.save_model()
-
-            # Persiting model
-            trained_model = TrainedModel(path, optimizer, loss_fn, loader)
-            trained_model.__setattr__('train_size', train_size)
-            trained_model.rsmes.push(test_rmse)
-            self.__refs[pair['consumerId']] = {
-                pair['situationName'] : trained_model
-            }
-
-            # Model retrian subscriptions
-            retrain_sub = Data(path)
-            retrain_sub.attach(self)
-            trained_model.__setattr__('subscription', retrain_sub)
-    
-            # Testing the model
-            # visualize(timeseries, model, train_size, x_train, x_test)
+    def __learn(self, consumer_id, situation_name):   
+        path = consumer_id + '-' + situation_name
         
+        # Checking if there is a model already being trained.
+        if(path in self.__wipset):
+            return 
+        
+        # Setting WPI flag
+        self.__wipset.add(path)
+
+        timeseries = self.get_dataset_mongo(consumer_id, situation_name)
+
+        # Initial train-test split
+        train_size = int(len(timeseries) * 0.9) 
+        train, test = timeseries[:train_size], timeseries[train_size:]
+
+        x_train, y_train = self.create_dataset(train)
+        x_test, y_test = self.create_dataset(test)
+
+        model = LSTMModel(path)
+        optimizer = optim.Adam(model.parameters())
+        loss_fn = nn.MSELoss()
+        loader = data.DataLoader(data.TensorDataset(x_train, y_train), shuffle=False, batch_size=self.__lookback) 
+
+        test_rmse = 0 # Final RMSE for prediction
+        for epoch in range(self.__epochs):
+            model.train()
+            for x_batch,y_batch in loader:
+                y_pred = model(x_batch)
+                loss = loss_fn(y_pred, y_batch)
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+            #Validation
+            if epoch%100 != 0:
+                continue
+            model.eval()
+            with torch.no_grad():
+                y_pred = model(x_train)
+                train_rmse = np.sqrt(loss_fn(y_pred, y_train))
+                
+                y_pred = model(x_test)
+                test_rmse = np.sqrt(loss_fn(y_pred, y_test))
+            
+            print("Epoch %d: train RMSE %.4f, test RMSE %.4f" % (epoch, train_rmse, test_rmse))
+        
+        # Save the model with a path
+        model.save_model()
+
+        # Persiting model
+        trained_model = TrainedModel(path, optimizer, loss_fn, loader)
+        trained_model.__setattr__('train_size', train_size)
+        trained_model.rsmes.push(test_rmse)
+        self.__refs[consumer_id] = {
+            situation_name : trained_model
+        }
+
+        # Clearning the WIP flag
+        self.__wipset.discard(path)
+
+        # Model retrian subscriptions
+        retrain_sub = Data(path)
+        retrain_sub.attach(self)
+        trained_model.__setattr__('subscription', retrain_sub)
+
+        # Testing the model
+        # visualize(timeseries, model, train_size, x_train, x_test)
+    
     def predict(self, consumer_id, situation_name, horizon):
         if(self.__ready):
             if((consumer_id in self.__refs) and (situation_name in self.__refs[consumer_id])):
+                # There is an already trained model for the consumer and event.
                 path = consumer_id + '-' + situation_name
                 model = LSTMModel(path)
                 
@@ -192,9 +210,37 @@ class LSTMExecutor():
 
                 return pred_value
             else:
+                # There is no trained model at the moment. So, triggering a learning.
+                self.__background_train()
+                self.__moving_average(consumer_id, situation_name, horizon)
+                # What to return when there is no model to predict with?
+                # 
                 return None
         else:
             return None
+
+    def __moving_average(self, consumer_id, situation_name, horizon):
+        timeseries = self.get_dataset_mongo(consumer_id, situation_name)
+        # Exponential smoothing
+        reliance = timeseries['probability'].to_frame()
+        reliance['mvavg'] = reliance['probability'].ewm(span=10).mean()
+        # Prediction
+        predictions = self.__predict_next(reliance['mvavg'].tolist().reverse(), horizon)
+        return predictions
+
+    def __predict_next(self, arr, horizon):
+        fit_model = SimpleExpSmoothing(arr, initialization_method="estimated").fit()
+        # Returns a nd-array of the forecasts
+        return fit_model.forecast(horizon)
+
+    def fire_and_forget(f):
+        def wrapped():
+            threading.Thread(target=f).start()
+        return wrapped
+
+    @fire_and_forget
+    def __background_train(self, consumer_id, situation_name):
+        self.__learn(consumer_id, situation_name)
     
     def visualize(self, timeseries, model, train_size, x_train, x_test):
         with torch.no_grad():

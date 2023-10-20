@@ -30,12 +30,12 @@ class MongoClient:
       return -1
     
   # Retrieve all the items (upro 10,000 records) in the collection
-  def read_all(self, collection, condition, projection = None, sorting_col = '_id'):
+  def read_all(self, collection, condition, projection = None, sorting_col = '_id', asd = 1, limit = 10000):
     col = self.__db[collection]
     if projection != None:
-      return list(col.find(condition, projection).sort(sorting_col,1).limit(10000))
+      return list(col.find(condition, projection).sort(sorting_col,asd).limit(limit))
     else:
-      return list(col.find(condition).sort(sorting_col,1).limit(10000))
+      return list(col.find(condition).sort(sorting_col,asd).limit(limit))
     
   # Read only the distinct values of a property from a collection
   def read_distinct(self, collection, field):

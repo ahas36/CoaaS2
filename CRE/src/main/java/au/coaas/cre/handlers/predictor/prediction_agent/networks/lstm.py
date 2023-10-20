@@ -51,7 +51,7 @@ class LSTMExecutor():
     __ready = False
     __pred_count = 0
 
-    def __init__(self, db, lookback, epochs):
+    def __init__(self, db, lookback, epochs, horizon):
         print('Creating new LSTM models for each consumer-event pairs.')
         self.__db = db
         self.__refs = {}
@@ -59,6 +59,7 @@ class LSTMExecutor():
 
         self.__lookback = lookback
         self.__epochs = epochs
+        self.__horizon = horizon
 
         try:
             self.init_training()
@@ -72,7 +73,10 @@ class LSTMExecutor():
         x,y = [],[]
         for i in range(len(dataset) - self.__lookback):
             feature = dataset[i:i + self.__lookback]
-            target = dataset[i+1:i + self.__lookback + 1]
+            target = dataset[i+self.__horizon:i + self.__lookback + self.__horizon]
+
+            if(len(feature)<self.__lookback or len(target)<self.__lookback):
+                break
 
             # If all the dates are in order, then go ahead, else continue
             prev = None
@@ -104,7 +108,21 @@ class LSTMExecutor():
             'time' : 1,
             'probability' : 1
         }
-        situations = self.__db.read_all('infered_situations', _filter, _project)
+        situations = self.__db.read_all('infered_situations', _filter, _project, asd = -1)
+        df = pd.DataFrame(situations, columns =['time', 'probability'], dtype = float) 
+        
+        return df
+    
+    def get_last_records(self, consumer, situation):
+        _filter = {
+            'consumerId': consumer,
+            'situationName': situation
+        }
+        _project = {
+            'time' : 1,
+            'probability' : 1
+        }
+        situations = self.__db.read_all('infered_situations', _filter, _project, asd = -1, limit = self.__horizon)
         df = pd.DataFrame(situations, columns =['time', 'probability'], dtype = float) 
         
         return df
@@ -171,7 +189,7 @@ class LSTMExecutor():
                 y_pred = model(x_test)
                 test_rmse = np.sqrt(loss_fn(y_pred, y_test))
             
-            print("Epoch %d: train RMSE %.4f, test RMSE %.4f" % (epoch, train_rmse, test_rmse))
+            # print("Epoch %d: train RMSE %.4f, test RMSE %.4f" % (epoch, train_rmse, test_rmse))
         
         # Save the model with a path
         model.save_model()
@@ -184,6 +202,13 @@ class LSTMExecutor():
             situation_name : trained_model
         }
 
+        # Persist the model status
+        self.__db.insert_one('infered_situations_rmse', {
+            'consumer_id': consumer_id, 
+            'situation': situation_name,
+            'rmse': test_rmse
+        })
+
         # Clearning the WIP flag
         self.__wipset.discard(path)
 
@@ -195,27 +220,30 @@ class LSTMExecutor():
         # Testing the model
         # visualize(timeseries, model, train_size, x_train, x_test)
     
-    def predict(self, consumer_id, situation_name, horizon):
+    def predict(self, consumer_id, situation_name):
         if(self.__ready):
             if((consumer_id in self.__refs) and (situation_name in self.__refs[consumer_id])):
                 # There is an already trained model for the consumer and event.
                 path = consumer_id + '-' + situation_name
                 model = LSTMModel(path)
                 
-                pred_value = model.forward(horizon)
+                pd_last = self.get_last_records(consumer_id, situation_name)
+                pred_value = model(torch.tensor(pd_last),self.__horizon)
+                final = pred_value.flatten().detach().numpy()
+
+                # Persist the prediction
+                self.__persist_prediction(self, path, 'lstm', final[-self.__horizon:])
                 
                 self.__pred_count += 1
                 model_obj = self.__refs[consumer_id][situation_name]
                 model_obj.subscription.data(model_obj.subscription.data()+1)
 
-                return pred_value
+                return final[-self.__horizon:]
             else:
                 # There is no trained model at the moment. So, triggering a learning.
                 self.__background_train()
-                self.__moving_average(consumer_id, situation_name, horizon)
-                # What to return when there is no model to predict with?
-                # 
-                return None
+                result = self.__moving_average(consumer_id, situation_name, self.__horizon)
+                return result
         else:
             return None
 
@@ -226,6 +254,9 @@ class LSTMExecutor():
         reliance['mvavg'] = reliance['probability'].ewm(span=10).mean()
         # Prediction
         predictions = self.__predict_next(reliance['mvavg'].tolist().reverse(), horizon)
+        # Persist the prediction
+        self.__persist_prediction(self, consumer_id + '-' + situation_name, 'moving_avg', predictions)
+        
         return predictions
 
     def __predict_next(self, arr, horizon):
@@ -241,6 +272,14 @@ class LSTMExecutor():
     @fire_and_forget
     def __background_train(self, consumer_id, situation_name):
         self.__learn(consumer_id, situation_name)
+    
+    @fire_and_forget
+    def __persist_prediction(self, name, method, predictions):
+        self.__db.insert_one('infered_situations_rmse', {
+            'name': name, 
+            'method': method, 
+            'prediction': predictions
+        })
     
     def visualize(self, timeseries, model, train_size, x_train, x_test):
         with torch.no_grad():
@@ -302,6 +341,13 @@ class LSTMExecutor():
         self.__refs[sub[0]] = {
                 sub[1] : model_obj
             }
+
+        # Persist the model status
+        self.__db.insert_one('infered_situations_rmse', {
+            'consumer_id': sub[0], 
+            'situation': sub[1], 
+            'rmse': test_rmse
+        })
 
         # Updating the saved model
         temp_model.save_model()

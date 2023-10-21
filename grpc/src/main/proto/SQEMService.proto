@@ -303,6 +303,12 @@ message Statistic {
     repeated string haskeys = 10;
 }
 
+message InferenceStat {
+    string consumerId = 1;
+    au.coaas.cre.proto.ReasoningResponse response = 2;
+    Statistic stat = 3;
+}
+
 message SummarySLA
 {
     string csid = 1;
@@ -416,6 +422,7 @@ service SQEMService {
     rpc getContextAgeProfile(Empty) returns (ContextProfile);
     rpc getCacheLatenciesSummary(Empty) returns (SQEMResponse);
     rpc logCacheDecision (ContextCacheDecision) returns (Empty);
+    rpc logInferencePerformance (InferenceStat) returns (Empty);
     rpc getContextProfile(ContextProfileRequest) returns (ContextProfile);
     rpc getSituationProfile(ContextProfileRequest) returns (SituationProfile);
     rpc getQueryClassProfile (ContextProfileRequest) returns (QueryClassProfile);

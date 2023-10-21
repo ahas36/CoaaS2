@@ -4,6 +4,7 @@ import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cpree.proto.LearnedWeights;
 import au.coaas.cqc.proto.CQCServiceGrpc;
 import au.coaas.cqc.proto.RegisterState;
+import au.coaas.cre.proto.ReasoningResponse;
 import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.grpc.client.CQCChannel;
 import au.coaas.sqem.monitor.LogicalContextLevel;
@@ -366,6 +367,20 @@ public class PerformanceLogHandler {
         catch(SQLException ex){
             log.severe(ex.getMessage());
         }
+    }
+
+    // Record inferencing history
+    public static void inferenceHistory(ReasoningResponse request) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas_log");
+        MongoCollection<Document> collection = db.getCollection("inferenceHistory");
+
+        Document persRecord = new Document();
+        persRecord.put("confidence", request.getConfidence());
+        persRecord.put("situation", request.getSituationTitle());
+        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss").format(new java.util.Date()));
+
+        collection.insertOne(persRecord);
     }
 
     // Changes in refreshing schedulers

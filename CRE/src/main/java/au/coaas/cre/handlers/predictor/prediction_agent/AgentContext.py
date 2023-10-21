@@ -19,7 +19,8 @@ top_config = config['DEFAULT']
 db = MongoClient(top_config['ConnectionString'], top_config['DBName'])
 
 class AgentContext(Resource):
-    __executor = LSTMExecutor(db, top_config['Lookback'], top_config['Epochs'], top_config['Horizon'])
+    __executor = LSTMExecutor(db, top_config['Lookback'], top_config['Epochs'], 
+                              top_config['Horizon'], top_config['MinDataThreshold'])
 
     def get(self):
         try:     

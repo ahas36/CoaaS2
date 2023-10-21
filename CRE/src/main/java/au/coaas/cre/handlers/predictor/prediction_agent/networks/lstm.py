@@ -51,7 +51,7 @@ class LSTMExecutor():
     __ready = False
     __pred_count = 0
 
-    def __init__(self, db, lookback, epochs, horizon):
+    def __init__(self, db, lookback, epochs, horizon, min_data):
         print('Creating new LSTM models for each consumer-event pairs.')
         self.__db = db
         self.__refs = {}
@@ -60,6 +60,7 @@ class LSTMExecutor():
         self.__lookback = lookback
         self.__epochs = epochs
         self.__horizon = horizon
+        self.__min_data = min_data
 
         try:
             self.init_training()
@@ -155,6 +156,10 @@ class LSTMExecutor():
         self.__wipset.add(path)
 
         timeseries = self.get_dataset_mongo(consumer_id, situation_name)
+
+        if(len(timeseries)<self.__min_data):
+            self.__wipset.remove(path)
+            return
 
         # Initial train-test split
         train_size = int(len(timeseries) * 0.9) 

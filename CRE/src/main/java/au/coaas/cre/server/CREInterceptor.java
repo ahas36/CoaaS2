@@ -1,5 +1,6 @@
 package au.coaas.cre.server;
 
+import au.coaas.sqem.proto.InferenceStat;
 import io.grpc.*;
 import au.coaas.cre.proto.CREResponse;
 import au.coaas.cre.proto.ReasoningResponse;
@@ -51,10 +52,14 @@ public class CREInterceptor implements ServerInterceptor {
                             = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
                     for(ReasoningResponse reasonRes : res.getBodyList()){
-                        sqemStub.logPerformanceData (Statistic.newBuilder()
-                                .setMethod(method).setTime(responseTime)
-                                .setStatus(res.getStatus()).setIdentifier(reasonRes.getSituationTitle())
-                                .build());
+                        sqemStub.logInferencePerformance (
+                                InferenceStat.newBuilder()
+                                        .setResponse(reasonRes)
+                                        .setStat(Statistic.newBuilder()
+                                                .setMethod(method).setTime(responseTime)
+                                                .setStatus(res.getStatus()).setIdentifier(reasonRes.getSituationTitle())
+                                                .build())
+                                        .build());
                     }
 
                     break;

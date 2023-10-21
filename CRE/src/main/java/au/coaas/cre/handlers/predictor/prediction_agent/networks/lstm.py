@@ -275,7 +275,7 @@ class LSTMExecutor():
     
     @fire_and_forget
     def __persist_prediction(self, name, method, predictions):
-        self.__db.insert_one('infered_situations_rmse', {
+        self.__db.insert_one('prediction_history', {
             'name': name, 
             'method': method, 
             'prediction': predictions

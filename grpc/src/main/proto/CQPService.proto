@@ -273,6 +273,7 @@ message ContextFunction {
 message SituationFunctionResponse {
     SituationFunction sFunction = 1;
     string status = 2;
+    string regConsumerId = 3;
 }
 
 message SituationFunction {

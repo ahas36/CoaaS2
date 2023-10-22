@@ -11,6 +11,7 @@ import "CQPService.proto";
 message CREResponse {
     string status = 1;
     repeated ReasoningResponse body = 2;
+    string meta = 3;
 }
 
 message CRESituation {
@@ -27,6 +28,7 @@ message SituationInferenceRequest
 {
     repeated au.coaas.cqp.proto.SituationDescription situationDescriptions = 1;
     repeated AttributeValue attributeValues = 2;
+    string consumerId = 3;
 }
 
 message AttributeValue {

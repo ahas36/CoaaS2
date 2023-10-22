@@ -21,6 +21,7 @@ public class SituationReasoner {
     public static CREResponse infer(SituationInferenceRequest request) {
 
         CREResponse.Builder response = CREResponse.newBuilder();
+        response.setMeta(request.getConsumerId());
 
         try {
             for (SituationDescription situationDescription : request.getSituationDescriptionsList()) {

@@ -52,7 +52,7 @@ public class CDQLExecutor {
                 ContextFunction cFunction = cdqlConstruct.getFunction();
                 if(cFunction.getType().equals(ContextFunctionType.SITUATION))
                 {
-                    return SituationRegistrationManager.register(request.getCdql(), cFunction, request.getQueryid());
+                    return SituationRegistrationManager.register(request.getCdql(), request.getToken(), cFunction, request.getQueryid());
                 }else {
                     return null;
                 }

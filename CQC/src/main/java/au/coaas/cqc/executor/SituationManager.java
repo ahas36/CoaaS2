@@ -2,6 +2,7 @@ package au.coaas.cqc.executor;
 
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 import au.coaas.cqc.proto.*;
+import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
 import au.coaas.cqp.proto.*;
@@ -14,14 +15,12 @@ import au.coaas.cre.proto.SituationRequest;
 import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.grpc.client.*;
 
-import au.coaas.sqem.proto.Situation;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
-import au.coaas.sqem.proto.CdqlSubscription;
-import au.coaas.sqem.proto.SituationFunctionRequest;
+import au.coaas.sqem.proto.*;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.Gson;
 import org.joda.time.Period;
 import org.joda.time.DateTime;
@@ -721,7 +720,14 @@ public class SituationManager {
             return (new JSONObject()).put("value", res);
         }
         catch (IOException | NumberFormatException | JSONException e) {
-            Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity);
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setUsername(subID).build());
+
+            // TODO: What to do when there is no consumer found for the given subscription ID?
+            JSONObject sla = new JSONObject(slaMessage.getBody());
+            Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity,
+                    sla.getJSONObject("_id").getString("$oid"));
 
             if (execute.toString().trim().startsWith("[")) {
                 return (new JSONObject()).put("results",

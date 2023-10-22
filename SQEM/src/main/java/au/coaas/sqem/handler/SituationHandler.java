@@ -64,7 +64,11 @@ public class SituationHandler {
 
             MongoCollection<Document> collection = db.getCollection("situations");
 
+            JSONObject sla = new JSONObject(ContextConsumerHandler.getConsumerSLA(request.getToken(), true));
+            String consumerId = sla.getJSONObject("_id").getString("$oid");
+
             Document doc = new Document("title", request.getTitle())
+                    .append("consumerId", consumerId)
                     .append("raw", request.getRaw())
                     .append("parsed", JsonFormat.printer().print(request.getSFunction()));
 
@@ -96,6 +100,7 @@ public class SituationHandler {
                 JsonFormat.parser().ignoringUnknownFields().merge(res.getString("parsed"), builder);
                 response.setStatus("200");
                 response.setSFunction(builder.build());
+                response.setRegConsumerId(res.getString("consumerId"));
             }
             else response.setStatus("404");
         } catch (Exception e) {

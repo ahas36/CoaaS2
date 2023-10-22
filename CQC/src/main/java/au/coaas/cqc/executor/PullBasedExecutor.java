@@ -224,7 +224,11 @@ public class PullBasedExecutor {
                 String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
 
                 if (contextService != null) {
-                    ContextRequest.Builder contextRequest = generateContextRequest(entity, query, ce, 0, 0, complexity);
+                    SQEMResponse slaObj = slaMessage.get();
+                    JSONObject returned = new JSONObject(slaObj.getBody());
+                    String consumerId = returned.getJSONObject("_id").getString("$oid");
+
+                    ContextRequest.Builder contextRequest = generateContextRequest(entity, query, ce, 0, 0, complexity, consumerId);
                     List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
 
                     String key = null;
@@ -319,7 +323,7 @@ public class PullBasedExecutor {
                         else {
                             // Has been a stream read. So, retrieving from the context storage.
                             AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit,
-                                    ((SimpleContainer) cacheResult.getValue()).getContextService(), complexity);
+                                    ((SimpleContainer) cacheResult.getValue()).getContextService(), complexity, consumerId);
                             ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
 
                             if(cacheEnabled){
@@ -394,7 +398,8 @@ public class PullBasedExecutor {
                         }
                     }
 
-                    AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, null, complexity);
+                    AbstractMap.SimpleEntry rex = executeSQEMQuery(entity, query, ce, page, limit, null,
+                            complexity, sla.getJSONObject("_id").getString("$oid"));
                     ce.put(entity.getEntityID(), (JSONObject) rex.getKey());
                     if(consumerQoS == null) {
                         consumerQoS = sla.getJSONObject("sla").getJSONObject("qos");
@@ -417,12 +422,20 @@ public class PullBasedExecutor {
             result.put(entity, ce.get(entity));
         });
 
+        String consumerId = null;
+        if(!query.getSelect().getSelectFunctionsList().isEmpty()) {
+            SQEMResponse slaObj = slaMessage.get();
+            JSONObject returned = new JSONObject(slaObj.getBody());
+            consumerId = returned.getJSONObject("_id").getString("$oid");
+        }
+
+        String finalConsumerId = consumerId;
         query.getSelect().getSelectFunctionsList().parallelStream().forEach((fCall) -> {
             if (fCall.getFunctionName().equals("avg") || fCall.getFunctionName().equals("cluster")) {
-                result.put(fCall.getFunctionName(), executeFunctionCall(fCall, ce, query, complexity));
+                result.put(fCall.getFunctionName(), executeFunctionCall(fCall, ce, query, complexity, finalConsumerId));
             } else {
                 // All other context functions that are not either "avg" or "cluster".
-                Object execute = executeFunctionCall(fCall, ce, query, complexity);
+                Object execute = executeFunctionCall(fCall, ce, query, complexity, finalConsumerId);
                 result.put(fCall.getFunctionName(), execute);
 //              if (execute.trim().startsWith("[")) {
 //                  result.put(fCall.getFunctionName(), new JSONArray(execute.replaceAll("\"", "")));
@@ -998,7 +1011,7 @@ public class PullBasedExecutor {
         return(c * r);
     }
 
-    public static Object executeFunctionCall(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query, double complexity) {
+    public static Object executeFunctionCall(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query, double complexity, String consumerId) {
         FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(fCall.getFunctionName());
         fCallTemp.addAllSubItems(fCall.getSubItemsList());
 
@@ -1026,7 +1039,7 @@ public class PullBasedExecutor {
                         break;
                     case FUNCTION_CALL:
                         fCallTemp.addArguments(Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON)
-                                .setStringValue(executeFunctionCall(argument.getFunctioncall(), ce, query, complexity).toString()));
+                                .setStringValue(executeFunctionCall(argument.getFunctioncall(), ce, query, complexity, consumerId).toString()));
                         break;
                     default:
                         fCallTemp.addArguments(argument);
@@ -1041,9 +1054,9 @@ public class PullBasedExecutor {
         } else if (fCall.getFunctionName().equals("now")) {
             return now(fCallTemp.build());
         } else if (fCall.getFunctionName().equals("embed")) {
-            return embedSituation(fCallTemp.build(), ce, query, complexity);
+            return embedSituation(fCallTemp.build(), ce, query, complexity, consumerId);
         } else {
-            return executeSituationFunction(fCallTemp.build(), complexity);
+            return executeSituationFunction(fCallTemp.build(), complexity, consumerId);
 
 //            if (execute.trim().startsWith("[")) {
 //                return new JSONArray(execute.replaceAll("\"", ""));
@@ -1143,7 +1156,8 @@ public class PullBasedExecutor {
         return objectResult;
     }
 
-    private static JSONObject embedSituation(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query, double complexity) {
+    private static JSONObject embedSituation(FunctionCall fCall, Map<String, JSONObject> ce, CDQLQuery query,
+                                             double complexity, String consumerId) {
 
         JSONObject jo = new JSONObject(fCall.getArguments(0).getStringValue());
         JSONArray entities = jo.getJSONArray("results");
@@ -1160,7 +1174,7 @@ public class PullBasedExecutor {
                 fCallTemp.addSubItems(names[j]);
             }
             fCallTemp.addArguments(Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(entity.toString()));
-            entity.put(functionName, executeFunctionCall(fCallTemp.build(), ce, query, complexity));
+            entity.put(functionName, executeFunctionCall(fCallTemp.build(), ce, query, complexity, consumerId));
         }
 
         JSONObject objectResult = new JSONObject();
@@ -1233,7 +1247,7 @@ public class PullBasedExecutor {
         return jo2;
     }
 
-    public static Object executeSituationFunction(FunctionCall fCall, double complexity) {
+    public static Object executeSituationFunction(FunctionCall fCall, double complexity, String consumerId) {
         // Checking cache for the situation
         String situId = Utilities.combineHashKeys(fCall.getArgumentsList().stream().map(x -> {
             // This is a quick fix to defining a hashkey for the situations.
@@ -1370,6 +1384,7 @@ public class PullBasedExecutor {
                 }
                 itemResult.put("attributeValues", avs);
                 try {
+                    request.setConsumerId(consumerId);
                     CREResponse creResponse = creStub.infer(request.build());
                     if (fCall.getSubItemsList().isEmpty()) {
                         JSONObject jo = new JSONObject();
@@ -1726,7 +1741,8 @@ public class PullBasedExecutor {
     }
 
     public static ContextRequest.Builder generateContextRequest(ContextEntity targetEntity, CDQLQuery query,
-                                                                Map<String, JSONObject> ce, int page, int limit, double complexity) {
+                                                                Map<String, JSONObject> ce, int page, int limit,
+                                                                double complexity, String consumerId) {
         ArrayList<CdqlConditionToken> list = new ArrayList(targetEntity.getCondition().getRPNConditionList());
 
         for (int i = 0; i < list.size(); i++) {
@@ -1795,7 +1811,7 @@ public class PullBasedExecutor {
                         }
                     }
                     if (requiredArgs == 0) {
-                        String val = executeFunctionCall(fCallTemp.build(), ce, query, complexity).toString();
+                        String val = executeFunctionCall(fCallTemp.build(), ce, query, complexity, consumerId).toString();
                         CdqlConstantConditionTokenType constantType = getConstantType(val);
                         CdqlConditionToken constantToken = CdqlConditionToken.newBuilder().setType(CdqlConditionTokenType.Constant)
                                 .setStringValue(val)
@@ -1859,16 +1875,17 @@ public class PullBasedExecutor {
     }
 
     public static JSONObject executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
-                                                           Map<String, JSONObject> ce, int page, int limit, double complexity) {
-        AbstractMap.SimpleEntry res = executeSQEMQuery(targetEntity, query, ce, page, limit, null, complexity);
+                                              Map<String, JSONObject> ce, int page, int limit,
+                                              double complexity, String consumerId) {
+        AbstractMap.SimpleEntry res = executeSQEMQuery(targetEntity, query, ce, page, limit, null, complexity, consumerId);
         return (JSONObject) res.getKey();
     }
 
     private static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
                                                Map<String, JSONObject> ce, int page, int limit,
-                                               String contextService, double complexity) {
+                                               String contextService, double complexity, String consumerId) {
 
-        ContextRequest.Builder cr = generateContextRequest(targetEntity, query, ce, page, limit, complexity);
+        ContextRequest.Builder cr = generateContextRequest(targetEntity, query, ce, page, limit, complexity, consumerId);
 
         if(contextService != null) {
             JSONObject cs = new JSONObject(contextService);

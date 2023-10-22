@@ -1,5 +1,6 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.sqem.proto.AuthToken;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.RegisterContextConsumerRequest;
@@ -23,7 +24,12 @@ public class ContextConsumerHandler {
     private static final Logger log = Logger.getLogger(ContextConsumerHandler.class.getName());
 
     private static final BasicDBObject project = new BasicDBObject(){{
+        put("_id", true);
         put("sla", true);
+    }};
+
+    private static final BasicDBObject idProject = new BasicDBObject(){{
+        put("_id", true);
     }};
 
     public static SQEMResponse register(RegisterContextConsumerRequest registerRequest) {
@@ -100,30 +106,27 @@ public class ContextConsumerHandler {
         }
     }
 
-    public static SQEMResponse retrieveSLA(String authToken){
+    public static SQEMResponse retrieveSLA(AuthToken authToken){
         try{
-            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-            MongoDatabase db = mongoClient.getDatabase("coaas");
-
-            MongoCollection<Document> tokenCollection = db.getCollection("consumerToken");
-            Document value = tokenCollection.find(Filters.and(
-                    Filters.eq("status", true),
-                    Filters.eq("token", authToken)
-            )).first();
-
-            if(value != null){
-                MongoCollection<Document> consumerCollection = db.getCollection("contextConsumer");
-                String id = value.getString("consumerId");
-                Document sla = consumerCollection.find(Filters.and(
-                        Filters.eq("_id", new ObjectId(id)),
-                        Filters.eq("status", true)
-                )).projection(project).first();
-
-                return SQEMResponse.newBuilder().setStatus("200").setBody(sla.toJson()).build();
+            String token;
+            if(!authToken.getUsername().equals(null)) {
+                // SLA retrieval using subscription Id
+                SQEMResponse res = SubscriptionHandler.getSubscription(authToken.getUsername());
+                if(!res.getStatus().equals("200"))
+                    return SQEMResponse.newBuilder().setStatus("404")
+                        .setBody("Couldn't find an consumer by the subscription Id.").build();
+                token = res.getMeta();
+            }
+            else token = authToken.getToken();
+            // SLA retrieval using auth token.
+            String json = getConsumerSLA(token, false);
+            if(json != null){
+                return SQEMResponse.newBuilder()
+                        .setStatus("200").setBody(json).build();
             }
 
-            return SQEMResponse.newBuilder().setStatus("404").setBody("Couldn't find an consumer by the token").build();
-
+            return SQEMResponse.newBuilder().setStatus("404")
+                    .setBody("Couldn't find an consumer by the token").build();
         }
         catch(Exception e){
             JSONObject body = new JSONObject();
@@ -132,5 +135,32 @@ public class ContextConsumerHandler {
 
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }
+    }
+
+    protected static String getConsumerSLA(String authToken, boolean idOnly) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas");
+
+        MongoCollection<Document> tokenCollection = db.getCollection("consumerToken");
+        Document value = tokenCollection.find(Filters.and(
+                Filters.eq("status", true),
+                Filters.eq("token", authToken)
+        )).first();
+
+        if(value != null){
+            MongoCollection<Document> consumerCollection = db.getCollection("contextConsumer");
+            String id = value.getString("consumerId");
+            FindIterable<Document> slaSet = consumerCollection.find(Filters.and(
+                    Filters.eq("_id", new ObjectId(id)),
+                    Filters.eq("status", true)
+            ));
+
+            Document sla;
+            if(idOnly) sla = slaSet.projection(idProject).first();
+            else sla = slaSet.projection(project).first();
+
+            return sla.toJson();
+        }
+        return null;
     }
 }

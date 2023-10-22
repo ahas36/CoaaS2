@@ -1,10 +1,12 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cqp.proto.SituationFunction;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextServiceRequest;
 import au.coaas.sqem.proto.RegisterContextServiceRequest;
 import au.coaas.sqem.proto.RegisterPushQuery;
 import au.coaas.sqem.proto.SQEMResponse;
+import com.google.protobuf.util.JsonFormat;
 import com.mongodb.BasicDBObject;
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
@@ -14,6 +16,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -99,6 +102,37 @@ public class SubscriptionHandler {
             body.put("cause",e.getCause().toString());
             log.severe(e.getMessage());
             return RegisterPushQuery.newBuilder().setStatus("500").build();
+        }
+    }
+
+    public static SQEMResponse getSubscription(String subId) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas_subscription");
+
+            MongoCollection<Document> collection = db.getCollection("subscriptions");
+            BasicDBObject query = new BasicDBObject() {{
+                put("_id", new ObjectId(subId));
+            }};
+
+            Document res = collection.find(query).first();
+            SQEMResponse.Builder response = SQEMResponse.newBuilder();
+
+            if(res != null){
+                response.setMeta(res.getString("token"));
+                response.setBody(res.toJson());
+                response.setStatus("200");
+
+            }
+            else response.setStatus("404");
+
+            return response.build();
+        } catch (Exception e) {
+            JSONObject body = new JSONObject();
+            body.put("message",e.getMessage());
+            body.put("cause",e.getCause().toString());
+            log.severe(e.getMessage());
+            return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }
     }
 }

@@ -272,7 +272,8 @@ message StorageRoutine
 message RegisterSituationRequest {
     string raw = 1;
     string title = 2;
-    au.coaas.cqp.proto.SituationFunction sFunction = 3;
+    string token = 3;
+    au.coaas.cqp.proto.SituationFunction sFunction = 4;
 }
 
 message PubSubMessage {

@@ -370,15 +370,16 @@ public class PerformanceLogHandler {
     }
 
     // Record inferencing history
-    public static void inferenceHistory(ReasoningResponse request) {
+    public static void inferenceHistory(ReasoningResponse request, String consumerId) {
         MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
-        MongoDatabase db = mongoClient.getDatabase("coaas_log");
-        MongoCollection<Document> collection = db.getCollection("inferenceHistory");
+        MongoDatabase db = mongoClient.getDatabase("coaas");
+        MongoCollection<Document> collection = db.getCollection("infered_situations");
 
         Document persRecord = new Document();
-        persRecord.put("confidence", request.getConfidence());
-        persRecord.put("situation", request.getSituationTitle());
-        persRecord.put("created", new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss").format(new java.util.Date()));
+        persRecord.put("consumerId", consumerId);
+        persRecord.put("probability", request.getConfidence());
+        persRecord.put("situation_name", request.getSituationTitle());
+        persRecord.put("time", new SimpleDateFormat("yyyy.MM.dd-HH.mm.ss").format(new java.util.Date()));
 
         collection.insertOne(persRecord);
     }

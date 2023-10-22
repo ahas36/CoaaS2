@@ -500,7 +500,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     public void logInferencePerformance(au.coaas.sqem.proto.InferenceStat request,
                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
         try {
-            PerformanceLogHandler.inferenceHistory(request.getResponse());
+            PerformanceLogHandler.inferenceHistory(request.getResponse(), request.getConsumerId());
             PerformanceLogHandler.coassPerformanceRecord(request.getStat());
             responseObserver.onNext(Empty.newBuilder().build());
         } catch (Exception ex) {
@@ -673,7 +673,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     public void getConsumerSLA(au.coaas.sqem.proto.AuthToken request,
                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
         try {
-            responseObserver.onNext(ContextConsumerHandler.retrieveSLA(request.getToken()));
+            responseObserver.onNext(ContextConsumerHandler.retrieveSLA(request));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

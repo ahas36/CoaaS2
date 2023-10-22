@@ -54,6 +54,7 @@ public class CREInterceptor implements ServerInterceptor {
                     for(ReasoningResponse reasonRes : res.getBodyList()){
                         sqemStub.logInferencePerformance (
                                 InferenceStat.newBuilder()
+                                        .setConsumerId(res.getMeta())
                                         .setResponse(reasonRes)
                                         .setStat(Statistic.newBuilder()
                                                 .setMethod(method).setTime(responseTime)

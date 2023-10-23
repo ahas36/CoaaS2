@@ -176,6 +176,7 @@ message ContextEntity {
     string entityID = 2;
     Condition condition = 3;
     map<string,string> contextAttributes = 4;
+    string sub = 5;
 }
 
 enum TimeUnit {

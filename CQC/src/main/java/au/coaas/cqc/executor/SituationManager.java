@@ -65,8 +65,8 @@ public class SituationManager {
                     .setKey(persEvent.getString("key"))
                     .setProviderID(persEvent.has("providerID") ?
                             persEvent.getString("providerID") : eventRequest.getProvider())
+                    .setSubscriptionID(persEvent.getString("subscriptionID"))
                     // Following are commented because they should be null.
-                    // .setSubscriptionID(persEvent.getString("subscriptionID"))
                     // .setSubscriptionValue(persEvent.getString("subscriptionValue"))
                     .setTimestamp(persEvent.getString("timestamp"))
                     .setContextEntity(mapper.readValue(persEvent.getJSONObject("contextEntity").toString(),
@@ -100,7 +100,7 @@ public class SituationManager {
 
                 CdqlResponse pullResponse = PullBasedExecutor.executePullBaseQuery(subscription.getQuery(),
                         subscription.getToken(), -1, -1, subscription.getQueryId(),
-                        subscription.getCriticality(), subscription.getComplexity(), null);
+                        subscription.getCriticality(), subscription.getComplexity(), null, null);
 
                 String body = pullResponse.getBody();
                 JSONObject jsonObject = new JSONObject(body);
@@ -183,13 +183,21 @@ public class SituationManager {
     private static List<SubscribedQuery> getSubscribedQueries(ContextEvent event) throws IOException {
         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-        CdqlSubscription subs_res = sqemStub.getRelatedSubscriptions(Situation.newBuilder()
-                .setContextEntity(event.getContextEntity())
-                .setProviderID(event.getProviderID())
-                // Following are commented because they should be null.
-                // .setSubscriptionID(event.getSubscriptionID())
-                // .setSubscriptionValue(event.getSubscriptionValue())
-                .setTimestamp(event.getTimestamp()).build());
+
+        CdqlSubscription subs_res;
+        if(event.getSubscriptionID() != null)
+            subs_res = sqemStub.getRelatedSubscriptions(Situation.newBuilder()
+                    .setSubscriptionID(event.getSubscriptionID())
+                    .setTimestamp(event.getTimestamp()).build());
+        else {
+            subs_res = sqemStub.getRelatedSubscriptions(Situation.newBuilder()
+                    .setContextEntity(event.getContextEntity())
+                    .setProviderID(event.getProviderID())
+                    // Following are commented because they should be null.
+                    // .setSubscriptionID(event.getSubscriptionID())
+                    // .setSubscriptionValue(event.getSubscriptionValue())
+                    .setTimestamp(event.getTimestamp()).build());
+        }
 
         if(subs_res.getStatus().equals("200")){
             JSONArray subs = new JSONArray(subs_res.getBody());

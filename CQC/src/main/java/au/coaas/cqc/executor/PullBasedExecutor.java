@@ -96,7 +96,7 @@ public class PullBasedExecutor {
     // This method executes the query plan for pull based queries
     public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit,
                                                     String queryId, String criticality, double complexity,
-                                                    List<ContextEntity> subEntities) throws Exception{
+                                                    List<ContextEntity> subEntities, String subId) throws Exception{
 
         // Initialize values
         Map<String, JSONObject> ce = new HashMap<>();
@@ -298,6 +298,7 @@ public class PullBasedExecutor {
                         Optional<ContextEntity> tempEnt = subEntities.stream()
                                 .filter(v -> v.getEntityID().equals(entityID)).findFirst();
                         if(tempEnt.isPresent()) subscribeEntity = tempEnt.get();
+                        subscribeEntity = subscribeEntity.toBuilder().setSub(subId).build();
                     }
 
                     AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,

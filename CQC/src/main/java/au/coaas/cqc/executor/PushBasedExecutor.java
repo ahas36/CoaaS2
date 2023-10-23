@@ -108,6 +108,7 @@ public class PushBasedExecutor {
                     break;
                 }
                 default: {
+                    // Any other function other than aggregate functions
                     try {
                         SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                                 = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
@@ -171,36 +172,35 @@ public class PushBasedExecutor {
                 cseCondition.addAllRPNCondition(contextEntity.get().getCondition().getRPNConditionList());
                 csEntity.setCondition(cseCondition.build());
 
-//                Set<String> cseAttributes = new HashSet<>();
-//                if (relatedAttributes != null) {
-//                    cseAttributes.addAll(relatedAttributes.getValueList());
-//                }
-//                cseAttributes.addAll(contextEntity.get().getContextAttributesMap().keySet());
-//
-//                for (FunctionCall functionCall : functionCalls) {
-//                    if (situations.containsKey(functionCall.getFunctionName())) {
-//                        SituationFunction situ = situations.get(functionCall.getFunctionName());
-//                        for (Operand argument : functionCall.getArgumentsList()) {
-//                            if (argument.getType() == OperandType.CONTEXT_ENTITY && argument.getStringValue().equals(entityID)) {
-//                                String entityType = contextEntity.get().getType().getType();
-//                                Map.Entry<String, ContextEntityType> findEntity = situ.getRelatedEntitiesMap().entrySet().stream()
-//                                        .filter(p -> p.getValue().toString().equals(entityType))
-//                                        .findFirst().get();
-//                                String prefix = findEntity.getKey();
-//                                for (String attr : situ.getAllAttributesList()) {
-//                                    if (attr.startsWith(prefix + "dot")) {
-//                                        cseAttributes.add(attr.substring((prefix + "dot").length()));
-//                                    }
-//                                }
-//                                situ.getRelatedEntitiesMap().remove(findEntity.getKey());
-//                            }
-//
-//                        }
-//                    }
-//                }
+                // This section was commented out before/
+                Set<String> cseAttributes = new HashSet<>();
+                if (relatedAttributes != null) {
+                    cseAttributes.addAll(relatedAttributes.getValueList());
+                }
+                cseAttributes.addAll(contextEntity.get().getContextAttributesMap().keySet());
 
-//                csEntity.putAllContextAttributes(new ArrayList<>(cseAttributes));
-                // Uncomment above, and comment the below line, if there is anything wrong with attribute management
+                for (FunctionCall functionCall : functionCalls) {
+                    // Checking if the function is a situation function.
+                    if (situations.containsKey(functionCall.getFunctionName())) {
+                        SituationFunction situ = situations.get(functionCall.getFunctionName());
+                        for (Operand argument : functionCall.getArgumentsList()) {
+                            if (argument.getType() == OperandType.CONTEXT_ENTITY && argument.getStringValue().equals(entityID)) {
+                                String entityType = contextEntity.get().getType().getType();
+                                Map.Entry<String, ContextEntityType> findEntity = situ.getRelatedEntitiesMap().entrySet().stream()
+                                        .filter(p -> p.getValue().toString().equals(entityType))
+                                        .findFirst().get();
+                                String prefix = findEntity.getKey();
+                                for (String attr : situ.getAllAttributesList()) {
+                                    if (attr.startsWith(prefix + "dot")) {
+                                        cseAttributes.add(attr.substring((prefix + "dot").length()));
+                                    }
+                                }
+                                situ.getRelatedEntitiesMap().remove(findEntity.getKey());
+                            }
+                        }
+                    }
+                }
+                // Above section was commented out before.
 
                 csEntity.putAllContextAttributes(contextEntity.get().getContextAttributesMap());
                 relateCdqlSubscriptionEntities.add(csEntity.build());
@@ -256,7 +256,8 @@ public class PushBasedExecutor {
             Executors.newCachedThreadPool().execute(() -> {
                 try {
                     PullBasedExecutor.executePullBaseQuery(query, token, 0, -1,
-                            queryId, criticality, complexity, relateCdqlSubscriptionEntities);
+                            queryId, criticality, complexity, relateCdqlSubscriptionEntities,
+                            sub_id.getMessage());
                 } catch (Exception e) {
                     log.severe("Error occured when executing the push query: " + e.getMessage());
                     log.info(e.getStackTrace().toString());
@@ -418,7 +419,7 @@ public class PushBasedExecutor {
             CdqlResponse executePullBaseQuery = PullBasedExecutor.executePullBaseQuery(
                     subscription.getQuery(), subscription.getToken(),-1, -1,
                     subscription.getQueryId(), subscription.getCriticality(),
-                    subscription.getComplexity(), null);
+                    subscription.getComplexity(), null, subscription.getId());
 
             if(executePullBaseQuery.getStatus().equals("200")){
                 JSONObject jsonObject = new JSONObject(executePullBaseQuery.getBody());

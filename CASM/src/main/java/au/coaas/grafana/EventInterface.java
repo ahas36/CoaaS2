@@ -7,6 +7,7 @@ import au.coaas.grpc.client.CQCChannel;
 import au.coaas.situations.KafkaMessenger;
 
 import javax.ws.rs.*;
+import javax.ws.rs.Path;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;

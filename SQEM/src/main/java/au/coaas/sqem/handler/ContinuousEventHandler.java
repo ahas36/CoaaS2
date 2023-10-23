@@ -48,17 +48,23 @@ public class ContinuousEventHandler {
             // String attributes = "[\"" + Joiner.on("\",\"").join(keySet) + "\",\"*\"]";
 
             Document matchElems = new Document();
-            matchElems.put("type.type", event.getContextEntity().getType().getType());
-            matchElems.put("type.vocabURI", event.getContextEntity().getType().getVocabURI());
-            matchElems.put("condition.RPNCondition",
-                    Utilty.messageToJsonArray(event.getContextEntity()
-                            .getCondition().getRPNConditionList()));
-
-            Document relEntities = new Document();
-            relEntities.put("$elemMatch", matchElems);
-
             Document mongoQuery = new Document();
-            mongoQuery.put("relatedEntities", relEntities);
+            if(event.getSubscriptionID() != null) {
+                mongoQuery.put("_id", event.getSubscriptionID());
+            }
+            else {
+                matchElems.put("type.type", event.getContextEntity().getType().getType());
+                matchElems.put("type.vocabURI", event.getContextEntity().getType().getVocabURI());
+                matchElems.put("condition.RPNCondition",
+                        Utilty.messageToJsonArray(event.getContextEntity()
+                                .getCondition().getRPNConditionList()));
+
+                Document relEntities = new Document();
+                relEntities.put("$elemMatch", matchElems);
+
+                mongoQuery.put("relatedEntities", relEntities);
+            }
+
             mongoQuery.put("active", true);
 
             Document projection = new Document();

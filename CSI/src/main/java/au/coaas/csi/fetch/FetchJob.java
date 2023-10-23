@@ -245,6 +245,7 @@ public class FetchJob implements Job {
                             .setKey(entId)
                             .setTimestamp(String.valueOf(System.currentTimeMillis()))
                             .setProviderID(cpId)
+                            .setSubscriptionID(subEnt.getSub()) // Subscription Id
                             .setContextEntity(subEnt) // Context entity
                             .setAttributes(response.toString()) // JSON attribute values from the retrieval
                             .build());
@@ -253,9 +254,11 @@ public class FetchJob implements Job {
                     // Generic event creation for all subscriptions.
                     HashSet<ContextEntity> ents = monitored.get(entId);
                     for(ContextEntity ent : ents) {
-                        sendEvent(ContextEvent.newBuilder().setKey(entId)
+                        sendEvent(ContextEvent.newBuilder()
+                                .setKey(entId)
                                 .setTimestamp(String.valueOf(System.currentTimeMillis()))
                                 .setProviderID(cpId)
+                                .setSubscriptionID(subEnt.getSub()) // Subscription Id
                                 .setContextEntity(ent) // Context entity
                                 .setAttributes(response.toString()) // JSON attribute values from the retrieval
                                 .build());

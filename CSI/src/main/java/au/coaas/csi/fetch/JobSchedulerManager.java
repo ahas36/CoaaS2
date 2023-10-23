@@ -109,6 +109,7 @@ public class JobSchedulerManager {
 
         if(cs.getTimes() < 1){
             jobDataMap.put("subscriptionEntity", JsonFormat.printer().print(cs.getSubEntity()));
+            jobDataMap.put("subId", cs.getSubEntity().getSub());
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
                     .withIdentity(jobId, "cs-fetch-trigger")
                     .forJob("fetch-job", "cs-fetch-job")

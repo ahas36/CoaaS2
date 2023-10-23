@@ -178,9 +178,11 @@ public class RetrievalManager {
             }
 
             // Creating event and context provider monitoring.
-            Executors.newCachedThreadPool().execute(() -> {
-                propagateChanges(subEnt, cpId, response);
-            });
+            if (subEnt != null) {
+                Executors.newCachedThreadPool().execute(() -> {
+                    propagateChanges(subEnt, cpId, response);
+                });
+            }
 
             SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
                     = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
@@ -235,6 +237,7 @@ public class RetrievalManager {
                             .setKey(entId)
                             .setTimestamp(String.valueOf(System.currentTimeMillis()))
                             .setProviderID(cpId)
+                            .setSubscriptionID(subEnt.getSub()) // Subscription Id
                             .setContextEntity(subEnt) // Context entity
                             .setAttributes(response.toString()) // JSON attribute values from the retrieval
                             .build());
@@ -246,6 +249,7 @@ public class RetrievalManager {
                         PushBasedExecutor.sendEvent(ContextEvent.newBuilder().setKey(entId)
                                 .setTimestamp(String.valueOf(System.currentTimeMillis()))
                                 .setProviderID(cpId)
+                                .setSubscriptionID(subEnt.getSub()) // Subscription Id
                                 .setContextEntity(ent) // Context entity
                                 .setAttributes(response.toString()) // JSON attribute values from the retrieval
                                 .build());

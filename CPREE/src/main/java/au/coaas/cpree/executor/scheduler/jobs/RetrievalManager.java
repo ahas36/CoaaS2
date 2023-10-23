@@ -163,6 +163,7 @@ public class RetrievalManager {
                             PushBasedExecutor.sendEvent(ContextEvent.newBuilder().setKey(hk)
                                     .setTimestamp(String.valueOf(System.currentTimeMillis()))
                                     .setProviderID(provider.getJSONObject("_id").getString("$oid"))
+                                    .setSubscriptionID(ent.getSub())
                                     .setContextEntity(ent) // Context entity
                                     .setAttributes(response.toString()) // JSON attribute values from the retrieval
                                     .build());

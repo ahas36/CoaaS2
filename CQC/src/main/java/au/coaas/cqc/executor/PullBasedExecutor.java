@@ -9,6 +9,7 @@ import au.coaas.cpree.proto.ContextRefreshRequest;
 
 import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.ConQEngHelper;
+import au.coaas.cqc.utils.ReturnType;
 import au.coaas.cqc.utils.enums.CacheLevels;
 
 import au.coaas.cre.proto.*;
@@ -38,6 +39,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
 
+import javax.naming.Context;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -93,13 +95,163 @@ public class PullBasedExecutor {
         return null;
     }
 
+    public static ReturnType getContextRequest(ContextEntity entity, CDQLQuery query, Map<String, JSONObject> ce,
+                                               double complexity, String consumerId) {
+        ContextRequest.Builder contextRequest = generateContextRequest(entity, query, ce, 0, 0, complexity, consumerId);
+        List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
+
+        String key = null;
+        String value = null;
+
+        LinkedHashMap<String,String> params = new LinkedHashMap();
+        List<String> operators = new ArrayList<>();
+
+        LinkedList<CdqlConditionTokenType> proceeded = new LinkedList<>();
+        for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
+            if(cdqlConditionToken.getType() != CdqlConditionTokenType.Operator){
+                proceeded.add(cdqlConditionToken.getType());
+            }
+
+            switch (cdqlConditionToken.getType()) {
+                case Attribute:
+                    key = cdqlConditionToken.getContextAttribute().getAttributeName();
+                    if (value != null) {
+                        params.put(key,value);
+                        key = null;
+                        value = null;
+                    }
+                    break;
+                case Constant:
+                    value = cdqlConditionToken.getStringValue();
+                    if(value.startsWith("{")){
+                        JSONObject valObj = new JSONObject(value);
+                        // TODO:
+                        // Should modify the following to converted to the defined unit of the Consumer SLA
+                        if(valObj.has("value"))
+                            value = valObj.get("value").toString();
+                    }
+                    if (key != null) {
+                        params.put(key,value);
+                        key = null;
+                    }
+                    value = null;
+                    break;
+                case Operator:
+                    int size = proceeded.size();
+                    if(size>=2){
+                        CdqlConditionTokenType opnd_1 = proceeded.get(size - 1);
+                        CdqlConditionTokenType opnd_2 = proceeded.get(size - 2);
+                        boolean ifAtt_1 = opnd_1 == CdqlConditionTokenType.Attribute || opnd_1 == CdqlConditionTokenType.Constant;
+                        boolean ifAtt_2 = opnd_2 == CdqlConditionTokenType.Attribute || opnd_2 == CdqlConditionTokenType.Constant;
+                        if(ifAtt_1 && ifAtt_2) {
+                            operators.add(cdqlConditionToken.getStringValue());
+                            proceeded.clear();
+                        }
+                    }
+            }
+        }
+        return new ReturnType(params, operators, rpnConditionList);
+    }
+
+    protected static AbstractMap.SimpleEntry<Boolean, Map<String, String>> processForContextService (Queue<CdqlConditionToken> rpnCondition, ContextEntity entity,
+                                                                                                     Map<String, JSONObject> ce) {
+        Map<String, String> terms = new HashMap<>();
+        while (rpnCondition.peek() != null) {
+            try {
+                CdqlConditionToken token = rpnCondition.poll();
+                if(token.getType().equals(CdqlConditionTokenType.Function)){
+                    // Skipping the conditional value
+                    rpnCondition.poll();
+                    // Skipping the operand
+                    rpnCondition.poll().getStringValue();
+                    continue;
+                }
+                String attributeName = token.getStringValue();
+                if (attributeName.equals("and") || attributeName.equals("or"))
+                    continue;
+
+                // Take only the identifier of the context attribute
+                // e.g., e1.attr1 --> key = attr1
+                String key = attributeName.replace(entity.getEntityID() + ".", "");
+                // Take the value on the right side of the operator
+                CdqlConditionToken valueToken = rpnCondition.poll();
+                String value = valueToken.getStringValue();
+                // e.g., "\"value"\" --> "value"
+                if (value.contains("\"")) {
+                    value = value.replaceAll("\"", "");
+                    String pathEncode = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.toString());
+                    // e.g., term <att1,"value">
+                    terms.put(key, pathEncode);
+                    // serviceURI = serviceURI.replace("{" + key + "}", pathEncode);
+                }
+                else if (value.contains("{")) { }
+                else if (valueToken.getType() != CdqlConditionTokenType.Constant && (ce.containsKey(value) || value.contains("."))) {
+                    // This step sees if the value of the condition is an attribute of another entity
+                    String valueEntityID = value.split("\\.")[0];
+                    String valueEntityBody = value.replace(valueEntityID + ".", "");
+                    Object get = null;
+                    if (valueEntityID.equals(valueEntityBody)) {
+                        get = ce.get(valueEntityID);
+                    } else {
+                        try {
+                            // What happens here is, the query contains a condition that compares that values of an existing entity.
+                            // So, this try to get the matched attribute (i.e., valueEntityBody) value from the 'ce'.
+                            get = Utilities.getValueOfJsonObject(ce.get(valueEntityID), valueEntityBody);
+                        } catch (Exception ex) {
+                            get = Utilities.getValueOfJsonObject(ce.get(valueEntityID).getJSONArray("results").getJSONObject(0), valueEntityBody);
+                        }
+                    }
+                    if (get instanceof JSONObject) {
+                        JSONObject tmp = (JSONObject) get;
+                        Set<String> keySet = tmp.keySet();
+                        if(keySet.contains("value")){
+                            Object subItemValue = tmp.get("value");
+                            if (!(subItemValue instanceof JSONObject)) {
+                                String pathEncode = URLEncoder.encode(subItemValue.toString(), java.nio.charset.StandardCharsets.UTF_8.toString());
+                                terms.put(key, pathEncode);
+                            }
+                        }
+                        else {
+                            for (String jsonKey : tmp.keySet()) {
+                                Object subItemValue = tmp.get(jsonKey);
+                                if (!(subItemValue instanceof JSONObject)) {
+                                    String pathEncode = URLEncoder.encode(subItemValue.toString(), java.nio.charset.StandardCharsets.UTF_8.toString());
+                                    terms.put(key + "." + jsonKey, pathEncode);
+                                }
+                            }
+                        }
+                    } else {
+                        String temp = String.valueOf(get).replaceAll("\"", "");
+                        String pathEncode = URLEncoder.encode(temp, java.nio.charset.StandardCharsets.UTF_8.toString());
+                        terms.put(key, pathEncode);
+                    }
+
+                } else {
+                    String pathEncode = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.toString());
+                    terms.put(key, pathEncode);
+                }
+                // This is the third part of the expression - Operator
+                // e.g., "=". This is only to skip to the next operand. Operator is not used here.
+                rpnCondition.poll();
+
+            } catch (Exception ex) {
+                Logger.getLogger(PullBasedExecutor.class
+                        .getName()).log(Level.SEVERE, null, ex);
+                JSONObject error = new JSONObject();
+                error.put("error", ex.getMessage());
+                ce.put(entity.getEntityID(), error);
+                return new AbstractMap.SimpleEntry(true,null);
+            }
+        }
+        return new AbstractMap.SimpleEntry(false,terms);
+    }
+
     // This method executes the query plan for pull based queries
     public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit,
                                                     String queryId, String criticality, double complexity,
-                                                    List<ContextEntity> subEntities, String subId) throws Exception{
-
+                                                    List<ContextEntity> subEntities, String subId, Map<String, JSONObject> resultDict) throws Exception{
         // Initialize values
-        Map<String, JSONObject> ce = new HashMap<>();
+        Map<String, JSONObject> ce = resultDict == null ? new HashMap<>() : resultDict;
         JSONObject consumerQoS = null;
 
         // Iterates over execution plan.
@@ -116,171 +268,24 @@ public class PullBasedExecutor {
         for (ListOfString entityList : aList) {
             // Second loop iterates over the entities in the dependent set.
             for (String entityID : entityList.getValueList()) {
+                // If the entity data has already been shared from the event processing.
+                if(ce.containsKey(entityID)) continue;
                 ContextEntity entity = query.getDefine().getDefinedEntitiesList().stream().filter(v -> v.getEntityID().equals(entityID)).findFirst().get();
                 // Here the entity ID is the aliase that is defined in the query. e.g., e1 in "define entity e1 is from swm:type1".
-
-                Queue<CdqlConditionToken> rpnCondition = new LinkedList<>(entity.getCondition().getRPNConditionList());
-
-                int i = 0;
-                Map<String, String> terms = new HashMap<>();
-                boolean errorDetected = false;
 
                 // Third loop iterates over the RPN Conditions of an entity
                 // This loop cleans the RPN Conditions to form that is in line with the rest of the logic.
                 // For example, {"unit":"km","value":2} is converted to 2000
-                while (rpnCondition.peek() != null) {
-                    try {
-                        CdqlConditionToken token = rpnCondition.poll();
-                        if(token.getType().equals(CdqlConditionTokenType.Function)){
-                            // Skipping the conditional value
-                            rpnCondition.poll();
-                            // Skipping the operand
-                            rpnCondition.poll().getStringValue();
-                            continue;
-                        }
-                        String attributeName = token.getStringValue();
-                        if (attributeName.equals("and") || attributeName.equals("or"))
-                            continue;
+                AbstractMap.SimpleEntry<Boolean, Map<String, String>> preResponse = processForContextService(new LinkedList<>(entity.getCondition().getRPNConditionList()), entity, ce);
 
-                        // Take only the identifier of the context attribute
-                        // e.g., e1.attr1 --> key = attr1
-                        String key = attributeName.replace(entity.getEntityID() + ".", "");
-                        // Take the value on the right side of the operator
-                        CdqlConditionToken valueToken = rpnCondition.poll();
-                        String value = valueToken.getStringValue();
-                        // e.g., "\"value"\" --> "value"
-                        if (value.contains("\"")) {
-                            value = value.replaceAll("\"", "");
-                            String pathEncode = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.toString());
-                            // e.g., term <att1,"value">
-                            terms.put(key, pathEncode);
-                            // serviceURI = serviceURI.replace("{" + key + "}", pathEncode);
-                        }
-                        else if (value.contains("{")) { }
-                        else if (valueToken.getType() != CdqlConditionTokenType.Constant && (ce.containsKey(value) || value.contains("."))) {
-                            // This step sees if the value of the condition is an attribute of another entity
-                            String valueEntityID = value.split("\\.")[0];
-                            String valueEntityBody = value.replace(valueEntityID + ".", "");
-                            Object get = null;
-                            if (valueEntityID.equals(valueEntityBody)) {
-                                get = ce.get(valueEntityID);
-                            } else {
-                                try {
-                                    // What happens here is, the query contains a condition that compares that values of an existing entity.
-                                    // So, this try to get the matched attribute (i.e., valueEntityBody) value from the 'ce'.
-                                    get = Utilities.getValueOfJsonObject(ce.get(valueEntityID), valueEntityBody);
-                                } catch (Exception ex) {
-                                    get = Utilities.getValueOfJsonObject(ce.get(valueEntityID).getJSONArray("results").getJSONObject(0), valueEntityBody);
-                                }
-                            }
-                            if (get instanceof JSONObject) {
-                                JSONObject tmp = (JSONObject) get;
-                                Set<String> keySet = tmp.keySet();
-                                if(keySet.contains("value")){
-                                    Object subItemValue = tmp.get("value");
-                                    if (!(subItemValue instanceof JSONObject)) {
-                                        String pathEncode = URLEncoder.encode(subItemValue.toString(), java.nio.charset.StandardCharsets.UTF_8.toString());
-                                        terms.put(key, pathEncode);
-                                    }
-                                }
-                                else {
-                                    for (String jsonKey : tmp.keySet()) {
-                                        Object subItemValue = tmp.get(jsonKey);
-                                        if (!(subItemValue instanceof JSONObject)) {
-                                            String pathEncode = URLEncoder.encode(subItemValue.toString(), java.nio.charset.StandardCharsets.UTF_8.toString());
-                                            terms.put(key + "." + jsonKey, pathEncode);
-                                        }
-                                    }
-                                }
-                            } else {
-                                String temp = String.valueOf(get).replaceAll("\"", "");
-                                String pathEncode = URLEncoder.encode(temp, java.nio.charset.StandardCharsets.UTF_8.toString());
-                                terms.put(key, pathEncode);
-                            }
-
-                        } else {
-                            String pathEncode = URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8.toString());
-                            terms.put(key, pathEncode);
-                        }
-                        // This is the third part of the expression - Operator
-                        // e.g., "=". This is only to skip to the next operand. Operator is not used here.
-                        rpnCondition.poll();
-
-                    } catch (Exception ex) {
-                        Logger.getLogger(PullBasedExecutor.class
-                                .getName()).log(Level.SEVERE, null, ex);
-                        JSONObject error = new JSONObject();
-                        error.put("error", ex.getMessage());
-                        ce.put(entity.getEntityID(), error);
-                        errorDetected = true;
-                        break;
-                    }
-                }
-
-                if (errorDetected) {
-                    break;
-                }
-
-                String contextService = ContextServiceDiscovery.discover(entity.getType(), terms.keySet());
+                if (preResponse.getKey()) break;
+                String contextService = ContextServiceDiscovery.discover(entity.getType(), preResponse.getValue().keySet());
 
                 if (contextService != null) {
                     SQEMResponse slaObj = slaMessage.get();
                     JSONObject returned = new JSONObject(slaObj.getBody());
                     String consumerId = returned.getJSONObject("_id").getString("$oid");
-
-                    ContextRequest.Builder contextRequest = generateContextRequest(entity, query, ce, 0, 0, complexity, consumerId);
-                    List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
-
-                    String key = null;
-                    String value = null;
-
-                    LinkedHashMap<String,String> params = new LinkedHashMap();
-                    List<String> operators = new ArrayList<>();
-
-                    LinkedList<CdqlConditionTokenType> proceeded = new LinkedList<>();
-                    for (CdqlConditionToken cdqlConditionToken : rpnConditionList) {
-                        if(cdqlConditionToken.getType() != CdqlConditionTokenType.Operator){
-                            proceeded.add(cdqlConditionToken.getType());
-                        }
-
-                        switch (cdqlConditionToken.getType()) {
-                            case Attribute:
-                                key = cdqlConditionToken.getContextAttribute().getAttributeName();
-                                if (value != null) {
-                                    params.put(key,value);
-                                    key = null;
-                                    value = null;
-                                }
-                                break;
-                            case Constant:
-                                value = cdqlConditionToken.getStringValue();
-                                if(value.startsWith("{")){
-                                    JSONObject valObj = new JSONObject(value);
-                                    // TODO:
-                                    // Should modify the following to converted to the defined unit of the Consumer SLA
-                                    if(valObj.has("value"))
-                                        value = valObj.get("value").toString();
-                                }
-                                if (key != null) {
-                                    params.put(key,value);
-                                    key = null;
-                                }
-                                value = null;
-                                break;
-                            case Operator:
-                                int size = proceeded.size();
-                                if(size>=2){
-                                    CdqlConditionTokenType opnd_1 = proceeded.get(size - 1);
-                                    CdqlConditionTokenType opnd_2 = proceeded.get(size - 2);
-                                    boolean ifAtt_1 = opnd_1 == CdqlConditionTokenType.Attribute || opnd_1 == CdqlConditionTokenType.Constant;
-                                    boolean ifAtt_2 = opnd_2 == CdqlConditionTokenType.Attribute || opnd_2 == CdqlConditionTokenType.Constant;
-                                    if(ifAtt_1 && ifAtt_2) {
-                                        operators.add(cdqlConditionToken.getStringValue());
-                                        proceeded.clear();
-                                    }
-                                }
-                        }
-                    }
+                    ReturnType cr_res = getContextRequest(entity, query, ce, complexity, consumerId);
 
                     if(sla == null) {
                         SQEMResponse slaResult = slaMessage.get();
@@ -301,9 +306,9 @@ public class PullBasedExecutor {
                         subscribeEntity = subscribeEntity.toBuilder().setSub(subId).build();
                     }
 
-                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, params, limit,
-                                                                    criticality, sla, complexity, terms.keySet(),
-                                                                    operators, subscribeEntity);
+                    AbstractMap.SimpleEntry cacheResult = retrieveContext(entity, contextService, cr_res.getParams(), limit,
+                                                                    criticality, sla, complexity, preResponse.getValue().keySet(),
+                                                                    cr_res.getOperators(), subscribeEntity);
 
                     // Checking if from Stream Read or not.
                     if(cacheResult != null){
@@ -318,7 +323,7 @@ public class PullBasedExecutor {
                                 ce.put(entity.getEntityID(),resultJson.getJSONObject(0));
                             }
                             if(query.getSelect().getSelectAttrsMap().containsKey(entity.getEntityID()))
-                                executeQueryBlock(rpnConditionList, ce, entityID);
+                                executeQueryBlock(cr_res.getRpnConditionList(), ce, entityID);
                             if(consumerQoS == null)  consumerQoS = (JSONObject) cacheResult.getValue();
                         }
                         else {
@@ -344,7 +349,7 @@ public class PullBasedExecutor {
                                     JSONObject freshnessCal = conSer.getJSONObject("sla").getJSONObject("freshness");
                                     freshnessCal.put("fthresh", finalConsumerQoS.getDouble("fthresh"));
 
-                                    CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(params)
+                                    CacheLookUp.Builder lookup = CacheLookUp.newBuilder().putAllParams(cr_res.getParams())
                                             .setEt(entity.getType())
                                             .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
                                             .setCheckFresh(true)
@@ -1304,6 +1309,7 @@ public class PullBasedExecutor {
             for (Operand argument : arguments) {
                 List<List<AttributeValue>> attributeValues = new ArrayList<>();
                 String entityKey = null;
+
                 if (argument.getType().equals(OperandType.CONTEXT_VALUE_JSON)) {
                     JSONObject entities = new JSONObject(argument.getStringValue());
                     if (entities.has("results")) {
@@ -1361,8 +1367,7 @@ public class PullBasedExecutor {
                     allAttributeValues.addAll(attributeValues);
                 } else {
                     for (int j = 0; j < allAttributeValues.size(); j++) {
-                        for (List<AttributeValue> av : attributeValues
-                        ) {
+                        for (List<AttributeValue> av : attributeValues) {
                             allAttributeValues.get(j).addAll(av);
                         }
                     }
@@ -1882,7 +1887,7 @@ public class PullBasedExecutor {
         return (JSONObject) res.getKey();
     }
 
-    private static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
+    protected static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,
                                                Map<String, JSONObject> ce, int page, int limit,
                                                String contextService, double complexity, String consumerId) {
 

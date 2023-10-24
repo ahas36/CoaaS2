@@ -1,6 +1,8 @@
 package au.coaas.cqc.executor;
 
+import au.coaas.base.proto.ListOfString;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
+import au.coaas.cpree.proto.SimpleContainer;
 import au.coaas.cqc.proto.*;
 import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
@@ -80,83 +82,117 @@ public class SituationManager {
             List<SubscribedQuery> subQueries = getSubscribedQueries(event);
 
             JSONObject result = new JSONObject();
-            JSONArray pushList = new JSONArray();
+            Queue<JSONObject> pushList = new LinkedList<>();
+            String ent_id = persEvent.getString("key");
 
-            for (SubscribedQuery subscription : subQueries) {
-                boolean notRelated = true;
-                for (ContextEntity subEntity : subscription.getRelatedEntitiesList()) {
-                    Queue<CdqlConditionToken> tempEntityQueue = new LinkedList<>(subEntity.getCondition().getRPNConditionList());
-                    if (event.getContextEntity().getType().getType().equals(subEntity.getType().getType())) {
-                        JSONObject tempEventJson = persEvent.getJSONObject("attributes");
-                        tempEventJson.put(event.getKey(), event.getContextEntity().getEntityID());
-                        if (evaluateNonDeterministic(new JSONObject().put(subEntity.getEntityID(), tempEventJson), tempEntityQueue) == true) {
-                            notRelated = false;
-                            break;
+            subQueries.stream().parallel().forEach(subscription -> {
+                try {
+                    boolean notRelated = true;
+                    Map<String, JSONObject> temp_ce = new HashMap<>();
+                    SQEMServiceGrpc.SQEMServiceBlockingStub sqemstub
+                            = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                    SQEMResponse consumer = sqemstub.getConsumerSLA(AuthToken.newBuilder().setUsername(subscription.getToken()).build());
+                    JSONObject conId = new JSONObject(consumer.getBody());
+
+                    for (ContextEntity subEntity : subscription.getRelatedEntitiesList()) {
+                        // Checking if the entity for which we got the data for, is the first in the execution order
+                        // to resolve whether any other entity data need to be retrieved.
+                        for (ListOfString keys : subscription.getQuery().getExecutionPlanMap().values()) {
+                            if(keys.getValueList().contains(ent_id) || temp_ce.containsKey(ent_id)) break;
+
+                            // Need to retrieve from the context storage.
+                            Optional<ContextEntity> entity = subscription.getRelatedEntitiesList().stream()
+                                    .filter(x -> x.getEntityID().equals(ent_id)).findFirst();
+                            // Pre-process for resolving the context service.
+                            AbstractMap.SimpleEntry<Boolean, Map<String, String>> preResponse = PullBasedExecutor.processForContextService(
+                                    new LinkedList<>(entity.get().getCondition().getRPNConditionList()), entity.get(), temp_ce);
+                            if (preResponse.getKey()) break;
+                            // Resolving context service to retrieval.
+                            String contextService = ContextServiceDiscovery.discover(entity.get().getType(), preResponse.getValue().keySet());
+                            // Finally, retrieve from the Context Storage.
+                            AbstractMap.SimpleEntry rex = PullBasedExecutor.executeSQEMQuery(entity.get(), subscription.getQuery(), temp_ce, -1, -1,
+                                    contextService, subscription.getComplexity(), conId.getJSONObject("_id").getString("$oid"));
+                            temp_ce.put(ent_id, (JSONObject) rex.getKey());
+                        }
+
+                        if (event.getContextEntity().getType().getType().equals(subEntity.getType().getType())) {
+                            JSONObject tempEventJson = persEvent.getJSONObject("attributes");
+                            tempEventJson.put(event.getKey(), event.getContextEntity().getEntityID());
+                            temp_ce.put(subEntity.getEntityID(), tempEventJson);
+                            if (evaluateNonDeterministic(new JSONObject(temp_ce),
+                                    new LinkedList<>(subEntity.getCondition().getRPNConditionList())) == true) {
+                                notRelated = false;
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (notRelated) continue;
+                    if (notRelated) return;
 
-                CdqlResponse pullResponse = PullBasedExecutor.executePullBaseQuery(subscription.getQuery(),
-                        subscription.getToken(), -1, -1, subscription.getQueryId(),
-                        subscription.getCriticality(), subscription.getComplexity(), null, null);
+                    CdqlResponse pullResponse = PullBasedExecutor.executePullBaseQuery(subscription.getQuery(),
+                            subscription.getToken(), -1, -1, subscription.getQueryId(),
+                            subscription.getCriticality(), subscription.getComplexity(), null, null, temp_ce);
 
-                String body = pullResponse.getBody();
-                JSONObject jsonObject = new JSONObject(body);
-                String entityID = subscription.getRelatedEntities(0).getEntityID();
-                JSONObject oldValue = new JSONObject(jsonObject.toString());
+                    String body = pullResponse.getBody();
+                    JSONObject jsonObject = new JSONObject(body);
+                    String entityID = subscription.getRelatedEntities(0).getEntityID();
+                    JSONObject oldValue = new JSONObject(jsonObject.toString());
 
-                try {
-                    JSONObject ent = jsonObject.getJSONObject(subscription.getRelatedEntities(0).getEntityID());
-                    if (ent.has("results")) {
-                        ent = ent.getJSONArray("results").getJSONObject(0);
-                    }
-                    if (!ent.get(event.getKey()).toString().equals(event.getContextEntity().getEntityID())) {
-                        continue;
-                    }
-
-                } catch (Exception e) {
-                    continue;
-                }
-
-                for (String key : jsonObject.keySet()) {
                     try {
-                        jsonObject.put(key, jsonObject.getJSONObject(key)
-                                .getJSONArray("results").getJSONObject(0));
+                        JSONObject ent = jsonObject.getJSONObject(subscription.getRelatedEntities(0).getEntityID());
+                        if (ent.has("results")) {
+                            ent = ent.getJSONArray("results").getJSONObject(0);
+                        }
+                        if (!ent.get(event.getKey()).toString().equals(event.getContextEntity().getEntityID())) {
+                            return;
+                        }
                     } catch (Exception e) {
-
+                        return;
                     }
-                }
 
-                for (Map.Entry<String, String> entry : event.getContextEntity().getContextAttributesMap().entrySet()) {
-                    String[] keys = entry.getKey().split(":");
-                    String key = keys[keys.length - 1];
-                    Object value = persEvent.getJSONObject("attributes").get(key);
-                    jsonObject.getJSONObject(entityID).put(key, value);
-                }
+                    for (String key : jsonObject.keySet()) {
+                        try {
+                            jsonObject.put(key, jsonObject.getJSONObject(key)
+                                    .getJSONArray("results").getJSONObject(0));
+                        } catch (Exception e) {
+                            log.info(e.getMessage() + " in handle event.");
+                        }
+                    }
 
-                Queue<CdqlConditionToken> tempQueue = new LinkedList<>(subscription.getSituationList());
-                boolean flag = false;
-                try {
-                    flag = evaluate(subscription.getId(), jsonObject, oldValue, tempQueue,
-                            subscription.getQuery(), subscription.getComplexity());
-                } catch (Exception ex) {
-                    log.severe("Error occured when evaluating the situations: " + ex.getMessage());
-                    log.severe(String.valueOf(ex.getStackTrace()));
-                }
+                    for (Map.Entry<String, String> entry : event.getContextEntity().getContextAttributesMap().entrySet()) {
+                        String[] keys = entry.getKey().split(":");
+                        String key = keys[keys.length - 1];
+                        Object value = persEvent.getJSONObject("attributes").get(key);
+                        jsonObject.getJSONObject(entityID).put(key, value);
+                    }
 
-                if (flag) {
-                    pushList.put(jsonObject);
+                    // Checking if the situational conditions are met to push to the consumer.
+                    Queue<CdqlConditionToken> tempQueue = new LinkedList<>(subscription.getSituationList());
+                    boolean flag = false;
                     try {
-                       PushBasedExecutor.pushContext(subscription.getCallback(), jsonObject, subscription.getId());
-                    } catch (InterruptedException | ExecutionException ex) {
-                        log.severe(ex.getMessage());
-                    } catch (IOException ex) {
-                        log.severe(ex.getMessage());
+                        flag = evaluate(subscription.getId(), jsonObject, oldValue, tempQueue,
+                                subscription.getQuery(), subscription.getComplexity());
+                    } catch (Exception ex) {
+                        log.severe("Error occured when evaluating the situations: " + ex.getMessage());
+                        log.severe(String.valueOf(ex.getStackTrace()));
                     }
+
+                    if (flag) {
+                        pushList.add(jsonObject);
+                        try {
+                            PushBasedExecutor.pushContext(subscription.getCallback(), jsonObject, subscription.getId());
+                        } catch (InterruptedException | ExecutionException ex) {
+                            log.severe(ex.getMessage());
+                        } catch (IOException ex) {
+                            log.severe(ex.getMessage());
+                        }
+                    }
+                } catch (InterruptedException | WrongOperatorException e) {
+                    log.severe(e.getMessage());
+                } catch (Exception e) {
+                    log.severe(e.getMessage());
                 }
-            }
+            });
 
             totalExecutionTime += System.currentTimeMillis() - eventStartTime;
 

@@ -257,7 +257,7 @@ public class PushBasedExecutor {
                 try {
                     PullBasedExecutor.executePullBaseQuery(query, token, 0, -1,
                             queryId, criticality, complexity, relateCdqlSubscriptionEntities,
-                            sub_id.getMessage());
+                            sub_id.getMessage(), null);
                 } catch (Exception e) {
                     log.severe("Error occured when executing the push query: " + e.getMessage());
                     log.info(e.getStackTrace().toString());
@@ -419,7 +419,7 @@ public class PushBasedExecutor {
             CdqlResponse executePullBaseQuery = PullBasedExecutor.executePullBaseQuery(
                     subscription.getQuery(), subscription.getToken(),-1, -1,
                     subscription.getQueryId(), subscription.getCriticality(),
-                    subscription.getComplexity(), null, subscription.getId());
+                    subscription.getComplexity(), null, subscription.getId(), null);
 
             if(executePullBaseQuery.getStatus().equals("200")){
                 JSONObject jsonObject = new JSONObject(executePullBaseQuery.getBody());

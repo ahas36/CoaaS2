@@ -30,6 +30,8 @@ class AgentContext(Resource):
             situation_name = args['situation']
             # Predict the results
             result = self.__executor.predict(consumer_id, situation_name)
+            if result == None:
+                return 'Failed', 400
             # Return data and 200 OK code
             return result, 200
 

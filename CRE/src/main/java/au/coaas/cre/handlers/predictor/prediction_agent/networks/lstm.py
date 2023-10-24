@@ -144,6 +144,8 @@ class LSTMExecutor():
         for sub in subscribers:
             pair = sub['_id']
             self.__learn(pair['consumerId'], pair['situationName'])
+        
+        print('Finished training all the initial models')
             
     def __learn(self, consumer_id, situation_name):   
         path = consumer_id + '-' + situation_name
@@ -254,6 +256,11 @@ class LSTMExecutor():
 
     def __moving_average(self, consumer_id, situation_name, horizon):
         timeseries = self.get_dataset_mongo(consumer_id, situation_name)
+
+        # There should be ateast a number of datasets 
+        if(len(timeseries)<self.__lookback):
+            return None
+        
         # Exponential smoothing
         reliance = timeseries['probability'].to_frame()
         reliance['mvavg'] = reliance['probability'].ewm(span=10).mean()

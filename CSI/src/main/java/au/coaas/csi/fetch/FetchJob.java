@@ -164,7 +164,7 @@ public class FetchJob implements Job {
                         .setCost(fetch.getStatus().equals("200")? fetch.getSummary().getPrice() : 0.0).build());
 
                 if(sqemResponse.getStatus().equals("200")){
-                    log.info("Fetch Job Successfully completed form : " + dataMap.getString("providerId"));
+                    log.info("Fetch Job Successfully completed from : " + dataMap.getString("providerId"));
                     log.info(sqemResponse.getBody());
                     return hkeys;
                 }

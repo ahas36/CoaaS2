@@ -233,7 +233,8 @@ public class SituationManager {
                 .setContextEntity(entity).setContextID(contextId).build());
     }
 
-    private static boolean evaluateNonDeterministic(JSONObject values, Queue<CdqlConditionToken> RPNCondition) throws WrongOperatorException {
+    // Calling 'value' here because there is only one entity available here in the dictionary.
+    private static boolean evaluateNonDeterministic(JSONObject value, Queue<CdqlConditionToken> RPNCondition) throws WrongOperatorException {
         Stack<CdqlConditionToken> stack = new Stack<>();
         while (RPNCondition.size() > 0) {
             CdqlConditionToken token = RPNCondition.poll();
@@ -244,11 +245,11 @@ public class SituationManager {
                     stack.push(newToken);
                     break;
                 case Attribute:
-                    String value = findAttributeValue(token, values);
+                    String value_res = findAttributeValue(token, value);
                     stack.push(CdqlConditionToken.newBuilder()
                             .setType(CdqlConditionTokenType.Constant)
-                            .setStringValue(value)
-                            .setConstantTokenType(getConstantType(value)).build());
+                            .setStringValue(value_res)
+                            .setConstantTokenType(getConstantType(value_res)).build());
                     break;
                 case Function:
                     stack.push(CdqlConditionToken.newBuilder()
@@ -256,7 +257,6 @@ public class SituationManager {
                                     .setType(CdqlConditionTokenType.Constant)
                                     .setStringValue("maybe").build());
                     break;
-
                 default:
                     stack.push(token);
             }

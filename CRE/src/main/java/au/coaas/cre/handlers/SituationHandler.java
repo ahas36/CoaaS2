@@ -23,7 +23,8 @@ public class SituationHandler {
         JSONObject persEvent = new JSONObject(eventRequest.getEvent());
 
         // If there isn't a push context query subscription attached to it, then nothing happens in this method.
-        if (persEvent.has("subscriptionID") && persEvent.getString("subscriptionID") != null) {
+        if (persEvent.has("subscriptionID") && persEvent.getString("subscriptionID") != null &&
+                persEvent.has("subscriptionValue") && persEvent.getString("subscriptionValue") != null) {
             try {
                 SiddhiWrapper.addEvent(new Object[]{"event", Double.valueOf(persEvent.getString("subscriptionValue")),
                         persEvent.getLong("timestamp")},"sub_" + persEvent.getString("subscriptionID"));

@@ -97,21 +97,24 @@ public class SituationManager {
                         // Checking if the entity for which we got the data for, is the first in the execution order
                         // to resolve whether any other entity data need to be retrieved.
                         for (ListOfString keys : subscription.getQuery().getExecutionPlanMap().values()) {
-                            if(keys.getValueList().contains(ent_id) || temp_ce.containsKey(ent_id)) break;
+                            if((keys.getValueCount() == 1 && keys.getValueList().contains(ent_id)) || temp_ce.containsKey(ent_id)) break;
 
-                            // Need to retrieve from the context storage.
-                            Optional<ContextEntity> entity = subscription.getRelatedEntitiesList().stream()
-                                    .filter(x -> x.getEntityID().equals(ent_id)).findFirst();
-                            // Pre-process for resolving the context service.
-                            AbstractMap.SimpleEntry<Boolean, Map<String, String>> preResponse = PullBasedExecutor.processForContextService(
-                                    new LinkedList<>(entity.get().getCondition().getRPNConditionList()), entity.get(), temp_ce);
-                            if (preResponse.getKey()) break;
-                            // Resolving context service to retrieval.
-                            String contextService = ContextServiceDiscovery.discover(entity.get().getType(), preResponse.getValue().keySet());
-                            // Finally, retrieve from the Context Storage.
-                            AbstractMap.SimpleEntry rex = PullBasedExecutor.executeSQEMQuery(entity.get(), subscription.getQuery(), temp_ce, -1, -1,
-                                    contextService, subscription.getComplexity(), conId.getJSONObject("_id").getString("$oid"));
-                            temp_ce.put(ent_id, (JSONObject) rex.getKey());
+                            for(String entKey : keys.getValueList()){
+                                if(entKey == ent_id) continue;
+                                // Need to retrieve from the context storage.
+                                Optional<ContextEntity> entity = subscription.getRelatedEntitiesList().stream()
+                                        .filter(x -> x.getEntityID().equals(entKey)).findFirst();
+                                // Pre-process for resolving the context service.
+                                AbstractMap.SimpleEntry<Boolean, Map<String, String>> preResponse = PullBasedExecutor.processForContextService(
+                                        new LinkedList<>(entity.get().getCondition().getRPNConditionList()), entity.get(), temp_ce);
+                                if (preResponse.getKey()) break;
+                                // Resolving context service to retrieval.
+                                String contextService = ContextServiceDiscovery.discover(entity.get().getType(), preResponse.getValue().keySet());
+                                // Finally, retrieve from the Context Storage.
+                                AbstractMap.SimpleEntry rex = PullBasedExecutor.executeSQEMQuery(entity.get(), subscription.getQuery(), temp_ce, -1, -1,
+                                        contextService, subscription.getComplexity(), conId.getJSONObject("_id").getString("$oid"));
+                                temp_ce.put(entKey, (JSONObject) rex.getKey());
+                            }
                         }
 
                         if (event.getContextEntity().getType().getType().equals(subEntity.getType().getType())) {
@@ -134,37 +137,39 @@ public class SituationManager {
                             subscription.getCriticality(), subscription.getComplexity(), null, null, temp_ce);
 
                     String body = pullResponse.getBody();
+                    JSONObject oldValue = new JSONObject(body);
                     JSONObject jsonObject = new JSONObject(body);
-                    String entityID = subscription.getRelatedEntities(0).getEntityID();
-                    JSONObject oldValue = new JSONObject(jsonObject.toString());
+                    // This is the entity that the consumer selects.
+//                    Map<String, ListOfContextAttribute> map = subscription.getQuery().getSelect().getSelectAttrsMap();
+//                    String entityID = map.keySet().iterator().next();
 
-                    try {
-                        JSONObject ent = jsonObject.getJSONObject(subscription.getRelatedEntities(0).getEntityID());
-                        if (ent.has("results")) {
-                            ent = ent.getJSONArray("results").getJSONObject(0);
-                        }
-                        if (!ent.get(event.getKey()).toString().equals(event.getContextEntity().getEntityID())) {
-                            return;
-                        }
-                    } catch (Exception e) {
-                        return;
-                    }
+//                    try {
+//                        JSONObject ent = jsonObject.getJSONObject(entityID);
+//                        if (ent.has("results")) {
+//                            ent = ent.getJSONArray("results").getJSONObject(0);
+//                        }
+//                        if (!ent.get(event.getKey()).toString().equals(event.getContextEntity().getEntityID())) {
+//                            return;
+//                        }
+//                    } catch (Exception e) {
+//                        return;
+//                    }
 
-                    for (String key : jsonObject.keySet()) {
-                        try {
-                            jsonObject.put(key, jsonObject.getJSONObject(key)
-                                    .getJSONArray("results").getJSONObject(0));
-                        } catch (Exception e) {
-                            log.info(e.getMessage() + " in handle event.");
-                        }
-                    }
+//                    for (String key : jsonObject.keySet()) {
+//                        try {
+//                            jsonObject.put(key, jsonObject.getJSONObject(key)
+//                                    .getJSONArray("results").getJSONObject(0));
+//                        } catch (Exception e) {
+//                            log.info(e.getMessage() + " in handle event.");
+//                        }
+//                    }
 
-                    for (Map.Entry<String, String> entry : event.getContextEntity().getContextAttributesMap().entrySet()) {
-                        String[] keys = entry.getKey().split(":");
-                        String key = keys[keys.length - 1];
-                        Object value = persEvent.getJSONObject("attributes").get(key);
-                        jsonObject.getJSONObject(entityID).put(key, value);
-                    }
+//                    for (Map.Entry<String, String> entry : event.getContextEntity().getContextAttributesMap().entrySet()) {
+//                        String[] keys = entry.getKey().split(":");
+//                        String key = keys[keys.length - 1];
+//                        Object value = persEvent.getJSONObject("attributes").get(key);
+//                        jsonObject.getJSONObject(entityID).put(key, value);
+//                    }
 
                     // Checking if the situational conditions are met to push to the consumer.
                     Queue<CdqlConditionToken> tempQueue = new LinkedList<>(subscription.getSituationList());
@@ -749,6 +754,24 @@ public class SituationManager {
                     }
                 }
                 return new JSONObject("{\"value\":false}");
+            }
+            else {
+                // Any other situational function
+                SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                        = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setUsername(subID).build());
+                if(slaMessage.getStatus().equals("200")) {
+                    JSONObject sla = new JSONObject(slaMessage.getBody());
+                    Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity,
+                            sla.getJSONObject("_id").getString("$oid"));
+
+                    if (execute.toString().trim().startsWith("[")) {
+                        return (new JSONObject()).put("results",
+                                new JSONArray(execute.toString().replaceAll("\"", "")));
+                    } else {
+                        return (new JSONObject()).put("value", execute);
+                    }
+                }
             }
 
             JSONObject result = new JSONObject();

@@ -39,7 +39,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONException;
 
-import javax.naming.Context;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -917,7 +916,7 @@ public class PullBasedExecutor {
         }
     }
 
-    private static JSONArray executeFunction(FunctionCall fCall, Map<String, JSONObject> ce, String operand, String value) throws Exception {
+    protected static JSONArray executeFunction(FunctionCall fCall, Map<String, JSONObject> ce, String operand, String value) throws Exception {
         switch(fCall.getFunctionName().toLowerCase()){
             case "distance":
                 String resultEntity = null;

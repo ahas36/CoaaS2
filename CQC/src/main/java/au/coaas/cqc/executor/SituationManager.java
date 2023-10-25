@@ -2,7 +2,7 @@ package au.coaas.cqc.executor;
 
 import au.coaas.base.proto.ListOfString;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
-import au.coaas.cpree.proto.SimpleContainer;
+
 import au.coaas.cqc.proto.*;
 import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
@@ -22,7 +22,6 @@ import au.coaas.sqem.proto.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.gson.Gson;
 import org.joda.time.Period;
 import org.joda.time.DateTime;
@@ -118,8 +117,9 @@ public class SituationManager {
                         if (event.getContextEntity().getType().getType().equals(subEntity.getType().getType())) {
                             JSONObject tempEventJson = persEvent.getJSONObject("attributes");
                             tempEventJson.put(event.getKey(), event.getContextEntity().getEntityID());
+
                             temp_ce.put(subEntity.getEntityID(), tempEventJson);
-                            if (evaluateNonDeterministic(new JSONObject(temp_ce),
+                            if (evaluateNonDeterministic(temp_ce,
                                     new LinkedList<>(subEntity.getCondition().getRPNConditionList())) == true) {
                                 notRelated = false;
                                 break;
@@ -269,8 +269,8 @@ public class SituationManager {
                 .setContextEntity(entity).setContextID(contextId).build());
     }
 
-    // Calling 'value' here because there is only one entity available here in the dictionary.
-    private static boolean evaluateNonDeterministic(JSONObject value, Queue<CdqlConditionToken> RPNCondition) throws WrongOperatorException {
+    // 'value' is exactly the same as 'ce'.
+    private static boolean evaluateNonDeterministic(Map<String, JSONObject> value, Queue<CdqlConditionToken> RPNCondition) throws Exception {
         Stack<CdqlConditionToken> stack = new Stack<>();
         while (RPNCondition.size() > 0) {
             CdqlConditionToken token = RPNCondition.poll();
@@ -281,17 +281,22 @@ public class SituationManager {
                     stack.push(newToken);
                     break;
                 case Attribute:
-                    String value_res = findAttributeValue(token, value);
+                    String value_res = findAttributeValue(token, new JSONObject(value));
                     stack.push(CdqlConditionToken.newBuilder()
                             .setType(CdqlConditionTokenType.Constant)
                             .setStringValue(value_res)
                             .setConstantTokenType(getConstantType(value_res)).build());
                     break;
                 case Function:
-                    stack.push(CdqlConditionToken.newBuilder()
-                                    .setConstantTokenType(CdqlConstantConditionTokenType.String)
-                                    .setType(CdqlConditionTokenType.Constant)
-                                    .setStringValue("maybe").build());
+                    JSONArray func_result = PullBasedExecutor.executeFunction(token.getFunctionCall(), value, RPNCondition.poll().getStringValue(),
+                            RPNCondition.poll().getStringValue());
+                    if(func_result != null && !func_result.isEmpty()){
+                        stack.push(CdqlConditionToken.newBuilder()
+                                .setType(CdqlConditionTokenType.Constant)
+                                .setConstantTokenType(CdqlConstantConditionTokenType.Array)
+                                .setStringValue(func_result.toString())
+                                .build());
+                    }
                     break;
                 default:
                     stack.push(token);
@@ -543,8 +548,11 @@ public class SituationManager {
     }
 
     private static String findAttributeValue(CdqlConditionToken cdqlContextAttributeConditionToken, JSONObject values) {
+        // Getting the entity JSON from the values using the entity ID (here, entity name is the entity id).
         JSONObject entity = values.getJSONObject(cdqlContextAttributeConditionToken.getContextAttribute().getEntityName());
-        String[] split = cdqlContextAttributeConditionToken.getContextAttribute().getAttributeName().split("\\.");
+        String[] split = cdqlContextAttributeConditionToken.getContextAttribute().getAttributeName().contains(".") ?
+                cdqlContextAttributeConditionToken.getContextAttribute().getAttributeName().split("\\.") :
+                new String[] {cdqlContextAttributeConditionToken.getContextAttribute().getAttributeName()};
         JSONObject item = entity;
         for (int i = 0; i < split.length - 1; i++) {
             item = item.getJSONObject(split[i]);

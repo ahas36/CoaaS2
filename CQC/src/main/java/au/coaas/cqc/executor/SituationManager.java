@@ -5,6 +5,9 @@ import au.coaas.cpree.proto.CPREEServiceGrpc;
 
 import au.coaas.cqc.proto.*;
 import au.coaas.cqc.proto.Empty;
+import au.coaas.cqc.utils.Utilities;
+import au.coaas.cqc.utils.enums.HttpRequests;
+import au.coaas.cqc.utils.enums.RequestDataType;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
 
 import au.coaas.cqp.proto.*;
@@ -23,6 +26,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import com.google.gson.Gson;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
 import org.joda.time.Period;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -358,7 +363,7 @@ public class SituationManager {
                     stack.push(CdqlConditionToken.newBuilder()
                             .setConstantTokenType(CdqlConstantConditionTokenType.Json)
                             .setType(CdqlConditionTokenType.Constant)
-                            .setStringValue(executeFunctionCall(functionCall, subscriptionID, funcName, complexity).toString())
+                            .setStringValue(executeFunctionCall(functionCall, subscriptionID, funcName, complexity, RPNCondition).toString())
                             .build());
                     break;
                 default:
@@ -538,7 +543,27 @@ public class SituationManager {
                 case "!=":
                     return res != 0 ? tokenTrue : tokenFalse;
             }
-        } else {
+        }
+        else if (operand1.getConstantTokenType() == CdqlConstantConditionTokenType.Json) {
+            JSONObject json = new JSONObject(operand1.getStringValue());
+            Double value = json.optDouble("value");
+            int res = value.compareTo(Double.valueOf(operand2.getStringValue()));
+            switch (operator) {
+                case ">":
+                    return res > 0 ? tokenTrue : tokenFalse;
+                case ">=":
+                    return res >= 0 ? tokenTrue : tokenFalse;
+                case "=":
+                    return res == 0 ? tokenTrue : tokenFalse;
+                case "<=":
+                    return res <= 0 ? tokenTrue : tokenFalse;
+                case "<":
+                    return res < 0 ? tokenTrue : tokenFalse;
+                case "!=":
+                    return res != 0 ? tokenTrue : tokenFalse;
+            }
+        }
+        else {
             switch (operator) {
                 case "=":
                     return operand1.getStringValue().equals(operand2.getStringValue()) ?
@@ -588,7 +613,7 @@ public class SituationManager {
                         fCallTemp.setArguments(iter_index, Operand.newBuilder()
                                         .setType(OperandType.CONTEXT_VALUE_STRING)
                                         .setContextAttribute(argument.getContextAttribute())
-                                        .setStringValue(executeFunctionCall(subFunction, subID, stringFcall, complexity).toString())
+                                        .setStringValue(executeFunctionCall(subFunction, subID, stringFcall, complexity, null).toString())
                                         .build());
                         break;
                     }
@@ -659,7 +684,8 @@ public class SituationManager {
         return fCallTemp.build();
     }
 
-    private static JSONObject executeFunctionCall(FunctionCall fCall, String subID, String stringFcall, double complexity) {
+    private static JSONObject executeFunctionCall(FunctionCall fCall, String subID, String stringFcall,
+                                                  double complexity, Queue<CdqlConditionToken> comparators) {
         try {
             if (fCall.getFunctionName().equals("change")) {
                 String val1 = fCall.getArguments(0).getStringValue();
@@ -762,14 +788,38 @@ public class SituationManager {
                 SQEMResponse slaMessage = sqemStub.getConsumerSLA(AuthToken.newBuilder().setUsername(subID).build());
                 if(slaMessage.getStatus().equals("200")) {
                     JSONObject sla = new JSONObject(slaMessage.getBody());
-                    Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity,
-                            sla.getJSONObject("_id").getString("$oid"));
+                    String consumerId = sla.getJSONObject("_id").getString("$oid");
+                    Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity, consumerId);
+
+                    // TODO: Do this in a seperate background thread.
+                    // Start predicting for this situational function.
+                    if(comparators != null) {
+                        CdqlConditionToken[] preds = predictSituation(consumerId, fCall.getFunctionName());
+                        CdqlConditionToken operand_2 = comparators.poll();
+                        CdqlConditionToken operator = comparators.poll();
+
+                        for(CdqlConditionToken pred_value : preds) {
+                            Stack<CdqlConditionToken> stack = new Stack<>();
+                            stack.push(pred_value);
+                            stack.push(operand_2);
+                            try {
+                                CdqlConditionToken newToken = applyOperator(operator.getStringValue(), stack);
+                                if(newToken.getStringValue().equals("true")) {
+                                    // TODO: Start Proactive Caching.
+                                }
+                            }
+                            catch (Exception ex) {
+                                log.info("Error when apploying operators - either premature or wrong use of operation.");
+                                log.info(ex.getMessage());
+                            }
+                        }
+                    }
 
                     if (execute.toString().trim().startsWith("[")) {
                         return (new JSONObject()).put("results",
                                 new JSONArray(execute.toString().replaceAll("\"", "")));
                     } else {
-                        return (new JSONObject()).put("value", execute);
+                        return (new JSONObject()).put("value", (Double) execute);
                     }
                 }
             }
@@ -823,5 +873,25 @@ public class SituationManager {
         totalNumberOfEvents = 0;
         totalExecutionTime = 0;
         return Empty.newBuilder().build();
+    }
+
+    // Start predicting the situation.
+    public static CdqlConditionToken[] predictSituation(String consumerId, String situationName) {
+        String predictURI = String.format("http://localhost:9797/predictions?consumer=%1$s&situation=%2$s",
+                consumerId, situationName);
+        String predictions = Utilities.httpCall(predictURI, HttpRequests.GET, RequestDataType.JSON, null, null);
+        if(predictions != null){
+            JSONObject pred_res = new JSONObject(predictions);
+            JSONArray res = pred_res.getJSONArray("predictions");
+            CdqlConditionToken[] pred_values = new CdqlConditionToken[res.length()];
+            for (int i = 0; i < res.length(); ++i) {
+                pred_values[i] = CdqlConditionToken.newBuilder().setStringValue(res.getString(i))
+                        .setType(CdqlConditionTokenType.Constant)
+                        .setConstantTokenType(CdqlConstantConditionTokenType.Numeric)
+                        .build();
+            }
+            return pred_values;
+        }
+        return null;
     }
 }

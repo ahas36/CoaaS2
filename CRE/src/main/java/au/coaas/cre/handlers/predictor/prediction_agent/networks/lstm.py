@@ -245,12 +245,12 @@ class LSTMExecutor():
                 model_obj = self.__refs[consumer_id][situation_name]
                 model_obj.subscription.data(model_obj.subscription.data()+1)
 
-                return final[-self.__horizon:]
+                return { 'predictions': final[-self.__horizon:] }
             else:
                 # There is no trained model at the moment. So, triggering a learning.
                 self.__background_train()
                 result = self.__moving_average(consumer_id, situation_name, self.__horizon)
-                return result
+                return { 'predictions': result }
         else:
             return None
 

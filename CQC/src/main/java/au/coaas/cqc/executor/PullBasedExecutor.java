@@ -1374,20 +1374,20 @@ public class PullBasedExecutor {
             }
 
             JSONArray finalResult = new JSONArray();
-            for (List<AttributeValue> attributeValue :
-                    allAttributeValues) {
+            for (List<AttributeValue> attributeValue : allAttributeValues) {
                 JSONObject itemResult = new JSONObject();
                 SituationInferenceRequest.Builder request = SituationInferenceRequest.newBuilder();
                 request.addAllSituationDescriptions(function.getSituationsList());
                 request.addAllAttributeValues(attributeValue);
+
                 JSONArray avs = new JSONArray();
-                for (AttributeValue av :
-                        attributeValue) {
+                for (AttributeValue av : attributeValue) {
                     JSONObject jo = new JSONObject();
                     jo.put(av.getAttributeName(), av.getValue());
                     avs.put(jo);
                 }
                 itemResult.put("attributeValues", avs);
+
                 try {
                     request.setConsumerId(consumerId);
                     CREResponse creResponse = creStub.infer(request.build());

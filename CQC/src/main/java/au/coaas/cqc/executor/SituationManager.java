@@ -3,8 +3,10 @@ package au.coaas.cqc.executor;
 import au.coaas.base.proto.ListOfString;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 
+import au.coaas.cpree.proto.SimpleContainer;
 import au.coaas.cqc.proto.*;
 import au.coaas.cqc.proto.Empty;
+import au.coaas.cqc.utils.ReturnType;
 import au.coaas.cqc.utils.Utilities;
 import au.coaas.cqc.utils.enums.HttpRequests;
 import au.coaas.cqc.utils.enums.RequestDataType;
@@ -41,6 +43,7 @@ import java.io.IOException;
 import java.util.*;
 import java.text.SimpleDateFormat;
 
+import java.util.concurrent.Executors;
 import java.util.stream.Stream;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -48,6 +51,8 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SituationManager {
+    private static boolean cacheEnabled = true;
+
     public static long totalExecutionTime = 0;
     public static long totalNumberOfEvents = 0;
 
@@ -114,11 +119,61 @@ public class SituationManager {
                                         new LinkedList<>(entity.get().getCondition().getRPNConditionList()), entity.get(), temp_ce);
                                 if (preResponse.getKey()) break;
                                 // Resolving context service to retrieval.
-                                String contextService = ContextServiceDiscovery.discover(entity.get().getType(), preResponse.getValue().keySet());
-                                // Finally, retrieve from the Context Storage.
-                                AbstractMap.SimpleEntry rex = PullBasedExecutor.executeSQEMQuery(entity.get(), subscription.getQuery(), temp_ce, -1, -1,
-                                        contextService, subscription.getComplexity(), conId.getJSONObject("_id").getString("$oid"));
-                                temp_ce.put(entKey, (JSONObject) rex.getKey());
+                                JSONArray contextServices = new JSONArray(
+                                        ContextServiceDiscovery.discover(entity.get().getType(), preResponse.getValue().keySet()));
+                                // Finally, retrieve from the Cache or Context Storage.
+                                ReturnType retTy = PullBasedExecutor.getContextRequest(entity.get(),
+                                        subscription.getQuery(), temp_ce, subscription.getComplexity(),
+                                        conId.getJSONObject("_id").getString("$oid"));
+
+                                for(Object con_ser : contextServices) {
+                                    JSONObject conSer = (JSONObject)con_ser;
+                                    conSer = PullBasedExecutor.mapServiceWithSLA(conSer, conId.getJSONObject("sla").getJSONObject("qos"),
+                                            entity.get().getType(), subscription.getCriticality().toLowerCase());
+                                    ContextRequest.Builder cr_build = retTy.getContextRequest().setProviderId(((JSONObject) con_ser)
+                                            .getJSONObject("_id").getString("$oid"));
+
+                                    // Checking cache as well if enabled.
+                                    if(cacheEnabled && conSer.getJSONObject("sla").getBoolean("cache")) {
+                                        JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
+                                        String ent_keys = "";
+                                        for(Object k : candidate_keys)
+                                            ent_keys = ent_keys.isEmpty() ? k.toString() : ent_keys + "," + k.toString();
+
+                                        JSONObject slaObj = conSer.getJSONObject("sla");
+                                        // By this line, I should have completed identifying the query class
+                                        CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
+                                                .setCheckFresh(true)
+                                                .setEt(entity.get().getType())
+                                                .setKey(ent_keys).setQClass("1") // TODO: Assign the correct context query class
+                                                .putAllParams(retTy.getParams())
+                                                .addAllOperators(retTy.getOperators()) // Operators of the params
+                                                .setServiceId(conSer.getJSONObject("_id").getString("$oid"))
+                                                .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
+                                                .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()); // sampling
+                                        // Look up also considers known refreshing logics
+                                        SQEMResponse data = sqemstub.handleContextRequestInCache(lookup.build());
+
+                                        if(data.getStatus().equals("400") || data.getStatus().equals("404")){
+                                            // In the following, we are only considering context providers pushing data mode.
+                                            AbstractMap.SimpleEntry<String,List<String>> status =
+                                                    RetrievalManager.executeStreamRead(conSer.toString(),
+                                                            conSer.getJSONObject("_id").getString("$oid"), retTy.getParams(), null,
+                                                            1, cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty());
+                                            if(!status.getKey().equals("200"))
+                                            continue; // Moving to the next context provider since it is currently unavailable.
+                                        }
+                                        else if (data.getStatus().equals("200")){
+                                            temp_ce.put(entKey, new JSONObject(data.getBody()));
+                                            break;
+                                        }
+                                    }
+
+                                    AbstractMap.SimpleEntry rex = PullBasedExecutor.executeSQEMQuery(cr_build.build(),
+                                            ((JSONObject) con_ser).toString());
+                                    temp_ce.put(entKey, (JSONObject) rex.getKey());
+                                    break;
+                                }
                             }
                         }
 
@@ -791,29 +846,34 @@ public class SituationManager {
                     String consumerId = sla.getJSONObject("_id").getString("$oid");
                     Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity, consumerId);
 
-                    // TODO: Do this in a seperate background thread.
                     // Start predicting for this situational function.
-                    if(comparators != null) {
-                        CdqlConditionToken[] preds = predictSituation(consumerId, fCall.getFunctionName());
-                        CdqlConditionToken operand_2 = comparators.poll();
-                        CdqlConditionToken operator = comparators.poll();
+                    new Thread(() -> {
+                        if(comparators != null) {
+                            CdqlConditionToken[] preds = predictSituation(consumerId, fCall.getFunctionName());
+                            CdqlConditionToken operand_2 = comparators.poll();
+                            CdqlConditionToken operator = comparators.poll();
 
-                        for(CdqlConditionToken pred_value : preds) {
-                            Stack<CdqlConditionToken> stack = new Stack<>();
-                            stack.push(pred_value);
-                            stack.push(operand_2);
-                            try {
-                                CdqlConditionToken newToken = applyOperator(operator.getStringValue(), stack);
-                                if(newToken.getStringValue().equals("true")) {
-                                    // TODO: Start Proactive Caching.
+                            for(CdqlConditionToken pred_value : preds) {
+                                Stack<CdqlConditionToken> stack = new Stack<>();
+                                stack.push(pred_value);
+                                stack.push(operand_2);
+                                try {
+                                    CdqlConditionToken newToken = applyOperator(operator.getStringValue(), stack);
+                                    if(newToken.getStringValue().equals("true")) {
+                                        // TODO: Start proactively caching context.
+                                        if(cacheEnabled){
+
+                                        }
+                                    }
+                                }
+                                catch (Exception ex) {
+                                    log.info("Error when apploying operators - either premature or wrong use of operation.");
+                                    log.info(ex.getMessage());
                                 }
                             }
-                            catch (Exception ex) {
-                                log.info("Error when apploying operators - either premature or wrong use of operation.");
-                                log.info(ex.getMessage());
-                            }
                         }
-                    }
+                    }).start();
+
 
                     if (execute.toString().trim().startsWith("[")) {
                         return (new JSONObject()).put("results",

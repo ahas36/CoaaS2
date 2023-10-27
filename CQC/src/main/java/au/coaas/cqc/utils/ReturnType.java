@@ -1,6 +1,7 @@
 package au.coaas.cqc.utils;
 
 import au.coaas.cqp.proto.CdqlConditionToken;
+import au.coaas.sqem.proto.ContextRequest;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -8,13 +9,13 @@ import java.util.List;
 public class ReturnType {
     private List<String> operators;
     private LinkedHashMap<String,String> params;
-    private List<CdqlConditionToken> rpnConditionList;
+    private ContextRequest.Builder contextRequest;
 
     public ReturnType(LinkedHashMap<String,String> params, List<String> operators,
-                      List<CdqlConditionToken> rpnConditionList) {
+                      ContextRequest.Builder contextRequest) {
         this.operators = operators;
         this.params = params;
-        this.rpnConditionList = rpnConditionList;
+        this.contextRequest = contextRequest;
     }
 
     public List<String> getOperators() {
@@ -26,6 +27,10 @@ public class ReturnType {
     }
 
     public List<CdqlConditionToken> getRpnConditionList() {
-        return rpnConditionList;
+        return contextRequest.getCondition().getRPNConditionList();
+    }
+
+    public ContextRequest.Builder getContextRequest() {
+        return contextRequest;
     }
 }

@@ -96,7 +96,7 @@ public class PullBasedExecutor {
 
     public static ReturnType getContextRequest(ContextEntity entity, CDQLQuery query, Map<String, JSONObject> ce,
                                                double complexity, String consumerId) {
-        ContextRequest.Builder contextRequest = generateContextRequest(entity, query, ce, 0, 0, complexity, consumerId);
+        ContextRequest.Builder contextRequest = generateContextRequest(entity, query, ce, -1, -1, complexity, consumerId);
         List<CdqlConditionToken> rpnConditionList = contextRequest.getCondition().getRPNConditionList();
 
         String key = null;
@@ -149,7 +149,7 @@ public class PullBasedExecutor {
                     }
             }
         }
-        return new ReturnType(params, operators, rpnConditionList);
+        return new ReturnType(params, operators, contextRequest);
     }
 
     protected static AbstractMap.SimpleEntry<Boolean, Map<String, String>> processForContextService (Queue<CdqlConditionToken> rpnCondition, ContextEntity entity,
@@ -1438,7 +1438,7 @@ public class PullBasedExecutor {
         }
     }
 
-    private static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
+    protected static AbstractMap.SimpleEntry retrieveContext(ContextEntity targetEntity, String contextServicesText,
                                                            HashMap<String,String> params, int limit, String criticality,
                                                            JSONObject consumerSLA, double complexity, Set<String> attributes,
                                                            List<String> operators, ContextEntity subEnt) {
@@ -1715,7 +1715,7 @@ public class PullBasedExecutor {
         }
     }
 
-    private static JSONObject mapServiceWithSLA(JSONObject conSer, JSONObject qos, ContextEntityType etype, String criticality){
+    protected static JSONObject mapServiceWithSLA(JSONObject conSer, JSONObject qos, ContextEntityType etype, String criticality){
         Double fthresh = -1.0;
 
         if(qos.getBoolean("staged") && qos.getJSONObject("criticality").has(criticality)){
@@ -1867,7 +1867,7 @@ public class PullBasedExecutor {
         ContextEntity tempContextEntity = tempContextEntityBuilder.build();
         List<ContextAttribute> returnAttributes = new ArrayList<>();
 
-        //ToDo fix return attribute section
+        //TODO: fix return attribute section
         ContextRequest.Builder cr = ContextRequest.newBuilder().setEt(targetEntity.getType())
                 .setCondition(tempContextEntity.getCondition())
                 .setMeta(query.getMeta())
@@ -1884,6 +1884,46 @@ public class PullBasedExecutor {
                                               double complexity, String consumerId) {
         AbstractMap.SimpleEntry res = executeSQEMQuery(targetEntity, query, ce, page, limit, null, complexity, consumerId);
         return (JSONObject) res.getKey();
+    }
+
+    protected static AbstractMap.SimpleEntry executeSQEMQuery(ContextRequest cr, String contextService) {
+        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+        Iterator<Chunk> data = sqemStub.handleContextRequest(cr);
+
+        ByteString.Output output = ByteString.newOutput();
+
+        data.forEachRemaining(c -> {
+            output.write(c.getData().toByteArray(), c.getIndex() * MAX_MESSAGE_SIZE, c.getData().size());
+        });
+
+        JSONObject invoke = new JSONObject();
+        String entityCollection = "";
+
+        try {
+            SQEMResponse sqemResponse = SQEMResponse.parseFrom(output.toByteString());
+            entityCollection = sqemResponse.getBody();
+            if (sqemResponse.getMeta() != null) {
+                invoke.put("results", new JSONArray(entityCollection));
+                invoke.put("meta", new JSONObject(sqemResponse.getMeta()));
+            }
+        } catch (InvalidProtocolBufferException e) {
+            e.printStackTrace();
+        }
+
+        JSONObject slaObj = new JSONObject(contextService);
+        String entType = slaObj.getJSONObject("info").getString("name");
+        Double fthresh = slaObj.getJSONObject("sla").getJSONObject("freshness").getDouble("fthresh");
+
+        SQEMServiceGrpc.SQEMServiceFutureStub asyncStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        asyncStub.summarizeAge(Statistic.newBuilder().setMethod(entityCollection)
+                .setStatus(entType).setEarning(fthresh).build());
+
+        JSONObject cs = new JSONObject(contextService);
+        JSONObject qos = cs.getJSONObject("sla").getJSONObject("qos");
+        return new AbstractMap.SimpleEntry(invoke,
+                qos.put("price", cs.getJSONObject("sla").getJSONObject("cost").getDouble("value")));
     }
 
     protected static AbstractMap.SimpleEntry executeSQEMQuery(ContextEntity targetEntity, CDQLQuery query,

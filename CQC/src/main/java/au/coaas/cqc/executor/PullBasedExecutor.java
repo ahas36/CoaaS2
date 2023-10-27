@@ -1576,7 +1576,7 @@ public class PullBasedExecutor {
         return null;
     }
 
-    private static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
+    protected static void refreshOrCacheContext(JSONObject sla, int cacheStatus, CacheLookUp.Builder lookup,
                                               String retEntity, String currRefPolicy, double complexity,
                                               List<String> hashKeys){
         try {

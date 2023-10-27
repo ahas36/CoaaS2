@@ -133,16 +133,21 @@ public class SituationManager {
                                     ContextRequest.Builder cr_build = retTy.getContextRequest().setProviderId(((JSONObject) con_ser)
                                             .getJSONObject("_id").getString("$oid"));
 
+                                    SQEMResponse data = null;
+                                    boolean isPartialMiss = false;
+                                    CacheLookUp.Builder lookup = null;
+                                    JSONObject slaObj = conSer.getJSONObject("sla");
+                                    AbstractMap.SimpleEntry<String,List<String>> status = null;
+
                                     // Checking cache as well if enabled.
-                                    if(cacheEnabled && conSer.getJSONObject("sla").getBoolean("cache")) {
-                                        JSONArray candidate_keys = conSer.getJSONObject("sla").getJSONArray("key");
+                                    if(cacheEnabled && slaObj.getBoolean("cache")) {
+                                        JSONArray candidate_keys = slaObj.getJSONArray("key");
                                         String ent_keys = "";
                                         for(Object k : candidate_keys)
                                             ent_keys = ent_keys.isEmpty() ? k.toString() : ent_keys + "," + k.toString();
 
-                                        JSONObject slaObj = conSer.getJSONObject("sla");
                                         // By this line, I should have completed identifying the query class
-                                        CacheLookUp.Builder lookup = CacheLookUp.newBuilder()
+                                        lookup = CacheLookUp.newBuilder()
                                                 .setCheckFresh(true)
                                                 .setEt(entity.get().getType())
                                                 .setKey(ent_keys).setQClass("1") // TODO: Assign the correct context query class
@@ -152,12 +157,12 @@ public class SituationManager {
                                                 .setUniformFreshness(slaObj.getJSONObject("freshness").toString()) // current lifetime & REQUESTED fthresh for the query
                                                 .setSamplingInterval(slaObj.getJSONObject("updateFrequency").toString()); // sampling
                                         // Look up also considers known refreshing logics
-                                        SQEMResponse data = sqemstub.handleContextRequestInCache(lookup.build());
+                                        data = sqemstub.handleContextRequestInCache(lookup.build());
 
                                         if(data.getStatus().equals("400") || data.getStatus().equals("404")){
+                                            isPartialMiss = data.getStatus().equals("400");
                                             // In the following, we are only considering context providers pushing data mode.
-                                            AbstractMap.SimpleEntry<String,List<String>> status =
-                                                    RetrievalManager.executeStreamRead(conSer.toString(),
+                                            status = RetrievalManager.executeStreamRead(conSer.toString(),
                                                             conSer.getJSONObject("_id").getString("$oid"), retTy.getParams(), null,
                                                             1, cacheEnabled && data.getStatus().equals("404") && data.getHashKey().isEmpty());
                                             if(!status.getKey().equals("200"))
@@ -170,8 +175,26 @@ public class SituationManager {
                                     }
 
                                     AbstractMap.SimpleEntry rex = PullBasedExecutor.executeSQEMQuery(cr_build.build(),
-                                            ((JSONObject) con_ser).toString());
+                                            conSer.toString());
                                     temp_ce.put(entKey, (JSONObject) rex.getKey());
+
+                                    // Refreshing any partially missed context entities only.
+                                    // Leaving missed ones to be cached for proactive caching.
+                                    if(cacheEnabled && isPartialMiss){
+                                        JSONObject finalConSer = conSer;
+                                        CacheLookUp.Builder finalLookup = lookup;
+                                        SQEMResponse finalData = data;
+                                        AbstractMap.SimpleEntry<String, List<String>> finalStatus = status;
+
+                                        Executors.newCachedThreadPool().submit(() -> {
+                                            PullBasedExecutor.refreshOrCacheContext(
+                                                    finalConSer.getJSONObject("sla"),
+                                                    Integer.parseInt(finalData.getStatus()),
+                                                    finalLookup, rex.getKey().toString(),
+                                                    finalData.getMeta(), subscription.getComplexity(),
+                                                    finalStatus.getValue());
+                                        });
+                                    }
                                     break;
                                 }
                             }

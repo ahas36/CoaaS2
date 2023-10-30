@@ -8,6 +8,7 @@ import au.coaas.cqc.proto.*;
 import au.coaas.cqc.proto.Empty;
 import au.coaas.cqc.utils.ReturnType;
 import au.coaas.cqc.utils.Utilities;
+import au.coaas.cqc.utils.enums.CacheLevels;
 import au.coaas.cqc.utils.enums.HttpRequests;
 import au.coaas.cqc.utils.enums.RequestDataType;
 import au.coaas.cqc.utils.exceptions.WrongOperatorException;
@@ -134,7 +135,6 @@ public class SituationManager {
                                             .getJSONObject("_id").getString("$oid"));
 
                                     SQEMResponse data = null;
-                                    boolean isPartialMiss = false;
                                     CacheLookUp.Builder lookup = null;
                                     JSONObject slaObj = conSer.getJSONObject("sla");
                                     AbstractMap.SimpleEntry<String,List<String>> status = null;
@@ -160,7 +160,6 @@ public class SituationManager {
                                         data = sqemstub.handleContextRequestInCache(lookup.build());
 
                                         if(data.getStatus().equals("400") || data.getStatus().equals("404")){
-                                            isPartialMiss = data.getStatus().equals("400");
                                             // In the following, we are only considering context providers pushing data mode.
                                             status = RetrievalManager.executeStreamRead(conSer.toString(),
                                                             conSer.getJSONObject("_id").getString("$oid"), retTy.getParams(), null,
@@ -178,9 +177,9 @@ public class SituationManager {
                                             conSer.toString());
                                     temp_ce.put(entKey, (JSONObject) rex.getKey());
 
-                                    // Refreshing any partially missed context entities only.
+                                    // Refreshing any partially missed context entities and evaluating to cache others.
                                     // Leaving missed ones to be cached for proactive caching.
-                                    if(cacheEnabled && isPartialMiss){
+                                    if(cacheEnabled){
                                         JSONObject finalConSer = conSer;
                                         CacheLookUp.Builder finalLookup = lookup;
                                         SQEMResponse finalData = data;
@@ -869,6 +868,12 @@ public class SituationManager {
                     String consumerId = sla.getJSONObject("_id").getString("$oid");
                     Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity, consumerId);
 
+                    JSONObject cacheable_situ = new JSONObject();
+                    if (execute.toString().trim().startsWith("[")) {
+                        cacheable_situ.put("results",
+                                new JSONArray(execute.toString().replaceAll("\"", "")));
+                    } else cacheable_situ.put("value", (Double) execute);
+
                     // Start predicting for this situational function.
                     new Thread(() -> {
                         if(comparators != null) {
@@ -883,9 +888,32 @@ public class SituationManager {
                                 try {
                                     CdqlConditionToken newToken = applyOperator(operator.getStringValue(), stack);
                                     if(newToken.getStringValue().equals("true")) {
-                                        // TODO: Start proactively caching context.
+                                        // Starting to proactively cache.
                                         if(cacheEnabled){
+                                            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_caching
+                                                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+                                            // Firstly, cache all related entities if they have not been cached.
+                                            // Secondly, caching the situation to be refreshed reactively.
+                                            // Checking cache for the situation
+                                            String situId = Utilities.combineHashKeys(fCall.getArgumentsList().stream().map(x -> {
+                                                // This is a quick fix to defining a hashkey for the situations.
+                                                String strValue = x.getStringValue();
+                                                if(strValue.startsWith("{")) return (new JSONObject(strValue)).getString("hashkey");
+                                                else return strValue;
+                                            }).collect(Collectors.toList()));
 
+                                            sqemStub_caching.cacheContext(CacheRequest.newBuilder()
+                                                            .setSituReference(SituationLookUp.newBuilder()
+                                                                    .setFunction(fCall)
+                                                                    .setUniquehashkey(situId)
+                                                                    .setZeroTime(System.currentTimeMillis()).build())
+                                                            .setJson(cacheable_situ.toString())
+                                                            .setCacheLevel(CacheLevels.SITU_FUNCTION.toString())
+                                                            .setRefreshLogic("REACTIVE")
+                                                            .setHashkey(situId)
+                                                            .setIndefinite(true)
+                                                    .build());
+                                            // Thirdly, cache the expected context (path).
                                         }
                                     }
                                 }
@@ -897,13 +925,7 @@ public class SituationManager {
                         }
                     }).start();
 
-
-                    if (execute.toString().trim().startsWith("[")) {
-                        return (new JSONObject()).put("results",
-                                new JSONArray(execute.toString().replaceAll("\"", "")));
-                    } else {
-                        return (new JSONObject()).put("value", (Double) execute);
-                    }
+                    return cacheable_situ;
                 }
             }
 

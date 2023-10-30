@@ -42,7 +42,8 @@ public class CQCInterceptor implements ServerInterceptor {
         // Asynchronously update the performance logs
         try{
             switch(method){
-                case "execute": {
+                case "execute":
+                case "handleSituation": {
                     // Log response time
                     CdqlResponse res = (CdqlResponse) message;
                     double penalty = 0;

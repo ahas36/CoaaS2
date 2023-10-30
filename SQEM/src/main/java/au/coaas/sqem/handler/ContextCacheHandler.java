@@ -1,6 +1,7 @@
 package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.SituationFunction;
+import au.coaas.cqp.proto.SituationFunctionResponse;
 import au.coaas.sqem.proto.*;
 import au.coaas.cpree.proto.Lookup;
 import au.coaas.grpc.client.CPREEChannel;
@@ -31,6 +32,7 @@ import au.coaas.sqem.util.enums.ScheduleTasks;
 import au.coaas.sqem.util.enums.PerformanceStats;
 import au.coaas.sqem.util.enums.DelayCacheLatency;
 
+import static au.coaas.sqem.handler.SituationHandler.findSituationByTitle;
 import static java.lang.Character.isDigit;
 
 public class ContextCacheHandler {
@@ -77,6 +79,14 @@ public class ContextCacheHandler {
     private static SQEMResponse cacheSituation(CacheRequest registerRequest){
         try {
             Document contextData = Document.parse(registerRequest.getJson());
+            SituationLookUp lookup = registerRequest.getSituReference();
+            if (lookup.getSituation() == null) {
+                SituationFunctionResponse temp_situ = findSituationByTitle(lookup.getFunction().getFunctionName());
+                registerRequest = registerRequest.toBuilder()
+                        .setSituReference(lookup.toBuilder().setSituation(temp_situ.getSFunction()))
+                        .build();
+            }
+
             registry.updateRegistry(registerRequest.getSituReference());
             String contextId = registerRequest.getSituReference().getFunction().getFunctionName() + "-"
                     + registerRequest.getHashkey();
@@ -90,12 +100,7 @@ public class ContextCacheHandler {
 
             RBucket<Document> ent = cacheClient.getBucket(contextId);
             synchronized (ContextCacheHandler.class){
-                if(!registerRequest.getIndefinite()){
-                    // Cached with definite lifetime
-                    ent.set(entityJson, registerRequest.getCachelife(), TimeUnit.MILLISECONDS);
-                    PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife(), DelayCacheLatency.DEFINITE);
-                }
-                else {
+                if(registerRequest.getIndefinite()){
                     // Cached with an indefinite lifetime
                     ent.set(entityJson);
                     if(!traditionalCaching){ // This prevents preemptive evictions as done in context caching
@@ -103,6 +108,11 @@ public class ContextCacheHandler {
                         Event.operation.subscribe(contextId, subscriber);
                     }
                     PerformanceLogHandler.logDecisionLatency("cachelife", Long.MAX_VALUE, DelayCacheLatency.INDEFINITE);
+                }
+                else {
+                    // Cached with definite lifetime
+                    ent.set(entityJson, registerRequest.getCachelife(), TimeUnit.MILLISECONDS);
+                    PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife(), DelayCacheLatency.DEFINITE);
                 }
 
                 // Also caching the situation definition to access it faster.

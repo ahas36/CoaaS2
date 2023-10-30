@@ -92,6 +92,11 @@ public class SituationItem implements ContextCacheItem {
                 this.lifetime.put("value",3600.0);
                 break;
             }
+            case "hazardous": {
+                // Making hazardous synchronized with our 3 seconds prediction window.
+                this.lifetime.put("value",3);
+                break;
+            }
             default: this.lifetime.put("value",1800.0);
         }
     }

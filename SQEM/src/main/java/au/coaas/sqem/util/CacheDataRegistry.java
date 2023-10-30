@@ -3,6 +3,7 @@ package au.coaas.sqem.util;
 import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.cqp.proto.Operand;
 import au.coaas.cqp.proto.OperandType;
+import au.coaas.cqp.proto.SituationFunctionResponse;
 import au.coaas.sqem.entity.ContextCacheItem;
 import au.coaas.sqem.entity.SituationItem;
 import au.coaas.sqem.proto.*;
@@ -590,10 +591,12 @@ public final class CacheDataRegistry{
                             TimeZone.getDefault().toZoneId());
                     SituationItem newSituationInstance = new SituationItem((SituationItem) v, lookup.getUniquehashkey(),
                             lookup.getFunction().getArgumentsList(), zeroTime);
+
                     // Setting the entities related to the situation
                     for(Operand ope: lookup.getFunction().getArgumentsList()){
                         if(ope.getType().equals(OperandType.CONTEXT_VALUE_JSON)){
                             String entityName  = ope.getContextAttribute().getEntityName();
+
                             ContextEntityType entType = lookup.getSituation().getRelatedEntitiesMap().get(entityName);
                             JSONObject value = new JSONObject(ope.getStringValue());
 
@@ -625,6 +628,7 @@ public final class CacheDataRegistry{
                     TimeZone.getDefault().toZoneId());
             SituationItem newSituationInstance = new SituationItem(rootSitu, lookup.getUniquehashkey(),
                     lookup.getFunction().getArgumentsList(), zeroTime);
+
             // Setting the entities related to the situation
             for(Operand ope: lookup.getFunction().getArgumentsList()){
                 if(ope.getType().equals(OperandType.CONTEXT_VALUE_JSON)){

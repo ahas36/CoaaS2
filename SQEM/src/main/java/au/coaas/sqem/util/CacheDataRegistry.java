@@ -595,7 +595,8 @@ public final class CacheDataRegistry{
                     // Setting the entities related to the situation
                     for(Operand ope: lookup.getFunction().getArgumentsList()){
                         if(ope.getType().equals(OperandType.CONTEXT_VALUE_JSON)){
-                            String entityName  = ope.getContextAttribute().getEntityName();
+                            String entityName = ope.getContextAttribute().isInitialized() ?
+                                    ope.getContextAttribute().getEntityName() : ope.getContextEntity().getEntityID();
 
                             ContextEntityType entType = lookup.getSituation().getRelatedEntitiesMap().get(entityName);
                             JSONObject value = new JSONObject(ope.getStringValue());

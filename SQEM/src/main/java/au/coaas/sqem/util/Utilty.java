@@ -83,6 +83,10 @@ public class Utilty {
         JSONObject lifetime = new JSONObject();
         lifetime.put("unit","s");
         switch(entityType.toLowerCase()){
+            case "hazardous": {
+                lifetime.put("value", 3.0);
+                break;
+            }
             case "car":
             case "vehicle": {
                 lifetime.put("value",30.0);

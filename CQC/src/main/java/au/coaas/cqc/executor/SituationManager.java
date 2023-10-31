@@ -3,9 +3,9 @@ package au.coaas.cqc.executor;
 import au.coaas.base.proto.ListOfString;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 
-import au.coaas.cpree.proto.SimpleContainer;
 import au.coaas.cqc.proto.*;
 import au.coaas.cqc.proto.Empty;
+import au.coaas.cqc.utils.GeoIndexer;
 import au.coaas.cqc.utils.ReturnType;
 import au.coaas.cqc.utils.Utilities;
 import au.coaas.cqc.utils.enums.CacheLevels;
@@ -29,7 +29,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 
 import com.google.gson.Gson;
-import com.google.protobuf.InvalidProtocolBufferException;
+
 import com.google.protobuf.util.JsonFormat;
 import org.joda.time.Period;
 import org.joda.time.DateTime;
@@ -52,12 +52,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SituationManager {
-    private static boolean cacheEnabled = true;
+    private static final boolean cacheEnabled = true;
 
     public static long totalExecutionTime = 0;
     public static long totalNumberOfEvents = 0;
 
-    private static Logger log = Logger.getLogger(SituationManager.class.getName());
+    private static final Logger log = Logger.getLogger(SituationManager.class.getName());
+    private static final String[] locAttrs = new String[]{"location", "geo" };
 
     public static CdqlResponse handleEvent(EventRequest eventRequest) throws Exception {
         long eventStartTime = System.currentTimeMillis();
@@ -111,7 +112,7 @@ public class SituationManager {
                             if((keys.getValueCount() == 1 && keys.getValueList().contains(ent_id)) || temp_ce.containsKey(ent_id)) break;
 
                             for(String entKey : keys.getValueList()){
-                                if(entKey == ent_id) continue;
+                                if(entKey.equals(ent_id)) continue;
                                 // Need to retrieve from the context storage.
                                 Optional<ContextEntity> entity = subscription.getRelatedEntitiesList().stream()
                                         .filter(x -> x.getEntityID().equals(entKey)).findFirst();
@@ -268,14 +269,10 @@ public class SituationManager {
                         pushList.add(jsonObject);
                         try {
                             PushBasedExecutor.pushContext(subscription.getCallback(), jsonObject, subscription.getId());
-                        } catch (InterruptedException | ExecutionException ex) {
-                            log.severe(ex.getMessage());
                         } catch (IOException ex) {
                             log.severe(ex.getMessage());
                         }
                     }
-                } catch (InterruptedException | WrongOperatorException e) {
-                    log.severe(e.getMessage());
                 } catch (Exception e) {
                     log.severe(e.getMessage());
                 }
@@ -408,7 +405,7 @@ public class SituationManager {
                 Double.valueOf(val);
                 constantType = CdqlConstantConditionTokenType.Numeric;
             } catch (NumberFormatException e) {
-
+                log.severe(e.getMessage());
             }
         }
 
@@ -685,6 +682,7 @@ public class SituationManager {
             if (null != argument.getType()) {
                 switch (argument.getType()) {
                     case FUNCTION_CALL: {
+                        String funName = argument.getFunctioncall().getFunctionName();
                         FunctionCall subFunction = preproccessFunctionCall(gson.fromJson(gson.toJson(argument.getStringValue()), FunctionCall.class),
                                 jsonValues, old, query, subID, stringFcall, complexity);
                         fCallTemp.setArguments(iter_index, Operand.newBuilder()
@@ -722,20 +720,40 @@ public class SituationManager {
                             }
                         }
 
-                        JSONObject values = new JSONObject(argument.getStringValue());
-                        JSONObject entity = jsonValues.getJSONObject(values.get("entityName").toString());
-                        String[] split = ((String) values.get("attributeName").toString()).split("\\.");
-                        JSONObject item = entity;
-                        if (item.has("results")) {
-                            item = item.getJSONArray("results").getJSONObject(0);
-                        }
+                        JSONObject values;
+                        JSONObject values_org = new JSONObject(argument.getStringValue());
 
+                        if(values_org.has("results")) values = values_org.getJSONArray("results").getJSONObject(0);
+                        else values = values_org;
+
+                        ContextAttribute con_attr = argument.getContextAttribute();
+                        String[] split = con_attr.getAttributeName().split("\\.");
                         for (int i = 0; i < split.length - 1; i++) {
-                            item = item.getJSONObject(split[i]);
+                            values = values.getJSONObject(split[i]);
                         }
 
-                        String value = String.valueOf(item.get(split[split.length - 1]));
+//                        JSONObject values = new JSONObject(argument.getStringValue());
+//                        JSONObject entity = jsonValues.getJSONObject(values.get("entityName").toString());
+//                        String[] split = ((String) values.get("attributeName").toString()).split("\\.");
+//                        JSONObject item = entity;
+//                        if (item.has("results")) {
+//                            item = item.getJSONArray("results").getJSONObject(0);
+//                        }
+//                        for (int i = 0; i < split.length - 1; i++) {
+//                            item = item.getJSONObject(split[i]);
+//                        }
+
+                        String value = String.valueOf(values.get(split[split.length - 1]));
+                        if ((fCall.getFunctionName().equals("decrease") || fCall.getFunctionName().equals("increase") || fCall.getFunctionName().equals("distance"))
+                        && (split[split.length - 1].equals("location") || split[split.length - 1].equals("geo"))) {
+                            JSONObject val = new JSONObject(value);
+                            val.put("speed", values_org.has("speed") ? values_org.getDouble("speed") :
+                                    con_attr.getEntityName().equals("car") ? 60 : 5);
+                            val.put("heading", values_org.has("heading") ? values_org.getDouble("heading") : 0);
+                        }
+
                         fCallTemp.setArguments(iter_index, Operand.newBuilder()
+                                .setContextAttribute(argument.getContextAttribute())  // Adding it here to indicate value was derived as a context attribute.
                                 .setType(OperandType.CONTEXT_VALUE_STRING)
                                 .setStringValue(value).build());
                         break;
@@ -748,6 +766,7 @@ public class SituationManager {
                         String entityTypeString = findEntity.get().getType().toString();
                         operandEntity.put("entityType", entityTypeString);
                         fCallTemp.setArguments(iter_index, Operand.newBuilder()
+                                .setContextEntity(findEntity.get()) // Adding it here because, in order to be a JSON, it has to be an entity.
                                 .setType(OperandType.CONTEXT_VALUE_JSON)
                                 .setStringValue(operandEntity.toString()).build());
                         break;
@@ -887,14 +906,82 @@ public class SituationManager {
                                 stack.push(operand_2);
                                 try {
                                     CdqlConditionToken newToken = applyOperator(operator.getStringValue(), stack);
+                                    // Starting to proactively cache.
                                     if(newToken.getStringValue().equals("true")) {
-                                        // Starting to proactively cache.
+                                        // Check if this is a JSON (hence, an entity been passed an argument).
                                         if(cacheEnabled){
                                             SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_caching
                                                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
                                             // Firstly, cache all related entities if they have not been cached.
+                                            // Secondly, cache the expected context (path). This happends through the same loop.
+                                            for(Operand x : fCall.getArgumentsList()) {
+                                                if(x.getStringValue().startsWith("{")){
+                                                    // It is always implicit that when a context entity is mobile, it generates JSON type data.
+                                                    // So, considering only CONTEXT_VALUE_JSON for processing.
+                                                    JSONObject argValue = new JSONObject(x.getStringValue());
+                                                    if(argValue.has("mobile") && argValue.getBoolean("mobile")) {
+                                                        double lat = 0, lng = 0;
+                                                        if(argValue.has("latitude") && argValue.has("longitude")) {
+                                                            lat = argValue.getDouble("latitude");
+                                                            lng = argValue.getDouble("longitude");
+                                                        } else {
+                                                            for(String att : locAttrs) {
+                                                                if(argValue.has(att)) {
+                                                                    lat = argValue.getJSONObject(att).getDouble("latitude");
+                                                                    lng = argValue.getJSONObject(att).getDouble("longitude");
+                                                                }
+                                                            }
+                                                        }
+
+                                                        GeoIndexer geo = GeoIndexer.getInstance();
+                                                        // TODO: Should be best based on historic path analysis.
+                                                        Path pred_path = geo.getPredictedPath(lat, lng, argValue.getDouble("heading"),
+                                                                argValue.getDouble("speed"), 3);
+
+                                                        sqemStub_caching.cacheContext(CacheRequest.newBuilder()
+                                                                .setJson(JsonFormat.printer().print(pred_path))
+                                                                .setCacheLevel(CacheLevels.ATTRIBUTE.toString())
+                                                                .setReference(CacheLookUp.newBuilder()
+                                                                        .setEt(x.getContextEntity().getType())
+                                                                        .setServiceId(argValue.getJSONArray("providers").getString(0))
+                                                                        .setHashKey(argValue.getString("hashkey")).build())
+                                                                .setRefreshLogic("REACTIVE")
+                                                                .setIndefinite(false) // Should be set to Entity lifetime
+                                                                .setHashkey("pred_path")
+                                                                .build());
+                                                    }
+                                                }
+                                                else if ((fCall.getFunctionName().equals("distance") || fCall.getFunctionName().equals("increase")
+                                                    || fCall.getFunctionName().equals("decrease")) && x.getType().equals(OperandType.CONTEXT_VALUE_STRING.toString())) {
+                                                    if(x.hasContextAttribute() && Arrays.asList(locAttrs).contains(x.getContextAttribute().getAttributeName())) {
+                                                        JSONObject argValue = new JSONObject(x.getStringValue());
+                                                        double lat = 0, lng = 0;
+                                                        for(String att : locAttrs) {
+                                                            if(argValue.has(att)) {
+                                                                lat = argValue.getJSONObject(att).getDouble("latitude");
+                                                                lng = argValue.getJSONObject(att).getDouble("longitude");
+                                                            }
+                                                        }
+                                                        GeoIndexer geo = GeoIndexer.getInstance();
+                                                        Path pred_path = geo.getPredictedPath(lat, lng, argValue.getDouble("heading"),
+                                                                argValue.getDouble("speed"), 3);
+
+                                                        sqemStub_caching.cacheContext(CacheRequest.newBuilder()
+                                                                .setJson(JsonFormat.printer().print(pred_path))
+                                                                .setCacheLevel(CacheLevels.ATTRIBUTE.toString())
+                                                                .setReference(CacheLookUp.newBuilder()
+                                                                        .setEt(x.getContextEntity().getType())
+                                                                        .setServiceId(argValue.getJSONArray("providers").getString(0))
+                                                                        .setHashKey(argValue.getString("hashkey")).build())
+                                                                .setRefreshLogic("REACTIVE")
+                                                                .setIndefinite(false) // Should be set to Entity lifetime
+                                                                .setHashkey("pred_path")
+                                                                .build());
+                                                    }
+                                                }
+                                            }
+
                                             // Secondly, caching the situation to be refreshed reactively.
-                                            // Checking cache for the situation
                                             String situId = Utilities.combineHashKeys(fCall.getArgumentsList().stream().map(x -> {
                                                 // This is a quick fix to defining a hashkey for the situations.
                                                 String strValue = x.getStringValue();
@@ -913,8 +1000,10 @@ public class SituationManager {
                                                             .setHashkey(situId)
                                                             .setIndefinite(true)
                                                     .build());
-                                            // Thirdly, cache the expected context (path).
                                         }
+
+                                        log.info("Situation predicted and cached.");
+                                        break; // Immediatly breaking from the loop because we already know the situation is expected to happen.
                                     }
                                 }
                                 catch (Exception ex) {

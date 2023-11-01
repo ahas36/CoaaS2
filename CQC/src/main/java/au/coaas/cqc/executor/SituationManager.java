@@ -939,6 +939,7 @@ public class SituationManager {
                                             // Not caching further context entities becuase,for example, car may not be cached cecause it is cost inefficient to
                                             // refresh the location all the time.
                                             for(Operand x : fCall.getArgumentsList()) {
+                                                String refAttr = "location";
                                                 if(x.getStringValue().startsWith("{")){
                                                     // It is always implicit that when a context entity is mobile, it generates JSON type data.
                                                     // So, considering only CONTEXT_VALUE_JSON for processing.
@@ -950,6 +951,7 @@ public class SituationManager {
                                                             lng = argValue.getDouble("longitude");
                                                         } else {
                                                             for(String att : locAttrs) {
+                                                                refAttr = att;
                                                                 if(argValue.has(att)) {
                                                                     lat = argValue.getJSONObject(att).getDouble("latitude");
                                                                     lng = argValue.getJSONObject(att).getDouble("longitude");
@@ -966,10 +968,11 @@ public class SituationManager {
                                                                 .setJson(JsonFormat.printer().print(pred_path))
                                                                 .setCacheLevel(CacheLevels.ATTRIBUTE.toString())
                                                                 .setReference(CacheLookUp.newBuilder()
+                                                                        .setKey(refAttr)
+                                                                        .setZeroTime(pred_path.getZeroTime())
                                                                         .setEt(x.getContextEntity().getType())
                                                                         .setServiceId(argValue.getJSONArray("providers").getString(0))
                                                                         .setHashKey(argValue.getString("hashkey")).build())
-                                                                .setRefreshLogic("REACTIVE")
                                                                 .setIndefinite(false) // Should be set to Entity lifetime if available or indefinite (if the ghost transforms, then take that lifetime).
                                                                 .setHashkey("pred_path")
                                                                 .build());
@@ -994,10 +997,11 @@ public class SituationManager {
                                                                 .setJson(JsonFormat.printer().print(pred_path))
                                                                 .setCacheLevel(CacheLevels.ATTRIBUTE.toString())
                                                                 .setReference(CacheLookUp.newBuilder()
+                                                                        .setKey(refAttr)
+                                                                        .setZeroTime(pred_path.getZeroTime())
                                                                         .setEt(x.getContextEntity().getType())
                                                                         .setServiceId(argValue.getJSONArray("providers").getString(0))
                                                                         .setHashKey(argValue.getString("hashkey")).build())
-                                                                .setRefreshLogic("REACTIVE")
                                                                 .setIndefinite(false) // Should be set to Entity lifetime
                                                                 .setHashkey("pred_path")
                                                                 .build());

@@ -1,8 +1,10 @@
 package au.coaas.cqc.utils;
 
 import au.coaas.cqc.proto.CordinatesIndex;
+import au.coaas.cqc.proto.IndexCoordinate;
 
 import au.coaas.cqc.proto.Path;
+
 import com.uber.h3core.H3Core;
 import com.uber.h3core.LengthUnit;
 import com.uber.h3core.util.LatLng;
@@ -99,12 +101,23 @@ public class GeoIndexer {
     }
 
     // Returns all the indexes in the path of 2 indexes and the directed edge.
-    public Path getPath (long origin, long destination) {
+    public Path getPath (long origin, long destination, Path result) {
         long edge = h3Client.cellsToDirectedEdge(origin, destination);
-        return Path.newBuilder().setOrigin(origin).setDestination(destination)
-                .addAllPath(h3Client.gridPathCells(origin, destination))
-                .setEdge(edge).setDistace(h3Client.edgeLength(edge, LengthUnit.km))
-                .build();
+        if(result == null) {
+            return Path.newBuilder()
+                    .setOrigin(IndexCoordinate.newBuilder().setIndex(origin).build())
+                    .setDestination(IndexCoordinate.newBuilder().setIndex(destination).build())
+                    .addAllPath(h3Client.gridPathCells(origin, destination))
+                    .setEdge(edge).setDistance(h3Client.edgeLength(edge, LengthUnit.km))
+                    .setZeroTime(System.currentTimeMillis())
+                    .build();
+        }
+        else {
+            return result.toBuilder()
+                    .addAllPath(h3Client.gridPathCells(origin, destination))
+                    .setEdge(edge).setDistance(h3Client.edgeLength(edge, LengthUnit.km))
+                    .build();
+        }
     }
 
     // Returns the higher level index that the provided index belongs to in the hierachy.
@@ -117,8 +130,20 @@ public class GeoIndexer {
         // Considering speed in Kmph, time in seconds,
         double distance = speed * (time/3600.0);
         AbstractMap.SimpleEntry<Double, Double> destination = estimateDestination (lat, lng, distance, heading);
-        return getPath(h3Client.latLngToCell(lat, lng, getInstance().def_res),
-                h3Client.latLngToCell(destination.getKey(), destination.getValue(), getInstance().def_res));
+
+        long origin = h3Client.latLngToCell(lat, lng, getInstance().def_res);
+        long dest = h3Client.latLngToCell(destination.getKey(), destination.getValue(), getInstance().def_res);
+        Path result_obj = Path.newBuilder()
+                .setOrigin(IndexCoordinate.newBuilder()
+                        .setLatitude(lat).setLongitude(lng)
+                        .setIndex(origin).build())
+                .setDestination(IndexCoordinate.newBuilder()
+                        .setLatitude(destination.getKey()).setLatitude(destination.getValue())
+                        .setIndex(dest).build())
+                .setZeroTime(System.currentTimeMillis())
+                .build();
+
+        return getPath(origin, dest, result_obj);
     }
 
     private static final long radius = 6371;

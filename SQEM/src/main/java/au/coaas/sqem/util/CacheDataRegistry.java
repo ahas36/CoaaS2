@@ -1,19 +1,21 @@
 package au.coaas.sqem.util;
 
-import au.coaas.cqp.proto.ContextEntityType;
 import au.coaas.cqp.proto.Operand;
 import au.coaas.cqp.proto.OperandType;
-import au.coaas.cqp.proto.SituationFunctionResponse;
-import au.coaas.sqem.entity.ContextCacheItem;
-import au.coaas.sqem.entity.SituationItem;
+import au.coaas.cqp.proto.ContextEntityType;
+
+import au.coaas.sqem.entity.AttributeItem;
 import au.coaas.sqem.proto.*;
 import au.coaas.sqem.entity.ContextItem;
+import au.coaas.sqem.entity.SituationItem;
+import au.coaas.sqem.entity.ContextCacheItem;
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.handler.PerformanceLogHandler;
 
 import au.coaas.sqem.util.PubSub.Event;
 import au.coaas.sqem.util.PubSub.Message;
 import au.coaas.sqem.util.PubSub.Subscriber;
+
 import org.json.JSONObject;
 
 import java.time.Instant;
@@ -21,10 +23,11 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
-import java.util.stream.Collectors;
 
 public final class CacheDataRegistry{
 
@@ -48,7 +51,6 @@ public final class CacheDataRegistry{
     }
 
     // Registry lookup. Returns hash key if available in cache.
-    // Done
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
         // Initializing
         CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
@@ -536,9 +538,167 @@ public final class CacheDataRegistry{
     }
 
     // Adds or updates the cached context repository
-    // Done
     public synchronized String updateRegistry(Object lookup){
         return updateRegistry(lookup, null);
+    }
+
+    // Record a context attribute in registry.
+    public synchronized Double attributeRegistryEntry(CacheRequest lookup){
+        AtomicReference<Double> remainingLifetime = null;
+        remainingLifetime.set(-1.0);
+
+        // 1. Checking if there already exists cached instance this entity.
+        String entType = lookup.getReference().getEt().getType();
+        if(this.root.containsKey(entType)){
+            // Updating the last update time of the entity type
+            this.root.compute(entType, (k,v) -> {
+                if(v != null){
+                    String serId = lookup.getReference().getServiceId();
+                    if(v.getChildren().containsKey(serId)){
+                        String finalSerId = serId;
+                        v.getChildren().compute(serId, (id, stat) -> {
+                            if(stat != null){
+                                if(stat.getChildren().containsKey(lookup.getReference().getHashKey())){
+                                    // A solid context entity is already there.
+                                    stat.getChildren().compute(lookup.getReference().getHashKey(), (k1,v1) -> {
+                                        if(v1!=null){
+                                            Double ent_lifetime = v1.getlifetime().getDouble("value"); // seconds
+                                            LocalDateTime expTime = v1.getZeroTime().plusSeconds(ent_lifetime.longValue());
+                                            long diff = ChronoUnit.SECONDS.between(LocalDateTime.now(), expTime);
+
+                                            // If there is remaining lifetime, then cache for that time. Otherwise indefinite because the entity may turn ghost.
+                                            if(diff>0) remainingLifetime.set((double) diff);
+                                            LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getReference().getZeroTime()),
+                                                    TimeZone.getDefault().toZoneId());
+                                            ((ContextItem)v1).setChildren(lookup.getHashkey(),
+                                                    new AttributeItem((ContextItem)v1, lookup.getHashkey(), zeroTime, lookup.getReference().getKey()));
+                                        }
+                                        return v1;
+                                    });
+                                }
+                                else {
+                                    // Add a ghost entity by hash key if not available.
+                                    ContextItem sharedEntity = null;
+                                    HashMap<String, ContextCacheItem> siblingCPs = v.getChildren();
+                                    for(Map.Entry<String, ContextCacheItem> sibling : siblingCPs.entrySet()){
+                                        if(sibling.getValue().getChildren().containsKey(lookup.getReference().getHashKey())){
+                                            sharedEntity = (ContextItem) sibling.getValue()
+                                                    .getChildren().get(lookup.getReference().getHashKey());
+                                            break;
+                                        }
+                                    }
+
+                                    LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getReference().getZeroTime()),
+                                            TimeZone.getDefault().toZoneId());
+                                    if(sharedEntity == null){
+                                        // No shared entity.
+                                        ContextItem temp_ent = new ContextItem((ContextItem) stat, lookup.getReference().getHashKey(),
+                                                zeroTime, entType, true);
+                                        temp_ent.setChildren(lookup.getHashkey(),
+                                                new AttributeItem((ContextItem)temp_ent, lookup.getHashkey(), zeroTime, lookup.getReference().getKey()));
+                                        stat.getChildren().put(lookup.getReference().getHashKey(), temp_ent);
+                                    }
+                                    else {
+                                        // Already existing shared entity.
+                                        sharedEntity.setParents(finalSerId, stat);
+                                        sharedEntity.setChildren(lookup.getHashkey(),
+                                                new AttributeItem((ContextItem)sharedEntity, lookup.getHashkey(), zeroTime, lookup.getReference().getKey()));
+                                        stat.getChildren().put(lookup.getReference().getHashKey(), sharedEntity);
+
+                                        Double ent_lifetime = sharedEntity.getlifetime().getDouble("value"); // seconds
+                                        LocalDateTime expTime = sharedEntity.getZeroTime().plusSeconds(ent_lifetime.longValue());
+                                        long diff = ChronoUnit.SECONDS.between(LocalDateTime.now(), expTime);
+
+                                        // If there is remaining lifetime, then cache for that time. Otherwise indefinite because the entity may turn ghost.
+                                        if(diff>0) remainingLifetime.set((double) diff);
+                                    }
+                                }
+                            }
+                            return stat;
+                        });
+                    }
+                    else {
+                        // No entities by the context provider.
+                        LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getReference().getZeroTime()),
+                                TimeZone.getDefault().toZoneId());
+                        ContextCacheItem ref = v.getChildren()
+                                .put(serId, new ContextItem((ContextItem) v, serId, lookup.getReference().getHashKey(),
+                                        "reactive", zeroTime, true));
+                        remainingLifetime.set(attributeRegistryEntry(lookup));
+                    }
+                }
+                return v;
+            });
+        }
+        else {
+            // No entities by the context entity type.
+            LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getReference().getZeroTime()),
+                    TimeZone.getDefault().toZoneId());
+            this.root.put(lookup.getReference().getEt().getType(),
+                    new ContextItem(lookup.getReference(), lookup.getReference().getHashKey(), "reactive", zeroTime, true));
+            remainingLifetime.set(attributeRegistryEntry(lookup));
+        }
+
+//        if(Event.operation.checkChannel("situationUpdate")){
+//            Message message = new Message(entType, lookup.getReference().getHashKey());
+//            Event.operation.publish("situationUpdate", message);
+//        }
+
+        // Remaining lifetime of the entity.
+        return remainingLifetime.get();
+    }
+
+    // Refresh a context attribute entry.
+    public synchronized Double updateRegistryForAttribute(CacheRefreshRequest lookup){
+        AtomicReference<Double> remainingLifetime = null;
+        remainingLifetime.set(-1.0);
+
+        String entType = lookup.getReference().getEt().getType();
+        if(this.root.containsKey(entType)){
+            // Updating the last update time of the entity type
+            this.root.compute(entType, (k,v) -> {
+                if(v != null){
+                    String serId = lookup.getReference().getServiceId();
+                    if(v.getChildren().containsKey(serId)){
+                        String finalSerId = serId;
+                        v.getChildren().compute(serId, (id, stat) -> {
+                            if(stat != null){
+                                if(stat.getChildren().containsKey(lookup.getReference().getHashKey())){
+                                    // A solid or ghost context entity is already there.
+                                    stat.getChildren().compute(lookup.getReference().getHashKey(), (k1,v1) -> {
+                                        if(v1!=null){
+                                            if(!((ContextItem)v1).isGhost) {
+                                                Double ent_lifetime = v1.getlifetime().getDouble("value"); // seconds
+                                                LocalDateTime expTime = v1.getZeroTime().plusSeconds(ent_lifetime.longValue());
+                                                long diff = ChronoUnit.SECONDS.between(LocalDateTime.now(), expTime);
+
+                                                // If there is remaining lifetime, then cache for that time. Otherwise indefinite because the entity may turn ghost.
+                                                if(diff>0) remainingLifetime.set((double) diff);
+                                            }
+
+                                            LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getReference().getZeroTime()),
+                                                    TimeZone.getDefault().toZoneId());
+
+                                            v1.getChildren().compute(lookup.getAddAttributeName(), (k2,v2) -> {
+                                                v2.setZeroTime(zeroTime);
+                                                v2.setUpdatedTime(LocalDateTime.now());
+                                                return v2;
+                                            });
+                                        }
+                                        return v1;
+                                    });
+                                }
+                            }
+                            return stat;
+                        });
+                    }
+                }
+                return v;
+            });
+        }
+
+        // Remaining lifetime of the entity.
+        return remainingLifetime.get();
     }
 
     // Done
@@ -546,6 +706,7 @@ public final class CacheDataRegistry{
         try {
             if(lookup instanceof CacheLookUp) return updateCachedEntity((CacheLookUp)lookup, refreshLogic);
             else if(lookup instanceof SituationLookUp) return updateCachedSituation((SituationLookUp)lookup);
+            else if(lookup instanceof CacheRefreshRequest) return updateRegistryForAttribute((CacheRefreshRequest)lookup).toString();
         }
         catch(Exception ex) {
             log.severe("Error in update registry: " + ex.getMessage());

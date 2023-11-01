@@ -160,6 +160,7 @@ message CacheRefreshRequest
     string refPolicy = 5;
     string contextLevel = 6;
     SituationLookUp situReference = 7;
+    string addAttributeName = 8;
 }
 
 message RegisterEntityRequest

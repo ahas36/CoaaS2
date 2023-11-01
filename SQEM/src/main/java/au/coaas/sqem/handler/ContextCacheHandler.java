@@ -66,8 +66,7 @@ public class ContextCacheHandler {
         return currentPerf.containsKey(key) ? currentPerf.get(key) : 0.0;
     }
 
-    // Caches all context under an entity
-    // Done
+    // Caches different types of context information.
     public static SQEMResponse cacheContext(CacheRequest registerRequest){
         switch(registerRequest.getCacheLevel().toLowerCase()){
             case "situ_function": return cacheSituation(registerRequest);
@@ -79,7 +78,48 @@ public class ContextCacheHandler {
 
     // Caches the predictive context attributes.
     private static SQEMResponse cachePredictiveAttribute(CacheRequest registerRequest) {
-        return SQEMResponse.newBuilder().build();
+        try {
+            Document predAttrData = Document.parse(registerRequest.getJson());
+            CacheLookUp.Builder temp = registerRequest.getReference().toBuilder();
+            temp.setZeroTime(predAttrData.getLong("zeroTime"));
+
+            // registry.updateRegistry(temp.build(), registerRequest.getRefreshLogic());
+            // Considering the returned cached lifetime is in seconds and that only if there already exists the cached entity.
+            // -1 if ghost entity and to refer infinitely caching.
+            double cacheLife = registry.attributeRegistryEntry(registerRequest);
+
+            // The following hashkey is an extension to the entity hashkey indicating what is the additional attribute.
+            String entity_hash = registerRequest.getReference().getEt().getType() + "-"
+                    + registerRequest.getReference().getHashKey();
+            String contextId = entity_hash + "-" + registerRequest.getHashkey();
+
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+
+            // Preparing Cache Object
+            Document attrJson = new Document();
+            attrJson.put("data", predAttrData);
+            attrJson.put("entity", entity_hash);
+            attrJson.put("ref_attribute", registerRequest.getReference().getKey());
+
+            RBucket<Document> attribute = cacheClient.getBucket(contextId);
+            synchronized (ContextCacheHandler.class){
+                if(cacheLife>0){
+                    // Cached with definite lifetime
+                    attribute.set(attrJson, (long) (cacheLife * 1000), TimeUnit.MILLISECONDS);
+                    PerformanceLogHandler.logDecisionLatency("cachelife", registerRequest.getCachelife(), DelayCacheLatency.DEFINITE);
+                }
+                else {
+                    // Cached with an indefinite lifetime
+                    attribute.set(attrJson);
+                    PerformanceLogHandler.logDecisionLatency("cachelife", Long.MAX_VALUE, DelayCacheLatency.INDEFINITE);
+                }
+            }
+
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.CACHE, contextId, registerRequest.getRefreshLogic());
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Predictive attribute cached.").build();
+        } catch (Exception e) {
+            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
+        }
     }
 
     // Caches the situation and the confidence.
@@ -184,8 +224,43 @@ public class ContextCacheHandler {
     public static SQEMResponse refreshContext(CacheRefreshRequest updateRequest) {
         switch(updateRequest.getContextLevel().toLowerCase()){
             case "situ_function": return refreshSituation(updateRequest);
+            case "attribute": return refreshAttribute(updateRequest);
             case "entity":
             default: return refreshEntity(updateRequest);
+        }
+    }
+
+    private static SQEMResponse refreshAttribute(CacheRefreshRequest updateRequest) {
+        try {
+            String entity_hash = updateRequest.getReference().getEt().getType() + "-"
+                    + updateRequest.getReference().getHashKey();
+            String contextId = entity_hash + "-" + updateRequest.getAddAttributeName();
+
+            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+            Document data =  Document.parse(updateRequest.getJson());
+            RBucket<Document> ent = cacheClient.getBucket(contextId);
+
+            RLock lock;
+            RFuture<Document> refreshStatus;
+
+            synchronized (ContextCacheHandler.class){
+                lock = cacheClient.getFairLock("refreshLock");
+                Document attrJson = ent.get();
+                attrJson.replace("data", data);
+                Double cacheLife = Double.valueOf(registry.updateRegistry(updateRequest));
+                if(cacheLife < 0) {
+                    refreshStatus = ent.getAndSetAsync(attrJson);
+                } else refreshStatus = ent.getAndSetAsync(attrJson, (long) (cacheLife * 1000), TimeUnit.MILLISECONDS);
+            }
+
+            refreshStatus.whenCompleteAsync((res, exception) -> {
+                lock.unlockAsync();
+            });
+
+            PerformanceLogHandler.logCacheActions(ScheduleTasks.REFRESH, contextId, updateRequest.getRefPolicy());
+            return SQEMResponse.newBuilder().setStatus("200").setBody("Attribute refreshed.").build();
+        } catch (Exception e) {
+            return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
     }
 

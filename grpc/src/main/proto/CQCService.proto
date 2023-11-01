@@ -66,9 +66,16 @@ message CordinatesIndex {
 message Path {
     repeated uint64 path = 1;
     uint64 edge = 2;
-    uint64 origin = 3;
-    uint64 destination = 4;
-    double distace = 5;
+    IndexCoordinate origin = 3;
+    IndexCoordinate destination = 4;
+    double distance = 5;
+    uint64 zeroTime = 6;
+}
+
+message IndexCoordinate {
+    uint64 index = 1;
+    double latitude = 2;
+    double longitude = 3;
 }
 
 service CQCService {

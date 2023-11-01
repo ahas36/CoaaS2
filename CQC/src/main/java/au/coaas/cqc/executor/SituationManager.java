@@ -620,6 +620,8 @@ public class SituationManager {
         }
         else if (operand1.getConstantTokenType() == CdqlConstantConditionTokenType.Json) {
             JSONObject json = new JSONObject(operand1.getStringValue());
+            if(json.has("results")) return tokenFalse;
+
             Double value = json.optDouble("value");
             int res = value.compareTo(Double.valueOf(operand2.getStringValue()));
             switch (operator) {
@@ -888,12 +890,13 @@ public class SituationManager {
                     Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity, consumerId);
 
                     JSONObject cacheable_situ = new JSONObject();
-                    if (execute.toString().trim().startsWith("[")) {
-                        cacheable_situ.put("results",
-                                new JSONArray(execute.toString().replaceAll("\"", "")));
+                    if (execute.toString().trim().startsWith("{")) {
+                        cacheable_situ = (JSONObject) execute;
+                        // cacheable_situ.put("results", new JSONArray(execute.toString().replaceAll("\"", "")));
                     } else cacheable_situ.put("value", (Double) execute);
 
                     // Start predicting for this situational function.
+                    JSONObject finalCacheable_situ = cacheable_situ;
                     new Thread(() -> {
                         if(comparators != null) {
                             CdqlConditionToken[] preds = predictSituation(consumerId, fCall.getFunctionName());
@@ -912,8 +915,29 @@ public class SituationManager {
                                         if(cacheEnabled){
                                             SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub_caching
                                                     = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-                                            // Firstly, cache all related entities if they have not been cached.
+                                            // Firstly, caching the situation to be refreshed reactively.
+                                            String situId = Utilities.combineHashKeys(fCall.getArgumentsList().stream().map(x -> {
+                                                // This is a quick fix to defining a hashkey for the situations.
+                                                String strValue = x.getStringValue();
+                                                if(strValue.startsWith("{")) return (new JSONObject(strValue)).getString("hashkey");
+                                                else return strValue;
+                                            }).collect(Collectors.toList()));
+
+                                            sqemStub_caching.cacheContext(CacheRequest.newBuilder()
+                                                    .setSituReference(SituationLookUp.newBuilder()
+                                                            .setFunction(fCall)
+                                                            .setUniquehashkey(situId)
+                                                            .setZeroTime(System.currentTimeMillis()).build())
+                                                    .setJson(finalCacheable_situ.toString())
+                                                    .setCacheLevel(CacheLevels.SITU_FUNCTION.toString())
+                                                    .setRefreshLogic("REACTIVE")
+                                                    .setHashkey(situId)
+                                                    .setIndefinite(true)
+                                                    .build());
+
                                             // Secondly, cache the expected context (path). This happends through the same loop.
+                                            // Not caching further context entities becuase,for example, car may not be cached cecause it is cost inefficient to
+                                            // refresh the location all the time.
                                             for(Operand x : fCall.getArgumentsList()) {
                                                 if(x.getStringValue().startsWith("{")){
                                                     // It is always implicit that when a context entity is mobile, it generates JSON type data.
@@ -946,7 +970,7 @@ public class SituationManager {
                                                                         .setServiceId(argValue.getJSONArray("providers").getString(0))
                                                                         .setHashKey(argValue.getString("hashkey")).build())
                                                                 .setRefreshLogic("REACTIVE")
-                                                                .setIndefinite(false) // Should be set to Entity lifetime
+                                                                .setIndefinite(false) // Should be set to Entity lifetime if available or indefinite (if the ghost transforms, then take that lifetime).
                                                                 .setHashkey("pred_path")
                                                                 .build());
                                                     }
@@ -980,26 +1004,6 @@ public class SituationManager {
                                                     }
                                                 }
                                             }
-
-                                            // Secondly, caching the situation to be refreshed reactively.
-                                            String situId = Utilities.combineHashKeys(fCall.getArgumentsList().stream().map(x -> {
-                                                // This is a quick fix to defining a hashkey for the situations.
-                                                String strValue = x.getStringValue();
-                                                if(strValue.startsWith("{")) return (new JSONObject(strValue)).getString("hashkey");
-                                                else return strValue;
-                                            }).collect(Collectors.toList()));
-
-                                            sqemStub_caching.cacheContext(CacheRequest.newBuilder()
-                                                            .setSituReference(SituationLookUp.newBuilder()
-                                                                    .setFunction(fCall)
-                                                                    .setUniquehashkey(situId)
-                                                                    .setZeroTime(System.currentTimeMillis()).build())
-                                                            .setJson(cacheable_situ.toString())
-                                                            .setCacheLevel(CacheLevels.SITU_FUNCTION.toString())
-                                                            .setRefreshLogic("REACTIVE")
-                                                            .setHashkey(situId)
-                                                            .setIndefinite(true)
-                                                    .build());
                                         }
 
                                         log.info("Situation predicted and cached.");
@@ -1048,9 +1052,10 @@ public class SituationManager {
             Object execute = PullBasedExecutor.executeSituationFunction(fCall, complexity,
                     sla.getJSONObject("_id").getString("$oid"));
 
-            if (execute.toString().trim().startsWith("[")) {
-                return (new JSONObject()).put("results",
-                        new JSONArray(execute.toString().replaceAll("\"", "")));
+            if (execute.toString().trim().startsWith("{")) {
+                return (JSONObject) execute;
+                // return (new JSONObject()).put("results",
+                //         new JSONArray(execute.toString().replaceAll("\"", "")));
             } else {
                 return (new JSONObject()).put("value", execute);
             }

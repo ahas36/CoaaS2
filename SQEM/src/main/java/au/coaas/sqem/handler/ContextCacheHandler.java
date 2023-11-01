@@ -71,11 +71,18 @@ public class ContextCacheHandler {
     public static SQEMResponse cacheContext(CacheRequest registerRequest){
         switch(registerRequest.getCacheLevel().toLowerCase()){
             case "situ_function": return cacheSituation(registerRequest);
+            case "attribute": return cachePredictiveAttribute(registerRequest);
             case "entity":
             default: return cacheEntity(registerRequest);
         }
     }
 
+    // Caches the predictive context attributes.
+    private static SQEMResponse cachePredictiveAttribute(CacheRequest registerRequest) {
+        return SQEMResponse.newBuilder().build();
+    }
+
+    // Caches the situation and the confidence.
     private static SQEMResponse cacheSituation(CacheRequest registerRequest){
         try {
             Document contextData = Document.parse(registerRequest.getJson());

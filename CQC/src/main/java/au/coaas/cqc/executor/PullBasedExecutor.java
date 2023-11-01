@@ -1032,7 +1032,10 @@ public class PullBasedExecutor {
                             item = item.getJSONObject(split[i]);
                         }
                         String value = String.valueOf(item.get(split[split.length - 1]));
-                        fCallTemp.addArguments(Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_STRING).setStringValue(value));
+                        fCallTemp.addArguments(Operand.newBuilder()
+                                .setContextAttribute(contextAttribute) // Only to signify the origin of the value.
+                                .setType(OperandType.CONTEXT_VALUE_STRING)
+                                .setStringValue(value));
                         break;
                     case CONTEXT_ENTITY:
                         String entityID = argument.getContextEntity().getEntityID();
@@ -1040,10 +1043,16 @@ public class PullBasedExecutor {
                         ContextEntity findEntity = query.getDefine().getDefinedEntitiesList().stream().filter(i -> i.getEntityID().equals(entityID)).findFirst().get();
                         String entityTypeString = findEntity.getType().toString();
                         operandEntity.put("entityType", entityTypeString);
-                        fCallTemp.addArguments(Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON).setStringValue(operandEntity.toString()));
+                        fCallTemp.addArguments(Operand.newBuilder()
+                                .setContextEntity(findEntity)
+                                .setType(OperandType.CONTEXT_VALUE_JSON)
+                                .setStringValue(operandEntity.toString()));
                         break;
                     case FUNCTION_CALL:
-                        fCallTemp.addArguments(Operand.newBuilder().setType(OperandType.CONTEXT_VALUE_JSON)
+                        fCallTemp.addArguments(Operand.newBuilder()
+                                .setType(OperandType.CONTEXT_VALUE_STRING)
+                                //.setType(OperandType.CONTEXT_VALUE_JSON) // This is the initial but commented bcz it feels wrong.
+                                .setContextAttribute(argument.getContextAttribute())
                                 .setStringValue(executeFunctionCall(argument.getFunctioncall(), ce, query, complexity, consumerId).toString()));
                         break;
                     default:
@@ -1269,18 +1278,33 @@ public class PullBasedExecutor {
         SQEMResponse situCacheRes = sqemStub.handleSituationInCache(situLookup);
 
         if(situCacheRes.getStatus().equals("200")){
-            JSONArray finalResult = new JSONArray(situCacheRes.getBody());
-            if (finalResult.length() == 1) {
-                Object outcome = finalResult.getJSONObject(0).get("outcome");
+            JSONObject finalResult = new JSONObject(situCacheRes.getBody());
+            JSONArray outcomes = finalResult.getJSONArray("outcomes");
+            if (outcomes.length() == 1) {
+                Object outcome = outcomes.getJSONObject(0).get("outcome");
                 if(outcome instanceof JSONObject){
-                    return ((JSONObject) outcome).get(fCall.getFunctionName());
+                    String situationName = fCall.getFunctionName();
+                    return ((JSONObject) outcome).getDouble(situationName);
                 }
-                return outcome;
+                return (Double) outcome; // This will output only the confidence value.
             } else {
                 JSONObject resultWrapper = new JSONObject();
-                resultWrapper.put("results", finalResult);
+                resultWrapper.put("results", outcomes); // Returns the full object.
                 return resultWrapper;
             }
+
+//            JSONArray finalResult = new JSONArray(situCacheRes.getBody());
+//            if (finalResult.length() == 1) {
+//                Object outcome = finalResult.getJSONObject(0).get("outcome");
+//                if(outcome instanceof JSONObject){
+//                    return ((JSONObject) outcome).get(fCall.getFunctionName());
+//                }
+//                return outcome;
+//            } else {
+//                JSONObject resultWrapper = new JSONObject();
+//                resultWrapper.put("results", finalResult);
+//                return resultWrapper;
+//            }
         }
         else {
             long zeroTime = 0;
@@ -1401,7 +1425,10 @@ public class PullBasedExecutor {
                         String situation = fCall.getSubItemsList().get(0);
                         Optional<ReasoningResponse> rr = creResponse.getBodyList().stream().filter(p -> p.getSituationTitle().equalsIgnoreCase(situation)).findFirst();
                         if (rr.isPresent()) {
-                            itemResult.put("outcome", rr.get().getConfidence());
+                            JSONObject obj = new JSONObject();
+                            obj.put(situation, rr.get().getConfidence());
+                            itemResult.put("outcome", obj);
+                            // itemResult.put("outcome", rr.get().getConfidence());
                         } else {
                             itemResult.put("outcome", 0);
                         }
@@ -1427,12 +1454,12 @@ public class PullBasedExecutor {
                 Object outcome = finalResult.getJSONObject(0).get("outcome");
                 if(outcome instanceof JSONObject){
                     String situationName = function.getSituations(0).getSituationName();
-                    return ((JSONObject) outcome).get(situationName);
+                    return ((JSONObject) outcome).getDouble(situationName);
                 }
-                return outcome;
+                return (Double) outcome; // This will output only the confidence value.
             } else {
                 JSONObject resultWrapper = new JSONObject();
-                resultWrapper.put("results", finalResult);
+                resultWrapper.put("results", finalResult); // Returns the full object.
                 return resultWrapper;
             }
         }

@@ -138,7 +138,7 @@ public class ContextCacheHandler {
                         .build();
             }
 
-            registry.updateRegistry(registerRequest.getSituReference());
+            registry.updateRegistry(registerRequest.getSituReference(), true);
             String contextId = registerRequest.getSituReference().getFunction().getFunctionName() + "-"
                     + registerRequest.getHashkey();
 
@@ -186,7 +186,7 @@ public class ContextCacheHandler {
             CacheLookUp.Builder temp = registerRequest.getReference().toBuilder();
             temp.setZeroTime(contextData.getLong("zeroTime"));
 
-            registry.updateRegistry(temp.build(), registerRequest.getRefreshLogic());
+            registry.updateRegistry(temp.build(), registerRequest.getRefreshLogic(), true);
             String contextId = registerRequest.getReference().getEt().getType() + "-"
                     + registerRequest.getReference().getHashKey();
 
@@ -251,7 +251,7 @@ public class ContextCacheHandler {
                 lock = cacheClient.getFairLock("refreshLock");
                 Document attrJson = ent.get();
                 attrJson.replace("data", data);
-                Double cacheLife = Double.valueOf(registry.updateRegistry(updateRequest));
+                Double cacheLife = Double.valueOf(registry.updateRegistry(updateRequest, false));
                 if(cacheLife < 0) {
                     refreshStatus = ent.getAndSetAsync(attrJson);
                 } else refreshStatus = ent.getAndSetAsync(attrJson, (long) (cacheLife * 1000), TimeUnit.MILLISECONDS);
@@ -293,6 +293,11 @@ public class ContextCacheHandler {
 
     private static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
         try {
+            Object quickLook = registry.lookupEntity(updateRequest.getReference().getEt().getType(),
+                    updateRequest.getReference().getHashKey());
+            if(quickLook == null) return SQEMResponse.newBuilder().setStatus("404")
+                    .setBody("Not a cached entity to refresh").build();
+
             String contextId = updateRequest.getReference().getEt().getType() + "-"
                     + updateRequest.getReference().getHashKey();
 
@@ -309,7 +314,7 @@ public class ContextCacheHandler {
                 cacheObject.replace("data", data);
                 refreshStatus = ent.getAndSetAsync(cacheObject);
                 registry.updateRegistry(updateRequest.getReference().toBuilder()
-                        .setZeroTime(data.getLong("zeroTime")).build());
+                        .setZeroTime(data.getLong("zeroTime")).build(), false);
             }
 
             refreshStatus.whenCompleteAsync((res, exception) -> {
@@ -340,7 +345,7 @@ public class ContextCacheHandler {
                 cacheObject.replace("data", data.get("outcome"));
                 refreshStatus = situ.getAndSetAsync(cacheObject);
                 registry.updateRegistry(updateRequest.getSituReference().toBuilder()
-                        .setZeroTime(data.getLong("zeroTime")).build());
+                        .setZeroTime(data.getLong("zeroTime")).build(), false);
             }
 
             refreshStatus.whenCompleteAsync((res, exception) -> {

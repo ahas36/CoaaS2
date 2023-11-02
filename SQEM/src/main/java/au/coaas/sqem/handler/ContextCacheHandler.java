@@ -1,7 +1,11 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cqc.proto.CQCServiceGrpc;
+import au.coaas.cqc.proto.PathRequest;
 import au.coaas.cqp.proto.SituationFunction;
 import au.coaas.cqp.proto.SituationFunctionResponse;
+import au.coaas.grpc.client.CQCChannel;
+import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.*;
 import au.coaas.cpree.proto.Lookup;
 import au.coaas.grpc.client.CPREEChannel;
@@ -264,6 +268,29 @@ public class ContextCacheHandler {
         }
     }
 
+    public static void initiateAttrRefresh (CacheRefreshRequest request, String refAttr) {
+        CQCServiceGrpc.CQCServiceBlockingStub cqcStub
+                = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
+        String contextId = request.getReference().getEt().getType() + "-" + request.getReference().getHashKey();
+        JSONObject cacheRes = new JSONObject(simpleRetrieval(contextId).toJson());
+
+        PathRequest.Builder path_request = PathRequest.newBuilder()
+                .setHeading(cacheRes.getDouble("heading"))
+                .setSpeed(cacheRes.getDouble("speed"))
+                .setRequest(request);
+
+        if(cacheRes.has(refAttr)) {
+            path_request.setLatitude(cacheRes.getJSONObject(refAttr).getDouble("latitude"));
+            path_request.setLongitude(cacheRes.getJSONObject(refAttr).getDouble("longitude"));
+        }
+        else {
+            path_request.setLatitude(cacheRes.getDouble("latitude"));
+            path_request.setLongitude(cacheRes.getDouble("longitude"));
+        }
+
+        cqcStub.refreshPredictedPath(path_request.build());
+    }
+
     private static SQEMResponse refreshEntity(CacheRefreshRequest updateRequest) {
         try {
             String contextId = updateRequest.getReference().getEt().getType() + "-"
@@ -514,6 +541,15 @@ public class ContextCacheHandler {
 
     // Retrieve entity context from cache
     // Done
+
+    private static Document simpleRetrieval (String contextId) {
+        RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+        RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
+        RLock lock = rwLock.readLock();
+        RBucket<Document> ent = cacheClient.getBucket(contextId);
+        return ent.get().get("data", Document.class);
+    }
+
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
         long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpRegistry(request);

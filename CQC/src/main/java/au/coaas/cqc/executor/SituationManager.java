@@ -30,6 +30,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 
 import com.google.gson.Gson;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import org.joda.time.Period;
 import org.joda.time.DateTime;
@@ -1064,6 +1065,25 @@ public class SituationManager {
                 return (new JSONObject()).put("value", execute);
             }
         }
+    }
+
+    public static Path processPredictedPath (PathRequest request) throws InvalidProtocolBufferException {
+        GeoIndexer geo = GeoIndexer.getInstance();
+        Path pred_path = geo.getPredictedPath(request.getLatitude(), request.getLongitude(),
+                request.getHeading(), request.getSpeed(), 3);
+        if(request.getRequest().isInitialized()) {
+            CacheLookUp cacheRef = request.getRequest().getReference()
+                    .toBuilder().setZeroTime(System.currentTimeMillis())
+                    .build();
+
+            SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                    = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
+            sqemStub.refreshContextEntity(request.getRequest().toBuilder()
+                    .setJson(JsonFormat.printer().print(pred_path))
+                    .setReference(cacheRef).build());
+        }
+
+        return pred_path;
     }
 
     public static EventStats getEventHandlingStats() {

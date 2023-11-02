@@ -169,4 +169,16 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    @Override
+    public void refreshPredictedPath(au.coaas.cqc.proto.PathRequest request,
+                                io.grpc.stub.StreamObserver<au.coaas.cqc.proto.Path> responseObserver){
+        try {
+            responseObserver.onNext(SituationManager.processPredictedPath(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
 }

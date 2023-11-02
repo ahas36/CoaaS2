@@ -1,5 +1,6 @@
 package au.coaas.sqem.util;
 
+import au.coaas.cqc.proto.PathRequest;
 import au.coaas.cqp.proto.Operand;
 import au.coaas.cqp.proto.OperandType;
 import au.coaas.cqp.proto.ContextEntityType;
@@ -872,6 +873,29 @@ public final class CacheDataRegistry{
                                         sharedEntity.setParents(finalSerId, stat);
                                         sharedEntity.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
                                         stat.getChildren().put(lookup.getHashKey(),sharedEntity);
+
+                                        if(sharedEntity.getChildren() != null && !sharedEntity.getChildren().isEmpty()){
+                                            // If there are attribute children.
+                                            // Refresh the attribute/s.
+                                            ContextItem finalSharedEntity = sharedEntity;
+                                            ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+                                            executorService.submit(() -> {
+                                                for(Map.Entry<String, ContextCacheItem> record:
+                                                        finalSharedEntity.getChildren().entrySet()) {
+                                                    AttributeItem attr = (AttributeItem) record.getValue();
+
+                                                    ContextCacheHandler.initiateAttrRefresh(CacheRefreshRequest.newBuilder()
+                                                            .setReference(CacheLookUp.newBuilder()
+                                                                    .setEt(ContextEntityType.newBuilder().setType(k).build())
+                                                                    .setHashKey(finalSharedEntity.getId())
+                                                                    .setServiceId(id))
+                                                            .setContextLevel("ATTRIBUTE")
+                                                            .setAddAttributeName(attr.getId())
+                                                            .build(), attr.getRefAttr());
+                                                }
+                                            });
+                                        }
                                     }
                                 }
                                 else {

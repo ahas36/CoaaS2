@@ -7,6 +7,7 @@ import java.util.HashMap;
 
 public class AttributeItem implements ContextCacheItem {
     private String id;
+    private String refAttr;
     private JSONObject lifetime;
     private LocalDateTime zeroTime;
     private LocalDateTime createdTime;
@@ -14,12 +15,15 @@ public class AttributeItem implements ContextCacheItem {
     private String refreshLogic = "reactive";
     private HashMap<String, ContextCacheItem> parents;
 
+    public String getId() {return this.id;}
+    public String getRefAttr() {return this.refAttr;}
     public JSONObject getlifetime() {return this.lifetime;}
     public LocalDateTime getZeroTime() {return this.zeroTime;}
     public String getRefreshLogic() {return this.refreshLogic;}
     public HashMap<String, ContextCacheItem> getParents() {return this.parents;}
     public HashMap<String, ContextCacheItem> getChildren() {return null;}
 
+    public void setRefAttr(String refAttr) {this.refAttr = refAttr;}
     public void setZeroTime(LocalDateTime time) {this.zeroTime = time;}
     public void setLifetime(JSONObject lifetime) {this.lifetime = lifetime;}
     public void setUpdatedTime(LocalDateTime time) {this.updatedTime = time;}
@@ -30,6 +34,7 @@ public class AttributeItem implements ContextCacheItem {
     // Attribute Node
     public AttributeItem(ContextItem parent, String ownId, LocalDateTime zeroTime, String refAttribute){
         this.id = ownId;
+        this.refAttr = refAttribute;
         this.zeroTime = zeroTime;
         this.refreshLogic = "reactive";
         this.createdTime = LocalDateTime.now();

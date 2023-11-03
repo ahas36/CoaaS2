@@ -16,6 +16,7 @@ import au.coaas.sqem.util.PubSub.Event;
 import au.coaas.sqem.util.PubSub.Message;
 import au.coaas.sqem.util.PubSub.Subscriber;
 
+import au.coaas.sqem.util.enums.ContextType;
 import org.json.JSONObject;
 
 import java.time.Instant;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -50,7 +52,7 @@ public final class CacheDataRegistry{
         return singleton;
     }
 
-    // Registry lookup. Returns hash key if available in cache.
+    // Registry lookup. Returns hash key if entity is available in cache.
     public CacheLookUpResponse lookUpRegistry(CacheLookUp lookup){
         // Initializing
         CacheLookUpResponse.Builder res = CacheLookUpResponse.newBuilder();
@@ -61,7 +63,10 @@ public final class CacheDataRegistry{
 
         // Check if the entity type is cached.
         if(this.root.containsKey(lookup.getEt().getType())){
-            HashMap<String, ContextCacheItem> cs = this.root.get(lookup.getEt().getType()).getChildren();
+            ContextItem root_ent = (ContextItem) this.root.get(lookup.getEt().getType());
+            if(root_ent.isGhost) res.setIsCached(false).setIsValid(false).setRemainingLife(0);
+
+            HashMap<String, ContextCacheItem> cs = root_ent.getChildren();
             String serId = lookup.getServiceId();
             String entType = lookup.getEt().getType();
 
@@ -70,10 +75,13 @@ public final class CacheDataRegistry{
                 serId = obj.getString("$oid");
             }
 
-            // Check if originating from a context provider is available
+            // Check if originating from a context provider is available.
             // This is because of the context provider selection.
             if(cs.containsKey(serId)){
-                HashMap<String, ContextCacheItem> entities = cs.get(serId).getChildren();
+                ContextItem root_prod = (ContextItem) cs.get(serId);
+                if(root_prod.isGhost) res.setIsCached(false).setIsValid(false).setRemainingLife(0);
+
+                HashMap<String, ContextCacheItem> entities = root_prod.getChildren();
                 // Map<String, String> parameters = lookup.getParamsMap();
 
                 if(lookup.getCheckFresh()){
@@ -102,6 +110,8 @@ public final class CacheDataRegistry{
                                     LocalDateTime expiryTime;
 
                                     ContextItem data = (ContextItem) entities.get(keySet.get(i));
+                                    // Check if Ghost and ignore from looking up.
+                                    if(data.isGhost) continue;
 
                                     JSONObject lifetime = data.getlifetime();
                                     LocalDateTime zeroTime = data.getZeroTime();
@@ -252,7 +262,16 @@ public final class CacheDataRegistry{
 
                         ContextItem data = (ContextItem) entities.get(finalHashKey);
 
-                        if(data != null){
+                        if(data == null || data.isGhost){
+                            PerformanceLogHandler.insertAccess(
+                                    entType + "-" + finalHashKey,
+                                    "miss", 0.0);
+                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
+                                    .setIsValid(false)
+                                    .setIsCached(false)
+                                    .setRemainingLife(0).build();
+                        }
+                        else {
                             JSONObject lifetime = data.getlifetime();
                             JSONObject freshness = new JSONObject(lookup.getUniformFreshness());
                             JSONObject sampling = new JSONObject(lookup.getSamplingInterval());
@@ -349,15 +368,6 @@ public final class CacheDataRegistry{
                                     .setRefreshLogic(data.getRefreshLogic())
                                     .setRemainingLife(remainingLife).build();
                         }
-                        else {
-                            PerformanceLogHandler.insertAccess(
-                                    entType + "-" + finalHashKey,
-                                    "miss", 0.0);
-                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
-                                    .setIsValid(false)
-                                    .setIsCached(false)
-                                    .setRemainingLife(0).build();
-                        }
                     }
                 }
                 // This is when the freshness is not considered.
@@ -378,6 +388,11 @@ public final class CacheDataRegistry{
 
                                 // Sending cache hit or miss record to performance monitor.
                                 for(int i = start; i < end; i++){
+                                    ContextItem ent = (ContextItem) entities.get(keySet.get(i));
+                                    if (ent.isGhost) {
+                                        keySet.remove(keySet.get(i));
+                                        continue;
+                                    }
                                     PerformanceLogHandler.insertAccess(
                                             entType + "-" + keySet.get(i),
                                             "hit", 0);
@@ -391,6 +406,14 @@ public final class CacheDataRegistry{
                             executorService.awaitTermination(Long.MAX_VALUE, java.util.concurrent.TimeUnit.NANOSECONDS);
                         } catch (InterruptedException e) {
                             log.severe("Executor failed to execute with error: " + e.getMessage());
+                        }
+
+                        if(keySet.isEmpty()) {
+                            // All the entities are ghost caches.
+                            return res.setHashkey("service:" + lookup.getServiceId())
+                                    .setIsValid(false)
+                                    .setIsCached(false)
+                                    .setRemainingLife(0).build();
                         }
 
                         // Sending the ID is the level above to generalize the cache hit.
@@ -414,7 +437,16 @@ public final class CacheDataRegistry{
                         else finalHashKey = lookup.getHashKey();
 
                         ContextItem data = (ContextItem) entities.get(finalHashKey);
-                        if(data != null){
+                        if(data == null || data.isGhost){
+                            PerformanceLogHandler.insertAccess(
+                                    entType + "-" + finalHashKey,
+                                    "miss", 0);
+                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
+                                    .setIsValid(false)
+                                    .setIsCached(false)
+                                    .setRemainingLife(0).build();
+                        }
+                        else {
                             PerformanceLogHandler.insertAccess(
                                     entType + "-" + finalHashKey,
                                     "hit", 0);
@@ -423,15 +455,6 @@ public final class CacheDataRegistry{
                                     .setIsCached(true)
                                     .setRefreshLogic(data.getRefreshLogic())
                                     .setRemainingLife(-1).build();
-                        }
-                        else {
-                            PerformanceLogHandler.insertAccess(
-                                    entType + "-" + finalHashKey,
-                                    "miss", 0);
-                            return res.setHashkey("entity:" + entType + "-" + finalHashKey)
-                                    .setIsValid(false)
-                                    .setIsCached(false)
-                                    .setRemainingLife(0).build();
                         }
                     }
                 }
@@ -850,7 +873,7 @@ public final class CacheDataRegistry{
         return lookup.getUniquehashkey();
     }
 
-    // Caching and updating a cached entity
+    // Caching and updating a cached entity.
     private String updateCachedEntity(CacheLookUp lookup, String refreshLogic, boolean isCaching){
         String entType = lookup.getEt().getType();
         if(this.root.containsKey(entType)){
@@ -974,7 +997,7 @@ public final class CacheDataRegistry{
         return lookup.getHashKey();
     }
 
-    // Change the hashtable record of the current refreshing logic
+    // Change the hashtable record of the current refreshing logic.
     public void changeRefreshLogic(RefreshUpdate lookup){
         if(this.root.containsKey(lookup.getLookup().getEt().getType())){
             this.root.compute(lookup.getLookup().getEt().getType(), (k,v) -> {
@@ -1005,7 +1028,7 @@ public final class CacheDataRegistry{
         }
     }
 
-    // Removes context items from the cached context registry
+    // Removes context items from the cached context registry.
     public String removeFromRegistry(CacheLookUp lookup){
         if(this.root.containsKey(lookup.getEt().getType())){
             this.root.compute(lookup.getEt().getType(), (k,v) -> {
@@ -1021,7 +1044,7 @@ public final class CacheDataRegistry{
                         if(stat.getChildren().containsKey(lookup.getHashKey())){
                             ContextItem entity = (ContextItem) stat.getChildren().get(lookup.getHashKey());
                             for(String situId: entity.getParents().keySet()){
-                                if(!Utilty.isEntity(situId)){
+                                if(Utilty.getContextType(situId).equals(ContextType.SITUATION)){
                                     // When situation
                                     String[] situNames = situId.split("-");
                                     ContextCacheItem func = this.root.get(situNames[0]).getChildren()
@@ -1061,8 +1084,9 @@ public final class CacheDataRegistry{
         return lookup.getHashKey();
     }
 
-    // Evicts entities
+    // Evict entities.
     public void removeFromRegistry(String serviceId, String hashKey, String entityType){
+        AtomicBoolean changeToGhost = new AtomicBoolean(false);
         if(this.root.containsKey(entityType)){
             this.root.compute(entityType, (k,v) -> {
                 String serId = serviceId;
@@ -1077,45 +1101,59 @@ public final class CacheDataRegistry{
                         // Specific Entities
                         if(stat.getChildren().containsKey(hashKey)){
                             ContextItem entity = (ContextItem) stat.getChildren().get(hashKey);
-                            //Checking if the entity is a related to any situations
-                            for(String situId: entity.getParents().keySet()){
-                                if(!Utilty.isEntity(situId)){
-                                    // When situation
-                                    String[] situNames = situId.split("-");
-                                    ContextCacheItem func = this.root.get(situNames[0]).getChildren()
-                                            .get(situNames[1]);
-                                    ((SituationItem) func).removeChild(entity.getId());
+                            if(entity.getChildren() == null || entity.getChildren().isEmpty()) {
+                                //Checking if the entity is a related to any situations
+                                for(String situId: entity.getParents().keySet()){
+                                    if(Utilty.getContextType(situId).equals(ContextType.SITUATION)){
+                                        // When situation
+                                        String[] situNames = situId.split("-");
+                                        ContextCacheItem func = this.root.get(situNames[0]).getChildren()
+                                                .get(situNames[1]);
+                                        ((SituationItem) func).removeChild(entity.getId());
 
-                                    // Cached Situtaion subscribing to make a reference to this entity
-                                    // in case it gets cashed again.
-                                    String entId = entityType + "-" + hashKey;
-                                    Subscriber subscriber = new Subscriber("situ:"+ entId, situId);
-                                    Event.operation.subscribe("situationUpdate", subscriber);
+                                        // Cached Situtaion subscribing to make a reference to this entity
+                                        // in case it gets cashed again.
+                                        String entId = entityType + "-" + hashKey;
+                                        Subscriber subscriber = new Subscriber("situ:"+ entId, situId);
+                                        Event.operation.subscribe("situationUpdate", subscriber);
+                                    }
                                 }
+                                entity.removeAllParents();
                             }
-                            entity.removeAllParents();
+                            else {
+                                // Then, there are context attributes to the context entity.
+                                stat.getChildren().compute(hashKey, (x,y) -> {
+                                    entity.isGhost = true;
+                                    changeToGhost.set(true);
+                                    return y;
+                                });
+                            }
                         }
-                        ((ContextItem) stat).removeChild(hashKey);
-                        if(stat.getChildren().isEmpty()){
-                            ((ContextItem) stat).removeAllParents();
+                        // Remove parents only if this is not a ghost cache instance.
+                        if(!changeToGhost.get()) {
+                            ((ContextItem) stat).removeChild(hashKey);
+                            if(stat.getChildren().isEmpty()){
+                                ((ContextItem) stat).removeAllParents();
+                            }
                         }
+
                         return stat;
                     });
 
-                    if(statTemp.getParents().isEmpty()){
+                    if(statTemp.getParents().isEmpty() && !changeToGhost.get()){
                         ((ContextItem) v).removeChild(serId);
                     }
                 }
                 return v;
             });
 
-            if(this.root.get(entityType).getChildren().isEmpty()){
+            if(this.root.get(entityType).getChildren().isEmpty() && !changeToGhost.get()){
                 this.root.remove(entityType);
             }
         }
     }
 
-    // Evicts Situations
+    // Evict Situations.
     public boolean removeFromRegistry(String situName, String hashKey){
         // Return indicates the relevant situation Type should be evicted from cache.
         boolean shouldEvict = false;
@@ -1156,6 +1194,49 @@ public final class CacheDataRegistry{
             }
         }
         return shouldEvict;
+    }
+
+    // Evict attributes.
+    public void removeFromRegistry(String entityType, String serviceId, String hashKey, String attrName){
+        if(this.root.containsKey(entityType)){
+            this.root.compute(entityType, (k,v) -> {
+                String serId = serviceId;
+                if(serId.startsWith("{")){
+                    JSONObject obj = new JSONObject(serId);
+                    serId = obj.getString("$oid");
+                }
+
+                // Context Service Reference
+                if(v.getChildren().containsKey(serId)){
+                    ContextItem statTemp = (ContextItem) v.getChildren().compute(serId, (id,stat) -> {
+                        // Specific Entities
+                        if(stat.getChildren().containsKey(hashKey)){
+                            stat.getChildren().compute(hashKey, (x,y) -> {
+                                if(y.getChildren() != null && !y.getChildren().isEmpty()
+                                        && y.getChildren().containsKey(attrName)) {
+                                    // Then, there are context attributes to the context entity.
+                                    ((ContextItem)y).removeChild(attrName);
+                                    if(y.getChildren().isEmpty()) ((ContextItem)y).clearChildren();
+                                }
+                                if(y.getChildren().isEmpty()) ((ContextItem) y).removeAllParents();
+                                return y;
+                            });
+                        }
+
+                        ((ContextItem) stat).removeChild(hashKey);
+                        if(stat.getChildren().isEmpty()) ((ContextItem) stat).removeAllParents();
+                        return stat;
+                    });
+
+                    if(statTemp.getParents().isEmpty()) ((ContextItem) v).removeChild(serId);
+                }
+                return v;
+            });
+
+            if(this.root.get(entityType).getChildren().isEmpty()){
+                this.root.remove(entityType);
+            }
+        }
     }
 }
 

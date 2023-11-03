@@ -36,6 +36,7 @@ public class ContextItem implements ContextCacheItem {
     public void removeParent(String id) {this.parents.remove(id);}
     public void removeAllChildren() {this.children.clear();}
     public void removeAllParents() {this.parents.clear();}
+    public void clearChildren() {this.children = null;}
 
     // Context Entity Node
     public ContextItem(CacheLookUp lookup, String hashKey, String refreshLogic, LocalDateTime zeroTime){

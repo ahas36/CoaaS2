@@ -19,12 +19,15 @@ public class Subscriber {
     // name: situ:entity-ID
     // situation: situ-hashkey
     public Subscriber(String name, String situation) {
-        String entityId = (name.split(":"))[0];
-        this.entity = (entityId.split("-"))[0];
-        this.entHashkey = (entityId.split("-"))[1];
+        String[] split = (name.split(":"));
+        if(split[0].equals("situ")) {
+            String entityId = split[1];
+            this.entity = (entityId.split("-"))[0];
+            this.entHashkey = (entityId.split("-"))[1];
 
-        this.situationName = (situation.split("-"))[0];
-        this.situHashkey = (situation.split("-"))[1];;
+            this.situationName = (situation.split("-"))[0];
+            this.situHashkey = (situation.split("-"))[1];
+        }
     }
 
     @OnMessage

@@ -3,6 +3,7 @@ package au.coaas.sqem.util;
 import au.coaas.cqp.proto.CdqlConditionToken;
 import au.coaas.sqem.handler.ContextCacheHandler;
 import au.coaas.sqem.proto.ScheduleTask;
+import au.coaas.sqem.util.enums.ContextType;
 import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.hash.Hashing;
 import com.google.protobuf.MessageOrBuilder;
@@ -70,13 +71,13 @@ public class Utilty {
         }
     }
 
-    public static boolean isEntity(String contextId){
-        // This is a quick fix
-        String prefix = (contextId.split("-"))[0];
-        if(Arrays.stream(entityTypes).anyMatch(x -> x.equals(prefix.toLowerCase()))){
-            return true;
+    public static ContextType getContextType(String contextId){
+        String[] prefixes = contextId.split("-");
+        if(prefixes.length > 2) return ContextType.ATTRIBUTE;
+        if(Arrays.stream(entityTypes).anyMatch(x -> x.equals(prefixes[0].toLowerCase()))){
+            return ContextType.ENTITY;
         }
-        return false;
+        return ContextType.SITUATION;
     }
 
     public static JSONObject getLifetime(String entityType){

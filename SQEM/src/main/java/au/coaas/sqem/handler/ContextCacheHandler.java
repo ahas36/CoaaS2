@@ -12,6 +12,7 @@ import au.coaas.grpc.client.CPREEChannel;
 import au.coaas.sqem.redis.ConnectionPool;
 import au.coaas.cpree.proto.CPREEServiceGrpc;
 
+import au.coaas.sqem.util.enums.ContextType;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import org.bson.Document;
@@ -224,7 +225,6 @@ public class ContextCacheHandler {
     }
 
     // Updating cached context for an entity
-    // Done
     public static SQEMResponse refreshContext(CacheRefreshRequest updateRequest) {
         switch(updateRequest.getContextLevel().toLowerCase()){
             case "situ_function": return refreshSituation(updateRequest);
@@ -249,6 +249,8 @@ public class ContextCacheHandler {
 
             synchronized (ContextCacheHandler.class){
                 lock = cacheClient.getFairLock("refreshLock");
+                lock.lock();
+
                 Document attrJson = ent.get();
                 attrJson.replace("data", data);
                 Double cacheLife = Double.valueOf(registry.updateRegistry(updateRequest, false));
@@ -310,6 +312,8 @@ public class ContextCacheHandler {
 
             synchronized (ContextCacheHandler.class){
                 lock = cacheClient.getFairLock("refreshLock");
+                lock.lock();
+
                 Document cacheObject = ent.get();
                 cacheObject.replace("data", data);
                 refreshStatus = ent.getAndSetAsync(cacheObject);
@@ -341,6 +345,8 @@ public class ContextCacheHandler {
 
             synchronized (ContextCacheHandler.class){
                 lock = cacheClient.getFairLock("refreshLock");
+                lock.lock();
+
                 Document cacheObject = situ.get();
                 cacheObject.replace("data", data.get("outcome"));
                 refreshStatus = situ.getAndSetAsync(cacheObject);
@@ -363,7 +369,7 @@ public class ContextCacheHandler {
         return registry.setMissingEntityRefs(entType, entHash, situName, situHash);
     }
 
-    // Done
+    // Change the context refreshing strategy.
     public static Empty toggleRefreshLogic(RefreshUpdate request) {
         try {
             synchronized (ContextCacheHandler.class) {
@@ -394,6 +400,7 @@ public class ContextCacheHandler {
 
         RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
         RLock lock = rwLock.writeLock();
+        lock.lock();
 
         cacheClient.getKeys().deleteAsync(contextId);
         RFuture<Boolean> evictStatus = cacheClient.getBucket(contextId).deleteAsync();
@@ -416,6 +423,7 @@ public class ContextCacheHandler {
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
             RLock lock = rwLock.writeLock();
             RFuture<Boolean> evictStatus;
+            lock.lock();
 
             if(result.getRemainingLife() > 0){
                 // TODO:
@@ -465,96 +473,131 @@ public class ContextCacheHandler {
     // Execution point for keyspace events, AR less than a threshold event, or from above.
     public static SQEMResponse evictContext(String contextId, boolean definite) {
         // Entity Eviction
-        if(Utilty.isEntity(contextId)) {
-            // This hashkey is entityType-hash format.
-            // This function assumes that the hash key is unique across all the contexts (irrespective of the context service, etc.)
-            // Ideally the initial evict should push the context into ghost cache
-            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+        switch(Utilty.getContextType(contextId)) {
+            case SITUATION: {
+                // This hashkey is situationName-hash format.
+                RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
-            RBucket<Object> bucket = cacheClient.getBucket(contextId);
-            Document cacheObject = (Document) bucket.get();
+                RBucket<Object> bucket = cacheClient.getBucket(contextId);
+                Document cacheObject = (Document) bucket.get();
 
-            RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
-            RLock lock = rwLock.writeLock();
-            RFuture<Boolean> evictStatus;
+                RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
+                RLock lock = rwLock.writeLock();
+                RFuture<Boolean> evictStatus;
 
-            synchronized (ContextCacheHandler.class){
-                CPREEServiceGrpc.CPREEServiceBlockingStub stub
-                        = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
-                stub.stopRefreshing(Lookup.newBuilder()
-                        .setContextId(contextId).build());
+                boolean evictType;
+                synchronized (ContextCacheHandler.class){
+                    evictType = registry.removeFromRegistry(cacheObject.getString("situName"), (contextId.split("-"))[1]);
+                    if(!definite) Event.operation.deleteChannel(contextId);
+                }
 
-                registry.removeFromRegistry(cacheObject.getString("serviceId"),
-                        (contextId.split("-"))[1], cacheObject.getString("entityType"));
-                if(!definite) Event.operation.deleteChannel(contextId);
+                cacheClient.getKeys().deleteAsync(contextId);
+                evictStatus = bucket.deleteAsync();
+
+                // Evicting the situation type
+                if(evictType) {
+                    RBucket<Object> defBucket = cacheClient.getBucket(cacheObject.getString("situName"));
+                    cacheClient.getKeys().deleteAsync(cacheObject.getString("situName"));
+                    defBucket.deleteAsync();
+                }
+
+                evictStatus.whenCompleteAsync((res, exception) -> {
+                    lock.unlockAsync();
+                });
+
+                PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
+                return SQEMResponse.newBuilder().setStatus("200").setBody("Situation evicted.").build();
             }
+            case ENTITY: {
+                // This hashkey is entityType-hash format.
+                // This function assumes that the hash key is unique across all the contexts (irrespective of the context service, etc.)
+                RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
-            cacheClient.getKeys().deleteAsync(contextId);
-            evictStatus = bucket.deleteAsync();
+                RBucket<Object> bucket = cacheClient.getBucket(contextId);
+                Document cacheObject = (Document) bucket.get();
 
-            evictStatus.whenCompleteAsync((res, exception) -> {
-                lock.unlockAsync();
-            });
+                RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
+                RLock lock = rwLock.writeLock();
+                RFuture<Boolean> evictStatus;
+                lock.lock();
 
-            PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
-            return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted.").build();
+                synchronized (ContextCacheHandler.class){
+                    CPREEServiceGrpc.CPREEServiceBlockingStub stub
+                            = CPREEServiceGrpc.newBlockingStub(CPREEChannel.getInstance().getChannel());
+                    stub.stopRefreshing(Lookup.newBuilder()
+                            .setContextId(contextId).build());
+
+                    registry.removeFromRegistry(cacheObject.getString("serviceId"),
+                            (contextId.split("-"))[1], cacheObject.getString("entityType"));
+                    if(!definite) Event.operation.deleteChannel(contextId);
+                }
+
+                cacheClient.getKeys().deleteAsync(contextId);
+                evictStatus = bucket.deleteAsync();
+
+                evictStatus.whenCompleteAsync((res, exception) -> {
+                    lock.unlockAsync();
+                });
+
+                PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
+                return SQEMResponse.newBuilder().setStatus("200").setBody("Entity evicted.").build();
+            }
+            case ATTRIBUTE: {
+                // This hashkey is entityType-hash-attributeName format.
+                RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
+
+                RBucket<Object> bucket = cacheClient.getBucket(contextId);
+                Document cacheObject = (Document) bucket.get();
+
+                RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
+                RLock lock = rwLock.writeLock();
+                RFuture<Boolean> evictStatus;
+                lock.lock();
+
+                synchronized (ContextCacheHandler.class){
+                    String[] splits = contextId.split("-");
+                    registry.removeFromRegistry(cacheObject.getString("entityType"),
+                            cacheObject.getString("serviceId"),
+                            splits[1], splits[2]);
+                    if(!definite) Event.operation.deleteChannel(contextId);
+                }
+
+                cacheClient.getKeys().deleteAsync(contextId);
+                evictStatus = bucket.deleteAsync();
+
+                evictStatus.whenCompleteAsync((res, exception) -> {
+                    lock.unlockAsync();
+                });
+
+                PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
+                return SQEMResponse.newBuilder().setStatus("200").setBody("Attribute evicted.").build();
+            }
         }
-        // Situation Eviction
-        else {
-            // This hashkey is situationName-hash format.
-            RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
-
-            RBucket<Object> bucket = cacheClient.getBucket(contextId);
-            Document cacheObject = (Document) bucket.get();
-
-            RReadWriteLock rwLock = cacheClient.getReadWriteLock("evictLock");
-            RLock lock = rwLock.writeLock();
-            RFuture<Boolean> evictStatus;
-
-            boolean evictType;
-            synchronized (ContextCacheHandler.class){
-                evictType = registry.removeFromRegistry(cacheObject.getString("situName"), (contextId.split("-"))[1]);
-                if(!definite) Event.operation.deleteChannel(contextId);
-            }
-
-            cacheClient.getKeys().deleteAsync(contextId);
-            evictStatus = bucket.deleteAsync();
-
-            // Evicting the situation type
-            if(evictType) {
-                RBucket<Object> defBucket = cacheClient.getBucket(cacheObject.getString("situName"));
-                cacheClient.getKeys().deleteAsync(cacheObject.getString("situName"));
-                defBucket.deleteAsync();
-            }
-
-            evictStatus.whenCompleteAsync((res, exception) -> {
-                lock.unlockAsync();
-            });
-
-            PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
-            return SQEMResponse.newBuilder().setStatus("200").setBody("Situation evicted.").build();
-        }
+        return SQEMResponse.newBuilder().setStatus("404").setBody("Invalid or unavailable type.").build();
     }
 
     // Lookup in  context registry whether the entity is cached
-    // Done
     public static SQEMResponse lookUp(CacheLookUp request){
         CacheLookUpResponse result = registry.lookUpRegistry(request);
         return SQEMResponse.newBuilder().setStatus("200")
                 .setCacheresponse(result).build();
     }
 
-    // Retrieve entity context from cache
-    // Done
-
+    // Retrieve entity context or attribute from cache.
     private static Document simpleRetrieval (String contextId) {
         RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
         RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
         RLock lock = rwLock.readLock();
+        lock.lock();
+
         RBucket<Document> ent = cacheClient.getBucket(contextId);
-        return ent.get().get("data", Document.class);
+        Document entData = ent.get().get("data", Document.class);
+        lock.unlockAsync();
+
+        return entData;
     }
 
+    // Retrieve a context entity/ies from cache.
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
         long startTime = System.currentTimeMillis();
         CacheLookUpResponse result = registry.lookUpRegistry(request);
@@ -567,6 +610,7 @@ public class ContextCacheHandler {
 
                 RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
                 RLock lock = rwLock.readLock();
+                lock.lock();
 
                 List<Document> entityContext = Collections.synchronizedList(new ArrayList<>());
                 Map<String, String> paramList = request.getParamsMap();
@@ -741,6 +785,7 @@ public class ContextCacheHandler {
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
 
             RLock lock = rwLock.readLock();
+            lock.lock();
             RBucket<Document> situ = cacheClient.getBucket(hashkey);
             Document conSituation = situ.get().get("data", Document.class);
             lock.unlockAsync();
@@ -760,6 +805,7 @@ public class ContextCacheHandler {
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
 
             RLock lock = rwLock.readLock();
+            lock.lock();
             RBucket<Document> situ = cacheClient.getBucket(request.getFunction().getFunctionName());
 
             SQEMResponse.Builder response = SQEMResponse.newBuilder().setStatus("400")
@@ -787,6 +833,7 @@ public class ContextCacheHandler {
         RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
 
         RLock lock = rwLock.readLock();
+        lock.lock();
         RBucket<Document> situ = cacheClient.getBucket(request.getFunction().getFunctionName());
 
         SQEMResponse.Builder response = SQEMResponse.newBuilder().setStatus("404")
@@ -809,7 +856,6 @@ public class ContextCacheHandler {
         return response.build();
     }
 
-    // Done
     private static void logCacheSearch(String status, String csId, String freshness, long responseTime){
         Statistic stat;
         if(freshness != null){
@@ -825,7 +871,6 @@ public class ContextCacheHandler {
         PerformanceLogHandler.coassPerformanceRecord(stat);
     }
 
-    // Done
     public static void updatePerformanceStats(Map perfMetrics, PerformanceStats key) {
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
@@ -833,6 +878,7 @@ public class ContextCacheHandler {
             
             synchronized (ContextCacheHandler.class){
                 RLock lock = cacheClient.getFairLock("refreshLock");
+                lock.lock();
                 map.putAll(perfMetrics);
                 lock.unlockAsync();
             }
@@ -841,13 +887,13 @@ public class ContextCacheHandler {
         }
     }
 
-    // Done
     public static SQEMResponse getPerformanceStats(String statKey, PerformanceStats perf_stats){
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
 
             RReadWriteLock rwLock = cacheClient.getReadWriteLock("readLock");
             RLock lock = rwLock.readLock();
+            lock.lock();
 
             RMap<String, Object> map = cacheClient.getMap(perf_stats.toString());
             Object stat = map.get(statKey);
@@ -864,7 +910,6 @@ public class ContextCacheHandler {
     }
 
     // Clears the context cache
-    // Done
     public static SQEMResponse clearCache() {
         RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
         cacheClient.getKeys().flushdb();
@@ -873,7 +918,6 @@ public class ContextCacheHandler {
         return SQEMResponse.newBuilder().setStatus("200").setBody("Cleared context cache").build();
     }
 
-    // Done
     public static Document getMemoryUtility() {
         try {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();
@@ -918,7 +962,6 @@ public class ContextCacheHandler {
         }
     }
 
-    // Done
     public static CachePerformance getCachePerformance(){
         if(currentPerf != null){
             // All values returned are in Seconds
@@ -935,20 +978,17 @@ public class ContextCacheHandler {
         else return CachePerformance.newBuilder().setStatus("404").build();
     }
 
-    // Done
     public static Empty logCacheDecisionLatency(DecisionLog request){
         PerformanceLogHandler.logDecisionLatency(request.getType(), request.getLatency(),
                 request.getIndefinite()? DelayCacheLatency.INDEFINITE : DelayCacheLatency.DEFINITE);
         return null;
     }
 
-    // Done
     public static Empty logCacheDecision(ContextCacheDecision json){
         PerformanceLogHandler.logCacheDecision(new JSONObject(json.getJson()), json.getLevel());
         return null;
     }
 
-    // Done
     private static String convertToUnit(char unit) {
         switch (unit) {
             case '%':

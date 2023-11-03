@@ -36,6 +36,7 @@ export class ApiServiceService {
 
   carParkData;
   placesData;
+  carsData;
 
   counter = 0;
   
@@ -400,4 +401,11 @@ export class ApiServiceService {
     return this.placesData;
   }
 
+  getCars(){
+    if(this.carsData == undefined){
+      this.carsData = this.http.get(config.cars);
+    }
+    console.log(this.carsData);
+    return this.carsData;
+  }
 }

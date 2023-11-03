@@ -11,6 +11,7 @@ import { ChartDataSets, ChartOptions } from 'chart.js';
 })
 
 export class MapComponent implements OnInit {
+  ishazard;
 
   queries;
   timeTicks;
@@ -23,7 +24,11 @@ export class MapComponent implements OnInit {
   parkmarkers: marker[] = [];
   placemarkers: marker[] = [];
   querymarkers: queryMarker[] = [];
-
+  
+  carmarkers: mobileMarker[] = [];
+  redbikemarkers: mobileMarker[] = [];
+  greenbikemarkers: mobileMarker[] = [];
+  
   public queryLoadVariation: ChartDataSets[] = [];
   public lineChartType = 'line';
   public lineChartLabels: Label[];
@@ -55,6 +60,13 @@ export class MapComponent implements OnInit {
   }
 
   ngOnInit() {
+    this.ishazard = (config.scenario == 'hazard')
+    if(this.ishazard) {
+      this.lat = -37.81300076003162; 
+      this.lng = 144.98572470373261;
+      this.zoom = 17;
+    }
+
     this.initializeData();
     this.interval = setInterval(() => {
       this.updateData();
@@ -63,9 +75,6 @@ export class MapComponent implements OnInit {
 
   initializeData(){
     try{
-      let carparks = this.serviceAPI.getCarParks();
-      let places = this.serviceAPI.getPlaces();
-
       let data = this.serviceAPI.getQueryLoadVariation();
 
       this.queries = data.perf.query_load.get();
@@ -73,46 +82,54 @@ export class MapComponent implements OnInit {
       this.timeTicks = data.perf.timeTicks.get();
       this.queryLocations = data.query;
 
-      carparks.subscribe(parks => {
-        for(const element of parks){
+      if(config.scenario === 'parking') {
+        let carparks = this.serviceAPI.getCarParks();
+        let places = this.serviceAPI.getPlaces();
 
-          this.parkmarkers.push({
-            lat: element.location.lat,
-            lng: element.location.long,
-            label: element.name,
-            address: element.address,
-            rating: element.rating,
-            icon: {
-                url: './assets/parking.png',
+        carparks.subscribe(parks => {
+          for(const element of parks){
+  
+            this.parkmarkers.push({
+              lat: element.location.lat,
+              lng: element.location.long,
+              label: element.name,
+              address: element.address,
+              rating: element.rating,
+              icon: {
+                  url: './assets/parking.png',
+                  scaledSize: {
+                      width: 20,
+                      height: 20
+                  }
+              }
+            });
+          }
+        });
+  
+        places.subscribe(place => {
+          for(const element of place){
+  
+            this.placemarkers.push({
+              lat: element.geometry.location.lat,
+              lng: element.geometry.location.lng,
+              label: element.name,
+              address: element.formatted_address,
+              rating: element.rating,
+              icon: {
+                url: './assets/building.png',
                 scaledSize: {
-                    width: 20,
-                    height: 20
+                    width: 23,
+                    height: 23
                 }
             }
-          });
-        }
-      });
-
-      places.subscribe(place => {
-        for(const element of place){
-
-          this.placemarkers.push({
-            lat: element.geometry.location.lat,
-            lng: element.geometry.location.lng,
-            label: element.name,
-            address: element.formatted_address,
-            rating: element.rating,
-            icon: {
-              url: './assets/building.png',
-              scaledSize: {
-                  width: 23,
-                  height: 23
-              }
+            });
           }
-          });
-        }
-      });
-   
+        });
+      }
+      else if(config.scenario === 'hazard'){
+        let cars = this.serviceAPI.getCars();
+      }
+
       this.queryLocations.subscribe(locs => {
         for(const element of locs){
           this.querymarkers.push({
@@ -176,6 +193,15 @@ interface queryMarker {
 	lng: number;
   icon: object;
   dest: string
+}
+
+interface mobileMarker {
+  lat: number;
+	lng: number;
+  speed: number;
+  heading: number;
+  rego: string;
+  hazardLevel: number;
 }
 
 

@@ -4,7 +4,9 @@ export var config = {
     "model_uri": "http://localhost:8070/CASM-2.0.1/api/log/models",
     "querystaturi": "http://localhost:8070/CASM-2.0.1/api/cqstats",
     "carparks": "https://demo0724795.mockable.io/carparks",
-    "places": "https://demo0724795.mockable.io/places"
+    "places": "https://demo0724795.mockable.io/places",
+    "cars": "https://demo0724795.mockable.io/cars",
+    "scenario": "hazard" // parking, hazard
 }
 
 // export var config = {

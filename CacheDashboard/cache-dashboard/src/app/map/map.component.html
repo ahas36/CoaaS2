@@ -1,65 +1,142 @@
 <div class="content">
-    <h1>Places of Interest, Car Parks & Query Origins</h1>
+    <div *ngIf="!ishazard"> 
+        <h1>Places of Interest, Car Parks & Query Origins</h1>
 
-    <agm-map #gm
-        [latitude]="lat"
-        [longitude]="lng"
-        [zoom]="zoom"
-        [disableDefaultUI]="true"
-        [zoomControl]="true">
+        <agm-map #gm
+            [latitude]="lat"
+            [longitude]="lng"
+            [zoom]="zoom"
+            [disableDefaultUI]="true"
+            [zoomControl]="true">
 
-        <agm-marker 
-            *ngFor="let m of querymarkers; let i = index"
-            [latitude]="m.lat"
-            [longitude]="m.lng"
-            [iconUrl] ="m.icon"> 
-        </agm-marker>
+            <agm-marker 
+                *ngFor="let m of querymarkers; let i = index"
+                [latitude]="m.lat"
+                [longitude]="m.lng"
+                [iconUrl] ="m.icon"> 
+            </agm-marker>
 
-        <agm-marker 
-            *ngFor="let m of parkmarkers; let i = index"
-            (markerClick)="clickedMarker(m.label, i)"
-            [latitude]="m.lat"
-            [longitude]="m.lng"
-            [iconUrl] ="m.icon">  
-            
-            <agm-info-window>
-                <div class="info-window">
-                    <h4 style="margin-bottom:-10px;">Name</h4>
-                    <p>{{m.label}}</p>
-                    <h4 style="margin-bottom:-10px; margin-top:-10px;">Address</h4>
-                    <p>{{m.address}}</p>
-                    <h4 style="margin-bottom:-10px; margin-top:-10px;">Rating</h4>
-                    <p>{{m.rating}}</p>               
-                </div>
-            </agm-info-window>
+            <agm-marker 
+                *ngFor="let m of parkmarkers; let i = index"
+                (markerClick)="clickedMarker(m.label, i)"
+                [latitude]="m.lat"
+                [longitude]="m.lng"
+                [iconUrl] ="m.icon">  
+                
+                <agm-info-window>
+                    <div class="info-window">
+                        <h4 style="margin-bottom:-10px;">Name</h4>
+                        <p>{{m.label}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Address</h4>
+                        <p>{{m.address}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Rating</h4>
+                        <p>{{m.rating}}</p>               
+                    </div>
+                </agm-info-window>
 
-        </agm-marker>
+            </agm-marker>
 
-        <agm-marker 
-            *ngFor="let m of placemarkers; let i = index"
-            (markerClick)="clickedMarker(m.label, i)"
-            [latitude]="m.lat"
-            [longitude]="m.lng"
-            [iconUrl] ="m.icon"> 
-            
-            <agm-info-window style="width:100px; height:50px">
-                <div class="info-window">
-                    <h4 style="margin-bottom:-10px;">Name</h4>
-                    <p>{{m.label}}</p>
-                    <h4 style="margin-bottom:-10px; margin-top:-10px;">Address</h4>
-                    <p>{{m.address}}</p>
-                    <h4 style="margin-bottom:-10px; margin-top:-10px;">Rating</h4>
-                    <p>{{m.rating}}</p>               
-                </div>
-            </agm-info-window>
+            <agm-marker 
+                *ngFor="let m of placemarkers; let i = index"
+                (markerClick)="clickedMarker(m.label, i)"
+                [latitude]="m.lat"
+                [longitude]="m.lng"
+                [iconUrl] ="m.icon"> 
+                
+                <agm-info-window style="width:100px; height:50px">
+                    <div class="info-window">
+                        <h4 style="margin-bottom:-10px;">Name</h4>
+                        <p>{{m.label}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Address</h4>
+                        <p>{{m.address}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Rating</h4>
+                        <p>{{m.rating}}</p>               
+                    </div>
+                </agm-info-window>
 
-        </agm-marker>
+            </agm-marker>
 
-    </agm-map>
+        </agm-map>
+    </div>
+
+    <div *ngIf="ishazard"> 
+        <h1>Cars, Bikes & Hazards</h1>
+
+        <agm-map #gm
+            [latitude]="lat"
+            [longitude]="lng"
+            [zoom]="zoom"
+            [disableDefaultUI]="true"
+            [zoomControl]="true">
+
+            <agm-marker 
+                *ngFor="let m of carmarkers; let i = index"
+                (markerClick)="clickedMarker(m.label, i)"
+                [latitude]="m.lat"
+                [longitude]="m.lng"
+                [iconUrl] ="m.icon">  
+                
+                <agm-info-window>
+                    <div class="info-window">
+                        <h4 style="margin-bottom:-10px;">VIN</h4>
+                        <p>{{m.rego}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Speed</h4>
+                        <p>{{m.speed}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Heading</h4>
+                        <p>{{m.heading}}</p>               
+                    </div>
+                </agm-info-window>
+
+            </agm-marker>
+
+            <agm-marker 
+                *ngFor="let m of redbikemarkers; let i = index"
+                (markerClick)="clickedMarker(m.label, i)"
+                [latitude]="m.lat"
+                [longitude]="m.lng"
+                [iconUrl] ="m.icon">  
+                
+                <agm-info-window>
+                    <div class="info-window">
+                        <h4 style="margin-bottom:-10px;">VIN</h4>
+                        <p>{{m.rego}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Speed</h4>
+                        <p>{{m.speed}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Heading</h4>
+                        <p>{{m.heading}}</p>  
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Hazard</h4>
+                        <p>{{m.hazardLevel}}</p>               
+                    </div>
+                </agm-info-window>
+
+            </agm-marker>
+
+            <agm-marker 
+                *ngFor="let m of greenbikemarkers; let i = index"
+                (markerClick)="clickedMarker(m.label, i)"
+                [latitude]="m.lat"
+                [longitude]="m.lng"
+                [iconUrl] ="m.icon">  
+                
+                <agm-info-window>
+                    <div class="info-window">
+                        <h4 style="margin-bottom:-10px;">VIN</h4>
+                        <p>{{m.rego}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Speed</h4>
+                        <p>{{m.speed}}</p>
+                        <h4 style="margin-bottom:-10px; margin-top:-10px;">Heading</h4>
+                        <p>{{m.heading}}</p>             
+                    </div>
+                </agm-info-window>
+
+            </agm-marker>
+
+        </agm-map>
+    </div>
 
     <br/>
 
-    <div class="first-card">
+    <div *ngIf="!ishazard" class="first-card">
         <mat-card class="stat-card" style="width:1170px;">
             <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
                 <div class="ledgend">
@@ -77,6 +154,40 @@
                 <div class="ledgend">
                     <img src='./assets/query.gif' alt="Context Consumer" width="26" height="26" style="display:inline">
                     <p>Context Consumer</p>
+                </div>
+            </mat-card-content>
+        </mat-card>
+    </div> 
+    <div *ngIf="ishazard" class="first-card">
+        <mat-card class="stat-card" style="width:1170px;">
+            <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
+                <div class="ledgend">
+                    <img src='./assets/bike-safe.png' alt="Place of Interest" width="26" height="26" style="display:inline">
+                    <p>Safe Bike</p>
+                </div>
+            </mat-card-content>
+            <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
+                <div class="ledgend">
+                    <img src='./assets/bike-unsafe.png' alt="Place of Interest" width="26" height="26" style="display:inline">
+                    <p>Unsafe Bike</p>
+                </div>
+            </mat-card-content>
+            <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
+                <div class="ledgend">
+                    <img src='./assets/car-moving.png' alt="Context Consumer" width="26" height="26" style="display:inline">
+                    <p>Mobile Car</p>
+                </div>
+            </mat-card-content>
+            <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
+                <div class="ledgend">
+                    <img src='./assets/car-stopped.png' alt="Context Consumer" width="26" height="26" style="display:inline">
+                    <p>Stationary Car</p>
+                </div>
+            </mat-card-content>
+            <mat-card-content style="display: inline; margin-left: 20px; margin-right: 20px;">
+                <div class="ledgend">
+                    <img src='./assets/car-predicted.png' alt="Context Consumer" width="26" height="26" style="display:inline">
+                    <p>Predicted Path of Car</p>
                 </div>
             </mat-card-content>
         </mat-card>

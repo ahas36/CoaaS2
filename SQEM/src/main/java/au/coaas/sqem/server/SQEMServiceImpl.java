@@ -208,6 +208,18 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void logPushResponse(au.coaas.sqem.proto.ContextResponse request,
+                                   io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver) {
+        try {
+            PerformanceLogHandler.logPushResponse(request);
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
     ///// Context Entity /////
 
     @Override
@@ -640,6 +652,17 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
                                      io.grpc.stub.StreamObserver<au.coaas.sqem.proto.ProbDelay> responseObserver) {
         try {
             responseObserver.onNext(PerformanceLogHandler.getProbabilityOfDelay(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getLatestPushes(au.coaas.sqem.proto.ProbDelay lookback,
+                              io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver) {
+        try {
+            responseObserver.onNext(PerformanceLogHandler.getCurrentHazrds(((Double)lookback.getValue()).longValue()));
         } catch (Exception ex) {
             responseObserver.onError(ex);
         }

@@ -260,6 +260,13 @@ message CDQLLog
     double complexity = 3;
 }
 
+message ContextResponse
+{
+    string json = 1;
+    string consumerId = 2;
+    string recieverId = 3;
+}
+
 message Empty {}
 
 message StorageRoutine
@@ -433,4 +440,6 @@ service SQEMService {
     rpc summarizeAge (Statistic) returns (Empty);
     rpc logContextAccess (ContextAccess) returns (Empty);
     rpc logSchedulerAction (SchedlerInfo) returns (Empty);
+    rpc logPushResponse (ContextResponse) returns (Empty);
+    rpc getLatestPushes (ProbDelay) returns (SQEMResponse);
 }

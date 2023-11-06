@@ -384,6 +384,21 @@ public class PerformanceLogHandler {
         collection.insertOne(persRecord);
     }
 
+    // Recording context pushed to a subscribed context consumer.
+    public static void logPushResponse (ContextResponse request) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas_log");
+        MongoCollection<Document> collection = db.getCollection("pushed_context");
+
+        Document persRecord = new Document();
+        persRecord.put("consumerId", request.getConsumerId());
+        persRecord.put("reciever", request.getRecieverId());
+        persRecord.put("responseBody", new JSONObject(request.getJson()));
+        persRecord.put("time", System.currentTimeMillis());
+
+        collection.insertOne(persRecord);
+    }
+
     // Changes in refreshing schedulers
     public static void insertSchedulerAction(SchedlerInfo request){
         try {
@@ -1764,6 +1779,31 @@ public class PerformanceLogHandler {
             latency = rs_2.getDouble("average");
         }
         return latency;
+    }
+
+    // Get all the context pushed context in the given lookback period. 'lookback' is in seconds.
+    public static SQEMResponse getCurrentHazrds(long lookback) {
+        MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+        MongoDatabase db = mongoClient.getDatabase("coaas_log");
+        MongoCollection<Document> collection = db.getCollection("pushed_context");
+
+        Document filter = new Document();
+        long timeThreshold = System.currentTimeMillis() - (lookback * 1000);
+        filter.put("time", new Document(){{ put("$gte", timeThreshold); }});
+
+        JSONArray finalResultJsonArr = new JSONArray();
+        Block<Document> printBlock = new Block<Document>() {
+            @Override
+            public void apply(final Document document) {
+                JSONObject resultJSON = new JSONObject(document.toJson());
+                finalResultJsonArr.put(resultJSON);
+            }
+        };
+
+        collection.find(filter).forEach(printBlock);
+
+        return SQEMResponse.newBuilder().setBody(finalResultJsonArr.toString())
+                .setStatus("200").build();
     }
 
     public static QueryClassProfile getQueryClassProfile(String classId){

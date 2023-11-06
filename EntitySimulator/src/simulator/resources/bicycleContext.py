@@ -33,18 +33,22 @@ class BicycleContext(Resource):
     def get(self):
         try:  
             args = request.args
-            data
-            # Retriving the current data from the bicycle
-            if('vin' in args):
-                data = self.handler.getBicycle(args['vin'])
-            elif('speed' in args):
-                data = self.handler.getBicycles(args['speed'])
-
-            # Simulating variation of response latencies
-            time.sleep(random.uniform(float(bicycle_config['MinLatency']), float(bicycle_config['MaxLatency'])))
-        
-            # Return data and 200 OK code
-            return parse_response(data[0]), data[1]
+            if(len(args)>0):
+                data
+                # Retriving the current data from the bicycle
+                if('vin' in args):
+                    data = self.handler.getBicycle(args['vin'])
+                elif('speed' in args):
+                    data = self.handler.getBicycles(args['speed'])
+                # Simulating variation of response latencies
+                time.sleep(random.uniform(float(bicycle_config['MinLatency']), float(bicycle_config['MaxLatency'])))
+                # Return data and 200 OK code
+                return parse_response(data[0]), data[1]
+            else:
+                # Details of all the bicycles on the roads.
+                data = self.handler.getAllBicycles()
+                # Return data and 200 OK code.
+                return data, 200
 
         except(Exception):
             print('An error occured : ' + traceback.format_exc())

@@ -261,6 +261,13 @@ public class SituationManager {
                     try {
                         flag = evaluate(subscription.getId(), jsonObject, oldValue, tempQueue,
                                 subscription.getQuery(), subscription.getComplexity());
+                        if(flag) {
+                            // Recording the context pushing event.
+                            // Following a quick hack to present at PerCom 2024. Should rather find the primary consumer and
+                            // resolve what it's key and then retrieve from temp_ce accordingly.
+                            recordContextPush(jsonObject, conId.getJSONObject("_id").getString("$oid"),
+                                    temp_ce.get("bike").getString("vin"));
+                        }
                     } catch (Exception ex) {
                         log.severe("Error occured when evaluating the situations: " + ex.getMessage());
                         log.severe(String.valueOf(ex.getStackTrace()));
@@ -1116,5 +1123,21 @@ public class SituationManager {
             return pred_values;
         }
         return null;
+    }
+
+    private static void recordContextPush (JSONObject cars, String consumerId, String bikeId) {
+        SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
+                = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
+        // Only recording the cars as for the 'hazardous' scenario.
+        JSONObject car_context = cars.getJSONObject("car");
+        if(!car_context.has("results")) {
+            JSONArray resSet = new JSONArray();
+            resSet.put(car_context);
+            car_context = new JSONObject();
+            car_context.put("results", resSet);
+        }
+        sqemStub.logPushResponse(ContextResponse.newBuilder()
+                .setJson(car_context.toString()).setConsumerId(consumerId)
+                .setRecieverId(bikeId).build());
     }
 }

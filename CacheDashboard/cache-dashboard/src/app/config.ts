@@ -3,10 +3,14 @@ export var config = {
     "uri": "http://localhost:8070/CASM-2.0.1/api/log/performance",
     "model_uri": "http://localhost:8070/CASM-2.0.1/api/log/models",
     "querystaturi": "http://localhost:8070/CASM-2.0.1/api/cqstats",
+    "scenario": "hazard", // parking, hazard
+    // For parking scenario
     "carparks": "https://demo0724795.mockable.io/carparks",
     "places": "https://demo0724795.mockable.io/places",
-    "cars": "https://demo0724795.mockable.io/cars",
-    "scenario": "hazard" // parking, hazard
+    // For hazard scenario
+    "bikes": "http://localhost:5000/bicycles",
+    "cars": "http://localhost:5000/cars",
+    "hazards": "http://localhost:8070/CASM-2.0.1/api/hazards"
 }
 
 // export var config = {

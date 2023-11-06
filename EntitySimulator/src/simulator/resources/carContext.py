@@ -32,16 +32,18 @@ class CarContext(Resource):
     def get(self):
         try:  
             args = request.args
-
-            # Retriving the current state of the car
-            data = self.handler.getCar(args['vin'])
-
-            # Simulating variation of response latencies
-            time.sleep(random.uniform(float(cars_config['MinLatency']), float(cars_config['MaxLatency'])))
-        
-            # Return data and 200 OK code
-            return parse_response(data[0]), data[1]
-
+            if(len(args)>0):
+                # Retriving the current state of a specific car.
+                data = self.handler.getCar(args['vin'])
+                # Simulating variation of response latencies.
+                time.sleep(random.uniform(float(cars_config['MinLatency']), float(cars_config['MaxLatency'])))
+                # Return data and 200 OK code.
+                return parse_response(data[0]), data[1]
+            else:
+                # Details of all the cars in the roads.
+                data = self.handler.getCars()
+                # Return data and 200 OK code.
+                return data, 200
         except(Exception):
             print('An error occured : ' + traceback.format_exc())
 

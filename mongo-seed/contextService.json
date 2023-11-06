@@ -7576,4 +7576,334 @@
       "sampleValue": "name"
     }
   ]
+},
+{
+  "info": {
+    "serviceURL": "http://localhost:5000/cars?vin={0}",
+    "ontClass": "<http://schema.org/Car>",
+    "graph": "<http://schema.org>",
+    "name": "Car",
+    "description": "Car",
+    "resultTag": null,
+    "params": [
+      {
+        "name": "{}",
+        "g": "<http://schema.org>",
+        "class": "<http://schema.org/Thing>",
+        "term": [
+          {
+            "subject": "http://schema.org/identifier",
+            "range": [
+              "http://schema.org/Text",
+              "http://schema.org/PropertyValue",
+              "http://schema.org/URL"
+            ],
+            "label": "vin"
+          }
+        ],
+        "value": "CAR0001",
+        "key": "vin",
+        "termParent": "http://schema.org/Text"
+      }
+    ]
+  },
+  "sla": {
+    "cache": true,
+    "cost": {
+      "unit": "aud",
+      "value": 0.01
+    },
+    "updateFrequency": {
+      "unit": "s",
+      "value": 60
+    },
+    "autoFetch": true,
+    "freshness": {
+      "unit": "s",
+      "value": 60
+    },
+    "key": [
+      "vin"
+    ],
+    "qos": {
+      "rate": 0.01,
+      "penPct": 1,
+      "rtmax": 1000
+    }
+  },
+  "attributes": [
+    {
+      "key": {
+        "subject": "http://schema.org/identifier",
+        "range": [
+          "http://schema.org/Text",
+          "http://schema.org/PropertyValue",
+          "http://schema.org/URL"
+        ],
+        "label": "vin"
+      },
+      "value": "&vin",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": "CAR0001"
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/GeoCoordinates",
+        "range": [
+          "http://schema.org/address",
+          "http://schema.org/latitude",
+          "http://schema.org/longitude"
+        ],
+        "label": "location"
+      },
+      "value": "&location",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": "{latitude:23.0898, longitude:21.45435}"
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Boolean"
+        ],
+        "label": "mobile"
+      },
+      "value": "&mobile",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": true
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/speed",
+        "range": [
+          "http://schema.org/QuantitativeValue"
+        ],
+        "label": "speed"
+      },
+      "value": "&speed",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 60.00
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Number"
+        ],
+        "label": "heading"
+      },
+      "value": "&heading",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 120.00
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Boolean"
+        ],
+        "label": "personInside"
+      },
+      "value": "&personInside",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": true
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Text"
+        ],
+        "label": "doorStatus"
+      },
+      "value": "&doorStatus",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": "Closed"
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Number"
+        ],
+        "label": "accelaration"
+      },
+      "value": "&accelaration",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 4.5
+    }
+  ]
+},
+{
+  "info": {
+    "serviceURL": "http://localhost:5000/bicycles?vin={0}",
+    "ontClass": "<https://schema.org/MotorizedBicycle>",
+    "graph": "<http://schema.org>",
+    "name": "Bicycle",
+    "description": "Bicycle",
+    "resultTag": null,
+    "params": [
+      {
+        "name": "{}",
+        "g": "<http://schema.org>",
+        "class": "<http://schema.org/Thing>",
+        "term": [
+          {
+            "subject": "http://schema.org/identifier",
+            "range": [
+              "http://schema.org/Text",
+              "http://schema.org/PropertyValue",
+              "http://schema.org/URL"
+            ],
+            "label": "vin"
+          }
+        ],
+        "value": "BIC0001",
+        "key": "vin",
+        "termParent": "http://schema.org/Text"
+      }
+    ]
+  },
+  "sla": {
+    "cache": true,
+    "cost": {
+      "unit": "aud",
+      "value": 0.05
+    },
+    "updateFrequency": {
+      "unit": "s",
+      "value": 60
+    },
+    "autoFetch": true,
+    "freshness": {
+      "unit": "s",
+      "value": 60
+    },
+    "key": [
+      "vin"
+    ],
+    "qos": {
+      "rate": 0.01,
+      "penPct": 1,
+      "rtmax": 1000
+    }
+  },
+  "attributes": [
+    {
+      "key": {
+        "subject": "http://schema.org/identifier",
+        "range": [
+          "http://schema.org/Text",
+          "http://schema.org/PropertyValue",
+          "http://schema.org/URL"
+        ],
+        "label": "vin"
+      },
+      "value": "&vin",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": "BIC0001"
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/GeoCoordinates",
+        "range": [
+          "http://schema.org/address",
+          "http://schema.org/latitude",
+          "http://schema.org/longitude"
+        ],
+        "label": "location"
+      },
+      "value": "&location",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": "{latitude:23.0898, longitude:21.45435}"
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Boolean"
+        ],
+        "label": "mobile"
+      },
+      "value": "&mobile",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": true
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/speed",
+        "range": [
+          "http://schema.org/QuantitativeValue"
+        ],
+        "label": "speed"
+      },
+      "value": "&speed",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 60.00
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Number"
+        ],
+        "label": "heading"
+      },
+      "value": "&heading",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 120.00
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Text"
+        ],
+        "label": "brakes"
+      },
+      "value": "&brakes",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": "Good"
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Text"
+        ],
+        "label": "roadNumber"
+      },
+      "value": "&roadNumber",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": "R001"
+    },
+    {
+      "key": {
+        "subject": "http://schema.org/DataType",
+        "range": [
+          "http://schema.org/Number"
+        ],
+        "label": "accelaration"
+      },
+      "value": "&accelaration",
+      "GeoJson": false,
+      "hasValue": true,
+      "sampleValue": 4.5
+    }
+  ]
 }]

@@ -327,8 +327,12 @@ public class PushBasedExecutor {
                     FirebaseMessaging.getInstance().sendAsync(message.build()).get();
                     break;
                 case HTTPPOST:
-                    sendODFWrite(callBack.getHttpURL(), callBack.getBody(), callBack.getHeaders(), callBack);
+                    sendODFWrite(callBack.getHttpURL(), result.toString(), callBack.getHeaders(), callBack);
                     break;
+                case WSS:
+                default:
+                    // Considering a websocket.
+                    sendWSSMessage(callBack.getHttpURL(), result.toString());
             }
 
             if (isDebugMode) {
@@ -380,8 +384,12 @@ public class PushBasedExecutor {
             cancelJob(subsID);
         }
         else {
-
+            log.severe("Callback not found!");
         }
+    }
+
+    private static void sendWSSMessage(String URI, String msg) {
+        log.info("Sending the push notification via a Web Socket.");
     }
 
     private static void sendODFWrite(String URI, String msg, Map<String, String> headers, CDQLCallback callback) {
@@ -394,7 +402,8 @@ public class PushBasedExecutor {
             //     requestBuilder.addHeader("Authorization", credential);
             // }
 
-            Utilities.httpCall(URI, HttpRequests.POST, RequestDataType.XML, headers, msg);
+            Utilities.httpCall(URI, HttpRequests.POST,
+                    msg.startsWith("{") ? RequestDataType.JSON : RequestDataType.XML, headers, msg);
         } catch (Exception ex) {
             log.severe("Error in pushing context via HTTPS: " + ex.getMessage());
         }

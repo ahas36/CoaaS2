@@ -230,6 +230,7 @@ enum CallBackMethod {
     UNKNOWN_METHOD_TYPE = 0;
     FCM = 1;
     HTTPPOST = 2;
+    WSS = 3;
 }
 
 message CDQLCallback {

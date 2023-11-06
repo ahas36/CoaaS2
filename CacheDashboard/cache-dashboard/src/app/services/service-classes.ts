@@ -127,7 +127,7 @@ export class Queue<T> {
       return this._store.length > 0;
     }
 
-  }
+}
 
   @Injectable()
   export class QueryStats {
@@ -142,19 +142,58 @@ export class Queue<T> {
   export class Location{
     public lat: number;
     public lng: number;
-  }
+}
 
-  @Injectable()
-  export class ModelState{
-    public threshold: number;
-    public kappa: number;
-    public mu: number;
-    public pi: number;
-    public delta: number;
-    public row: number;
-    public avg_cachelife: number;
-    public avg_delaytime: number;
-    public avg_reward: number;
-  }
+@Injectable()
+export class ModelState{
+  public threshold: number;
+  public kappa: number;
+  public mu: number;
+  public pi: number;
+  public delta: number;
+  public row: number;
+  public avg_cachelife: number;
+  public avg_delaytime: number;
+  public avg_reward: number;
+}
+
+export class Vehicle {
+  public vin: String;
+  public mobile: boolean;
+  public heading: number;
+  public speed: number;
+  public accelaration: number;
+  public location: LocationDetail;
+}
+
+@Injectable()
+export class Bike extends Vehicle{
+  public breaks: String;
+  public roadNumber: String;
+}
+
+@Injectable()
+export class Car extends Vehicle{
+  public personInside: String;
+  public doorStatus: String;
+}
+
+export class LocationDetail {
+  public latitude: String;
+  public longitude: String;
+}
+
+@Injectable()
+export class Hazards {
+  public consumerId: String;
+  public reciever: String;
+  public responseBody: ResultsBody
+}
+
+export class ResultsBody {
+  public results: [Car];
+}
+
+
 
 

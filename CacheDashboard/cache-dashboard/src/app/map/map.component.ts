@@ -80,12 +80,31 @@ export class MapComponent implements OnInit {
       this.queries = data.perf.query_load.get();
       this.queryLoadVariation.push({ data: this.queries, label: 'Context Queries' });
       this.timeTicks = data.perf.timeTicks.get();
-      this.queryLocations = data.query;
+      
 
       if(config.scenario === 'parking') {
+        this.queryLocations = data.query;
         let carparks = this.serviceAPI.getCarParks();
         let places = this.serviceAPI.getPlaces();
 
+        // Show the context query locations.
+        this.queryLocations.subscribe(locs => {
+          for(const element of locs){
+            this.querymarkers.push({
+                lat: element.location.lat,
+                lng: element.location.lng,
+                dest: element.address,
+                icon: {
+                  url: './assets/query.gif',
+                  scaledSize: {
+                      width: 50,
+                      height: 50
+                  }
+              }});
+            }
+        });
+        
+        // Shows the car parking facilities.
         carparks.subscribe(parks => {
           for(const element of parks){
   
@@ -105,7 +124,8 @@ export class MapComponent implements OnInit {
             });
           }
         });
-  
+        
+        // Shows the buildings/locations around.
         places.subscribe(place => {
           for(const element of place){
   
@@ -127,41 +147,98 @@ export class MapComponent implements OnInit {
         });
       }
       else if(config.scenario === 'hazard'){
-        let cars = this.serviceAPI.getCars();
+        this.updateHazardData();
       }
-
-      this.queryLocations.subscribe(locs => {
-        for(const element of locs){
-          this.querymarkers.push({
-              lat: element.location.lat,
-              lng: element.location.lng,
-              dest: element.address,
-              icon: {
-                url: './assets/query.gif',
-                scaledSize: {
-                    width: 50,
-                    height: 50
-                }
-            }});
-          }
-      });
-
-      // this.querymarkers.push({
-      //   lat: -37.825901243583886,
-      //   lng: 144.95778574794554,
-      //   dest: "Royal Botanic Gardens Victoria - Melbourne Gardens",
-      //   icon: {
-      //     url: './assets/query.gif',
-      //     scaledSize: {
-      //         width: 50,
-      //         height: 50
-      //     }
-      // }});
-
-
     }
     catch(ex){
       console.log('An error occured!'+ ex);
+    }
+  }
+
+  clearSubs() {
+    this.carmarkers = [];
+    this.redbikemarkers = [];
+    this.greenbikemarkers = [];
+  }
+
+  updateHazardData(isRefresh=false) {
+    let hazardata = this.serviceAPI.getHarzadsCarsBikes();
+    if(isRefresh) {
+      this.clearSubs();
+    } 
+
+    // Cars
+    for(const element of hazardata.cars){
+      if(element.speed > 0){
+        this.carmarkers.push({
+          lat: element.latitude,
+          lng: element.longitude,
+          speed: element.speed,
+          heading: element.heading,
+          rego: element.vin,
+          hazardLevel: 0.0,
+          icon: {
+            url: './assets/car-moving.png',
+            scaledSize: {
+                width: 23,
+                height: 23
+            }
+        }
+        });
+      } else {
+        this.carmarkers.push({
+          lat: element.latitude,
+          lng: element.longitude,
+          speed: 0,
+          heading: element.heading,
+          rego: element.vin,
+          hazardLevel: 0.0,
+          icon: {
+            url: './assets/car-stopped.png',
+            scaledSize: {
+                width: 23,
+                height: 23
+            }
+        }
+        });
+      }
+    }
+
+    // Not in danger bikes
+    for(const element of hazardata.greens){
+      this.greenbikemarkers.push({
+        lat: element.latitude,
+        lng: element.longitude,
+        speed: element.speed,
+        heading: element.heading,
+        rego: element.vin,
+        hazardLevel: 0.0,
+        icon: {
+          url: './assets/bike-safe.png',
+          scaledSize: {
+              width: 23,
+              height: 23
+          }
+      }
+      });
+    }
+    // Endangered bikes
+    for(const element of hazardata.reds){
+      this.redbikemarkers.push({
+        lat: element.latitude,
+        lng: element.longitude,
+        speed: element.speed,
+        heading: element.heading,
+        rego: element.vin,
+        hazardLevel: 0.80,
+        icon: {
+          url: './assets/bike-unsafe.png',
+          scaledSize: {
+              width: 23,
+              height: 23
+          }
+      }
+      });
     }
   }
 
@@ -171,7 +248,12 @@ export class MapComponent implements OnInit {
       this.queries = data.perf.query_load.get();
       this.queryLoadVariation[0].data = this.queries;
       this.timeTicks = data.perf.timeTicks.get();
-      this.queryLocations = data.query;
+      if(config.scenario === 'parking') {
+        this.queryLocations = data.query;
+      }
+      else {
+        this.updateHazardData(true);
+      }
     }
     catch(ex){
       console.log('An error occured!'+ ex);
@@ -201,6 +283,7 @@ interface mobileMarker {
   speed: number;
   heading: number;
   rego: string;
+  icon: object;
   hazardLevel: number;
 }
 

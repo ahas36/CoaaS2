@@ -10,7 +10,7 @@ export var config = {
     // For hazard scenario
     "bikes": "http://localhost:5000/bicycles",
     "cars": "http://localhost:5000/cars",
-    "hazards": "http://localhost:8070/CASM-2.0.1/api/hazards"
+    "hazards": "http://localhost:8070/CASM-2.0.1/api/log/hazards"
 }
 
 // export var config = {

@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { PerfData, QueryStats, ModelState, Queue } from './service-classes';
+import { PerfData, QueryStats, ModelState, Queue, Bike, Car, Hazards } from './service-classes';
 import { CSMSModel, LevelsModel, SummaryModel, SimpleModel, LearningModel } from './service-view-models';
 import { config } from '../config';
+import { Observable } from 'rxjs/internal/Observable';
+import { distinct, filter, first } from 'rxjs/operators'
 
 const divisor = 1073741824;
 
@@ -36,7 +38,10 @@ export class ApiServiceService {
 
   carParkData;
   placesData;
+  
   carsData;
+  redBikesData;
+  greenBikesData;
 
   counter = 0;
   
@@ -390,7 +395,7 @@ export class ApiServiceService {
     if(this.carParkData == undefined){
       this.carParkData = this.http.get(config.carparks);
     }
-    console.log(this.carParkData);
+    // console.log(this.carParkData);
     return this.carParkData;
   }
 
@@ -401,11 +406,28 @@ export class ApiServiceService {
     return this.placesData;
   }
 
-  getCars(){
-    if(this.carsData == undefined){
-      this.carsData = this.http.get(config.cars);
+  getHarzadsCarsBikes() {
+    this.carsData = this.http.get<Car>(config.cars);
+    let allHazards = this.http.get<Hazards>(config.hazards).pipe(distinct(e => e.reciever));
+    let bikes = this.http.get<Bike>(config.bikes);
+
+    this.greenBikesData = []
+    this.redBikesData = []
+
+    bikes.subscribe(res => {
+      allHazards.pipe(first(h => h.reciever === res.vin))
+        .subscribe(this.redBikesData.push(res), 
+          err => {
+            console.log('Error', err);
+            this.greenBikesData.push(res)
+          });
+    });
+    
+    return {
+      "cars": this.queryData,
+      "greens": this.greenBikesData,
+      "reds": this.redBikesData
     }
-    console.log(this.carsData);
-    return this.carsData;
   }
 }
+

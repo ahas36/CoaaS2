@@ -10,6 +10,7 @@ import au.coaas.sqem.proto.Empty;
 import au.coaas.sqem.proto.ProbDelay;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
+import org.json.JSONArray;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -56,7 +57,7 @@ public class LogInterface {
         SQEMResponse res = stub.getLatestPushes(ProbDelay.newBuilder()
                 .setValue(lookback).build());
         if (res.getStatus().equals("200")) {
-            return Response.ok(res.getBody()).build();
+            return Response.ok(new JSONArray(res.getBody())).build();
         } else {
             return Response.status(500).entity(res.getBody()).build();
         }

@@ -13,11 +13,16 @@ import okhttp3.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import javax.net.ssl.*;
+import javax.websocket.ContainerProvider;
+import javax.websocket.DeploymentException;
+import javax.websocket.Session;
+import javax.websocket.WebSocketContainer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -26,8 +31,11 @@ import java.util.concurrent.TimeUnit;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Logger;
 
 public class Utilities {
+    private static Logger log = Logger.getLogger(Utilities.class.getName());
+
     public static Double unitConverter(MeasuredProperty prop, String originUnit, String targetUnit, double value) {
         switch(prop){
             case DISTANCE: {

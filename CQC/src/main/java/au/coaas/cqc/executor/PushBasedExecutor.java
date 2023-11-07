@@ -3,6 +3,7 @@ package au.coaas.cqc.executor;
 import au.coaas.base.proto.ListOfString;
 import au.coaas.cqc.proto.RegisterState;
 import au.coaas.cqc.utils.SiddhiQueryGenerator;
+import au.coaas.cqc.utils.WebSocketClient;
 import au.coaas.cqp.proto.*;
 import au.coaas.cqc.utils.Utilities;
 import au.coaas.cre.proto.CREServiceGrpc;
@@ -29,6 +30,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
@@ -329,7 +331,13 @@ public class PushBasedExecutor {
                 case WSS:
                 default:
                     // Considering a websocket.
-                    sendWSSMessage(callBack.getHttpURL(), result.toString());
+                    JSONObject sendMsg = new JSONObject();
+                    sendMsg.put("message", result);
+                    // TODO: This is a quick hack. Should change to the right URL.
+                    String uri = callBack.getHttpURL() != null ? callBack.getHttpURL() :
+                            "ws://localhost:8070/CASM-2.0.1/contexts/BIC001";
+                    sendMsg.put("reciever", uri);
+                    sendWSSMessage("ws://localhost:8070/CASM-2.0.1/contexts/server", sendMsg.toString());
             }
 
             if (isDebugMode) {
@@ -385,8 +393,14 @@ public class PushBasedExecutor {
         }
     }
 
-    private static void sendWSSMessage(String URI, String msg) {
-        log.info("Sending the push notification via a Web Socket.");
+    private static void sendWSSMessage(String uri, String jsonMessage) {
+        try {
+            WebSocketClient clientEndPoint = new WebSocketClient(new URI(uri));
+            clientEndPoint.sendMessage(jsonMessage);
+            log.info("Sending the push notification via a Web Socket.");
+        } catch (Exception ex) {
+            log.severe("Exception occured: " + ex.getMessage());
+        }
     }
 
     private static void sendODFWrite(String URI, String msg, Map<String, String> headers, CDQLCallback callback) {

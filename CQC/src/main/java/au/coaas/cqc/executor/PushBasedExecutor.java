@@ -16,9 +16,8 @@ import au.coaas.cre.proto.SiddhiRegister;
 import au.coaas.grpc.client.CREChannel;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.*;
-import com.google.common.util.concurrent.ListenableFuture;
+
 import com.google.firebase.FirebaseApp;
-import com.google.gson.Gson;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 import com.google.firebase.FirebaseOptions;
@@ -26,12 +25,10 @@ import com.google.firebase.messaging.Message;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.messaging.FirebaseMessaging;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URLEncoder;
 import java.text.SimpleDateFormat;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;

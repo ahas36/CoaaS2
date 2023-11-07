@@ -11,16 +11,23 @@ export class WebsocketService {
   constructor() { }
 
   connect(): void {
-    this.socket = new WebSocket('wss://localhost:6602/context');
+    // This application emulates the application on BIC001.
+    this.socket = new WebSocket('wss://localhost:8084/context/BIC001');
 
     this.socket.onopen = () => {
       console.log('WebSocket connection established.');
     };
 
     this.socket.onmessage = (event) => {
-      const message = event.data;
-      console.log('Received message:', message);
-      this.messageReceived.next(message);
+      let sendMessage = 'go';
+      let message = JSON.parse(event.data);
+      if(message['car'].hasOwnProperty('results')) {
+        var numberOfHazs = Object.keys(message['car']['results']).length
+        if(numberOfHazs > 0){
+          sendMessage = 'stop';
+        }
+      }
+      this.messageReceived.next(sendMessage);
     };
 
     this.socket.onclose = (event) => {

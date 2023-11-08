@@ -597,6 +597,18 @@ public class ContextCacheHandler {
         return entData;
     }
 
+    // Retrieve an attribute from cache.
+    public static SQEMResponse retrieveFromCache(AttributeLookUp request) {
+        String[] split = request.getUniquehashkey().split("-");
+        CacheLookUpResponse result = registry.lookupAttribute(split[0], split[1], split[2]);
+        if(result.getIsCached() && result.getIsValid()) {
+            Document data = simpleRetrieval(request.getUniquehashkey());
+            return SQEMResponse.newBuilder().setStatus("200")
+                    .setBody(data.toJson()).build();
+        } else if (result.getIsCached() && !result.getIsValid()) return SQEMResponse.newBuilder().setStatus("400").build();
+        else return SQEMResponse.newBuilder().setStatus("404").build();
+    }
+
     // Retrieve a context entity/ies from cache.
     public static SQEMResponse retrieveFromCache(CacheLookUp request) {
         long startTime = System.currentTimeMillis();

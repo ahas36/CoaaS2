@@ -416,7 +416,10 @@ export class ApiServiceService {
 
     bikes.subscribe(res => {
       allHazards.pipe(first(h => h.reciever === res.vin))
-        .subscribe(this.redBikesData.push(res), 
+        .subscribe(h => {
+          res['hazardLevel'] = h.hazardLevel;
+          this.redBikesData.push(res)
+          }, 
           err => {
             console.log('Error', err);
             this.greenBikesData.push(res)

@@ -259,14 +259,15 @@ public class SituationManager {
                     Queue<CdqlConditionToken> tempQueue = new LinkedList<>(subscription.getSituationList());
                     boolean flag = false;
                     try {
-                        flag = evaluate(subscription.getId(), jsonObject, oldValue, tempQueue,
+                        AbstractMap.SimpleEntry eval_result = evaluate(subscription.getId(), jsonObject, oldValue, tempQueue,
                                 subscription.getQuery(), subscription.getComplexity());
+                        flag = (boolean) eval_result.getKey();
                         if(flag) {
                             // Recording the context pushing event.
                             // Following a quick hack to present at PerCom 2024. Should rather find the primary consumer and
                             // resolve what it's key and then retrieve from temp_ce accordingly.
                             recordContextPush(jsonObject, conId.getJSONObject("_id").getString("$oid"),
-                                    temp_ce.get("bike").getString("vin"));
+                                    temp_ce.get("bike").getString("vin"), (List<String>) eval_result);
                         }
                     } catch (Exception ex) {
                         log.severe("Error occured when evaluating the situations: " + ex.getMessage());
@@ -420,9 +421,10 @@ public class SituationManager {
         return constantType;
     }
 
-    public static boolean evaluate(String subscriptionID, JSONObject values, JSONObject old,
-                                   Queue<CdqlConditionToken> RPNCondition, CDQLQuery query, double complexity) throws WrongOperatorException {
+    public static AbstractMap.SimpleEntry<Boolean, List<String>> evaluate(String subscriptionID, JSONObject values, JSONObject old,
+                     Queue<CdqlConditionToken> RPNCondition, CDQLQuery query, double complexity) throws WrongOperatorException {
         Stack<CdqlConditionToken> stack = new Stack<>();
+        List<String> funcs = new ArrayList<>();
         while (RPNCondition.size() > 0) {
             CdqlConditionToken token = RPNCondition.poll();
             switch (token.getType()) {
@@ -442,11 +444,13 @@ public class SituationManager {
                     String funcName = token.getFunctionCall().getFunctionName();
                     FunctionCall functionCall = preproccessFunctionCall(token.getFunctionCall(), values, old, query,
                             subscriptionID, funcName, complexity);
+                    String funcValue = executeFunctionCall(functionCall, subscriptionID, funcName, complexity, RPNCondition).toString();
                     stack.push(CdqlConditionToken.newBuilder()
                             .setConstantTokenType(CdqlConstantConditionTokenType.Json)
                             .setType(CdqlConditionTokenType.Constant)
-                            .setStringValue(executeFunctionCall(functionCall, subscriptionID, funcName, complexity, RPNCondition).toString())
+                            .setStringValue(funcValue)
                             .build());
+                    funcs.add(funcValue);
                     break;
                 default:
                     stack.push(token);
@@ -454,9 +458,9 @@ public class SituationManager {
         }
 
         try {
-            return stack.size() == 1 && Boolean.valueOf(stack.pop().getStringValue());
+            return new AbstractMap.SimpleEntry(stack.size() == 1 && Boolean.valueOf(stack.pop().getStringValue()), funcs);
         } catch (Exception e) {
-            return false;
+            return new AbstractMap.SimpleEntry(false, null);
         }
     }
 
@@ -944,7 +948,7 @@ public class SituationManager {
                                                     .build());
 
                                             // Secondly, cache the expected context (path). This happends through the same loop.
-                                            // Not caching further context entities becuase,for example, car may not be cached cecause it is cost inefficient to
+                                            // Not caching further context entities becuase,for example, car may not be cached because it is cost inefficient to
                                             // refresh the location all the time.
                                             for(Operand x : fCall.getArgumentsList()) {
                                                 String refAttr = "location";
@@ -981,6 +985,10 @@ public class SituationManager {
                                                                         .setEt(x.getContextEntity().getType())
                                                                         .setServiceId(argValue.getJSONArray("providers").getString(0))
                                                                         .setHashKey(argValue.getString("hashkey")).build())
+                                                                .setSituReference(SituationLookUp.newBuilder()
+                                                                        .setFunction(fCall)
+                                                                        .setUniquehashkey(situId)
+                                                                        .setZeroTime(System.currentTimeMillis()).build())
                                                                 .setIndefinite(false) // Should be set to Entity lifetime if available or indefinite (if the ghost transforms, then take that lifetime).
                                                                 .setHashkey("pred_path")
                                                                 .build());
@@ -1004,6 +1012,10 @@ public class SituationManager {
                                                         sqemStub_caching.cacheContext(CacheRequest.newBuilder()
                                                                 .setJson(JsonFormat.printer().print(pred_path))
                                                                 .setCacheLevel(CacheLevels.ATTRIBUTE.toString())
+                                                                .setSituReference(SituationLookUp.newBuilder()
+                                                                        .setFunction(fCall)
+                                                                        .setUniquehashkey(situId)
+                                                                        .setZeroTime(System.currentTimeMillis()).build())
                                                                 .setReference(CacheLookUp.newBuilder()
                                                                         .setKey(refAttr)
                                                                         .setZeroTime(pred_path.getZeroTime())
@@ -1078,7 +1090,7 @@ public class SituationManager {
         GeoIndexer geo = GeoIndexer.getInstance();
         Path pred_path = geo.getPredictedPath(request.getLatitude(), request.getLongitude(),
                 request.getHeading(), request.getSpeed(), 3);
-        if(request.getRequest().isInitialized()) {
+        if(request.hasRequest() && request.getRequest().isInitialized()) {
             CacheLookUp cacheRef = request.getRequest().getReference()
                     .toBuilder().setZeroTime(System.currentTimeMillis())
                     .build();
@@ -1125,10 +1137,19 @@ public class SituationManager {
         return null;
     }
 
-    private static void recordContextPush (JSONObject cars, String consumerId, String bikeId) {
+    private static void recordContextPush (JSONObject cars, String consumerId, String bikeId, List<String> funcValues) {
         SQEMServiceGrpc.SQEMServiceFutureStub sqemStub
                 = SQEMServiceGrpc.newFutureStub(SQEMChannel.getInstance().getChannel());
         // Only recording the cars as for the 'hazardous' scenario.
+        double hazardLevel = 0.0;
+        for(String val : funcValues) {
+            JSONObject funRet = new JSONObject(val);
+            if (funRet.get("value") instanceof Double) {
+                hazardLevel = funRet.getDouble("value");
+                break;
+            }
+        }
+
         JSONObject car_context = cars.getJSONObject("car");
         if(!car_context.has("results")) {
             JSONArray resSet = new JSONArray();
@@ -1138,6 +1159,7 @@ public class SituationManager {
         }
         sqemStub.logPushResponse(ContextResponse.newBuilder()
                 .setJson(car_context.toString()).setConsumerId(consumerId)
+                .setFuncValue(hazardLevel)
                 .setRecieverId(bikeId).build());
     }
 }

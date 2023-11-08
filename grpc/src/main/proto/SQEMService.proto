@@ -52,6 +52,10 @@ message SituationLookUp {
     uint64 zeroTime = 4;
 }
 
+message AttributeLookUp {
+    string uniquehashkey = 1;
+}
+
 message RefreshUpdate {
     CacheLookUp lookup = 1;
     string refreshLogic = 2;
@@ -265,6 +269,7 @@ message ContextResponse
     string json = 1;
     string consumerId = 2;
     string recieverId = 3;
+    double funcValue = 4;
 }
 
 message Empty {}

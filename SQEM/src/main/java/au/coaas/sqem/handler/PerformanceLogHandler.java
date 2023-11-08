@@ -394,6 +394,7 @@ public class PerformanceLogHandler {
         persRecord.put("consumerId", request.getConsumerId());
         persRecord.put("reciever", request.getRecieverId());
         persRecord.put("responseBody", new JSONObject(request.getJson()));
+        persRecord.put("hazardLevel", request.getFuncValue());
         persRecord.put("time", System.currentTimeMillis());
 
         collection.insertOne(persRecord);

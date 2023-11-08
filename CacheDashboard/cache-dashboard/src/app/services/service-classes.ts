@@ -187,7 +187,8 @@ export class LocationDetail {
 export class Hazards {
   public consumerId: String;
   public reciever: String;
-  public responseBody: ResultsBody
+  public responseBody: ResultsBody;
+  public hazardLevel: number;
 }
 
 export class ResultsBody {

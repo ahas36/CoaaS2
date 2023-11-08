@@ -230,7 +230,7 @@ export class MapComponent implements OnInit {
         speed: element.speed,
         heading: element.heading,
         rego: element.vin,
-        hazardLevel: 0.80,
+        hazardLevel: element.hazardLevel,
         icon: {
           url: './assets/bike-unsafe.png',
           scaledSize: {

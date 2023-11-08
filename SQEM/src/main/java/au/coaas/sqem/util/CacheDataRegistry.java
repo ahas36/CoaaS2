@@ -594,6 +594,17 @@ public final class CacheDataRegistry{
         return updateRegistry(lookup, null, isCaching);
     }
 
+    private synchronized void setSituReference(ContextItem ent, SituationLookUp situ_lookup) {
+        this.root.compute(situ_lookup.getFunction().getFunctionName(), (fun,fun_val) -> {
+            ((SituationItem) fun_val).getChildren()
+                    .compute(situ_lookup.getUniquehashkey(), (sit, sit_val) -> {
+                        ((SituationItem) sit_val).setChildren(ent);
+                        return sit_val;
+                    });
+            return fun_val;
+        });
+    }
+
     // Record a context attribute in registry.
     public synchronized Double attributeRegistryEntry(CacheRequest lookup){
         AtomicReference<Double> remainingLifetime = null;
@@ -623,7 +634,8 @@ public final class CacheDataRegistry{
                                             LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getReference().getZeroTime()),
                                                     TimeZone.getDefault().toZoneId());
                                             ((ContextItem)v1).setChildren(lookup.getHashkey(),
-                                                    new AttributeItem((ContextItem)v1, lookup.getHashkey(), zeroTime, lookup.getReference().getKey()));
+                                                    new AttributeItem((ContextItem) v1, lookup.getHashkey(), zeroTime, lookup.getReference().getKey()));
+                                            setSituReference((ContextItem) v1, lookup.getSituReference());
                                         }
                                         return v1;
                                     });
@@ -649,13 +661,16 @@ public final class CacheDataRegistry{
                                         temp_ent.setChildren(lookup.getHashkey(),
                                                 new AttributeItem((ContextItem)temp_ent, lookup.getHashkey(), zeroTime, lookup.getReference().getKey()));
                                         stat.getChildren().put(lookup.getReference().getHashKey(), temp_ent);
+                                        setSituReference(temp_ent, lookup.getSituReference());
                                     }
                                     else {
                                         // Already existing shared entity.
                                         sharedEntity.setParents(finalSerId, stat);
                                         sharedEntity.setChildren(lookup.getHashkey(),
-                                                new AttributeItem((ContextItem)sharedEntity, lookup.getHashkey(), zeroTime, lookup.getReference().getKey()));
+                                                new AttributeItem((ContextItem)sharedEntity, lookup.getHashkey(),
+                                                        zeroTime, lookup.getReference().getKey()));
                                         stat.getChildren().put(lookup.getReference().getHashKey(), sharedEntity);
+                                        setSituReference(sharedEntity, lookup.getSituReference());
 
                                         Double ent_lifetime = sharedEntity.getlifetime().getDouble("value"); // seconds
                                         LocalDateTime expTime = sharedEntity.getZeroTime().plusSeconds(ent_lifetime.longValue());
@@ -809,7 +824,7 @@ public final class CacheDataRegistry{
                     // Setting the entities related to the situation
                     for(Operand ope: lookup.getFunction().getArgumentsList()){
                         if(ope.getType().equals(OperandType.CONTEXT_VALUE_JSON)){
-                            String entityName = ope.getContextAttribute().isInitialized() ?
+                            String entityName = ope.hasContextAttribute() && ope.getContextAttribute().isInitialized() ?
                                     ope.getContextAttribute().getEntityName() : ope.getContextEntity().getEntityID();
 
                             ContextEntityType entType = lookup.getSituation().getRelatedEntitiesMap().get(entityName);

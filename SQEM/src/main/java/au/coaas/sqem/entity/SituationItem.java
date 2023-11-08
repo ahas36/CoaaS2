@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 public class SituationItem implements ContextCacheItem {
     private String id;
+    private int predWindow;
     private String refreshLogic;
     private JSONObject lifetime;
     private List<Operand> operands;
@@ -23,6 +24,7 @@ public class SituationItem implements ContextCacheItem {
     private HashMap<String, ContextCacheItem> children;
 
     public String getId() {return this.id;}
+    public int getPredWindow() {return this.predWindow;}
     public JSONObject getlifetime() {return this.lifetime;}
     public LocalDateTime getZeroTime() {return this.zeroTime;}
     public String getRefreshLogic() {return this.refreshLogic;}
@@ -32,7 +34,9 @@ public class SituationItem implements ContextCacheItem {
     public void setZeroTime(LocalDateTime time) {this.zeroTime = time;}
     public void setLifetime(JSONObject lifetime) {this.lifetime = lifetime;}
     public void setUpdatedTime(LocalDateTime time) {this.updatedTime = time;}
+    public void setPredWindow(int predWindow) {this.predWindow = predWindow;}
     public void setOperands(List<Operand> operands) {this.operands = operands;}
+    public void setChildren(SituationItem situ) {this.children.put(situ.getId(), situ);}
     public void setChildren(ContextItem entity) {this.children.put(entity.getId(), entity);}
     public void setParents(String id, ContextCacheItem entity) {this.parents.put(id, entity);}
 
@@ -42,6 +46,7 @@ public class SituationItem implements ContextCacheItem {
 
     // Situation Reference Node
     public SituationItem(SituationLookUp lookUp, LocalDateTime zeroTime){
+        this.predWindow = 0;
         this.createdTime = LocalDateTime.now();
         this.updatedTime = LocalDateTime.now();
         this.id = lookUp.getFunction().getFunctionName();
@@ -56,6 +61,7 @@ public class SituationItem implements ContextCacheItem {
     }
 
     public SituationItem(SituationLookUp lookUp){
+        this.predWindow = 0;
         this.createdTime = LocalDateTime.now();
         this.updatedTime = LocalDateTime.now();
         this.id = lookUp.getFunction().getFunctionName();
@@ -68,6 +74,7 @@ public class SituationItem implements ContextCacheItem {
     // Situation Node
     public SituationItem(SituationItem parent, String ownId, List<Operand> operands, LocalDateTime zeroTime){
         this.id = ownId;
+        this.predWindow = 0;
         this.operands = operands;
         this.zeroTime = zeroTime;
         this.refreshLogic = "reactive";
@@ -93,8 +100,8 @@ public class SituationItem implements ContextCacheItem {
                 break;
             }
             case "hazardous": {
-                // Making hazardous synchronized with our 3 seconds prediction window.
-                this.lifetime.put("value",3);
+                // Hazard levels are so short lived.
+                this.lifetime.put("value",1);
                 break;
             }
             default: this.lifetime.put("value",1800.0);

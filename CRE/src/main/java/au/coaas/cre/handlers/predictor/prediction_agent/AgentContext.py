@@ -25,11 +25,14 @@ class AgentContext(Resource):
     def get(self):
         try:     
             # Accepts consumer id and the situation name as inputs from the parameters
-            args = request.args    
+            args = request.args  
+            horizon = top_config['Epochs']
             consumer_id = args['consumer']
             situation_name = args['situation']
+            if('horizon' in args):
+                horizon =  args['horizon']
             # Predict the results
-            result = self.__executor.predict(consumer_id, situation_name)
+            result = self.__executor.predict(consumer_id, situation_name, horizon)
             if result == None:
                 return 'Failed', 400
             # Return data and 200 OK code

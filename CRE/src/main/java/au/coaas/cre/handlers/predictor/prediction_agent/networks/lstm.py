@@ -114,7 +114,7 @@ class LSTMExecutor():
         
         return df
     
-    def get_last_records(self, consumer, situation):
+    def get_last_records(self, consumer, situation, horizon):
         _filter = {
             'consumerId': consumer,
             'situationName': situation
@@ -123,7 +123,7 @@ class LSTMExecutor():
             'time' : 1,
             'probability' : 1
         }
-        situations = self.__db.read_all('infered_situations', _filter, _project, asd = -1, limit = self.__horizon)
+        situations = self.__db.read_all('infered_situations', _filter, _project, asd = -1, limit = horizon)
         df = pd.DataFrame(situations, columns =['time', 'probability'], dtype = float) 
         
         return df
@@ -227,29 +227,29 @@ class LSTMExecutor():
         # Testing the model
         # visualize(timeseries, model, train_size, x_train, x_test)
     
-    def predict(self, consumer_id, situation_name):
+    def predict(self, consumer_id, situation_name, horizon):
         if(self.__ready):
             if((consumer_id in self.__refs) and (situation_name in self.__refs[consumer_id])):
                 # There is an already trained model for the consumer and event.
                 path = consumer_id + '-' + situation_name
                 model = LSTMModel(path)
                 
-                pd_last = self.get_last_records(consumer_id, situation_name)
-                pred_value = model(torch.tensor(pd_last),self.__horizon)
+                pd_last = self.get_last_records(consumer_id, situation_name, horizon)
+                pred_value = model(torch.tensor(pd_last), horizon)
                 final = pred_value.flatten().detach().numpy()
 
                 # Persist the prediction
-                self.__persist_prediction(self, path, 'lstm', final[-self.__horizon:])
+                self.__persist_prediction(self, path, 'lstm', final[-horizon:])
                 
                 self.__pred_count += 1
                 model_obj = self.__refs[consumer_id][situation_name]
                 model_obj.subscription.data(model_obj.subscription.data()+1)
 
-                return { 'predictions': final[-self.__horizon:] }
+                return { 'predictions': final[-horizon:] }
             else:
                 # There is no trained model at the moment. So, triggering a learning.
                 self.__background_train()
-                result = self.__moving_average(consumer_id, situation_name, self.__horizon)
+                result = self.__moving_average(consumer_id, situation_name, horizon)
                 return { 'predictions': result }
         else:
             return None

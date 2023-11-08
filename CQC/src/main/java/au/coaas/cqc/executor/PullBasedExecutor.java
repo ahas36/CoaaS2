@@ -1341,7 +1341,8 @@ public class PullBasedExecutor {
                         for (int i = 0; i < results.length(); i++) {
                             JSONObject entity = results.getJSONObject(i);
 
-                            Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
+                            Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream()
+                                    .filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
                             String prefix = findEntity.getKey();
                             entityKey = findEntity.getKey();
                             List<AttributeValue> entityAttributeValues = new ArrayList<>();
@@ -1363,7 +1364,8 @@ public class PullBasedExecutor {
                         }
                     } else {
                         String entityType = entities.getString("entityType");
-                        Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream().filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
+                        Map.Entry<String, ContextEntityType> findEntity = tempList.entrySet().stream()
+                                .filter(p -> p.getValue().getType().equals(entityType)).findFirst().get();
                         String prefix = findEntity.getKey();
                         entityKey = findEntity.getKey();
                         List<AttributeValue> entityAttributeValues = new ArrayList<>();
@@ -1423,7 +1425,8 @@ public class PullBasedExecutor {
                         itemResult.put("outcome", jo);
                     } else {
                         String situation = fCall.getSubItemsList().get(0);
-                        Optional<ReasoningResponse> rr = creResponse.getBodyList().stream().filter(p -> p.getSituationTitle().equalsIgnoreCase(situation)).findFirst();
+                        Optional<ReasoningResponse> rr = creResponse.getBodyList().stream()
+                                .filter(p -> p.getSituationTitle().equalsIgnoreCase(situation)).findFirst();
                         if (rr.isPresent()) {
                             JSONObject obj = new JSONObject();
                             obj.put(situation, rr.get().getConfidence());

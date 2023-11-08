@@ -50,6 +50,7 @@ message SituationLookUp {
     au.coaas.cqp.proto.FunctionCall function = 2;
     string uniquehashkey = 3;
     uint64 zeroTime = 4;
+    repeated au.coaas.cqp.proto.CdqlConditionToken predictions = 5;
 }
 
 message AttributeLookUp {
@@ -119,6 +120,7 @@ message CacheLookUpResponse {
     repeated string hashKeys = 6;
     repeated string missKeys = 7;
     au.coaas.cqp.proto.SituationFunction situation = 8;
+    int32 predValue = 9;
 }
 
 message SimpleEntityLookUp {

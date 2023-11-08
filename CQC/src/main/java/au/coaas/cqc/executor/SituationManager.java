@@ -54,6 +54,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class SituationManager {
     private static final boolean cacheEnabled = true;
+    // This is a quick hack for demo. This should rather be the time until the primary entity data can be retrieved (in seconds).
+    private static final int samplingWindow = 5;
 
     public static long totalExecutionTime = 0;
     public static long totalNumberOfEvents = 0;
@@ -911,7 +913,7 @@ public class SituationManager {
                     JSONObject finalCacheable_situ = cacheable_situ;
                     new Thread(() -> {
                         if(comparators != null) {
-                            CdqlConditionToken[] preds = predictSituation(consumerId, fCall.getFunctionName());
+                            CdqlConditionToken[] preds = predictSituation(consumerId, fCall.getFunctionName(), samplingWindow);
                             CdqlConditionToken operand_2 = comparators.poll();
                             CdqlConditionToken operator = comparators.poll();
 
@@ -939,7 +941,8 @@ public class SituationManager {
                                                     .setSituReference(SituationLookUp.newBuilder()
                                                             .setFunction(fCall)
                                                             .setUniquehashkey(situId)
-                                                            .setZeroTime(System.currentTimeMillis()).build())
+                                                            .setZeroTime(System.currentTimeMillis())
+                                                            .addAllPredictions(Arrays.asList(preds)).build())
                                                     .setJson(finalCacheable_situ.toString())
                                                     .setCacheLevel(CacheLevels.SITU_FUNCTION.toString())
                                                     .setRefreshLogic("REACTIVE")
@@ -1118,16 +1121,16 @@ public class SituationManager {
     }
 
     // Start predicting the situation.
-    public static CdqlConditionToken[] predictSituation(String consumerId, String situationName) {
-        String predictURI = String.format("http://localhost:9797/predictions?consumer=%1$s&situation=%2$s",
-                consumerId, situationName);
+    public static CdqlConditionToken[] predictSituation(String consumerId, String situationName, int horizon) {
+        String predictURI = String.format("http://localhost:9797/predictions?consumer=%1$s&situation=%2$s&horizon=%3$d",
+                consumerId, situationName, horizon);
         String predictions = Utilities.httpCall(predictURI, HttpRequests.GET, RequestDataType.JSON, null, null);
         if(predictions != null){
             JSONObject pred_res = new JSONObject(predictions);
             JSONArray res = pred_res.getJSONArray("predictions");
             CdqlConditionToken[] pred_values = new CdqlConditionToken[res.length()];
             for (int i = 0; i < res.length(); ++i) {
-                pred_values[i] = CdqlConditionToken.newBuilder().setStringValue(res.getString(i))
+                pred_values[i] = CdqlConditionToken.newBuilder().setStringValue(String.valueOf(res.getDouble(i)))
                         .setType(CdqlConditionTokenType.Constant)
                         .setConstantTokenType(CdqlConstantConditionTokenType.Numeric)
                         .build();

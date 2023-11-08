@@ -511,6 +511,24 @@ public final class CacheDataRegistry{
 
                 double finalAgeLoss = ChronoUnit.MILLIS.between(zeroTime,now);
                 if(now.isAfter(expiryTime)){
+                    if(data.getPredWindow() > 0) {
+                        LocalDateTime pred_expTime = zeroTime.plusSeconds(data.getPredWindow());
+                        if(now.isBefore(pred_expTime)) {
+                            // Cache hit, but from Predictive Cache.
+                            PerformanceLogHandler.insertAccess(
+                                    lookup.getFunction().getFunctionName() + "-" + lookup.getUniquehashkey(),
+                                    "hit", finalAgeLoss);
+                            int fwdSecs = (int) finalAgeLoss/1000;
+                            return res.setHashkey(lookup.getUniquehashkey())
+                                    .setIsValid(true)
+                                    .setIsCached(true)
+                                    .setPredValue(fwdSecs)
+                                    .setRefreshLogic(data.getRefreshLogic())
+                                    .setRemainingLife(remainingLife).build();
+                        }
+                    }
+
+                    // Partial Miss Occured.
                     PerformanceLogHandler.insertAccess(
                             lookup.getFunction().getFunctionName() + "-" + lookup.getUniquehashkey(),
                             "p_miss", finalAgeLoss);
@@ -807,11 +825,23 @@ public final class CacheDataRegistry{
                 v.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
                 if(v.getChildren().containsKey(lookup.getUniquehashkey())) {
                     v.getChildren().compute(lookup.getUniquehashkey(), (id, stat) -> {
+                        LocalDateTime oriZeroTime = stat.getZeroTime();
                         LocalDateTime zeroTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(lookup.getZeroTime()),
                                 TimeZone.getDefault().toZoneId());
                         stat.setZeroTime(zeroTime);
                         stat.setUpdatedTime(LocalDateTime.now(TimeZone.getDefault().toZoneId()));
                         ((SituationItem)stat).setOperands(lookup.getFunction().getArgumentsList());
+                        // Could be a refresh as well.
+                        if(lookup.getPredictionsCount() > 0) {
+                            ((SituationItem)stat).setPredWindow(lookup.getPredictionsCount());
+                        }
+                        else if(((SituationItem)stat).getPredWindow() > 0) {
+                            long diff = ChronoUnit.SECONDS.between(oriZeroTime, LocalDateTime.now());
+                            int remainFuture = ((SituationItem) stat).getPredWindow() - (int) diff;
+                            if(remainFuture <= 0) ((SituationItem) stat).setPredWindow(0);
+                            else ((SituationItem) stat).setPredWindow(remainFuture);
+                        }
+
                         return stat;
                     });
                 }
@@ -820,6 +850,10 @@ public final class CacheDataRegistry{
                             TimeZone.getDefault().toZoneId());
                     SituationItem newSituationInstance = new SituationItem((SituationItem) v, lookup.getUniquehashkey(),
                             lookup.getFunction().getArgumentsList(), zeroTime);
+                    // Can only occure when caching.
+                    if(lookup.getPredictionsCount() > 0) {
+                        ((SituationItem)newSituationInstance).setPredWindow(lookup.getPredictionsCount());
+                    }
 
                     // Setting the entities related to the situation
                     for(Operand ope: lookup.getFunction().getArgumentsList()){
@@ -858,6 +892,10 @@ public final class CacheDataRegistry{
                     TimeZone.getDefault().toZoneId());
             SituationItem newSituationInstance = new SituationItem(rootSitu, lookup.getUniquehashkey(),
                     lookup.getFunction().getArgumentsList(), zeroTime);
+            // Can only occure when caching.
+            if(lookup.getPredictionsCount() > 0) {
+                ((SituationItem)newSituationInstance).setPredWindow(lookup.getPredictionsCount());
+            }
 
             // Setting the entities related to the situation
             for(Operand ope: lookup.getFunction().getArgumentsList()){
@@ -883,6 +921,8 @@ public final class CacheDataRegistry{
                     }
                 }
             }
+
+            rootSitu.setChildren(newSituationInstance);
             this.root.put(lookup.getFunction().getFunctionName(), rootSitu);
         }
         return lookup.getUniquehashkey();

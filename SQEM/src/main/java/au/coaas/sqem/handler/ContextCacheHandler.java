@@ -2,6 +2,7 @@ package au.coaas.sqem.handler;
 
 import au.coaas.cqc.proto.CQCServiceGrpc;
 import au.coaas.cqc.proto.PathRequest;
+import au.coaas.cqp.proto.CdqlConditionToken;
 import au.coaas.cqp.proto.SituationFunction;
 import au.coaas.cqp.proto.SituationFunctionResponse;
 import au.coaas.grpc.client.CQCChannel;
@@ -174,6 +175,50 @@ public class ContextCacheHandler {
                     situation.set(Document.parse(situJson));
                 }
             }
+
+            // If predictions for the situation exists.
+            if(registerRequest.getSituReference().getPredictionsCount() > 0) {
+                String pred_hash = contextId + "-predictions";
+                RBucket<Document> pred = cacheClient.getBucket(pred_hash);
+
+                List<Double> predData = new ArrayList<>();
+                for(CdqlConditionToken token : registerRequest.getSituReference().getPredictionsList()) {
+                    predData.add(Double.valueOf(token.getStringValue()));
+                }
+
+                synchronized (ContextCacheHandler.class){
+                    Document predSituJson = new Document();
+                    entityJson.put("data", predData);
+                    entityJson.put("zeroTime", System.currentTimeMillis());
+                    pred.setAsync(predSituJson);
+                }
+            }
+            else {
+                String pred_hash = contextId + "-predictions";
+                RBucket<Document> pred = cacheClient.getBucket(pred_hash);
+                if(pred.isExists()) {
+                    List pre_values = pred.get().get("data", List.class);
+                    Long zeroTime = pred.get().get("zeroTime", Long.class);
+                    long diff = (System.currentTimeMillis() - zeroTime) / 1000;
+                    if(diff < pre_values.size()) {
+                        // Need to prune the cached predictions.
+                        long start = pre_values.size() - diff;
+                        List pre_remain = pre_values.subList((int) start, pre_values.size() - 1);
+                        synchronized (ContextCacheHandler.class){
+                            Document predSituJson = new Document();
+                            entityJson.put("data", pre_remain);
+                            entityJson.put("zeroTime", System.currentTimeMillis());
+                            pred.set(predSituJson);
+                        }
+
+                    } else {
+                        // Completely remove.
+                        cacheClient.getKeys().deleteAsync(pred_hash);
+                        pred.deleteAsync();
+                    }
+                }
+            }
+
             PerformanceLogHandler.logCacheActions(ScheduleTasks.CACHE, contextId, "reactive");
             return SQEMResponse.newBuilder().setStatus("200").setBody("Situation Cached").build();
         } catch (Exception e) {
@@ -505,6 +550,18 @@ public class ContextCacheHandler {
                     lock.unlockAsync();
                 });
 
+                try {
+                    String probSitu = contextId + "-predictions";
+                    RBucket<Object> probBucket = cacheClient.getBucket(probSitu);
+                    if(probBucket.isExists()) {
+                        cacheClient.getKeys().deleteAsync(probSitu);
+                        probBucket.deleteAsync();
+                    }
+                }
+                catch (Exception ex) {
+                    log.severe(ex.getMessage());
+                }
+
                 PerformanceLogHandler.logCacheActions(ScheduleTasks.EVICT, contextId, null);
                 return SQEMResponse.newBuilder().setStatus("200").setBody("Situation evicted.").build();
             }
@@ -798,19 +855,39 @@ public class ContextCacheHandler {
 
             RLock lock = rwLock.readLock();
             lock.lock();
-            RBucket<Document> situ = cacheClient.getBucket(hashkey);
-            Document conSituation = situ.get().get("data", Document.class);
-            lock.unlockAsync();
 
-            long endTime = System.currentTimeMillis();
+            if(result.getPredValue() > 0) {
+                hashkey = hashkey + "-predictions";
+                RBucket<Document> situ = cacheClient.getBucket(hashkey);
+                List predValues = situ.get().get("data", List.class);
+                lock.unlockAsync();
 
-            Executors.newCachedThreadPool().submit(()
-                    -> logCacheSearch("200", request.getFunction().getFunctionName(),
-                    null, endTime - startTime));
-            // Rest of the metadata is not needed when the context is returned from cache.
-            return SQEMResponse.newBuilder().setStatus("200")
-                    .setHashKey(hashkey)
-                    .setBody(conSituation.toString()).build();
+                JSONObject returnObj = new JSONObject();
+                returnObj.put("value", (Double) predValues.get(result.getPredValue() - 1));
+
+                long endTime = System.currentTimeMillis();
+                Executors.newCachedThreadPool().submit(()
+                        -> logCacheSearch("200", request.getFunction().getFunctionName(),
+                        null, endTime - startTime));
+                // Rest of the metadata is not needed when the context is returned from cache.
+                return SQEMResponse.newBuilder().setStatus("200")
+                        .setHashKey(hashkey)
+                        .setBody(returnObj.toString()).build();
+            }
+            else {
+                RBucket<Document> situ = cacheClient.getBucket(hashkey);
+                Document conSituation = situ.get().get("data", Document.class);
+                lock.unlockAsync();
+
+                long endTime = System.currentTimeMillis();
+                Executors.newCachedThreadPool().submit(()
+                        -> logCacheSearch("200", request.getFunction().getFunctionName(),
+                        null, endTime - startTime));
+                // Rest of the metadata is not needed when the context is returned from cache.
+                return SQEMResponse.newBuilder().setStatus("200")
+                        .setHashKey(hashkey)
+                        .setBody(conSituation.toString()).build();
+            }
         }
         else if(result.getIsCached() && !result.getIsValid()) {
             RedissonClient cacheClient = ConnectionPool.getInstance().getRedisClient();

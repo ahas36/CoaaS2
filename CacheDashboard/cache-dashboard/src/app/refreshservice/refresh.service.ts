@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ApiServiceService } from '../services/api-service.service';
+import { config } from '../config';
 
 @Injectable()
 export class RefreshService {
@@ -8,10 +9,14 @@ export class RefreshService {
   }
 
   triggerRefreshing(){
-    while(true){
-      setTimeout(() => {
-          this.api_service.retrievePerformanceData(); 
-    }, 1*1000);
+    setInterval(() => { 
+      this.api_service.retrievePerformanceData();
+      }, config.refresh_rate);
+    
+    if(config.scenario === 'hazards') {
+      setInterval(() => { 
+        this.api_service.hazardCarsBikeRoutine();
+        }, 5000);
     }
   }
 } 

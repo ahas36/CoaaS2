@@ -24,7 +24,13 @@ export class DashboardComponent implements OnInit {
   ngOnInit() {
     this.interval = setInterval(() => { 
       this.api_service.retrievePerformanceData();
-  }, config.refresh_rate);
+      }, config.refresh_rate);
+    
+    if(config.scenario === 'hazards') {
+      setInterval(() => { 
+        this.api_service.hazardCarsBikeRoutine();
+        }, 5000);
+    }
   }
 
   getOverallPerformance(){

@@ -406,7 +406,7 @@ export class ApiServiceService {
     return this.placesData;
   }
 
-  getHarzadsCarsBikes() {
+  hazardCarsBikeRoutine () {
     this.carsData = this.http.get<Car>(config.cars);
     let allHazards = this.http.get<Hazards>(config.hazards).pipe(distinct(e => e.reciever));
     let bikes = this.http.get<Bike>(config.bikes);
@@ -425,7 +425,9 @@ export class ApiServiceService {
             this.greenBikesData.push(res)
           });
     });
-    
+  }
+
+  getHarzadsCarsBikes() {
     return {
       "cars": this.queryData,
       "greens": this.greenBikesData,

@@ -70,7 +70,13 @@ export class MapComponent implements OnInit {
     this.initializeData();
     this.interval = setInterval(() => {
       this.updateData();
-  }, config.refresh_rate);
+      }, config.refresh_rate);
+    if(this.ishazard) { 
+      // For hazard scenario, should refresh every 5 seconds.
+      setInterval(() => {
+        this.updateHazardData(true);;
+        }, 5000);
+    }
   }
 
   initializeData(){
@@ -250,9 +256,6 @@ export class MapComponent implements OnInit {
       this.timeTicks = data.perf.timeTicks.get();
       if(config.scenario === 'parking') {
         this.queryLocations = data.query;
-      }
-      else {
-        this.updateHazardData(true);
       }
     }
     catch(ex){

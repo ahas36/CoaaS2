@@ -25,7 +25,6 @@ public class CQCInterceptor implements ServerInterceptor {
         logMessage(REQUEST, methodDescriptor);
 
         return next.startCall(new ForwardingServerCall.SimpleForwardingServerCall<ReqT, RespT>(call) {
-
             @Override
             public void sendMessage(RespT message) {
                 super.sendMessage(message);
@@ -34,7 +33,6 @@ public class CQCInterceptor implements ServerInterceptor {
                         methodDescriptor.getFullMethodName().replace("au.coaas.cqc.proto.CQCService/",""),
                         message, endTime - startTime));
             }
-
         }, requestHeaders);
     }
 

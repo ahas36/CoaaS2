@@ -15,6 +15,7 @@ public class CorsFilter implements ContainerResponseFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext response) {
+
         if(response.getHeaders().get("Access-Control-Allow-Origin")==null)
         {
             response.getHeaders().add(

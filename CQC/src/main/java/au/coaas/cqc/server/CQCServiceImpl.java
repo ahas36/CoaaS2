@@ -12,7 +12,7 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author ali
+ * @author ali & shakthi
  */
 public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
 
@@ -20,7 +20,7 @@ public class CQCServiceImpl extends CQCServiceGrpc.CQCServiceImplBase {
 
     @Override
     public void execute(au.coaas.cqc.proto.ExecutionRequest request,
-        io.grpc.stub.StreamObserver<CdqlResponse> responseObserver){
+            io.grpc.stub.StreamObserver<CdqlResponse> responseObserver){
         try {
             responseObserver.onNext(CDQLExecutor.execute(request));
         } catch (Exception ex) {

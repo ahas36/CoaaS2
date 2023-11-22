@@ -1,5 +1,8 @@
 package au.coaas.cqc.executor;
 
+import au.coaas.cqc.proto.CordinatesIndex;
+import au.coaas.cqc.utils.GeoIndexer;
+import au.coaas.cqc.utils.Utilities;
 import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.cqc.proto.CdqlResponse;
@@ -26,16 +29,20 @@ public class ContextServiceManager {
             sqemStub = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
             String service = request.getCdql();
             sqemResponse = sqemStub.registerContextService(
-                    RegisterContextServiceRequest.newBuilder().setJson(service).build());
+                    RegisterContextServiceRequest.newBuilder().setJson(service)
+                            .setIndex(getIndexOfService(service, request.getLocation())).build());
 
             if(sqemResponse.getStatus().equals("200") &&
                     new JSONObject(service).getJSONObject("sla").getBoolean("autoFetch"))
             {
-                CSIServiceGrpc.CSIServiceBlockingStub csiStub
-                        = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
-
                 JSONObject sqemBody = new JSONObject(sqemResponse.getBody());
                 String id = sqemBody.getString("id");
+
+                CSIServiceGrpc.CSIServiceBlockingStub csiStub
+                        = CSIServiceGrpc.newBlockingStub(
+                            sqemBody.getString("sub_edge").equals("master") ?
+                                    CSIChannel.getInstance().getChannel() :
+                                    CSIChannel.getInstance(sqemBody.getString("sub_edge")).getChannel());
 
                 CSIResponse fetchJob = csiStub.createFetchJob(
                         ContextService.newBuilder()
@@ -70,5 +77,20 @@ public class ContextServiceManager {
             return CdqlResponse.newBuilder().setBody(sqemResponse.getBody()).setStatus(sqemResponse.getStatus()).build();
         }
 
+    }
+
+    private static long getIndexOfService (String service, String location) {
+        Long index = 0L;
+        if(location.equals(null) || location.isEmpty()) {
+            Object res = Utilities.getPropertyValue(service, "info.location");
+            if(!res.equals(null)) {
+                GeoIndexer indexer = GeoIndexer.getInstance();
+                // This way, the resolution is low enough that we can resolve the best parent index for it to service.
+                CordinatesIndex retIndex = indexer.getGeoIndex(((JSONObject) res).getDouble("latitude"),
+                        ((JSONObject) res).getDouble("longitude"));
+                index = retIndex.getIndex();
+            }
+        }
+        return index;
     }
 }

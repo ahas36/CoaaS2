@@ -47,7 +47,7 @@ public class PushBasedExecutor {
     // This is the context push dedugging switch
     private static boolean isDebugMode = false;
     // This is the cache switch
-    private static boolean cacheEnabled = true;
+    private static boolean cacheEnabled = false;
     private static Map<String, ScheduledFuture<?>> scheduledJobs = new HashMap<>();
     private static ScheduledExecutorService execService = Executors.newScheduledThreadPool(15);
 

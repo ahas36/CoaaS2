@@ -20,8 +20,8 @@ import au.coaas.sqem.util.enums.DelayCacheLatency;
 import au.coaas.sqem.util.enums.HttpRequests;
 import au.coaas.sqem.util.enums.PerformanceStats;
 
-import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.collect.Iterables;
+import au.coaas.sqem.util.enums.ScheduleTasks;
 import com.google.common.util.concurrent.AtomicDouble;
 
 import com.mongodb.Block;

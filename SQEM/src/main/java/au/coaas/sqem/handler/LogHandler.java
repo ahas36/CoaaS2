@@ -2,18 +2,18 @@ package au.coaas.sqem.handler;
 
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.*;
-import com.google.protobuf.util.JsonFormat;
-import com.mongodb.BasicDBObject;
+
 import com.mongodb.Block;
+import com.mongodb.BasicDBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+
 import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.logging.Logger;
-
 
 public class LogHandler {
     private static final Logger log = Logger.getLogger(LogHandler.class.getName());

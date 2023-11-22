@@ -15,9 +15,7 @@ import org.json.JSONObject;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import javax.net.ssl.*;
 import javax.websocket.ContainerProvider;
 import javax.websocket.DeploymentException;
@@ -26,7 +24,6 @@ import javax.websocket.WebSocketContainer;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.AbstractMap;
 import java.util.concurrent.TimeUnit;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -315,5 +312,49 @@ public class Utilities {
     private static String base64Encode(byte[] bytes) {
         Base64.Encoder enc = Base64.getEncoder();
         return new String(enc.encode(bytes)).replaceAll("\\s", "");
+    }
+
+    public static Object getPropertyValue(String res, String property) {
+        String[] valuesIndexArray = property.split(".");
+        Object value = new JSONObject(res);
+        Object response = null;
+
+        for (int j = 0; j < valuesIndexArray.length; j++) {
+            if (value instanceof JSONObject) {
+                // See if the key is in the 1st level
+                if(((JSONObject) value).has(valuesIndexArray[j])){
+                    Object attaVal = ((JSONObject) value).get(valuesIndexArray[j]);
+                    if(attaVal.toString().startsWith("{")){
+                        JSONObject resOb = new JSONObject(attaVal.toString());
+                        if(resOb.has("value")) response = resOb.get("value");
+                        else if(resOb.has("price")) response = resOb.get("price");
+                        else response = attaVal;
+                    }
+                    else response = attaVal;
+                }
+                else {
+                    Set<String> keys = ((JSONObject) value).keySet();
+                    for(String key : keys){
+                        if(((JSONObject) value).get(key) instanceof JSONObject){
+                            Object attaVal = getPropertyValue(((JSONObject) value).get(key).toString(), valuesIndexArray[j]);
+                            if(attaVal != null){
+                                if(attaVal.toString().startsWith("{")){
+                                    JSONObject resOb = new JSONObject(attaVal.toString());
+                                    if(resOb.has("value")) response = resOb.get("value");
+                                    else if(resOb.has("price")) response = resOb.get("price");
+                                    else response = attaVal;
+                                    break;
+                                }
+                                response = attaVal;
+                                break;
+                            }
+                        }
+                    }
+                }
+            } else if (value instanceof JSONArray) {
+                response = ((JSONArray) value).get(Integer.valueOf(valuesIndexArray[j]));
+            }
+        }
+        return response;
     }
 }

@@ -6,6 +6,7 @@
 package au.coaas.sqem.server;
 
 import au.coaas.csi.proto.ContextService;
+import au.coaas.sqem.handler.DistributionManager;
 import au.coaas.sqem.monitor.MonitorRoutineManager;
 import au.coaas.sqem.monitor.routines.Routine;
 import au.coaas.sqem.proto.StorageRoutine;
@@ -43,6 +44,7 @@ public class SQEMServer {
 
         PerformanceLogHandler.seed_performance_db();
         PerformanceLogHandler.seed_timeseries_db();
+        DistributionManager.seed_distribution_db();
 
         monitorManager.start();
         monitorManager.registerRoutine(Routine.STAT, StorageRoutine.newBuilder()

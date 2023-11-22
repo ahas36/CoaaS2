@@ -56,7 +56,7 @@ import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 public class PullBasedExecutor {
 
     // This is the cache switch
-    private static boolean cacheEnabled = true;
+    private static boolean cacheEnabled = false;
     private static boolean registerState = false;
 
     private static final int numberOfThreads = 10;

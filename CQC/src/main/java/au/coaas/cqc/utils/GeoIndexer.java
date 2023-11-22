@@ -125,6 +125,12 @@ public class GeoIndexer {
         return h3Client.cellToParent(index, targetRes);
     }
 
+    public boolean isParent (long index, long pos_parent) {
+        int res = getResolution(index);
+        List<Long> children = h3Client.cellToChildren(pos_parent, res);
+        return children.contains(index);
+    }
+
     // Get the predicted path of a mobile entity.
     public Path getPredictedPath (double lat, double lng, double heading, double speed, long time) {
         // Considering speed in Kmph, time in seconds,

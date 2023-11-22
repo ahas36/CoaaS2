@@ -1,42 +1,65 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.sqem.util.GeoIndexer;
+import au.coaas.sqem.proto.EdgeDevice;
+import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.proto.ContextServiceRequest;
 import au.coaas.sqem.proto.RegisterContextServiceRequest;
-import au.coaas.sqem.proto.SQEMResponse;
-import com.mongodb.BasicDBObject;
+
 import com.mongodb.Block;
 import com.mongodb.MongoClient;
-import com.mongodb.client.MongoCollection;
+import com.mongodb.BasicDBObject;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.UpdateResult;
+
 import org.bson.Document;
 import org.bson.types.ObjectId;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import java.util.List;
 import java.util.logging.Logger;
 
-
 public class ContextServiceHandler {
-    private static final Logger LOG = Logger.getLogger(ContextServiceHandler.class.getName());
+    private static final Logger log = Logger.getLogger(ContextServiceHandler.class.getName());
 
     public static SQEMResponse register(RegisterContextServiceRequest registerRequest) {
         try {
+            String ipAddress = "master";
+            Long cpIndex = registerRequest.getIndex();
+
+            List<EdgeDevice> edges = DistributionManager.getEdgeDeviceIndexes();
+            GeoIndexer indexer = GeoIndexer.getInstance();
+            for(EdgeDevice ed: edges) {
+                if (indexer.isParent(cpIndex, ed.getIndex())) {
+                    cpIndex = ed.getIndex();
+                    ipAddress = ed.getIpAddress();
+                    break;
+                }
+            }
+
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas");
 
             MongoCollection<Document> collection = db.getCollection("contextService");
 
             Document myDoc = Document.parse(registerRequest.getJson());
+            myDoc.put("info.index", cpIndex);
             myDoc.put("status","active");
 
             collection.insertOne(myDoc);
+            DistributionManager.insertCPSubscription(myDoc.get("_id").toString(), cpIndex);
 
             JSONObject body = new JSONObject();
-            body.put("message","A Context Service has been registered.");
+            body.put("index", cpIndex);
+            body.put("sub_edge", ipAddress);
             body.put("id",myDoc.get("_id").toString());
+            body.put("message","A Context Service has been registered.");
 
             return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
         } catch (Exception e) {
@@ -102,7 +125,7 @@ public class ContextServiceHandler {
             // Get all the context services that conforms to the given ontology, and contains all the attributes needed in the query.
             // Service Description is within this json documents. Not like the prototype.
             collection.find(Filters.and(
-                    // Filters.eq("sla.cache",false),
+                    Filters.eq("status","active"),
                     Filters.eq("info.ontClass",vocabURI),
                     Filters.all("info.params.term.label",serviceRequest.getParamsList())
                     )).forEach(printBlock);
@@ -131,7 +154,10 @@ public class ContextServiceHandler {
                 finalResultJsonArr.put(resultJSON);
             };
 
-            collection.find(new BasicDBObject()).forEach(printBlock);
+            BasicDBObject filter = new BasicDBObject();
+            filter.put("status","active");
+
+            collection.find(filter).forEach(printBlock);
             return SQEMResponse.newBuilder().setStatus("200").setBody(finalResultJsonArr.toString()).build();
 
         } catch (Exception e) {
@@ -150,6 +176,7 @@ public class ContextServiceHandler {
             MongoCollection<Document> collection = db.getCollection("contextService");
             BasicDBObject query = new BasicDBObject() {{
                 put("_id", new ObjectId(contextProviderId));
+                put("status","active");
             }};
 
             Document cpInfo = collection.find(query).first();

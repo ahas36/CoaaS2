@@ -67,10 +67,29 @@ public class CSIChannel {
         return instance;
     }
 
+    // Location-based Overload for Master-Worker Node Channel Resolution.
+    private CSIChannel(String ipAddress) {
+        channel = ManagedChannelBuilder.forAddress(ipAddress, Services.CSI.port)
+                .maxInboundMessageSize(MAX_MESSAGE_SIZE)
+                .usePlaintext()
+                .build();
+    }
+
+    public static CSIChannel getInstance(String ipAddress) {
+        if (instance == null) {
+            //synchronized block to remove overhead
+            synchronized (CSIChannel.class) {
+                if (instance == null) {
+                    // if instance is null, initialize
+                    instance = new CSIChannel(ipAddress);
+                }
+            }
+        }
+        return instance;
+    }
+
     // Getter of the CSI channel.
     public ManagedChannel getChannel() {
         return channel;
     }
-    
-    
 }

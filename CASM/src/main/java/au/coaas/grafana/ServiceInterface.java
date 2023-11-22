@@ -16,6 +16,8 @@ import au.coaas.sqem.proto.Empty;
 
 
 import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.logging.Logger;
@@ -23,7 +25,7 @@ import java.util.logging.Logger;
 /**
  * REST Web Service
  *
- * @author ali
+ * @author ali & shakthi
  */
 @Path("service")
 public class ServiceInterface {
@@ -40,10 +42,12 @@ public class ServiceInterface {
     @POST
     @Path("register")
     @Consumes(MediaType.TEXT_PLAIN)
-    public Response registerContextService(String serviceDescription) {
+    public Response registerContextService(String serviceDescription, @Context HttpHeaders headers) {
+        String location = headers.getHeaderString("x-location");
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
-        CdqlResponse cdql = stub.registerContextService(ExecutionRequest.newBuilder().setCdql(serviceDescription).build());
+        CdqlResponse cdql = stub.registerContextService(ExecutionRequest.newBuilder()
+                .setCdql(serviceDescription).setLocation(location).build());
         return Response.ok(cdql.getBody()).build();
     }
 

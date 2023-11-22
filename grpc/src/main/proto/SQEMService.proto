@@ -199,11 +199,17 @@ message GetEntitiesRequest
 message RegisterContextServiceRequest
 {
     string json = 1;
+    uint64 index = 2;
 }
 
 message RegisterContextConsumerRequest
 {
     string json = 1;
+}
+
+message EdgeDevice {
+    uint64 index = 1;
+    string ipAddress = 2;
 }
 
 message ContextCacheDecision

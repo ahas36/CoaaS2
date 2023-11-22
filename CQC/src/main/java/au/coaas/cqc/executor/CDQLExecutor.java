@@ -25,10 +25,10 @@ public class CDQLExecutor {
     // Execute a PULL based query or make a subscription using a PUSH based query.
     public static CdqlResponse execute(ExecutionRequest request) throws Exception{
 
-        // First logs the entire query as it is
+        // First logs the entire query as it is.
         Executors.newCachedThreadPool().execute(() -> logQuery(request.getCdql(),request.getQueryid()));
 
-        // Parse the incoming query
+        // Parse the incoming query.
         CQPServiceGrpc.CQPServiceBlockingStub stub
                 = CQPServiceGrpc.newBlockingStub(CQPChannel.getInstance().getChannel());
         CDQLConstruct cdqlConstruct = stub.parse(ParseRequest.newBuilder().setCdql(request.getCdql())

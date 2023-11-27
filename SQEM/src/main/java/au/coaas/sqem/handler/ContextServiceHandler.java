@@ -30,16 +30,20 @@ public class ContextServiceHandler {
 
     public static SQEMResponse register(RegisterContextServiceRequest registerRequest) {
         try {
-            String ipAddress = "master";
+            String ipAddress = "0.0.0.0"; // Which means the master should handle.
             Long cpIndex = registerRequest.getIndex();
 
-            List<EdgeDevice> edges = DistributionManager.getEdgeDeviceIndexes();
-            GeoIndexer indexer = GeoIndexer.getInstance();
-            for(EdgeDevice ed: edges) {
-                if (indexer.isParent(cpIndex, ed.getIndex())) {
-                    cpIndex = ed.getIndex();
-                    ipAddress = ed.getIpAddress();
-                    break;
+            if(cpIndex > 0) {
+                // If the index is already zero, meaning there is problem with either the coordinates,
+                // or the location can not be found. So, served via the Master.
+                List<EdgeDevice> edges = DistributionManager.getEdgeDeviceIndexes();
+                GeoIndexer indexer = GeoIndexer.getInstance();
+                for(EdgeDevice ed: edges) {
+                    if (indexer.isParent(cpIndex, ed.getIndex())) {
+                        cpIndex = ed.getIndex();
+                        ipAddress = ed.getIpAddress();
+                        break;
+                    }
                 }
             }
 

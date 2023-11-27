@@ -1,0 +1,123 @@
+version: "3.2"
+services:
+  casm:
+    image: shakthiw/rwc:latest
+    container_name: "rwc"
+    ports:
+      - "6868"
+      - "8020:8020"
+    environment:
+      - MASTER_IP=0.0.0.0
+    depends_on:
+      - sqem
+      - csi
+    restart: always
+
+  csi:
+    image: shakthiw/csi:latest
+    container_name: "csi"
+    ports:
+      - "8582"
+      - "8002:8002"
+    restart: always
+    links:
+      - postgres:postgres
+      - sqem:sqem
+    depends_on:
+      - postgres
+      - sqem
+
+  sqem:
+    image: shakthiw/sqem:latest
+    container_name: "sqem"
+    ports:
+      - "8686"
+      - "8003:8003"
+    restart: always
+    depends_on:
+      - mongodb
+      - sqlserver
+    links:
+      - mongodb
+      - sqlserver
+
+  cpree:
+    image: shakthiw/cpree:latest
+    container_name: "cpree"
+    ports:
+      - "9292"
+      - "8014:8014"
+    restart: always
+    links:
+      - sqem:sqem
+      - cqc:cqc
+    depends_on:
+      - sqem
+      - cqc
+
+  mongodb:
+    image: mongo:latest
+    container_name: "mongodb"
+    environment:
+      - MONGO_DATA_DIR=/data/db
+      - MONGO_LOG_DIR=/dev/null
+    volumes:
+      - ./data/db:/data/db
+    ports:
+      - 27017:27017
+    command: mongod --logpath=/dev/null # --quiet
+
+  mongo-seed:
+    build: ../mongo-seed
+    restart: on-failure
+    depends_on:
+      - mongodb
+    links:
+      - mongodb
+
+  postgres:
+    image: postgres:12.15
+    container_name: "postgres"
+    environment:
+      - POSTGRES_USER=coaas
+      - POSTGRES_PASSWORD=acoca
+      - POSTGRES_DB=coaas
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - 5433:5432
+
+  timescale:
+    image: timescale/timescaledb-ha:pg14-latest
+    container_name: "timescale"
+    environment:
+      - POSTGRES_USER=coaas
+      - POSTGRES_DB=coaas
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - 5436:5432
+
+  redis:
+    container_name: "redis"
+    image: redis
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning
+    volumes:
+      - redis:/data
+
+  sqlserver:
+    container_name: "sqlserver"
+    image: mcr.microsoft.com/mssql/server
+    restart: always
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "coaas@PerfDB2k22"
+    ports:
+      - '1433:1433'
+
+volumes:
+  redis:
+    driver: local

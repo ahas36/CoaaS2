@@ -67,10 +67,28 @@ public class SQEMChannel {
         return instance;
     }
 
+    private SQEMChannel(String ipAddress) {
+        channel = ManagedChannelBuilder.forAddress(ipAddress, Services.SQEM.port)
+                .maxInboundMessageSize(MAX_MESSAGE_SIZE)
+                .usePlaintext()
+                .build();
+    }
+
+    public static SQEMChannel getInstance(String ipAddress) {
+        if (instance == null) {
+            //synchronized block to remove overhead
+            synchronized (SQEMChannel.class) {
+                if (instance == null) {
+                    // if instance is null, initialize
+                    instance = new SQEMChannel(ipAddress);
+                }
+            }
+        }
+        return instance;
+    }
+
     // Getter of the SQEM channel.
     public ManagedChannel getChannel() {
         return channel;
     }
-    
-    
 }

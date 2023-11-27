@@ -40,9 +40,7 @@ public class ContextServiceManager {
 
                 CSIServiceGrpc.CSIServiceBlockingStub csiStub
                         = CSIServiceGrpc.newBlockingStub(
-                            sqemBody.getString("sub_edge").equals("master") ?
-                                    CSIChannel.getInstance().getChannel() :
-                                    CSIChannel.getInstance(sqemBody.getString("sub_edge")).getChannel());
+                                CSIChannel.getInstance(sqemBody.getString("sub_edge")).getChannel());
 
                 CSIResponse fetchJob = csiStub.createFetchJob(
                         ContextService.newBuilder()
@@ -73,23 +71,25 @@ public class ContextServiceManager {
 
                 return CdqlResponse.newBuilder().setBody(sqemBody.toString()).setStatus(sqemResponse.getStatus()).build();
             }
-
             return CdqlResponse.newBuilder().setBody(sqemResponse.getBody()).setStatus(sqemResponse.getStatus()).build();
         }
-
     }
 
     private static long getIndexOfService (String service, String location) {
         Long index = 0L;
-        if(location.equals(null) || location.isEmpty()) {
-            Object res = Utilities.getPropertyValue(service, "info.location");
-            if(!res.equals(null)) {
-                GeoIndexer indexer = GeoIndexer.getInstance();
-                // This way, the resolution is low enough that we can resolve the best parent index for it to service.
-                CordinatesIndex retIndex = indexer.getGeoIndex(((JSONObject) res).getDouble("latitude"),
-                        ((JSONObject) res).getDouble("longitude"));
-                index = retIndex.getIndex();
+        try {
+            if(location.equals(null) || location.isEmpty()) {
+                Object res = Utilities.getPropertyValue(service, "info.location");
+                if(!res.equals(null)) {
+                    GeoIndexer indexer = GeoIndexer.getInstance();
+                    // This way, the resolution is low enough that we can resolve the best parent index for it to service.
+                    CordinatesIndex retIndex = indexer.getGeoIndex(((JSONObject) res).getDouble("latitude"),
+                            ((JSONObject) res).getDouble("longitude"));
+                    index = retIndex.getIndex();
+                }
             }
+        } catch(Exception ex) {
+            log.severe("Could not resolve the index for the given coordinates.");
         }
         return index;
     }

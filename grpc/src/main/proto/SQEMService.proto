@@ -386,6 +386,11 @@ message SituationProfile {
     string status = 4;
 }
 
+message EdgeStatus {
+    string status = 1;
+    string body = 2;
+}
+
 service SQEMService {
     rpc authenticateConsumer (AuthRequest) returns (SQEMResponse);
     rpc validateToken (AuthToken) returns (SQEMResponse);
@@ -455,4 +460,6 @@ service SQEMService {
     rpc logSchedulerAction (SchedlerInfo) returns (Empty);
     rpc logPushResponse (ContextResponse) returns (Empty);
     rpc getLatestPushes (ProbDelay) returns (SQEMResponse);
+
+    rpc reciveEdgeStatus (EdgeStatus) returns (Empty);
 }

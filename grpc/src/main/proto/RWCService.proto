@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_generic_services = true;
+
+package au.coaas.rwc.proto;
+
+message Empty {}
+
+message RWCResponse {
+  string status = 1;
+  string body = 2;
+}
+
+service RWCService {
+  rpc heartBeat (Empty) returns (RWCResponse);
+}
+

@@ -25,12 +25,6 @@ services:
           - "8008:8008"
         restart: always
 
-#    graphhopper:
-#      container_name: "graphhopper"
-#      image: israelhikingmap/graphhopper:latest
-#      ports:
-#        - "8989:8989"
-
     svm:
         image: shakthiw/svm:latest
         container_name: "svm"

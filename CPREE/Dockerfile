@@ -1,6 +1,6 @@
 FROM openjdk:8
 
-ENV JAVA_TOOL_OPTIONS -agentlib:jdwp=transport=dt_socket,address=8003,server=y,suspend=n
+ENV JAVA_TOOL_OPTIONS -agentlib:jdwp=transport=dt_socket,address=8014,server=y,suspend=n
 
 COPY target/lib /app/lib
 COPY target/CPREE-2.0.1.jar /app/CPREE-2.0.1.jar

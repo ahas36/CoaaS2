@@ -33,6 +33,7 @@
         <module>CPREE</module>
         <module>QueryGenerator</module>
         <module>SeeSenseDataWrapper</module>
+        <module>RWC</module>
     </modules>
 
     <dependencies>

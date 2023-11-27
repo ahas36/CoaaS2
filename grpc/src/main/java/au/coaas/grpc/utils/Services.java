@@ -7,7 +7,8 @@ public enum Services {
     CRE(8583),
     CSI(8582),
     SQEM(8686),
-    SVM(9191);
+    SVM(9191),
+    RWC(6868);
 
     public final int port;
     private Services(int port) {

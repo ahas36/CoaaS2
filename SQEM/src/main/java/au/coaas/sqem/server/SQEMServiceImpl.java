@@ -736,4 +736,25 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    // DCIS Related Services.
+    public void subscribeEdge(au.coaas.sqem.proto.EdgeStatus request,
+                              io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver){
+        try {
+            responseObserver.onNext(DistributionManager.registerDevice(request));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    public void getHeartBeats(au.coaas.sqem.proto.EdgeStatus request,
+                              io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
+        try {
+            DistributionManager.heartBeatUpdate(request);
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 }

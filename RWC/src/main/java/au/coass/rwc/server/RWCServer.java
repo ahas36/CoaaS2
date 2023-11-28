@@ -1,8 +1,6 @@
 package au.coass.rwc.server;
 
-import au.coaas.grpc.client.SQEMChannel;
-import au.coaas.sqem.proto.EdgeStatus;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
+import au.coass.rwc.executor.SubscriptionHandler;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 
@@ -25,11 +23,7 @@ public class RWCServer {
         log.info("Remote Worker Controller started on port 6868.");
 
         // Send Ready status to Master.
-        String master_ip = System.getenv("MASTER_IP");
-        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub =
-                SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance(master_ip).getChannel());
-        sqemStub.reciveEdgeStatus(EdgeStatus.newBuilder()
-                .setStatus("200").build());
+        SubscriptionHandler.registerDevice();
 
         server.awaitTermination();
     }

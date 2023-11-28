@@ -2,7 +2,6 @@ package au.coaas.sqem.server;
 
 import au.coaas.sqem.handler.PerformanceLogHandler;
 import au.coaas.sqem.monitor.LogicalContextLevel;
-import au.coaas.sqem.proto.Empty;
 import au.coaas.sqem.proto.SQEMResponse;
 import io.grpc.*;
 
@@ -22,17 +21,17 @@ public class SQEMInterceptor implements ServerInterceptor {
         long startTime = System.currentTimeMillis();
 
         MethodDescriptor<ReqT, RespT> methodDescriptor = call.getMethodDescriptor();
+        String funcName = methodDescriptor.getFullMethodName().replace("au.coaas.sqem.proto.SQEMService/","");
+
         logMessage(REQUEST, methodDescriptor);
 
         return next.startCall(new ForwardingServerCall.SimpleForwardingServerCall<ReqT, RespT>(call) {
-
             @Override
             public void sendMessage(RespT message) {
                 super.sendMessage(message);
                 long endTime = System.currentTimeMillis();
                 Executors.newCachedThreadPool().execute(() ->
-                    logMessage(RESPONSE, methodDescriptor.getFullMethodName().replace("au.coaas.sqem.proto.SQEMService/",""),
-                            message, endTime - startTime));
+                    logMessage(RESPONSE, funcName, message, endTime - startTime));
             }
 
         }, requestHeaders);
@@ -127,5 +126,4 @@ public class SQEMInterceptor implements ServerInterceptor {
     }
 
     protected void log(String message) { logger.info(message); }
-
 }

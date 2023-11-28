@@ -389,6 +389,17 @@ message SituationProfile {
 message EdgeStatus {
     string status = 1;
     string body = 2;
+    HostSpecs specs = 3;
+    string ipAddress = 4;
+}
+
+message HostSpecs {
+    int32 processors = 1;
+    double freeMemory = 2;
+    double maxMemory = 3;
+    double cpuUsage = 4;
+    string operatingSystem = 5;
+    string archi = 6;
 }
 
 service SQEMService {
@@ -461,5 +472,6 @@ service SQEMService {
     rpc logPushResponse (ContextResponse) returns (Empty);
     rpc getLatestPushes (ProbDelay) returns (SQEMResponse);
 
-    rpc reciveEdgeStatus (EdgeStatus) returns (Empty);
+    rpc subscribeEdge (EdgeStatus) returns (SQEMResponse);
+    rpc getHeartBeats (EdgeStatus) returns (Empty);
 }

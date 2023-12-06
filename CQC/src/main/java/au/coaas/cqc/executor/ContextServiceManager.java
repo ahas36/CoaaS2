@@ -78,15 +78,24 @@ public class ContextServiceManager {
     private static long getIndexOfService (String service, String location) {
         Long index = 0L;
         try {
+            GeoIndexer indexer = GeoIndexer.getInstance();
             if(location.equals(null) || location.isEmpty()) {
                 Object res = Utilities.getPropertyValue(service, "info.location");
                 if(!res.equals(null)) {
-                    GeoIndexer indexer = GeoIndexer.getInstance();
                     // This way, the resolution is low enough that we can resolve the best parent index for it to service.
                     CordinatesIndex retIndex = indexer.getGeoIndex(((JSONObject) res).getDouble("latitude"),
                             ((JSONObject) res).getDouble("longitude"));
                     index = retIndex.getIndex();
                 }
+                /** Note: */
+                // Null index means that there is no location information currently available.
+                // Possibly, the context provider is mobile (non-stationary) and the location need to resolved
+                // from the retrieved response.
+            }
+            else {
+                String[] latlng = location.split(";");
+                CordinatesIndex retIndex = indexer.getGeoIndex(Double.valueOf(latlng[0]), Double.valueOf(latlng[1]));
+                index = retIndex.getIndex();
             }
         } catch(Exception ex) {
             log.severe("Could not resolve the index for the given coordinates.");

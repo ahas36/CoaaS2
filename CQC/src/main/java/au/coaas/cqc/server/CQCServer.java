@@ -5,6 +5,7 @@
  */
 package au.coaas.cqc.server;
 
+import au.coaas.cqc.executor.CDQLExecutor;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.ServerInterceptors;
@@ -30,6 +31,10 @@ public class CQCServer {
                 .build();
         server.start();
         log.info("Server started on port 8484");
+
+        // Register that the master is ready.
+        CDQLExecutor.registerReadyMaster();
+
         server.awaitTermination();
     }
 }

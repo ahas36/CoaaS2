@@ -22,8 +22,11 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.AbstractMap;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class ContextServiceHandler {
     private static final Logger log = Logger.getLogger(ContextServiceHandler.class.getName());
@@ -34,16 +37,13 @@ public class ContextServiceHandler {
             Long cpIndex = registerRequest.getIndex();
 
             if(cpIndex > 0) {
-                // If the index is already zero, meaning there is problem with either the coordinates,
-                // or the location can not be found. So, served via the Master.
-                List<EdgeDevice> edges = DistributionManager.getEdgeDeviceIndexes();
-                GeoIndexer indexer = GeoIndexer.getInstance();
-                for(EdgeDevice ed: edges) {
-                    if (indexer.isParent(cpIndex, ed.getIndex())) {
-                        cpIndex = ed.getIndex();
-                        ipAddress = ed.getIpAddress();
-                        break;
-                    }
+                // If the index is zero (not assigned), there is either a problem with the coordinates,
+                // or the location can not be found. So, will be attached to the Master node until the
+                // location can be resolved.
+                AbstractMap.SimpleEntry res_index = resolveAttachedEdgeIndex(cpIndex);
+                if(res_index != null) {
+                    cpIndex = (Long) res_index.getKey();
+                    ipAddress = (String) res_index.getValue();
                 }
             }
 
@@ -72,6 +72,27 @@ public class ContextServiceHandler {
             body.put("cause",e.getCause().toString());
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
         }
+    }
+
+    private static AbstractMap.SimpleEntry resolveAttachedEdgeIndex (long cpIndex) {
+        List<EdgeDevice> edges = DistributionManager.getEdgeDeviceIndexes();
+        GeoIndexer indexer = GeoIndexer.getInstance();
+        List<EdgeDevice> parentIndexes = edges.parallelStream()
+                .filter(ed -> indexer.isParent(cpIndex, ed.getIndex()))
+                .collect(Collectors.toList());
+
+        if(parentIndexes.size() > 0) return new AbstractMap.SimpleEntry(
+                parentIndexes.get(0).getIndex(), parentIndexes.get(0).getIpAddress());
+
+        List<EdgeDevice> distances = edges.parallelStream()
+                .map(ed -> ed.toBuilder().setDistance(indexer.distance(cpIndex, ed.getIndex())).build())
+                .collect(Collectors.toList());
+        distances.sort(Comparator.comparing(EdgeDevice::getDistance));
+
+        // Load balancing if there are multiple by the same distance or in the same index.
+
+        return new AbstractMap.SimpleEntry(
+                distances.get(0).getIndex(), distances.get(0).getIpAddress());
     }
 
     public static SQEMResponse changeStatus(String id,String status) {

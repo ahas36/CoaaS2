@@ -26,7 +26,7 @@ public class SubscriptionHandler {
             if(ackn.getStatus().equals("200")) {
                 // Start sending heart beats & set self-index as env variable.
                 HealthHandler.getInstance().startHeartBeat();
-                updateEnv(self_index, ackn.getBody());
+                updateEnv(ackn.getBody());
             }
             else {
                 // Recursively attempting to establish a connection.
@@ -47,12 +47,12 @@ public class SubscriptionHandler {
                 .setStatus("200").build());
     }
 
-    private static void updateEnv(String name, String val) {
+    private static void updateEnv(String val) {
         try {
             Map<String, String> env = System.getenv();
             Field field = env.getClass().getDeclaredField("m");
             field.setAccessible(true);
-            ((Map<String, String>) field.get(env)).put(name, val);
+            ((Map<String, String>) field.get(env)).put(self_index, val);
         }
         catch (Exception e) {
             e.printStackTrace();

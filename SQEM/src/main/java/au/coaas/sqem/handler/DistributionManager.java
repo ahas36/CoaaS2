@@ -57,26 +57,27 @@ public class DistributionManager {
         }
     }
 
-    public static long insertEdgDevice (EdgeStatus newDevice, long index) {
+    public static void insertEdgDevice (EdgeStatus newDevice, long index) {
         try {
-            String queryString = "INSERT INTO edge_devices(ipAddress, index, processors, freeMemory, maxMemory, " +
-                    "cpuUsage, os, archi, createdTime) VALUES('%s',%d, %d, %f, %f, %f, '%s', '%s', %d);";
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
-            HostSpecs specs = newDevice.getSpecs();
-            ResultSet rs = statement.executeQuery(
-                    String.format(queryString, newDevice.getIpAddress(), index,
-                            specs.getProcessors(), specs.getFreeMemory(), specs.getMaxMemory(),
-                            specs.getCpuUsage(), specs.getOperatingSystem(), specs.getArchi(),
-                            System.currentTimeMillis()));
-            while(rs.next()){
-                index = rs.getLong("index");
-                break;
+            if(newDevice.getIpAddress().equals("0.0.0.0")) {
+                String queryString = "INSERT INTO edge_devices(ipAddress, index, createdTime) VALUES('%s',%d, %d);";
+                statement.executeQuery(String.format(queryString, newDevice.getIpAddress(),
+                        System.currentTimeMillis()));
+            }
+            else {
+                String queryString = "INSERT INTO edge_devices(ipAddress, index, processors, freeMemory, maxMemory, " +
+                        "cpuUsage, os, archi, createdTime) VALUES('%s',%d, %d, %f, %f, %f, '%s', '%s', %d);";
+                HostSpecs specs = newDevice.getSpecs();
+                statement.executeQuery(String.format(queryString, newDevice.getIpAddress(), index,
+                                specs.getProcessors(), specs.getFreeMemory(), specs.getMaxMemory(),
+                                specs.getCpuUsage(), specs.getOperatingSystem(), specs.getArchi(),
+                                System.currentTimeMillis()));
             }
         } catch(SQLException ex) {
             log.severe("Could not retrieve the edge device.");
         }
-        return index;
     }
 
     public static void insertCPSubscription (String cpId, long index) {
@@ -158,22 +159,27 @@ public class DistributionManager {
     }
 
     private static long resolveIndex (EdgeStatus specifications) {
-        // TODO: This should be a smart assignment where the assignment manager
-        /** should be able to predict the load that will come from within this area, consider the current load,
+        // TODO: Index assignement is independent from what context providers get assigned to it.
+        /** So, a separate load balancer should be able to predict the load that will come from within this area, consider the current load,
          * then map that to the specifications of the node and existing nodes in the area
-         * then, load balance it and assign the index. */
+         * then, load balance the context provider assignment. */
 
         // For this POC, Master Node is at Index = 85be6357fffffff (Melbourne area, res=5),
-        // and worker node is at index = 88be63cdedfffff (Wattle Park area, res=8).
+        // worker node_1 is at index = 88be63cdedfffff (Wattle Park area, res=8).
+        // and node_2 is at index = 88be63cd3bfffff (Deakin Burwood Campus area, res=8).
+
         GeoIndexer indexer = GeoIndexer.getInstance();
         if(specifications.getIpAddress().equals("0.0.0.0")) {
             CordinatesIndex res = indexer.getGeoIndex(-37.84732999340094, 145.11569778933645, 5);
             return res.getIndex();
         } else {
-            String approxLocation = "-37.840103016024436;145.10771553529105";
-            // approxLocation = convertIpToLocation(specifications.getIpAddress());
+            // String approxLocation = "-37.840103016024436;145.10771553529105";
+            String approxLocation = convertIpToLocation(specifications.getIpAddress());
+
             String[] loc_cords = approxLocation.split(";");
+            log.info("New edge node resolved from (Postal Code): " + loc_cords[2]);
             CordinatesIndex res = indexer.getGeoIndex(Double.valueOf(loc_cords[0]), Double.valueOf(loc_cords[1]), 8);
+
             return res.getIndex();
         }
     }
@@ -186,14 +192,15 @@ public class DistributionManager {
             InetAddress ipAddress = InetAddress.getByName(ip);
             CityResponse response = dbReader.city(ipAddress);
 
+            String postalCode = response.getPostal().getCode();
             String latitude = response.getLocation().getLatitude().toString();
             String longitude = response.getLocation().getLongitude().toString();
 
-            return latitude + ";" + longitude;
+            return latitude + ";" + longitude + ";" + postalCode;
         }
         catch(Exception ex) {
             log.severe("Could not convert the ip address to approximate location due to: " + ex.getMessage());
-            return "-37.84732999340094;145.11569778933645";
+            return "-37.84732999340094;145.11569778933645;3000"; // Master
         }
     }
 }

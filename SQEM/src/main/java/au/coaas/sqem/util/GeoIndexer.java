@@ -76,4 +76,11 @@ public class GeoIndexer {
         List<Long> children = h3Client.cellToChildren(pos_parent, res);
         return children.contains(index);
     }
+
+    public long distance (long origin_idx, long des_idx) {
+        int origin_res = h3Client.getResolution(origin_idx);
+        int des_res = h3Client.getResolution(des_idx);
+        if(origin_res != des_res) des_idx = h3Client.cellToCenterChild(des_idx, origin_res);
+        return h3Client.gridDistance(origin_idx, des_idx);
+    }
 }

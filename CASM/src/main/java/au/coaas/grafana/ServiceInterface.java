@@ -43,7 +43,9 @@ public class ServiceInterface {
     @Path("register")
     @Consumes(MediaType.TEXT_PLAIN)
     public Response registerContextService(String serviceDescription, @Context HttpHeaders headers) {
+        // Will return null if this header is not available.
         String location = headers.getHeaderString("x-location");
+
         CQCServiceGrpc.CQCServiceBlockingStub stub
                 = CQCServiceGrpc.newBlockingStub(CQCChannel.getInstance().getChannel());
         CdqlResponse cdql = stub.registerContextService(ExecutionRequest.newBuilder()

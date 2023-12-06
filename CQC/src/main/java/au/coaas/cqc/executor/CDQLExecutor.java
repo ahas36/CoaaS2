@@ -7,10 +7,7 @@ import au.coaas.cqc.proto.CdqlResponse;
 import au.coaas.grpc.client.CQPChannel;
 import au.coaas.grpc.client.SQEMChannel;
 
-import au.coaas.sqem.proto.CDQLLog;
-import au.coaas.sqem.proto.RegisterPushQuery;
-import au.coaas.sqem.proto.SQEMResponse;
-import au.coaas.sqem.proto.SQEMServiceGrpc;
+import au.coaas.sqem.proto.*;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.concurrent.ExecutionException;
@@ -80,5 +77,11 @@ public class CDQLExecutor {
         if(!response.getStatus().equals("200")){
             log.log(Level.WARNING, "Query logging failed with an error.");
         }
+    }
+
+    public static void registerReadyMaster () {
+        SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub =
+                SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance("0.0.0.0").getChannel());
+        sqemStub.subscribeEdge(EdgeStatus.newBuilder().setStatus("200").build());
     }
 }

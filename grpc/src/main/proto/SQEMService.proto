@@ -208,9 +208,10 @@ message RegisterContextConsumerRequest
 }
 
 message EdgeDevice {
-    uint64 index = 1;
-    string ipAddress = 2;
-    int64 distance = 3;
+    uint64 id = 1;
+    uint64 index = 2;
+    string ipAddress = 3;
+    int64 distance = 4;
 }
 
 message ContextCacheDecision

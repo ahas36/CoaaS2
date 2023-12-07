@@ -22,19 +22,19 @@ import org.bson.types.ObjectId;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.AbstractMap;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class ContextServiceHandler {
     private static final Logger log = Logger.getLogger(ContextServiceHandler.class.getName());
 
     public static SQEMResponse register(RegisterContextServiceRequest registerRequest) {
         try {
+            long sub_edge_id = 0;
             String ipAddress = "0.0.0.0"; // Which means the master should handle.
-            Long cpIndex = registerRequest.getIndex();
+            Long cpIndex = registerRequest.getIndex(); // Still if this is 0, means the location need to be resolved from the response.
 
             if(cpIndex > 0) {
                 // If the index is zero (not assigned), there is either a problem with the coordinates,
@@ -42,9 +42,10 @@ public class ContextServiceHandler {
                 // location can be resolved.
                 AbstractMap.SimpleEntry res_index = resolveAttachedEdgeIndex(cpIndex);
                 if(res_index != null) {
-                    cpIndex = (Long) res_index.getKey();
+                    sub_edge_id = (Long) res_index.getKey();
                     ipAddress = (String) res_index.getValue();
                 }
+                // If no edge node can be resolved then attached to the master node.
             }
 
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
@@ -57,12 +58,17 @@ public class ContextServiceHandler {
             myDoc.put("status","active");
 
             collection.insertOne(myDoc);
-            DistributionManager.insertCPSubscription(myDoc.get("_id").toString(), cpIndex);
+            DistributionManager.insertCPSubscription(myDoc.get("_id").toString(), cpIndex, sub_edge_id);
 
             JSONObject body = new JSONObject();
             body.put("index", cpIndex);
-            body.put("sub_edge", ipAddress);
             body.put("id",myDoc.get("_id").toString());
+
+            JSONObject sub_node = new JSONObject();
+            sub_node.put("id", sub_edge_id);
+            sub_node.put("ipAddress", ipAddress);
+            body.put("subEdge", sub_node);
+
             body.put("message","A Context Service has been registered.");
 
             return SQEMResponse.newBuilder().setStatus("200").setBody(body.toString()).build();
@@ -76,23 +82,53 @@ public class ContextServiceHandler {
 
     private static AbstractMap.SimpleEntry resolveAttachedEdgeIndex (long cpIndex) {
         List<EdgeDevice> edges = DistributionManager.getEdgeDeviceIndexes();
-        GeoIndexer indexer = GeoIndexer.getInstance();
-        List<EdgeDevice> parentIndexes = edges.parallelStream()
-                .filter(ed -> indexer.isParent(cpIndex, ed.getIndex()))
-                .collect(Collectors.toList());
+        if(edges.size() > 0) {
+            GeoIndexer indexer = GeoIndexer.getInstance();
+            List<EdgeDevice> parentIndexes = edges.parallelStream()
+                    .filter(ed -> indexer.isParent(cpIndex, ed.getIndex()))
+                    .collect(Collectors.toList());
 
-        if(parentIndexes.size() > 0) return new AbstractMap.SimpleEntry(
-                parentIndexes.get(0).getIndex(), parentIndexes.get(0).getIpAddress());
+            if(parentIndexes.size() > 0) return new AbstractMap.SimpleEntry(
+                    parentIndexes.get(0).getId(), parentIndexes.get(0).getIpAddress());
 
-        List<EdgeDevice> distances = edges.parallelStream()
-                .map(ed -> ed.toBuilder().setDistance(indexer.distance(cpIndex, ed.getIndex())).build())
-                .collect(Collectors.toList());
-        distances.sort(Comparator.comparing(EdgeDevice::getDistance));
+            List<EdgeDevice> distances = edges.parallelStream()
+                    .map(ed -> ed.toBuilder().setDistance(indexer.distance(cpIndex, ed.getIndex())).build())
+                    .collect(Collectors.toList());
+            distances.sort(Comparator.comparing(EdgeDevice::getDistance));
 
-        // Load balancing if there are multiple by the same distance or in the same index.
+            // Load balancing if there are multiple nodes by the same distance or in the same index.
+            long min_dist = distances.get(0).getDistance();
+            Stream<EdgeDevice> similarNodes = distances.stream().filter(c -> c.getDistance() == min_dist);
+            EdgeDevice selectedNode;
+            if(similarNodes.count() > 1)
+                selectedNode = loadBalance(similarNodes.collect(Collectors.toList()));
+            else selectedNode = distances.get(0);
 
-        return new AbstractMap.SimpleEntry(
-                distances.get(0).getIndex(), distances.get(0).getIpAddress());
+            return new AbstractMap.SimpleEntry(selectedNode.getId(), selectedNode.getIpAddress());
+        }
+
+        return null;
+    }
+
+    private static EdgeDevice loadBalance(List<EdgeDevice> similarNodes) {
+        // For this POC, we are using the Least Connections-based Load Balancing considering the edge nodes are
+        // equal and the context providers perform equally.
+        // TODO:
+        // But the best approach is to use "Resource-based" taking into consideration the following parameters:
+        // 1. Distance to the edge node/s
+        // 2. Current number of subscriptions that the candidate node has (and expected longidivity to have the connection)
+        // 3. System specs (available CPU, Memory, Storage)
+        // 4. Direction to the node (whether moving away or towards)
+        // 5. Predicted load.
+        HashMap<Long, Integer> loadDistribution = DistributionManager
+                .currentLoad(similarNodes
+                        .stream().map(c -> c.getId())
+                        .collect(Collectors.toList()));
+        Long sel_node = Collections.min(loadDistribution.entrySet(),
+                Map.Entry.comparingByValue()).getKey();
+
+        return similarNodes.stream().filter(nd -> nd.getId() == sel_node)
+                .findFirst().get();
     }
 
     public static SQEMResponse changeStatus(String id,String status) {

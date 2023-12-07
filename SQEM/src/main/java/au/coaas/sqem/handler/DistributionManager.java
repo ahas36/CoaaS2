@@ -18,6 +18,7 @@ import java.sql.Statement;
 import java.sql.SQLException;
 import java.sql.DriverManager;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -80,15 +81,45 @@ public class DistributionManager {
         }
     }
 
-    public static void insertCPSubscription (String cpId, long index) {
+    private static long master_id = 0;
+    public static void insertCPSubscription (String cpId, long index, long sub_edge) {
         try {
-            String queryString = "INSERT INTO cp_subscription(cpId, index) VALUES('%s',%d);";
+            if(sub_edge == 0) {
+                if(master_id == 0) {
+                    String queryString = "SELECT id FROM edge_devices WHERE ipAddress = '0.0.0.0';";
+                    Statement statement = connection.createStatement();
+                    statement.setQueryTimeout(30);
+                    ResultSet rs = statement.executeQuery(queryString);
+                    rs.next();
+                    master_id = rs.getLong("id");
+                }
+                sub_edge = master_id;
+            }
+            String queryString = "INSERT INTO cp_subscription(cpId, index, sub_edge, subTime) " +
+                    "VALUES('%s',%d, %d, %d);";
             Statement statement = connection.createStatement();
             statement.setQueryTimeout(30);
-            statement.executeQuery(String.format(queryString, cpId, index));
+            statement.executeQuery(String.format(queryString, cpId, index, sub_edge, System.currentTimeMillis()));
         } catch(SQLException ex) {
             log.severe("Could not add a new CP subscription.");
         }
+    }
+
+    protected static HashMap<Long,Integer> currentLoad (List<Long> subEdgeIds) {
+        HashMap<Long,Integer> load = new HashMap<>();
+        for(Long edgeId: subEdgeIds) {
+            try {
+                String queryString = "SELECT COUNT(*) AS cnt FROM cp_subscription WHERE sub_edge = %d;";
+                Statement statement = connection.createStatement();
+                statement.setQueryTimeout(30);
+                ResultSet rs = statement.executeQuery(String.format(queryString, edgeId));
+                rs.next();
+                load.put(edgeId, rs.getInt("cnt"));
+            } catch(SQLException ex) {
+                log.severe("Could not retrieve the edge device.");
+            }
+        }
+        return load;
     }
 
     public static long getEdgDeviceIndex (String ipAddress) {
@@ -113,7 +144,7 @@ public class DistributionManager {
             List<EdgeDevice> indexes = new ArrayList<>();
             try {
                 long pastTime = System.currentTimeMillis() - 60000;
-                String queryString = "SELECT index, ipAddress, createdTime FROM edge_devices " +
+                String queryString = "SELECT id, index, ipAddress, createdTime FROM edge_devices " +
                         "WHERE createdTime >= " + pastTime + ";";
                 Statement statement = connection.createStatement();
                 statement.setQueryTimeout(30);
@@ -121,6 +152,7 @@ public class DistributionManager {
 
                 while(rs.next()){
                     indexes.add(EdgeDevice.newBuilder()
+                                    .setId(rs.getLong("id"))
                                     .setIndex(rs.getLong("index"))
                                     .setIpAddress(rs.getString("ipAddress"))
                                     .build());
@@ -151,7 +183,8 @@ public class DistributionManager {
                     "ipAddress STRING, index INTEGER, processors INTEGER, freeMemory REAL, maxMemory REAL, cpuUsage REAL, " +
                     "os STRING, archi STRING, createdTime INTEGER, UNIQUE(ipAddress) ON CONFLICT REPLACE)");
             statement.executeUpdate("CREATE TABLE cp_subscription (id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "cpId STRING, index INTEGER, UNIQUE(cpId) ON CONFLICT REPLACE)");
+                    "cpId STRING, index INTEGER, sub_edge INTEGER, subTime INTEGER, FOREIGN KEY (sub_edge) " +
+                    "REFERENCES edge_devices (id), UNIQUE(cpId) ON CONFLICT REPLACE)");
         }
         catch(Exception ex) {
             log.severe("Could not seed the distributions database due to: " + ex.getMessage());

@@ -40,7 +40,8 @@ public class ContextServiceManager {
 
                 CSIServiceGrpc.CSIServiceBlockingStub csiStub
                         = CSIServiceGrpc.newBlockingStub(
-                                CSIChannel.getInstance(sqemBody.getString("sub_edge")).getChannel());
+                                CSIChannel.getInstance(sqemBody.getJSONObject("subEdge")
+                                        .getString("ipAddress")).getChannel());
 
                 CSIResponse fetchJob = csiStub.createFetchJob(
                         ContextService.newBuilder()

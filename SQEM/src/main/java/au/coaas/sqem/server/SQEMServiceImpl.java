@@ -757,4 +757,15 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         }
         responseObserver.onCompleted();
     }
+
+    public void checkMigration(au.coaas.sqem.proto.Migration request,
+                              io.grpc.stub.StreamObserver<au.coaas.sqem.proto.EdgeDevice> responseObserver){
+        try {
+            responseObserver.onNext(ContextEntityHandler.edgeHopping(
+                    request.getResponse(), request.getLastIndex()));
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
 }

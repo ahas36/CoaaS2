@@ -31,6 +31,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
@@ -114,14 +115,32 @@ public class FetchJob implements Job {
 
                 if(dataMap.getBoolean("updateRegistry")) {
                     updateRequest.setParamHash(Utils.getHashKey(params));
+                    dataMap.put("updateRegistry", false);
                 }
 
                 SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
-
                 SQEMResponse sqemResponse = sqemStub.updateContextEntity(updateRequest.build());
 
-                dataMap.put("updateRegistry", false);
+                // Check of the entity has gone out of the current edge node zone.
+                if(!dataMap.getBoolean("updateRegistry")) {
+                    ExecutorService executor = Executors.newSingleThreadExecutor();
+                    CSIResponse finalFetch1 = fetch;
+                    executor.submit(() -> {
+                        try {
+                            EdgeDevice device = sqemStub.checkMigration(Migration.newBuilder()
+                                            .setResponse(finalFetch1.getBody())
+                                            .setLastIndex(dataMap.getLong("index")).build());
+                            if(device.getChange()) {
+                                // TODO:
+                                // Start hot context migration.
+                            }
+                        } catch (Exception ex) {
+                            log.severe("Could not update the provider-edge subscription due to: "
+                                    + ex.getMessage());
+                        }
+                    });
+                }
 
                 // This calculation is unnessecary if running in complete DB mode.
                 double retDiff = retLatency - qos.getDouble("rtmax");

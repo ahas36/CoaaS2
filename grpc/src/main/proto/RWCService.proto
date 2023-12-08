@@ -14,5 +14,7 @@ message RWCResponse {
 
 service RWCService {
   rpc heartBeat (Empty) returns (RWCResponse);
+  rpc getNodeIndex (Empty) returns (RWCResponse);
 }
+
 

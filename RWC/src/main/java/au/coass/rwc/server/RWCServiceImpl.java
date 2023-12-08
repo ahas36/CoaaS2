@@ -3,6 +3,7 @@ package au.coass.rwc.server;
 import au.coaas.rwc.proto.Empty;
 import au.coaas.rwc.proto.RWCResponse;
 import au.coaas.rwc.proto.RWCServiceGrpc;
+import au.coass.rwc.executor.SubscriptionHandler;
 
 import java.util.logging.Logger;
 
@@ -16,6 +17,17 @@ public class RWCServiceImpl extends RWCServiceGrpc.RWCServiceImplBase{
     public void heartBeat (Empty request, io.grpc.stub.StreamObserver<RWCResponse> responseObserver){
         try {
             responseObserver.onNext(RWCResponse.newBuilder().setStatus("200").build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getNodeIndex (Empty request, io.grpc.stub.StreamObserver<RWCResponse> responseObserver){
+        try {
+            responseObserver.onNext(SubscriptionHandler.getMyIndex());
         } catch (Exception ex) {
             responseObserver.onError(ex);
             log.severe(ex.getMessage());

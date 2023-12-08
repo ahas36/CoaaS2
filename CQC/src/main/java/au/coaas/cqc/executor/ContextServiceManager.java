@@ -28,9 +28,10 @@ public class ContextServiceManager {
         try {
             sqemStub = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
             String service = request.getCdql();
+            Long cpIndex = getIndexOfService(service, request.getLocation());
             sqemResponse = sqemStub.registerContextService(
                     RegisterContextServiceRequest.newBuilder().setJson(service)
-                            .setIndex(getIndexOfService(service, request.getLocation())).build());
+                            .setIndex(cpIndex).build());
 
             if(sqemResponse.getStatus().equals("200") &&
                     new JSONObject(service).getJSONObject("sla").getBoolean("autoFetch"))
@@ -50,6 +51,7 @@ public class ContextServiceManager {
                 if(sub_edge.getString("ipAddress").equals("0.0.0.0") &&
                         sub_edge.getInt("id") == 0)
                     csMessage.setUpdateRegistry(true);
+                else csMessage.setCpIndex(cpIndex);
 
                 CSIResponse fetchJob = csiStub.createFetchJob(csMessage.build());
                 if(!fetchJob.getStatus().equals("200"))

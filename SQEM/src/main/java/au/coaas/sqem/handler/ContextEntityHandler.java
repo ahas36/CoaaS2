@@ -1,5 +1,6 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cqc.proto.CordinatesIndex;
 import au.coaas.cqp.proto.ContextEntityType;
 
 import au.coaas.csi.proto.CSIResponse;
@@ -7,7 +8,11 @@ import au.coaas.csi.proto.CSIServiceGrpc;
 import au.coaas.csi.proto.ContextMappingRequest;
 import au.coaas.csi.proto.ContextService;
 import au.coaas.grpc.client.CSIChannel;
+import au.coaas.grpc.client.RWCChannel;
 import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.rwc.proto.Empty;
+import au.coaas.rwc.proto.RWCResponse;
+import au.coaas.rwc.proto.RWCServiceGrpc;
 import au.coaas.sqem.proto.*;
 import au.coaas.sqem.util.GeoIndexer;
 import au.coaas.sqem.util.ResponseUtils;
@@ -254,7 +259,8 @@ public class ContextEntityHandler {
 
         // Step 2. Update the current SLA and CP Subscription.
         GeoIndexer indexer = GeoIndexer.getInstance();
-        String ipAddress = ContextServiceHandler.changeRegisteredLocation(cpId, indexer.getGeoIndex(latitude, longitude));
+        CordinatesIndex cpIndex = indexer.getGeoIndex(latitude, longitude);
+        String ipAddress = ContextServiceHandler.changeRegisteredLocation(cpId, cpIndex.getIndex());
 
         // Step 3. Stop Master Scheduler and start it in the relevant edge node.
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -269,11 +275,54 @@ public class ContextEntityHandler {
             CSIServiceGrpc.CSIServiceBlockingStub edgecsiStub
                     = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance(ipAddress).getChannel());
             ContextService.Builder csMessage = ContextService.newBuilder()
-                    .setMongoID(cpId).setJson(sla.getBody()).setTimes(-1);
+                    .setMongoID(cpId).setJson(sla.getBody())
+                    .setCpIndex(cpIndex.getIndex()).setTimes(-1);
             edgecsiStub.createFetchJob(csMessage.build());
         });
 
         return ipAddress;
+    }
+
+    public static EdgeDevice edgeHopping(String res, Long lastAssIndex) {
+        long idx = checkSubChange(res, lastAssIndex);
+        if(idx > 0) {
+            EdgeDevice sub_edge = ContextServiceHandler.resolveAttachedEdgeIndex(idx);
+            RWCServiceGrpc.RWCServiceBlockingStub rwcStub
+                    = RWCServiceGrpc.newBlockingStub(RWCChannel.getInstance().getChannel());
+            RWCResponse sub_idx = rwcStub.getNodeIndex(Empty.newBuilder().build());
+            if(sub_idx.getStatus().equals("200")) {
+                if(Long.valueOf(sub_idx.getBody()) != sub_edge.getIndex())
+                    return sub_edge.toBuilder().setChange(true).build();
+            }
+        }
+        return EdgeDevice.newBuilder().build();
+    }
+
+    private static long checkSubChange(String res, Long lastAssIndex) {
+        // Step 1. Resolve the current location.
+        Double latitude = 0.0, longitude = 0.0;
+        JSONObject response = new JSONObject(res);
+        if(response.has("latitude") && response.has("longitude")) {
+            latitude = response.get("latitude") instanceof Double ?
+                    response.getDouble("latitude") : Double.valueOf(response.getString("latitude"));
+            longitude = response.get("longitude") instanceof Double ?
+                    response.getDouble("longitude") : Double.valueOf(response.getString("longitude"));
+        }
+        else {
+            for(String locAttr: locationAttrs){
+                Object value = getValueByKey(response, locAttr);
+                if(value != null) {
+                    latitude = ((JSONObject) value).getDouble("latitude");
+                    longitude = ((JSONObject) value).getDouble("longitude");
+                    break;
+                }
+            }
+        }
+
+        GeoIndexer indexer = GeoIndexer.getInstance();
+        CordinatesIndex cpIndex = indexer.getGeoIndex(latitude, longitude);
+        if(cpIndex.getIndex() == lastAssIndex) return -1;
+        return cpIndex.getIndex();
     }
 
     private static Object getValueByKey(JSONObject item, String key) {

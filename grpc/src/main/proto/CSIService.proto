@@ -34,6 +34,7 @@ message ContextService
     bool updateRegistry = 6;
     au.coaas.cqp.proto.ContextEntity subEntity = 7;
     string jobParamHash = 8;
+    uint64 cpIndex = 9;
 }
 
 message ContextServiceInvokerRequest

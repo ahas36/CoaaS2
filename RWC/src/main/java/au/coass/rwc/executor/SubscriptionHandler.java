@@ -2,6 +2,7 @@ package au.coass.rwc.executor;
 
 import au.coaas.grpc.client.SQEMChannel;
 
+import au.coaas.rwc.proto.RWCResponse;
 import au.coaas.sqem.proto.EdgeStatus;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
@@ -56,6 +57,17 @@ public class SubscriptionHandler {
         }
         catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public static RWCResponse getMyIndex() {
+        try {
+            return RWCResponse.newBuilder()
+                    .setBody(System.getenv(self_index))
+                    .setStatus("200").build();
+        } catch(Exception ex) {
+            return RWCResponse.newBuilder()
+                    .setStatus("500").build();
         }
     }
 }

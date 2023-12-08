@@ -103,6 +103,7 @@ public class JobSchedulerManager {
 
         jobDataMap.put("params", (new JSONObject(cs.getParamsMap())).toString());
         jobDataMap.put("providerId", cs.getMongoID());
+        if(cs.getCpIndex() > 0)  jobDataMap.put("cpIndex", cs.getCpIndex());
 
         String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
 

@@ -41,10 +41,10 @@ public class ContextServiceHandler {
                 // If the index is zero (not assigned), there is either a problem with the coordinates,
                 // or the location can not be found. So, will be attached to the Master node until the
                 // location can be resolved.
-                AbstractMap.SimpleEntry res_index = resolveAttachedEdgeIndex(cpIndex);
+                EdgeDevice res_index = resolveAttachedEdgeIndex(cpIndex);
                 if(res_index != null) {
-                    sub_edge_id = (Long) res_index.getKey();
-                    ipAddress = (String) res_index.getValue();
+                    sub_edge_id = res_index.getId();
+                    ipAddress = res_index.getIpAddress();
                 }
                 // If no edge node can be resolved then attached to the master node.
             }
@@ -81,7 +81,7 @@ public class ContextServiceHandler {
         }
     }
 
-    private static AbstractMap.SimpleEntry resolveAttachedEdgeIndex (long cpIndex) {
+    protected static EdgeDevice resolveAttachedEdgeIndex (long cpIndex) {
         List<EdgeDevice> edges = DistributionManager.getEdgeDeviceIndexes();
         if(edges.size() > 0) {
             GeoIndexer indexer = GeoIndexer.getInstance();
@@ -89,8 +89,7 @@ public class ContextServiceHandler {
                     .filter(ed -> indexer.isParent(cpIndex, ed.getIndex()))
                     .collect(Collectors.toList());
 
-            if(parentIndexes.size() > 0) return new AbstractMap.SimpleEntry(
-                    parentIndexes.get(0).getId(), parentIndexes.get(0).getIpAddress());
+            if(parentIndexes.size() > 0) return parentIndexes.get(0);
 
             List<EdgeDevice> distances = edges.parallelStream()
                     .map(ed -> ed.toBuilder().setDistance(indexer.distance(cpIndex, ed.getIndex())).build())
@@ -105,7 +104,7 @@ public class ContextServiceHandler {
                 selectedNode = loadBalance(similarNodes.collect(Collectors.toList()));
             else selectedNode = distances.get(0);
 
-            return new AbstractMap.SimpleEntry(selectedNode.getId(), selectedNode.getIpAddress());
+            return selectedNode;
         }
 
         return null;
@@ -159,7 +158,7 @@ public class ContextServiceHandler {
         }
     }
 
-    public static String changeRegisteredLocation(String id, CordinatesIndex cpIndex) {
+    public static String changeRegisteredLocation(String id, Long cpIndex) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
             MongoDatabase db = mongoClient.getDatabase("coaas");
@@ -174,10 +173,10 @@ public class ContextServiceHandler {
 
             collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
 
-            AbstractMap.SimpleEntry res_index = resolveAttachedEdgeIndex(cpIndex.getIndex());
-            DistributionManager.updateCPSubscription(id, cpIndex.getIndex(), (Long)res_index.getKey());
+            EdgeDevice res_index = resolveAttachedEdgeIndex(cpIndex);
+            DistributionManager.updateCPSubscription(id, cpIndex, res_index.getId());
 
-            return (String) res_index.getValue();
+            return res_index.getIpAddress();
         } catch (Exception e) {
             log.severe(e.getMessage());
             return null;

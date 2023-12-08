@@ -214,6 +214,12 @@ message EdgeDevice {
     uint64 index = 2;
     string ipAddress = 3;
     int64 distance = 4;
+    bool change = 5;
+}
+
+message Migration {
+    string response = 1;
+    uint64 lastIndex = 2;
 }
 
 message ContextCacheDecision
@@ -478,4 +484,5 @@ service SQEMService {
 
     rpc subscribeEdge (EdgeStatus) returns (SQEMResponse);
     rpc getHeartBeats (EdgeStatus) returns (Empty);
+    rpc checkMigration (Migration) returns (EdgeDevice);
 }

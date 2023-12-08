@@ -105,6 +105,19 @@ public class DistributionManager {
         }
     }
 
+    public static void updateCPSubscription (String cpId, long index, long sub_edge) {
+        try {
+            String queryString = "UPDATE cp_subscription" +
+                    "SET index = %d, sub_edge = %d, subTime = %d " +
+                    "WHERE id = '%s';";
+            Statement statement = connection.createStatement();
+            statement.setQueryTimeout(30);
+            statement.executeQuery(String.format(queryString, index, sub_edge, System.currentTimeMillis(), cpId));
+        } catch (SQLException ex) {
+            log.severe("Could not update the subscription details.");
+        }
+    }
+
     protected static HashMap<Long,Integer> currentLoad (List<Long> subEdgeIds) {
         HashMap<Long,Integer> load = new HashMap<>();
         for(Long edgeId: subEdgeIds) {

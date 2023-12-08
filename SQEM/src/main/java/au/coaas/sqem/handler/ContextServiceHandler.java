@@ -1,5 +1,6 @@
 package au.coaas.sqem.handler;
 
+import au.coaas.cqc.proto.CordinatesIndex;
 import au.coaas.sqem.util.GeoIndexer;
 import au.coaas.sqem.proto.EdgeDevice;
 import au.coaas.sqem.proto.SQEMResponse;
@@ -139,14 +140,12 @@ public class ContextServiceHandler {
             MongoCollection<Document> collection = db.getCollection("contextService");
 
             BasicDBObject query = new BasicDBObject();
-
             query.put("_id", id);
 
             BasicDBObject updateFields = new BasicDBObject();
-
             updateFields.put("status",status);
 
-            UpdateResult ur = collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
+            collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
 
             JSONObject body = new JSONObject();
             body.put("message","1 Service updated");
@@ -157,6 +156,31 @@ public class ContextServiceHandler {
             body.put("message",e.getMessage());
             body.put("cause",e.getCause().toString());
             return SQEMResponse.newBuilder().setStatus("500").setBody(body.toString()).build();
+        }
+    }
+
+    public static String changeRegisteredLocation(String id, CordinatesIndex cpIndex) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas");
+            MongoCollection<Document> collection = db.getCollection("contextService");
+
+            // Find Conditions
+            BasicDBObject query = new BasicDBObject();
+            query.put("_id", id);
+            // Updates
+            BasicDBObject updateFields = new BasicDBObject();
+            updateFields.put("info.index", cpIndex);
+
+            collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
+
+            AbstractMap.SimpleEntry res_index = resolveAttachedEdgeIndex(cpIndex.getIndex());
+            DistributionManager.updateCPSubscription(id, cpIndex.getIndex(), (Long)res_index.getKey());
+
+            return (String) res_index.getValue();
+        } catch (Exception e) {
+            log.severe(e.getMessage());
+            return null;
         }
     }
 

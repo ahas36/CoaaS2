@@ -2,8 +2,14 @@ package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.ContextEntityType;
 
+import au.coaas.csi.proto.CSIResponse;
+import au.coaas.csi.proto.CSIServiceGrpc;
+import au.coaas.csi.proto.ContextMappingRequest;
+import au.coaas.csi.proto.ContextService;
+import au.coaas.grpc.client.CSIChannel;
 import au.coaas.grpc.client.SQEMChannel;
 import au.coaas.sqem.proto.*;
+import au.coaas.sqem.util.GeoIndexer;
 import au.coaas.sqem.util.ResponseUtils;
 import au.coaas.sqem.mongo.ConnectionPool;
 import au.coaas.sqem.util.CollectionDiscovery;
@@ -191,6 +197,14 @@ public class ContextEntityHandler {
                         .setProviderId(updateRequest.getProviderId())
                         .setKey(updateRequest.getKey());
 
+                if(updateRequest.getResolveLocation()) {
+                    String ipAddress = resetLocation(response, updateRequest.getProviderId(),
+                            updateRequest.getParamHash(), timestamp);
+                    SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                            = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance(ipAddress).getChannel());
+                    return sqemStub.updateContextEntity(builder.build());
+                }
+
                 return updateEntity(builder.build());
             }
             else {
@@ -199,10 +213,72 @@ public class ContextEntityHandler {
                 ageObj.put("unitText", "s");
 
                 response.put("age", ageObj);
+
+                if(updateRequest.getResolveLocation()) {
+                    String ipAddress = resetLocation(response, updateRequest.getProviderId(),
+                            updateRequest.getParamHash(), updateRequest.getObservedTime());
+                    SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
+                            = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance(ipAddress).getChannel());
+                    return sqemStub.updateContextEntity(updateRequest.toBuilder()
+                            .setJson(response.toString()).build());
+                }
+
                 return updateEntity(updateRequest.toBuilder()
                         .setJson(response.toString()).build());
             }
         }
+    }
+
+    private static final String[] locationAttrs = new String[]{"geo", "location"};
+
+    // Returns the IP Address to which the entity should be stored in and CSI scheduler should start to run.
+    private static String resetLocation(JSONObject response, String cpId, String jobId, long observedTime) {
+        // Step 1. Resolve the current location.
+        Double latitude = 0.0, longitude = 0.0;
+        if(response.has("latitude") && response.has("longitude")) {
+            latitude = response.get("latitude") instanceof Double ?
+                    response.getDouble("latitude") : Double.valueOf(response.getString("latitude"));
+            longitude = response.get("longitude") instanceof Double ?
+                    response.getDouble("longitude") : Double.valueOf(response.getString("longitude"));
+        }
+        else {
+            for(String locAttr: locationAttrs){
+                Object value = getValueByKey(response, locAttr);
+                if(value != null) {
+                    latitude = ((JSONObject) value).getDouble("latitude");
+                    longitude = ((JSONObject) value).getDouble("longitude");
+                    break;
+                }
+            }
+        }
+
+        // Step 2. Update the current SLA and CP Subscription.
+        GeoIndexer indexer = GeoIndexer.getInstance();
+        String ipAddress = ContextServiceHandler.changeRegisteredLocation(cpId, indexer.getGeoIndex(latitude, longitude));
+
+        // Step 3. Stop Master Scheduler and start it in the relevant edge node.
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.submit(() -> {
+            CSIServiceGrpc.CSIServiceBlockingStub csiStub
+                    = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
+            csiStub.cancelFetchJob(ContextService.newBuilder()
+                    .setMongoID(cpId).setJobParamHash(jobId).build());
+
+            // TODO: Adjust the time to start the scheduler using the age or observed time.
+            SQEMResponse sla = ContextServiceHandler.getContextServiceInfo(cpId);
+            CSIServiceGrpc.CSIServiceBlockingStub edgecsiStub
+                    = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance(ipAddress).getChannel());
+            ContextService.Builder csMessage = ContextService.newBuilder()
+                    .setMongoID(cpId).setJson(sla.getBody()).setTimes(-1);
+            edgecsiStub.createFetchJob(csMessage.build());
+        });
+
+        return ipAddress;
+    }
+
+    private static Object getValueByKey(JSONObject item, String key) {
+        Object value = item.opt(key);
+        return value;
     }
 
     private static Object getValueByKey(String item, String key) {

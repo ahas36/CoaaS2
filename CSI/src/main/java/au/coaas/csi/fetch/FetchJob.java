@@ -102,20 +102,26 @@ public class FetchJob implements Job {
                         setVocabURI(dataMap.getString("graph")).
                         setType(dataMap.getString("ontClass")).build();
 
-                UpdateEntityRequest updateRequest = UpdateEntityRequest.newBuilder()
+                UpdateEntityRequest.Builder updateRequest = UpdateEntityRequest.newBuilder()
                         .setEt(et)
                         .setJson(fetch.getBody())
                         .setProviderId(dataMap.getString("providerId"))
-                        .setKey(dataMap.getString("key"))
-                        .setReportAccess(dataMap.getBoolean("reportAccess")?"True":"False")
                         // This key is the unique identifier attribute(s) of the entity.
-                        .setRetLatency(retLatency)
-                        .build();
+                        .setKey(dataMap.getString("key"))
+                        .setResolveLocation(dataMap.getBoolean("updateRegistry"))
+                        .setReportAccess(dataMap.getBoolean("reportAccess") ? "True" : "False")
+                        .setRetLatency(retLatency);
+
+                if(dataMap.getBoolean("updateRegistry")) {
+                    updateRequest.setParamHash(Utils.getHashKey(params));
+                }
 
                 SQEMServiceGrpc.SQEMServiceBlockingStub sqemStub
                         = SQEMServiceGrpc.newBlockingStub(SQEMChannel.getInstance().getChannel());
 
-                SQEMResponse sqemResponse = sqemStub.updateContextEntity(updateRequest);
+                SQEMResponse sqemResponse = sqemStub.updateContextEntity(updateRequest.build());
+
+                dataMap.put("updateRegistry", false);
 
                 // This calculation is unnessecary if running in complete DB mode.
                 double retDiff = retLatency - qos.getDouble("rtmax");

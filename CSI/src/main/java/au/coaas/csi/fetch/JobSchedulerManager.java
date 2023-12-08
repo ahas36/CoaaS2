@@ -53,10 +53,8 @@ public class JobSchedulerManager {
         return instance;
     }
 
-
     private SchedulerFactory schedulerFactory;
     private Scheduler scheduler;
-
 
     private long convertTime2MilliSecond(JSONObject timeObject) {
         switch (timeObject.getString("unit")) {
@@ -93,6 +91,7 @@ public class JobSchedulerManager {
         ontClass = ontClassSplit[ontClassSplit.length - 1];
         jobDataMap.put("ontClass", ontClass);
         jobDataMap.put("reportAccess", cs.getReportAccess().equals("True")? true: false);
+        jobDataMap.put("updateRegistry", cs.getUpdateRegistry());
 
         String graph = contextService.getJSONObject("info").getString("graph").trim();
 
@@ -109,7 +108,7 @@ public class JobSchedulerManager {
 
         if(cs.getTimes() < 1){
             jobDataMap.put("subscriptionEntity", JsonFormat.printer().print(cs.getSubEntity()));
-            jobDataMap.put("subId", cs.getSubEntity().getSub());
+            if(cs.hasSubEntity()) jobDataMap.put("subId", cs.getSubEntity().getSub());
             SimpleTrigger trigger = (SimpleTrigger) TriggerBuilder.newTrigger()
                     .withIdentity(jobId, "cs-fetch-trigger")
                     .forJob("fetch-job", "cs-fetch-job")
@@ -145,6 +144,9 @@ public class JobSchedulerManager {
     }
 
     public CSIResponse cancelJob(ContextService cs) throws SchedulerException {
+        if(cs.getJobParamHash() != null && !cs.getJobParamHash().isEmpty()) {
+            return cancelJob(cs.getMongoID() + "-" + cs.getJobParamHash());
+        }
         String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
         boolean cs1 = scheduler.unscheduleJob(new TriggerKey(jobId, "cs-fetch-trigger"));
         return CSIResponse.newBuilder().setStatus(cs1 ? "200" : "500").build();

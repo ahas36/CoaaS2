@@ -37,17 +37,21 @@ public class ContextServiceManager {
             {
                 JSONObject sqemBody = new JSONObject(sqemResponse.getBody());
                 String id = sqemBody.getString("id");
+                JSONObject sub_edge = sqemBody.getJSONObject("subEdge");
 
                 CSIServiceGrpc.CSIServiceBlockingStub csiStub
                         = CSIServiceGrpc.newBlockingStub(
-                                CSIChannel.getInstance(sqemBody.getJSONObject("subEdge")
-                                        .getString("ipAddress")).getChannel());
+                                CSIChannel.getInstance(sub_edge.getString("ipAddress"))
+                                        .getChannel());
 
-                CSIResponse fetchJob = csiStub.createFetchJob(
-                        ContextService.newBuilder()
-                                .setMongoID(id)
-                                .setJson(service).setTimes(-1).build());
+                ContextService.Builder csMessage = ContextService.newBuilder()
+                        .setMongoID(id).setJson(service).setTimes(-1);
+                // Tagging to update registry of the context provider location.
+                if(sub_edge.getString("ipAddress").equals("0.0.0.0") &&
+                        sub_edge.getInt("id") == 0)
+                    csMessage.setUpdateRegistry(true);
 
+                CSIResponse fetchJob = csiStub.createFetchJob(csMessage.build());
                 if(!fetchJob.getStatus().equals("200"))
                 {
                     sqemStub.updateContextServiceStatus(

@@ -188,6 +188,8 @@ message UpdateEntityRequest
     int64 retLatency = 5;
     string providerId = 6;
     string reportAccess = 7;
+    bool resolveLocation = 8;
+    string paramHash = 9;
 }
 
 message GetEntitiesRequest

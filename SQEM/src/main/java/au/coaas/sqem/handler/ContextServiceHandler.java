@@ -183,6 +183,27 @@ public class ContextServiceHandler {
         }
     }
 
+    public static void changeRegisteredLocation(String id, Long cpIndex, EdgeDevice sub_edge) {
+        try {
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("coaas");
+            MongoCollection<Document> collection = db.getCollection("contextService");
+
+            // Find Conditions
+            BasicDBObject query = new BasicDBObject();
+            query.put("_id", id);
+            // Updates
+            BasicDBObject updateFields = new BasicDBObject();
+            updateFields.put("info.index", cpIndex);
+
+            collection.updateMany(query, new Document("$set", updateFields), new UpdateOptions().upsert(false));
+
+            DistributionManager.updateCPSubscription(id, cpIndex, sub_edge.getId());
+        } catch (Exception e) {
+            log.severe(e.getMessage());
+        }
+    }
+
     public static SQEMResponse discoverMatchingServices(ContextServiceRequest serviceRequest) {
         try {
             MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();

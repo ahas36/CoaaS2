@@ -127,17 +127,23 @@ public class FetchJob implements Job {
                     CSIResponse finalFetch1 = fetch;
                     executor.submit(() -> {
                         try {
-                            EdgeDevice device = sqemStub.checkMigration(Migration.newBuilder()
+                            // LastIndex actually refer to the index that the provider was in when
+                            // the edge assignment was made.
+                            CPEdgeDevice device = sqemStub.checkMigration(Migration.newBuilder()
                                             .setResponse(finalFetch1.getBody())
-                                            .setLastIndex(dataMap.getLong("index")).build());
-                            if(device.getChange()) {
+                                            .setLastIndex(dataMap.getLong("cpIndex")).build());
+                            if(device.hasEdgeDevice() && device.getEdgeDevice().getChange()) {
                                 // Starting the hot context migration via the RWC.
                                 RWCServiceGrpc.RWCServiceFutureStub rwcStub
                                         = RWCServiceGrpc.newFutureStub(RWCChannel.getInstance().getChannel());
                                 rwcStub.hotMigrate(MigrationRequest.newBuilder()
-                                                .setDestination(device)
+                                                .setEnt(updateRequest)
+                                                .setCs(contextService)
+                                                .setCpIndex(device.getCpIndex())
+                                                .setJobId(Utils.getHashKey(params))
+                                                .setDestination(device.getEdgeDevice())
                                                 .setProviderId(dataMap.getString("providerId"))
-                                                .setJobId(Utils.getHashKey(params)).build());
+                                                .build());
                             }
                         } catch (Exception ex) {
                             log.severe("Could not update the provider-edge subscription due to: "

@@ -11,6 +11,8 @@ import au.coaas.sqem.proto.Empty;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.proto.SQEMServiceGrpc;
 import com.google.protobuf.ByteString;
+import com.google.protobuf.InvalidProtocolBufferException;
+import io.grpc.stub.StreamObserver;
 
 import java.util.logging.Logger;
 
@@ -737,6 +739,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
     }
 
     // DCIS Related Services.
+    @Override
     public void subscribeEdge(au.coaas.sqem.proto.EdgeStatus request,
                               io.grpc.stub.StreamObserver<au.coaas.sqem.proto.SQEMResponse> responseObserver){
         try {
@@ -747,6 +750,7 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
     public void getHeartBeats(au.coaas.sqem.proto.EdgeStatus request,
                               io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
         try {
@@ -758,8 +762,9 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
     public void checkMigration(au.coaas.sqem.proto.Migration request,
-                              io.grpc.stub.StreamObserver<au.coaas.sqem.proto.EdgeDevice> responseObserver){
+                              io.grpc.stub.StreamObserver<au.coaas.sqem.proto.CPEdgeDevice> responseObserver){
         try {
             responseObserver.onNext(ContextEntityHandler.edgeHopping(
                     request.getResponse(), request.getLastIndex()));
@@ -767,5 +772,82 @@ public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
             responseObserver.onError(ex);
         }
         responseObserver.onCompleted();
+    }
+
+    @Override
+    public void changeSubscription (au.coaas.sqem.proto.CPEdgeDevice request,
+                               io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
+        try {
+            ContextServiceHandler.changeRegisteredLocation(
+                    request.getCpId(), request.getCpIndex(), request.getEdgeDevice());
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getContextFromProvider(au.coaas.sqem.proto.ContextServiceId request,
+                                     io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Chunk> responseObserver) {
+        try {
+            SQEMResponse response = ContextRequestHandler.getProviderContext(request.getId(), request.getEntType());
+            byte[] bytes = response.toByteArray();
+
+            int size = bytes.length;
+            int total = (int)Math.ceil((bytes.length * 1.0) / MAX_MESSAGE_SIZE);
+
+            for (int i = 0 ; i< total; i++){
+                Chunk.Builder chunk = Chunk.newBuilder().setTotal(size).setIndex(i).setData(ByteString.copyFrom(bytes,i*MAX_MESSAGE_SIZE,
+                        Math.min(size,(i+1)*MAX_MESSAGE_SIZE)));
+                responseObserver.onNext(chunk.build());
+            }
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+            log.severe(ex.getMessage());
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void deleteTemporaryContext (au.coaas.sqem.proto.ContextServiceId request,
+                                    io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver){
+        try {
+            ContextRequestHandler.deleteTempContext(request.getId(), request.getEntType());
+            responseObserver.onNext(Empty.newBuilder().build());
+        } catch (Exception ex) {
+            responseObserver.onError(ex);
+        }
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public io.grpc.stub.StreamObserver<Chunk> persistInMaster(io.grpc.stub.StreamObserver<au.coaas.sqem.proto.Empty> responseObserver) {
+        ByteString.Output output = ByteString.newOutput();
+
+        return new StreamObserver<Chunk>() {
+            @Override
+            public void onNext(Chunk chunk) {
+                output.write(chunk.getData().toByteArray(),
+                        chunk.getIndex() * MAX_MESSAGE_SIZE, chunk.getData().size());
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                log.severe(throwable.getMessage());
+            }
+
+            @Override
+            public void onCompleted() {
+                try {
+                    SQEMResponse sqemResponse = SQEMResponse.parseFrom(output.toByteString());
+                    if(sqemResponse.getStatus().equals("200"))
+                        ContextEntityHandler.persistOldContext(sqemResponse.getBody(), sqemResponse.getHashKey());
+                    else log.severe("Could not migrate and persist the context from the edge node.");
+                } catch (InvalidProtocolBufferException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
     }
 }

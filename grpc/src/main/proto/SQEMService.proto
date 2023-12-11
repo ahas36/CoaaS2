@@ -217,6 +217,13 @@ message EdgeDevice {
     bool change = 5;
 }
 
+message CPEdgeDevice {
+    EdgeDevice edgeDevice = 1;
+    uint64 cpIndex = 2;
+    string cpId = 3;
+    bool persistContext = 4;
+}
+
 message Migration {
     string response = 1;
     uint64 lastIndex = 2;
@@ -263,6 +270,7 @@ message ConQEngLog {
 
 message ContextServiceId {
     string id = 1;
+    string entType = 2;
 }
 
 message EntityTypeRequest
@@ -484,5 +492,10 @@ service SQEMService {
 
     rpc subscribeEdge (EdgeStatus) returns (SQEMResponse);
     rpc getHeartBeats (EdgeStatus) returns (Empty);
-    rpc checkMigration (Migration) returns (EdgeDevice);
+    rpc checkMigration (Migration) returns (CPEdgeDevice);
+    rpc changeSubscription (CPEdgeDevice) returns (Empty);
+    rpc deleteTemporaryContext (ContextServiceId) returns (Empty);
+    rpc getContextFromProvider (ContextServiceId) returns (stream Chunk);
+    rpc persistInMaster (stream Chunk) returns (Empty);
+
 }

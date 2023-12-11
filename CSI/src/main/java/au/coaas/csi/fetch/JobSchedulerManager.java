@@ -101,11 +101,14 @@ public class JobSchedulerManager {
         graph = graph.substring(1, graph.length() - 1);
         jobDataMap.put("graph", graph);
 
-        jobDataMap.put("params", (new JSONObject(cs.getParamsMap())).toString());
+        jobDataMap.put("params", cs.getParamsMap().isEmpty() ?
+                (new JSONObject()).toString() :
+                (new JSONObject(cs.getParamsMap())).toString());
         jobDataMap.put("providerId", cs.getMongoID());
         if(cs.getCpIndex() > 0)  jobDataMap.put("cpIndex", cs.getCpIndex());
 
-        String jobId = cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
+        String jobId = cs.getParamsMap().isEmpty() ? cs.getMongoID() :
+                cs.getMongoID() + "-" + Utils.getHashKey(cs.getParamsMap());
 
         if(cs.getTimes() < 1){
             jobDataMap.put("subscriptionEntity", JsonFormat.printer().print(cs.getSubEntity()));

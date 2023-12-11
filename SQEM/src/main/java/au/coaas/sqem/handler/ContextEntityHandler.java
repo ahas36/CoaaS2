@@ -283,7 +283,7 @@ public class ContextEntityHandler {
         return ipAddress;
     }
 
-    public static EdgeDevice edgeHopping(String res, Long lastAssIndex) {
+    public static CPEdgeDevice edgeHopping(String res, Long lastAssIndex) {
         long idx = checkSubChange(res, lastAssIndex);
         if(idx > 0) {
             EdgeDevice sub_edge = ContextServiceHandler.resolveAttachedEdgeIndex(idx);
@@ -291,11 +291,14 @@ public class ContextEntityHandler {
                     = RWCServiceGrpc.newBlockingStub(RWCChannel.getInstance().getChannel());
             RWCResponse sub_idx = rwcStub.getNodeIndex(Empty.newBuilder().build());
             if(sub_idx.getStatus().equals("200")) {
-                if(Long.valueOf(sub_idx.getBody()) != sub_edge.getIndex())
-                    return sub_edge.toBuilder().setChange(true).build();
+                if(Long.valueOf(sub_idx.getBody()) != sub_edge.getIndex()) {
+                    return CPEdgeDevice.newBuilder()
+                            .setEdgeDevice(sub_edge.toBuilder().setChange(true).build())
+                            .setCpIndex(idx).build();
+                }
             }
         }
-        return EdgeDevice.newBuilder().build();
+        return CPEdgeDevice.newBuilder().build();
     }
 
     private static long checkSubChange(String res, Long lastAssIndex) {
@@ -530,7 +533,6 @@ public class ContextEntityHandler {
         } catch (Exception e) {
             return SQEMResponse.newBuilder().setStatus("500").setBody(e.getMessage()).build();
         }
-
     }
 
     public static SQEMResponse remove(String name) {
@@ -572,5 +574,26 @@ public class ContextEntityHandler {
             ja.put(table);
         }
         return SQEMResponse.newBuilder().setBody(ja.toString()).setStatus("200").build();
+    }
+
+    public static void persistOldContext(String json, String collectionName) {
+        try {
+            JSONArray context = new JSONArray(json);
+            MongoClient mongoClient = ConnectionPool.getInstance().getMongoClient();
+            MongoDatabase db = mongoClient.getDatabase("historical_db");
+
+            MongoCollection<Document> collection = db.getCollection(collectionName);
+
+            List<Document> oldContext = new ArrayList<>();
+            for(Object con : context) {
+                Document record = Document.parse(con.toString());
+                record.remove("_id");
+                oldContext.add(record);
+            }
+            // TODO: this may not store the context in the right order in time.
+            collection.insertMany(oldContext);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

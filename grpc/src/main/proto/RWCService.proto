@@ -18,6 +18,9 @@ message MigrationRequest {
   au.coaas.sqem.proto.EdgeDevice destination = 1;
   string providerId = 2;
   string jobId = 3;
+  string cs = 4;
+  uint64 cpIndex = 5;
+  au.coaas.sqem.proto.UpdateEntityRequest ent = 6;
 }
 
 service RWCService {

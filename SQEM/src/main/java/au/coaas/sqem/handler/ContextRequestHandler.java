@@ -2,6 +2,7 @@ package au.coaas.sqem.handler;
 
 import au.coaas.cqp.proto.*;
 
+import au.coaas.sqem.proto.ContextServiceId;
 import au.coaas.sqem.util.MongoBlock;
 import au.coaas.sqem.proto.SQEMResponse;
 import au.coaas.sqem.util.ResponseUtils;
@@ -625,4 +626,29 @@ public class ContextRequestHandler {
         return SQEMResponse.newBuilder().setBody(errorMessage).setStatus("500").build();
     }
 
+    public static SQEMResponse getProviderContext(String cpId, String entity) {
+        BasicDBObject finalQuery = new BasicDBObject();
+        finalQuery.put("providers", cpId);
+
+        String collectionName = CollectionDiscovery.discover(entity);
+
+        MongoBlock printBlock = new MongoBlock();
+        MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("coaas");
+        MongoCollection<Document> entityCollection = db.getCollection(collectionName);
+        entityCollection.find(finalQuery).forEach(printBlock);
+
+        return SQEMResponse.newBuilder().setStatus("200").setBody(printBlock.getResultString())
+                .setMeta(printBlock.getMeta()).setHashKey(collectionName).build();
+    }
+
+    public static void deleteTempContext(String cpId, String entity) {
+        BasicDBObject finalQuery = new BasicDBObject();
+        finalQuery.put("providers", cpId);
+
+        String collectionName = CollectionDiscovery.discover(entity);
+        MongoDatabase db = ConnectionPool.getInstance().getMongoClient().getDatabase("coaas");
+        MongoCollection<Document> entityCollection = db.getCollection(collectionName);
+
+        entityCollection.deleteMany(finalQuery);
+    }
 }

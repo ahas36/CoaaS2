@@ -5,6 +5,8 @@ option java_generic_services = true;
 
 package au.coaas.rwc.proto;
 
+import "SQEMService.proto";
+
 message Empty {}
 
 message RWCResponse {
@@ -12,9 +14,16 @@ message RWCResponse {
   string body = 2;
 }
 
+message MigrationRequest {
+  au.coaas.sqem.proto.EdgeDevice destination = 1;
+  string providerId = 2;
+  string jobId = 3;
+}
+
 service RWCService {
   rpc heartBeat (Empty) returns (RWCResponse);
   rpc getNodeIndex (Empty) returns (RWCResponse);
+  rpc hotMigrate (MigrationRequest) returns (RWCResponse);
 }
 
 

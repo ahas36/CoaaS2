@@ -8,10 +8,9 @@ import au.coaas.cre.proto.ContextEvent;
 import au.coaas.csi.proto.*;
 import au.coaas.csi.utils.HttpResponseFuture;
 import au.coaas.csi.utils.Utils;
-import au.coaas.grpc.client.CPREEChannel;
-import au.coaas.grpc.client.CQCChannel;
-import au.coaas.grpc.client.CSIChannel;
-import au.coaas.grpc.client.SQEMChannel;
+import au.coaas.grpc.client.*;
+import au.coaas.rwc.proto.MigrationRequest;
+import au.coaas.rwc.proto.RWCServiceGrpc;
 import au.coaas.sqem.proto.*;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -132,8 +131,13 @@ public class FetchJob implements Job {
                                             .setResponse(finalFetch1.getBody())
                                             .setLastIndex(dataMap.getLong("index")).build());
                             if(device.getChange()) {
-                                // TODO:
-                                // Start hot context migration.
+                                // Starting the hot context migration via the RWC.
+                                RWCServiceGrpc.RWCServiceFutureStub rwcStub
+                                        = RWCServiceGrpc.newFutureStub(RWCChannel.getInstance().getChannel());
+                                rwcStub.hotMigrate(MigrationRequest.newBuilder()
+                                                .setDestination(device)
+                                                .setProviderId(dataMap.getString("providerId"))
+                                                .setJobId(Utils.getHashKey(params)).build());
                             }
                         } catch (Exception ex) {
                             log.severe("Could not update the provider-edge subscription due to: "

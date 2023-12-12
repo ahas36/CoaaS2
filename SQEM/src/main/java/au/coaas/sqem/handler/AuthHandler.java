@@ -19,6 +19,9 @@ import org.bson.Document;
 import java.time.LocalDateTime;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class AuthHandler {
 
     private static final Logger log = Logger.getLogger(AuthHandler.class.getName());

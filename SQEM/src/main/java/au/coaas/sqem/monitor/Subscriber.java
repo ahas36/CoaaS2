@@ -2,6 +2,9 @@ package au.coaas.sqem.monitor;
 
 import au.coaas.sqem.proto.PubSubMessage;
 
+/**
+ * @author shakthi
+ */
 public class Subscriber {
     public Subscriber(String[] topics) {
         for (String t : topics) {

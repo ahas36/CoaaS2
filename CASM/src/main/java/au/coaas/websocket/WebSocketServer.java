@@ -16,6 +16,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 @ServerEndpoint("/contexts/{reciever}")
 public class WebSocketServer {
     private static Map<String, Session> conApps = new ConcurrentHashMap<>();

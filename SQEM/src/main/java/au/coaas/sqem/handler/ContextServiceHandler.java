@@ -18,7 +18,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.logging.Logger;
 
-
+/**
+ * @author ali & shakthi
+ */
 public class ContextServiceHandler {
     private static final Logger LOG = Logger.getLogger(ContextServiceHandler.class.getName());
 

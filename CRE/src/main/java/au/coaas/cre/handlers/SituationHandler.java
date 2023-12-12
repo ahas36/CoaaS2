@@ -9,6 +9,9 @@ import io.siddhi.core.event.Event;
 import org.json.JSONObject;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class SituationHandler {
     private static Logger log = Logger.getLogger(SituationHandler.class.getName());
     public static int totalNumberOfEvents = 0;

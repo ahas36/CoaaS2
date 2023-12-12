@@ -15,6 +15,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class QueryStatHandler {
     private final static String conn_string =  "mongodb://host.docker.internal:27017";
     private static MongoClient mongoClient;

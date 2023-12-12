@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 /**
  * REST Web Service
  *
- * @author ali
+ * @author ali & shakthi
  */
 @Path("entity")
 public class EntityInterface {

@@ -17,6 +17,9 @@ import ltu.ecstra.range.RangeException;
 
 import java.util.Iterator;
 
+/**
+ * @author ali
+ */
 public class SituationReasoner {
     public static CREResponse infer(SituationInferenceRequest request) {
 

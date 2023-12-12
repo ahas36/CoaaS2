@@ -11,6 +11,9 @@ import java.util.Base64;
 import java.security.spec.KeySpec;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * @author shakthi
+ */
 public class Encryptor {
     private static final String SALT = "jz8WmQmrfm8x3tZF5snFAaUiCFoxDyfd";
     private static final String SECRET_KEY = "NgoThlX1WPyVvYa1xPj9CHE4OMWxdmmH";

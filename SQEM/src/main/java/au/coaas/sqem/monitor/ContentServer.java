@@ -5,6 +5,9 @@ import au.coaas.sqem.proto.PubSubMessage;
 import java.util.Hashtable;
 import java.util.List;
 
+/**
+ * @author shakthi
+ */
 public class ContentServer {
     private Hashtable<String, List<Subscriber>> subscriberLists;
 

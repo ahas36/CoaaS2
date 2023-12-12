@@ -12,6 +12,9 @@ import java.util.logging.Logger;
 
 import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
+/**
+ * @author shakthi
+ */
 public class CPREEServer {
     private static Logger log = Logger.getLogger(CPREEServer.class.getName());
 

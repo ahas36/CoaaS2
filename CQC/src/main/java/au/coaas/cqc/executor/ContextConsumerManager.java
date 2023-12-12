@@ -8,6 +8,9 @@ import org.json.JSONObject;
 
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class ContextConsumerManager {
 
     private static Logger log = Logger.getLogger(ContextConsumerManager.class.getName());

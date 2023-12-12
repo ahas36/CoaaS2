@@ -1,5 +1,8 @@
 package Jobs;
 
+/**
+ * @author shakthi
+ */
 public class ContextQuery {
 
     public String day;

@@ -2,6 +2,9 @@ import org.quartz.SchedulerException;
 
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class QueryGeneratingServer {
     private static Logger log = Logger.getLogger(QueryGeneratingServer.class.getName());
 

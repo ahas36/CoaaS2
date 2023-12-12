@@ -20,7 +20,7 @@ import java.util.logging.Logger;
 /**
  * REST Web Service
  *
- * @author ali
+ * @author shakthi & ali
  */
 @Path("log")
 public class LogInterface {

@@ -32,6 +32,9 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * @author shakthi
+ */
 public class ContinuousEventHandler {
     private static final Logger log = Logger.getLogger(ContinuousEventHandler.class.getName());
 

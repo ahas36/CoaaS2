@@ -8,6 +8,9 @@ import org.quartz.JobExecutionContext;
 
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class RegisterClearJob implements Job {
 
     private static Logger log = Logger.getLogger(RegisterClearJob.class.getName());

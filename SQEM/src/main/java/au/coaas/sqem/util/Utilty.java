@@ -15,6 +15,9 @@ import java.io.IOException;
 import java.util.*;
 import java.nio.charset.StandardCharsets;
 
+/**
+ * @author shakthi
+ */
 // General utility functions used by the service
 public class Utilty {
     final static String[] entityTypes = {"car", "vehicle", "thing", "weather", "place", "carpark", "parkingfacility"};

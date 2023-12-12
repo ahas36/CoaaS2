@@ -9,6 +9,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 @Path("cqstats")
 public class StatisticsInterface {
     public StatisticsInterface() {}

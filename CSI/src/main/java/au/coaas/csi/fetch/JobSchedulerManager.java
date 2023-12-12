@@ -13,6 +13,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * @author ali & shakthi
+ */
 public class JobSchedulerManager {
 
     // private instance, so that it can be

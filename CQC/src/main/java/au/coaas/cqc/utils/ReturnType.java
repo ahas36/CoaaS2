@@ -6,6 +6,9 @@ import au.coaas.sqem.proto.ContextRequest;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+/**
+ * @author shakthi
+ */
 public class ReturnType {
     private List<String> operators;
     private LinkedHashMap<String,String> params;

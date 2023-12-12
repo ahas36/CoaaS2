@@ -13,6 +13,9 @@ import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.List;
 
+/**
+ * @author shakthi
+ */
 public class GeoIndexer {
     private static H3Core h3Client;
     private static GeoIndexer instance;

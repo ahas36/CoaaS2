@@ -9,6 +9,9 @@ import org.json.JSONObject;
 
 import java.util.*;
 
+/**
+ * @author shakthi
+ */
 public class ResponseUtils {
     public static List<Object> parseJsonArray(JSONArray ja) {
         List<Object> result = new ArrayList<>();

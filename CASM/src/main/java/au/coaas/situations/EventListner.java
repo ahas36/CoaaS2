@@ -15,6 +15,9 @@ import javax.ejb.ActivationConfigProperty;
 
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 @MessageDriven(activationConfig = {
         @ActivationConfigProperty(propertyName = "topics",
                 propertyValue = "event"),

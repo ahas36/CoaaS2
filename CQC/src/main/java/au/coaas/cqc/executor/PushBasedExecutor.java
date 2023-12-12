@@ -43,6 +43,9 @@ import java.util.logging.Logger;
 
 import static au.coaas.cqc.utils.SiddhiQueryGenerator.generateQueries;
 
+/**
+ * @author shakthi
+ */
 public class PushBasedExecutor {
     // This is the context push dedugging switch
     private static boolean isDebugMode = false;

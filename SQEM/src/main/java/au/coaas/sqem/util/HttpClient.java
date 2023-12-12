@@ -12,6 +12,9 @@ import java.util.concurrent.TimeUnit;
 import au.coaas.sqem.util.enums.HttpRequests;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * @author shakthi
+ */
 public class HttpClient {
     public static String call(String serviceUrl, HttpRequests type, String body){
         OkHttpClient.Builder builder = new OkHttpClient.Builder();

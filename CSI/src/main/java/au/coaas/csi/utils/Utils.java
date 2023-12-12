@@ -9,6 +9,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
+/**
+ * @author shakthi
+ */
 public class Utils {
     public static String getHashKey(Map<String,String> params){
         String hashKey = "";

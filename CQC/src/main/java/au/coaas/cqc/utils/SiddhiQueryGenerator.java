@@ -2,6 +2,9 @@ package au.coaas.cqc.utils;
 
 import org.json.JSONObject;
 
+/**
+ * @author shakthi
+ */
 public class SiddhiQueryGenerator {
     // Function Signature sent here is the fully-parsed context function. I don't think that is right.
     public static String generateQueries(String type, String window, String functionSignature) {

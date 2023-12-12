@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
 /**
- * @author ali
+ * @author ali & shakthi
  */
 public class SQEMServiceImpl extends SQEMServiceGrpc.SQEMServiceImplBase {
 

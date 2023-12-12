@@ -13,6 +13,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author shakthi
+ */
 public class RefreshContext {
     private double fthr;
     private String csId;

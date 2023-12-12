@@ -23,7 +23,7 @@ import static au.coaas.grpc.client.Config.MAX_MESSAGE_SIZE;
 
 /**
  *
- * @author ali
+ * @author ali & shakthi
  */
 
 public class SQEMServer {

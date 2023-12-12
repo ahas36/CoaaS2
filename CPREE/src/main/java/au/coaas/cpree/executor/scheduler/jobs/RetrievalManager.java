@@ -24,6 +24,9 @@ import org.json.JSONObject;
 import java.util.*;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class RetrievalManager {
 
     private static HashMap<String, HashSet<ContextEntity>> monitored = new HashMap<>();

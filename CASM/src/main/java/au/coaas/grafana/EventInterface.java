@@ -13,6 +13,9 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+/**
+ * @author shakthi
+ */
 @Path("event")
 public class EventInterface {
 

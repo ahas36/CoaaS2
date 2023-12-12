@@ -8,6 +8,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.Map;
 
+/**
+ * @author shakthi
+ */
 public class Utilities {
     public static Double unitConverter(MeasuredProperty prop, String originUnit, String targetUnit, double value) {
         switch(prop){

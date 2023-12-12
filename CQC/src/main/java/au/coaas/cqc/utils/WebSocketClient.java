@@ -6,6 +6,9 @@ import javax.websocket.WebSocketContainer;
 import java.io.IOException;
 import java.net.URI;
 
+/**
+ * @author shakthi
+ */
 public class WebSocketClient {
     private WebSocketContainer container;
     private Session session;

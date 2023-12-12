@@ -21,6 +21,9 @@ import java.util.HashMap;
 import java.util.logging.Logger;
 import java.util.concurrent.Executors;
 
+/**
+ * @author shakthi
+ */
 public class QueryJob implements Job {
 
     private static Logger log = Logger.getLogger(QueryJob.class.getName());

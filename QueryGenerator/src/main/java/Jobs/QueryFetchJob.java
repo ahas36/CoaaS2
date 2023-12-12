@@ -25,6 +25,9 @@ import java.util.logging.Logger;
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Aggregates.sample;
 
+/**
+ * @author shakthi
+ */
 public class QueryFetchJob implements Job {
 
     private final static String conn_string =  "mongodb://localhost:27017";

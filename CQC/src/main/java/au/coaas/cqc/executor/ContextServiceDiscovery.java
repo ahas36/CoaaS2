@@ -10,6 +10,9 @@ import org.json.JSONArray;
 import java.util.Set;
 import java.util.logging.Logger;
 
+/**
+ * @author ali
+ */
 public class ContextServiceDiscovery {
 
     private static Logger log = Logger.getLogger(ContextServiceDiscovery.class.getName());

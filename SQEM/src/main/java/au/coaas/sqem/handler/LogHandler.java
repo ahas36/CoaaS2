@@ -14,7 +14,9 @@ import org.json.JSONObject;
 
 import java.util.logging.Logger;
 
-
+/**
+ * @author shakthi & ali
+ */
 public class LogHandler {
     private static final Logger log = Logger.getLogger(LogHandler.class.getName());
 

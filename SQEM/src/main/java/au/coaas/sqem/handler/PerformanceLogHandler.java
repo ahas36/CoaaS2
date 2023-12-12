@@ -55,6 +55,9 @@ import java.util.stream.Collectors;
 
 import static au.coaas.sqem.util.StatisticalUtils.*;
 
+/**
+ * @author shakthi
+ */
 public class PerformanceLogHandler {
 
     private static Connection connection;

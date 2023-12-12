@@ -12,6 +12,9 @@ import io.siddhi.core.stream.output.StreamCallback;
 import java.util.logging.Logger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/**
+ * @author shakthi
+ */
 public class SiddhiWrapper {
     private static SiddhiManager siddhiManager;
     private static Logger log = Logger.getLogger(SiddhiWrapper.class.getName());

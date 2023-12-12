@@ -9,6 +9,9 @@ import io.grpc.*;
 import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class CQCInterceptor implements ServerInterceptor {
 
     private static final String REQUEST = "Request";

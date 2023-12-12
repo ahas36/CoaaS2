@@ -8,6 +8,9 @@ import org.quartz.JobExecutionContext;
 import java.time.LocalDateTime;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class QueryJob implements Job {
 
     private static Logger log = Logger.getLogger(QueryJob.class.getName());

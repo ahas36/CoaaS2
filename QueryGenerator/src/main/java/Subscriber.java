@@ -2,6 +2,9 @@ import Utils.PubSub.Message;
 import Utils.PubSub.OnMessage;
 import org.quartz.SchedulerException;
 
+/**
+ * @author shakthi
+ */
 public class Subscriber {
     String name;
     public Subscriber(String name) {

@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+/**
+ * @author ali & shakthi
+ */
 public class ContextEntityManager {
 
     private static Logger log = Logger.getLogger(ContextEntityManager.class.getName());

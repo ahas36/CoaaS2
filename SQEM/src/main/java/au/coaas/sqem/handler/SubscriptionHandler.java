@@ -23,6 +23,9 @@ import org.json.JSONObject;
 import java.time.LocalDateTime;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi & ali
+ */
 public class SubscriptionHandler {
     private static final Logger log = Logger.getLogger(SubscriptionHandler.class.getName());
 

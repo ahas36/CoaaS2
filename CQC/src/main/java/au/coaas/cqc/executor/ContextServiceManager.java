@@ -14,6 +14,9 @@ import org.quartz.impl.StdSchedulerFactory;
 
 import java.util.logging.Logger;
 
+/**
+ * @author ali & shakthi
+ */
 public class ContextServiceManager {
 
     private static Logger log = Logger.getLogger(ContextServiceManager.class.getName());

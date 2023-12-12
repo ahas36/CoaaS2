@@ -38,6 +38,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.microsoft.sqlserver.jdbc.StringUtils.isNumeric;
 
+/**
+ * @author ali & shakthi
+ */
 public class ContextEntityHandler {
 
     public final static int BUCKET_SIZE = 200;

@@ -2,6 +2,9 @@ package au.coaas.sqem.util;
 
 import java.util.LinkedList;
 
+/**
+ * @author shakthi
+ */
 public class LimitedQueue<E> extends LinkedList<E> {
 
     private int limit;

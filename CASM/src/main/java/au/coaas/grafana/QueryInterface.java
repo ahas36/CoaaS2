@@ -21,7 +21,7 @@ import javax.ws.rs.core.Response;
 /**
  * REST Web Service
  *
- * @author ali
+ * @author ali & shakthi
  */
 @Path("query")
 public class QueryInterface {

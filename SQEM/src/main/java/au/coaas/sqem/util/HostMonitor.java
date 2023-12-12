@@ -3,6 +3,9 @@ package au.coaas.sqem.util;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
 
+/**
+ * @author shakthi
+ */
 public class HostMonitor {
     private static long lastProcessCpuTime  = 0;
 

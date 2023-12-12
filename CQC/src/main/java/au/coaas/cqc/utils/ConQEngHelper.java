@@ -22,6 +22,9 @@ import au.coaas.cqc.utils.enums.HttpRequests;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
 
+/**
+ * @author shakthi
+ */
 public class ConQEngHelper {
     private static Logger log = Logger.getLogger(ConQEngHelper.class.getName());
 

@@ -52,6 +52,9 @@ import java.util.stream.Collectors;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * @author shakthi
+ */
 public class SituationManager {
     private static final boolean cacheEnabled = true;
     // This is a quick hack for demo. This should rather be the time until the primary entity data can be retrieved (in seconds).

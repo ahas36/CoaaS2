@@ -18,6 +18,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutionException;
 
+/**
+ * @author shakthi
+ */
 public class ConQEngHelper {
     private static final String baseURL = "https://omega-branch-291602.ts.r.appspot.com/RRprocessor/";
     private static final String evalbaseURL = "https://omega-branch-291602.ts.r.appspot.com/QoC_CoC_Evaluator/";

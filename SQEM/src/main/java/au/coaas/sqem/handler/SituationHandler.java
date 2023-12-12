@@ -25,7 +25,9 @@ import com.google.protobuf.util.JsonFormat;
 
 import java.util.logging.Logger;
 
-
+/**
+ * @author ali & shakthi
+ */
 public class SituationHandler {
     private static final Logger log = Logger.getLogger(SituationHandler.class.getName());
 

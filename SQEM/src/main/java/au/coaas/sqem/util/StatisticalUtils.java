@@ -3,6 +3,9 @@ package au.coaas.sqem.util;
 import java.util.logging.Logger;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 
+/**
+ * @author shakthi
+ */
 // Class that defines the statistical and machine leaning routines
 public class StatisticalUtils {
     private static Logger log = Logger.getLogger(StatisticalUtils.class.getName());

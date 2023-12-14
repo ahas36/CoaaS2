@@ -40,6 +40,7 @@ public class CollectionDiscovery {
             case "TouristDestination":
                 return "Place";
             case "Bike":
+            case "Bicycle":
             case "Motorcycle":
             case "MotorizedBicycle":
                 return "Bike";

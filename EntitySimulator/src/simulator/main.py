@@ -2,6 +2,7 @@ import sys, os
 
 from resources.carContext import CarContext
 from resources.placeContext import PlaceContext
+from resources.phoneContext import PhoneContext
 from resources.bicycleContext import BicycleContext
 from resources.weatherContext import WeatherContext
 from resources.vehicleContext import VehicleContext
@@ -22,6 +23,7 @@ api.add_resource(WeatherContext, '/weather')
 api.add_resource(VehicleContext, '/vehicles')
 api.add_resource(CarParkContext, '/carparks')
 api.add_resource(BicycleContext, '/bicycles')
+api.add_resource(PhoneContext, '/phones')
 # api.add_resource(SimCarParkContext, '/sim-carpark')
 
 if __name__ == '__main__':

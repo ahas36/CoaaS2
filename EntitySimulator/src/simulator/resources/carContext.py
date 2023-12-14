@@ -26,7 +26,7 @@ db = pymssql.connect(default_config['SQLServer'], 'sa', default_config['SQLPassw
 
 class CarContext(Resource):   
     handler = CarHandler()
-    handler.setProperties(db)
+    handler.setProperties(db, int(cars_config['Set']))
 
     # GET Endpoint 
     def get(self):

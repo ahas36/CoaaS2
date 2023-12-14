@@ -1,6 +1,6 @@
 import sys, os
 
-from handlers.bicyclehandler import BicycleHandler
+from handlers.phonehandler import PhoneHandler
 sys.path.append(os.path.abspath(os.path.join('.')))
 
 import time
@@ -19,29 +19,25 @@ start_time = datetime.now()
 config = configparser.ConfigParser()
 config.read(os.getcwd()+'/config.ini')
 default_config = config['DEFAULT']
-bicycle_config = config['BICYCLES']
+phone_config = config['PHONES']
 
 # Creating a DB client
 db = pymssql.connect(default_config['SQLServer'], 'sa', default_config['SQLPassword'], default_config['SQLDBName'])
 
-class BicycleContext(Resource):
+class PhoneContext(Resource):
     
-    handler = BicycleHandler()
-    handler.setProperties(db, int(bicycle_config['Set']))
+    handler = PhoneHandler()
+    handler.setProperties(db)
 
     # GET Endpoint 
     def get(self):
         try:  
             args = request.args
             if(len(args)>0):
-                data = {}
-                # Retriving the current data from the bicycle
-                if('vin' in args):
-                    data = self.handler.getBicycle(args['vin'])
-                elif('speed' in args):
-                    data = self.handler.getBicycles(args['speed'])
+                # Retriving the current data from the phone
+                data = self.handler.getPerson(args['id'])
                 # Simulating variation of response latencies
-                time.sleep(random.uniform(float(bicycle_config['MinLatency']), float(bicycle_config['MaxLatency'])))
+                time.sleep(random.uniform(float(phone_config['MinLatency']), float(phone_config['MaxLatency'])))
                 # Return data and 200 OK code
                 return parse_response(data[0]), data[1]
             else:

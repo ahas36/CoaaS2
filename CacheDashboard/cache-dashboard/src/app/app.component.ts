@@ -1,5 +1,7 @@
 import { Component } from '@angular/core';
 
+// @author Shakthi
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',

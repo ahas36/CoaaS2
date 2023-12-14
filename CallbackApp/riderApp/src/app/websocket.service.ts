@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
 
+// @author Shakthi
+
 @Injectable({
   providedIn: 'root'
 })
+
 export class WebsocketService {
   private socket!: WebSocket;
   messageReceived: Subject<string> = new Subject<string>();

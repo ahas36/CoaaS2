@@ -12,6 +12,7 @@ import au.coaas.cqc.utils.ConQEngHelper;
 import au.coaas.cqc.utils.ReturnType;
 import au.coaas.cqc.utils.enums.CacheLevels;
 
+import au.coaas.cqc.utils.exceptions.InvalidOperandsException;
 import au.coaas.cre.proto.*;
 
 import au.coaas.cqc.utils.Utilities;
@@ -40,6 +41,7 @@ import org.json.JSONObject;
 import org.json.JSONException;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.function.Predicate;
@@ -251,7 +253,7 @@ public class PullBasedExecutor {
     // This method executes the query plan for pull based queries
     public static CdqlResponse executePullBaseQuery(CDQLQuery query, String authToken, int page, int limit,
                                                     String queryId, String criticality, double complexity,
-                                                    List<ContextEntity> subEntities, String subId, Map<String, JSONObject> resultDict) throws Exception{
+                                                    List<ContextEntity> subEntities, String subId, Map<String, JSONObject> resultDict) throws Exception, InvalidOperandsException{
         // Initialize values
         Map<String, JSONObject> ce = resultDict == null ? new HashMap<>() : resultDict;
         JSONObject consumerQoS = null;
@@ -441,7 +443,15 @@ public class PullBasedExecutor {
         query.getSelect().getSelectFunctionsList().parallelStream().forEach((fCall) -> {
             if (fCall.getFunctionName().equals("avg") || fCall.getFunctionName().equals("cluster")) {
                 result.put(fCall.getFunctionName(), executeFunctionCall(fCall, ce, query, complexity, finalConsumerId));
-            } else {
+            }
+            else if (fCall.getFunctionName().equals("distinct")) {
+                try {
+                    result.put(fCall.getFunctionName(), executeDistinct(fCall, ce));
+                } catch (Exception ex) {
+                    log.severe(ex.getMessage());
+                }
+            }
+            else {
                 // All other context functions that are not either "avg" or "cluster".
                 Object execute = executeFunctionCall(fCall, ce, query, complexity, finalConsumerId);
                 result.put(fCall.getFunctionName(), execute);
@@ -1081,6 +1091,40 @@ public class PullBasedExecutor {
 //                return execute;
 //            }
         }
+    }
+
+    public static JSONArray executeDistinct(FunctionCall fCall, Map<String, JSONObject> ce) throws InvalidOperandsException {
+        // This function return the distinct entity instance by given attributes.
+        // Distinct accepts only one context entity type.
+        List<String> entities = fCall.getArgumentsList().stream().map(arg -> arg.getContextAttribute().getEntityName())
+                .distinct().collect(Collectors.toList());
+        if(entities.size() > 1) throw new InvalidOperandsException();
+        List<String> attrList = fCall.getArgumentsList().stream().map(arg -> arg.getContextAttribute().getAttributeName())
+                .collect(Collectors.toList());
+
+        int size = 0;
+        JSONArray results = new JSONArray();
+        Set<JSONObject> tempResult = new HashSet<>();
+
+        if(ce.get(entities.get(0)).has("results")) {
+            for(Object ent : ce.get(entities.get(0)).getJSONArray("results")) {
+                JSONObject tempObj = new JSONObject();
+                for(String attrName : attrList) {
+                    tempObj.put(attrName, ((JSONObject) ent).get(attrName));
+                }
+                tempResult.add(tempObj);
+                if(tempResult.size() != size){
+                    results.put(ent);
+                    size = tempResult.size();
+                }
+            }
+
+            return results;
+        }
+
+        JSONArray tempObj = new JSONArray();
+        tempObj.put(ce.get(entities.get(0)));
+        return tempObj;
     }
 
     // Executes the aggregation on the values retrieved for the entity

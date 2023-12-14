@@ -106,10 +106,15 @@ class CarHandler(metaclass=SingletonMeta):
         cursor = self.__db.cursor(as_dict=True)
         try:
             response = []
-            cursor.execute('SELECT DISTINCT VIN FROM Car')
+            attr_name = 'VIN'
+            if(self.__set > 1):
+                cursor.execute('SELECT DISTINCT VIN FROM Car')
+            else:
+                cursor.execute('SELECT DISTINCT vin FROM CarSensor')
+                attr_name = 'vin'
             rows = cursor.fetchall()
             for result in rows:
-                car, status = self.getCar(result['VIN'])
+                car, status = self.getCar(result[attr_name])
                 if status == 200:
                     response.append(car)
             return response , 200

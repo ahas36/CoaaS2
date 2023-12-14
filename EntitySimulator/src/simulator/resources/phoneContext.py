@@ -42,7 +42,7 @@ class PhoneContext(Resource):
                 return parse_response(data[0]), data[1]
             else:
                 # Details of all the bicycles on the roads.
-                data = self.handler.getAllBicycles()
+                data = self.handler.getPeople()
                 # Return data and 200 OK code.
                 return data, 200
 

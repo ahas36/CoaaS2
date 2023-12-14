@@ -109,6 +109,14 @@ public class ContextServiceHandler {
                     Filters.all("info.params.term.label",serviceRequest.getParamsList())
                     )).forEach(printBlock);
 
+            if(finalResultJsonArr.isEmpty()){
+                // Finding any get all endpoints.
+                collection.find(Filters.and(
+                        Filters.eq("info.ontClass",vocabURI),
+                        Filters.eq("info.params","null")
+                )).forEach(printBlock);
+            }
+
             return SQEMResponse.newBuilder().setStatus("200").setBody(finalResultJsonArr.toString()).build();
 
         } catch (Exception e) {

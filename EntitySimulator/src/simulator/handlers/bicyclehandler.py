@@ -116,12 +116,18 @@ class BicycleHandler(metaclass=SingletonMeta):
         cursor = self.__db.cursor(as_dict=True)
         try:
             response = []
-            cursor.execute('SELECT DISTINCT VIN FROM Bicycle')
+            attr_name = 'VIN'
+            if(self.__set > 1):
+                cursor.execute('SELECT DISTINCT VIN FROM Bicycle')
+            else:
+                cursor.execute('SELECT DISTINCT bike_id FROM BicycleSensor')
+                attr_name = 'bike_id'
             rows = cursor.fetchall()
             for result in rows:
-                car, status = self.getBicycle(result['VIN'])
+                car, status = self.getBicycle(result[attr_name])
                 if status == 200:
                     response.append(car)
+
             return response , 200
         except Exception as e:
             print('No cars found.')

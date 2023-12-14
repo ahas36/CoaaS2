@@ -48,3 +48,18 @@ class PhoneHandler(metaclass=SingletonMeta):
             print('No peron found by the given ID.')
             return { 'error': 'No person by ID=' + id }, 500
     
+    def getPeople(self):
+        cursor = self.__db.cursor(as_dict=True)
+        try:
+            response = []
+            cursor.execute('SELECT DISTINCT person_id FROM phoneSensor')
+            rows = cursor.fetchall()
+            for result in rows:
+                person, status = self.getPerson(result['person_id'])
+                if status == 200:
+                    response.append(person)
+            return response , 200
+        except Exception as e:
+            print('No people found.')
+            return { 'error': e }, 500
+    

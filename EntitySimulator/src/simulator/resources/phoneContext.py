@@ -42,9 +42,9 @@ class PhoneContext(Resource):
                 return parse_response(data[0]), data[1]
             else:
                 # Details of all the bicycles on the roads.
-                data = self.handler.getPeople()
+                data, status = self.handler.getPeople()
                 # Return data and 200 OK code.
-                return data, 200
+                return data, status
 
         except(Exception):
             print('An error occured : ' + traceback.format_exc())

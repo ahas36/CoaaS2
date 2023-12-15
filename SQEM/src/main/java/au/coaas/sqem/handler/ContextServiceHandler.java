@@ -113,7 +113,7 @@ public class ContextServiceHandler {
                 // Finding any get all endpoints.
                 collection.find(Filters.and(
                         Filters.eq("info.ontClass",vocabURI),
-                        Filters.eq("info.params","null")
+                        Filters.eq("info.params",null)
                 )).forEach(printBlock);
             }
 

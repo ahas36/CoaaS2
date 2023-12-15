@@ -46,9 +46,9 @@ class BicycleContext(Resource):
                 return parse_response(data[0]), data[1]
             else:
                 # Details of all the bicycles on the roads.
-                data = self.handler.getAllBicycles()
+                data, status = self.handler.getAllBicycles()
                 # Return data and 200 OK code.
-                return data, 200
+                return data, status
 
         except(Exception):
             print('An error occured : ' + traceback.format_exc())

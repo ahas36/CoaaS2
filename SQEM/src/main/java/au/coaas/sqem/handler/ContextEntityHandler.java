@@ -218,6 +218,11 @@ public class ContextEntityHandler {
                 value = ((JSONObject) value).get(k);
             }
         }
+
+        if(isNumeric(value.toString())) {
+            if (StringUtils.isInteger(value.toString())) return Integer.valueOf(value.toString());
+            else return Double.valueOf(value.toString());
+        }
         return value;
     }
 

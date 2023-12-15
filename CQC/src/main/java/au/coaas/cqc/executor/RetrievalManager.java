@@ -284,11 +284,12 @@ public class RetrievalManager {
         CSIServiceGrpc.CSIServiceBlockingStub csiStub
                 = CSIServiceGrpc.newBlockingStub(CSIChannel.getInstance().getChannel());
 
-        CSIResponse fetch = csiStub.updateFetchJob(ContextService.newBuilder()
-                        .setJson(contextService).setMongoID(csID)
-                        .setTimes(times).putAllParams(params).setReportAccess(isFullMiss?"True":"False")
-                        .setSubEntity(subEnt)
-                        .build());
+        ContextService.Builder cs_build = ContextService.newBuilder()
+                .setJson(contextService).setMongoID(csID)
+                .setTimes(times).putAllParams(params).setReportAccess(isFullMiss ? "True" : "False");
+        if(subEnt != null) cs_build.setSubEntity(subEnt);
+
+        CSIResponse fetch = csiStub.updateFetchJob(cs_build.build());
 
         if(fetch.getStatus().equals("200"))
             return new AbstractMap.SimpleEntry("200",fetch.getHashkeysList());

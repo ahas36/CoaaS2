@@ -41,9 +41,9 @@ class CarContext(Resource):
                 return parse_response(data[0]), data[1]
             else:
                 # Details of all the cars in the roads.
-                data = self.handler.getCars()
+                data, status = self.handler.getCars()
                 # Return data and 200 OK code.
-                return data, 200
+                return data, status
         except(Exception):
             print('An error occured : ' + traceback.format_exc())
 

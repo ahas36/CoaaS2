@@ -112,15 +112,16 @@ public class ContextConsumerHandler {
     public static SQEMResponse retrieveSLA(AuthToken authToken){
         try{
             String token;
-            if(!authToken.getUsername().equals(null)) {
+            if(authToken.getUsername().equals(null) || authToken.getUsername().isEmpty())
+                token = authToken.getToken();
+            else {
                 // SLA retrieval using subscription Id
                 SQEMResponse res = SubscriptionHandler.getSubscription(authToken.getUsername());
                 if(!res.getStatus().equals("200"))
                     return SQEMResponse.newBuilder().setStatus("404")
-                        .setBody("Couldn't find an consumer by the subscription Id.").build();
+                            .setBody("Couldn't find an consumer by the subscription Id.").build();
                 token = res.getMeta();
             }
-            else token = authToken.getToken();
             // SLA retrieval using auth token.
             String json = getConsumerSLA(token, false);
             if(json != null){

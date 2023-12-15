@@ -427,8 +427,8 @@ public class PullBasedExecutor {
         JSONObject result = new JSONObject();
 
         // Filter out the neccesary attributes from the retrieved entity data
-        query.getSelect().getSelectAttrsMap().entrySet().parallelStream().forEach((entry) -> {
-            String entity = entry.getKey();
+        query.getSelect().getSelectAttrsMap().entrySet().parallelStream().forEach((attr) -> {
+            String entity = attr.getKey();
             result.put(entity, ce.get(entity));
         });
 
@@ -1942,7 +1942,13 @@ public class PullBasedExecutor {
         tempContextEntityBuilder.setEntityID(targetEntity.getEntityID());
         tempContextEntityBuilder.setType(targetEntity.getType());
         ContextEntity tempContextEntity = tempContextEntityBuilder.build();
+
         List<ContextAttribute> returnAttributes = new ArrayList<>();
+        for (ListOfContextAttribute vals : query.getSelect().getSelectAttrsMap().values()) {
+            for(ContextAttribute ca : vals.getValueList()) {
+                returnAttributes.add(ca);
+            }
+        }
 
         //TODO: fix return attribute section
         ContextRequest.Builder cr = ContextRequest.newBuilder().setEt(targetEntity.getType())

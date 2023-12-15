@@ -37,36 +37,38 @@ public class FetchManager {
         JSONObject sla = cs.getJSONObject("sla");
 
         String serviceUrl = info.getString("serviceURL");
-        JSONArray definedParamSet = info.getJSONArray("params");
-        Map<String, String> setParams = contextService.getParamsMap();
+        if(info.get("params").getClass() == JSONArray.class){
+            JSONArray definedParamSet = info.getJSONArray("params");
+            Map<String, String> setParams = contextService.getParamsMap();
 
-        if(serviceUrl.contains("{0}")){
-            for(Object pr : definedParamSet){
-                String key = ((JSONObject) pr).getString("key");
-                String defaultVal = ((JSONObject) pr).get("value").toString();
-                String placeholder = ((JSONObject) pr).getString("name");
+            if(serviceUrl.contains("{0}")){
+                for(Object pr : definedParamSet){
+                    String key = ((JSONObject) pr).getString("key");
+                    String defaultVal = ((JSONObject) pr).get("value").toString();
+                    String placeholder = ((JSONObject) pr).getString("name");
 
-                if(setParams.containsKey(key)){
-                    String paramVal = setParams.get(key);
-                    if(paramVal.startsWith("{")){
-                        JSONObject value = new JSONObject(paramVal);
-                        Object readVal = value.get("value");
-                        String setVal = readVal instanceof String ? (String)readVal : String.valueOf(readVal);
-                        serviceUrl = serviceUrl.replace(placeholder, setVal);
+                    if(setParams.containsKey(key)){
+                        String paramVal = setParams.get(key);
+                        if(paramVal.startsWith("{")){
+                            JSONObject value = new JSONObject(paramVal);
+                            Object readVal = value.get("value");
+                            String setVal = readVal instanceof String ? (String)readVal : String.valueOf(readVal);
+                            serviceUrl = serviceUrl.replace(placeholder, setVal);
+                        }
+                        else
+                            serviceUrl = serviceUrl.replace(placeholder, paramVal.replaceAll("\"",""));
                     }
                     else
-                        serviceUrl = serviceUrl.replace(placeholder, paramVal.replaceAll("\"",""));
+                        serviceUrl = serviceUrl.replace(placeholder, defaultVal.replaceAll("\"",""));
                 }
-                else
-                    serviceUrl = serviceUrl.replace(placeholder, defaultVal.replaceAll("\"",""));
             }
-        }
-        else {
-            for (Map.Entry<String, String> entry : setParams.entrySet()) {
-                if(serviceUrl.endsWith("{}"))
-                    serviceUrl = serviceUrl.replaceAll("\\{\\}", entry.getValue().replaceAll("\"",""));
-                else
-                    serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
+            else {
+                for (Map.Entry<String, String> entry : setParams.entrySet()) {
+                    if(serviceUrl.endsWith("{}"))
+                        serviceUrl = serviceUrl.replaceAll("\\{\\}", entry.getValue().replaceAll("\"",""));
+                    else
+                        serviceUrl = serviceUrl.replaceAll("\\{" + entry.getKey() + "\\}", entry.getValue().replaceAll("\"",""));
+                }
             }
         }
 

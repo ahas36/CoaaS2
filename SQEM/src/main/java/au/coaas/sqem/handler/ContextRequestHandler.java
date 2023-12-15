@@ -28,6 +28,8 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static com.mongodb.client.model.Projections.*;
+
 /**
  * @author ali & shakthi
  */
@@ -566,7 +568,32 @@ public class ContextRequestHandler {
             // The BSON document is used as the condition to retrieve from the mongo db. MongoDB collection is written, updated by the context streams.
             // So, running the context request (sub-query) is very straight forward. It's basically a query run on mongo db.
             // This is exactly the place where the first lookup of the cache memory or later the retrieval from the cache if item exist in lookup occur.
-            entityCollection.find(finalQuery).forEach(printBlock);
+            Document query = Document.parse(monogQueryString);
+
+            // Return attributes
+            if(contextRequest.getReturnAttributesCount() > 0) {
+                boolean getAllAttributes = false;
+                Document selectAttrs = new Document();
+                for(ContextAttribute retAttr : contextRequest.getReturnAttributesList()) {
+                    if(retAttr.getAttributeName().equals("*")) {
+                        getAllAttributes = true;
+                        break;
+                    }
+                    selectAttrs.put(retAttr.getAttributeName(),true);
+                }
+                if(getAllAttributes){
+                    entityCollection.find(query).projection(fields(exclude("_id", "providers"))).forEach(printBlock);
+                } else {
+                    selectAttrs.put("hashkey", true);
+                    selectAttrs.put("updatedTime", true);
+                    selectAttrs.put("zeroTime", true);
+                    selectAttrs.put("age", true);
+
+                    entityCollection.find(query).projection(fields(selectAttrs, excludeId())).forEach(printBlock);
+                }
+            }
+            else
+                entityCollection.find(query).projection(fields(exclude("_id", "providers"))).forEach(printBlock);
         }
 
         // Generating a SQEM message as response

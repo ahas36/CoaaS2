@@ -73,7 +73,7 @@ public class FetchManager {
         }
 
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        builder.connectTimeout(10, TimeUnit.SECONDS);
+        builder.connectTimeout(30, TimeUnit.SECONDS);
         builder.writeTimeout(10, TimeUnit.SECONDS);
         builder.readTimeout(10, TimeUnit.SECONDS);
         OkHttpClient client = builder.build();

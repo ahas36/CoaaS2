@@ -441,7 +441,9 @@ public class PullBasedExecutor {
 
         String finalConsumerId = consumerId;
         query.getSelect().getSelectFunctionsList().parallelStream().forEach((fCall) -> {
-            if (fCall.getFunctionName().equals("avg") || fCall.getFunctionName().equals("cluster")) {
+            if (fCall.getFunctionName().equals("avg") || fCall.getFunctionName().equals("min") ||
+                    fCall.getFunctionName().equals("max") || fCall.getFunctionName().equals("count") ||
+                    fCall.getFunctionName().equals("cluster")) {
                 result.put(fCall.getFunctionName(), executeFunctionCall(fCall, ce, query, complexity, finalConsumerId));
             }
             else if (fCall.getFunctionName().equals("distinct")) {
@@ -452,7 +454,7 @@ public class PullBasedExecutor {
                 }
             }
             else {
-                // All other context functions that are not either "avg" or "cluster".
+                // All other context functions that are not either "avg", "distinct", or "cluster".
                 Object execute = executeFunctionCall(fCall, ce, query, complexity, finalConsumerId);
                 result.put(fCall.getFunctionName(), execute);
 //              if (execute.trim().startsWith("[")) {
@@ -1033,6 +1035,7 @@ public class PullBasedExecutor {
         FunctionCall.Builder fCallTemp = FunctionCall.newBuilder().setFunctionName(fCall.getFunctionName());
         fCallTemp.addAllSubItems(fCall.getSubItemsList());
 
+        // Creating the function request
         for (Operand argument : fCall.getArgumentsList()) {
             if (null != argument.getType()) {
                 switch (argument.getType()) {
@@ -1044,11 +1047,28 @@ public class PullBasedExecutor {
                         for (int i = 0; i < split.length - 1; i++) {
                             item = item.getJSONObject(split[i]);
                         }
-                        String value = String.valueOf(item.get(split[split.length - 1]));
-                        fCallTemp.addArguments(Operand.newBuilder()
-                                .setContextAttribute(contextAttribute) // Only to signify the origin of the value.
-                                .setType(OperandType.CONTEXT_VALUE_STRING)
-                                .setStringValue(value));
+
+                        if(item.has("results")) {
+                            // Multiple entities requiring aggregation.
+                            List<Double> value = new ArrayList<>();
+                            JSONArray results = item.getJSONArray("results");
+                            for (int i = 0; i < results.length(); ++i) {
+                                JSONObject obj = results.getJSONObject(i);
+                                value.add(obj.getDouble(split[split.length - 1]));
+                            }
+                            fCallTemp.addArguments(Operand.newBuilder()
+                                    .setContextAttribute(contextAttribute) // Only to signify the origin of the value.
+                                    .setType(OperandType.CONTEXT_VALUE_STRING)
+                                    .setStringValue(value.toString()));
+                        }
+                        else {
+                            // Only a single entity in the result.
+                            String value = String.valueOf(item.get(split[split.length - 1]));
+                            fCallTemp.addArguments(Operand.newBuilder()
+                                    .setContextAttribute(contextAttribute) // Only to signify the origin of the value.
+                                    .setType(OperandType.CONTEXT_VALUE_STRING)
+                                    .setStringValue(value));
+                        }
                         break;
                     case CONTEXT_ENTITY:
                         String entityID = argument.getContextEntity().getEntityID();
@@ -1074,7 +1094,10 @@ public class PullBasedExecutor {
                 }
             }
         }
-        if (fCall.getFunctionName().equals("avg")) {
+
+        // Executing the function (aggregate and situation)
+        if (fCall.getFunctionName().equals("avg") || fCall.getFunctionName().equals("max") ||
+                fCall.getFunctionName().equals("min") || fCall.getFunctionName().equals("count")) {
             return executeAggregationFunction(fCallTemp.build());
         } else if (fCall.getFunctionName().equals("cluster")) {
             return groupByLocation(fCallTemp.build());
@@ -1135,6 +1158,7 @@ public class PullBasedExecutor {
         Map<String, Integer> numberOfInstances = new HashMap<>();
 
         for (Operand argument : arguments) {
+            // Here is the assumption is all operands are either all JSON or numeric.
             if (argument.getType().equals(OperandType.CONTEXT_VALUE_JSON)) {
                 JSONObject entity = new JSONObject(argument.getStringValue());
                 result.put("entityType", entity.opt("entityType"));
@@ -1145,6 +1169,39 @@ public class PullBasedExecutor {
                         result = sum(result, item, numberOfInstances);
                     }
                     result = computeAverage(result, numberOfInstances);
+                }
+            }
+            else if (argument.getType().equals(OperandType.CONTEXT_VALUE_STRING)) {
+                // Which means this is either an avg, count, min, or max function.
+                Stream<String> items = Arrays.stream(argument.getStringValue()
+                        .substring(1, argument.getStringValue().length() - 1)
+                        .split(","));
+                switch(fCall.getFunctionName()) {
+                    case "avg": {
+                        OptionalDouble avg = items
+                                .mapToDouble(num -> Double.parseDouble(num))
+                                .average();
+                        result.put("value", avg.getAsDouble());
+                        break;
+                    }
+                    case "min": {
+                        OptionalDouble minimum = items
+                                .mapToDouble(num -> Double.parseDouble(num))
+                                .min();
+                        result.put("value", minimum.getAsDouble());
+                        break;
+                    }
+                    case "max": {
+                        OptionalDouble maximum = items
+                                .mapToDouble(num -> Double.parseDouble(num))
+                                .max();
+                        result.put("value", maximum.getAsDouble());
+                        break;
+                    }
+                    case "count": {
+                        result.put("value", items.count());
+                        break;
+                    }
                 }
             }
         }

@@ -68,7 +68,7 @@ class CarHandler(metaclass=SingletonMeta):
                 }
                 return response , 200
             else:
-                cursor.execute('SELECT * FROM CarSensor WHERE vin=%d', vin)
+                cursor.execute('SELECT * FROM CarSensorNew WHERE vin=%s', vin)
                 row = cursor.fetchall()
                 curr_time = datetime.datetime.now()
                 row_count = int(cursor.rowcount)
@@ -77,23 +77,25 @@ class CarHandler(metaclass=SingletonMeta):
                 car = row[0]
 
                 response = { 
-                    'vin': vin,
-                    'mobile': True,
-                    'speed': car['speed'],
-                    'sensorId': car['sensor_id'],
-                    'acceleration': car['accelaration'],
-                    'personInside': True if car['person_inside'] == 1 else False,
-                    'location': {
+                    'vin': vin, 
+                    'mobile': True if car['speed'] > 0 else False, 
+                    'speed': car['speed'], 
+                    'sensorId': car['sensor_id'], 
+                    'acceleration': car['accelaration'], 
+                    'personInside': True if car['person_inside'] == 1 else False, 
+                    'location': { 
                         'longitude': car['latitude'],
                         'latitude': car['longitude']
                     },
-                    'engineStatus': True if car['engine_start'] == 1 else False,
-                    'doorsLocked': True if car['doors_locked'] == 1 else False,
-                    'zoneNumber': car['zone_number'],
-                    'kerbsideID': car['kerbside_id'],
-                    "age": {
-                        "value": curr_time.second,
-                        "unitText": "s"
+                    'engineStatus': True if car['engine_start'] == 1 else False, 
+                    'doorsLocked': True if car['doors_locked'] == 1 else False, 
+                    'zoneNumber': car['zone_number'], 
+                    'kerbsideID': car['kerbside_id'], 
+                    'clusterID': car['cluster_id'],
+                    'proiximityToBicycle': car['proximity_to_bicycle'],
+                    'age': {
+                        'value': curr_time.second,
+                        'unitText': "s"
                     }
                 }
                 return response , 200
@@ -101,7 +103,7 @@ class CarHandler(metaclass=SingletonMeta):
             traceback.print_exc() 
             print('No car found by the given VIN.')
             return { 'error': 'No car by VIN=' + vin }, 500
-        
+
     def getCars(self):
         cursor = self.__db.cursor(as_dict=True)
         try:
@@ -110,14 +112,16 @@ class CarHandler(metaclass=SingletonMeta):
             if(self.__set > 1):
                 cursor.execute('SELECT DISTINCT VIN FROM Car')
             else:
-                cursor.execute('SELECT DISTINCT vin FROM CarSensor')
                 attr_name = 'vin'
+                cursor.execute('SELECT DISTINCT vin FROM CarSensorNew')
             rows = cursor.fetchall()
+
             for result in rows:
                 car, status = self.getCar(result[attr_name])
                 if status == 200:
                     response.append(car)
-            return response , 200
+            
+            return response, 200
         except Exception as e:
             print('No cars found.')
             return { 'error': e }, 500

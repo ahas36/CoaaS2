@@ -70,7 +70,7 @@ class BicycleHandler(metaclass=SingletonMeta):
                 }
                 return response , 200
             else:
-                cursor.execute('SELECT * FROM BicycleSensor WHERE bike_id=%s', vin)
+                cursor.execute('SELECT * FROM BicycleSensorNew WHERE bike_id=%s', vin)
                 rows = cursor.fetchall()
                 row_count = int(cursor.rowcount)
                 curr_time = datetime.datetime.now()
@@ -84,10 +84,11 @@ class BicycleHandler(metaclass=SingletonMeta):
                 index = int(delta_mins) % row_count
 
                 bike = rows[index]
-                
+                isMobile = bike['speed'] > 0
+
                 response = { 
                     'vin': bike['bike_id'],
-                    'mobile': True,
+                    'mobile': isMobile,
                     'speed': bike['speed'],
                     'location': {
                         'longitude': bike['longitude'],
@@ -98,16 +99,23 @@ class BicycleHandler(metaclass=SingletonMeta):
                     'tyreWear': bike['tyre_wear'],
                     'roadCondition': bike['road_condition'].lower(),
                     'surfaceCondition': bike['surface_condition'].lower(),
-                    "age": {
-                        "value": curr_time.second % 4,
-                        "unitText": "s"
+                    'clusterID': bike['cluster_id'],
+                    'proximityToVehicle': bike['proximity_to_vehicle'],
+                    'weatherCondition': bike['weather_condition'],
+                    'proximityToObstacle': bike['proximity_to_obstacle'],
+                    'collisionState': True if bike['collision_state'] == 0 else False,
+                    'collisionType': bike['collission_type'].lower(),
+                    'personId': bike['person_id'],
+                    'age': {
+                        'value': curr_time.second % 4,
+                        'unitText': "s"
                     }
                 }
                 return response , 200
         except(Exception):
             traceback.print_exc() 
-            print('No bicylce found by the given VIN.')
-            return { 'error': 'No bicycle by VIN=' + vin }, 500
+            print('No bicylce found by the given Bike ID.')
+            return { 'error': 'No bicycle by Bike ID=' + vin }, 500
     
     def getBicycles(self, speed):
         return {} , 200
@@ -120,9 +128,10 @@ class BicycleHandler(metaclass=SingletonMeta):
             if(self.__set > 1):
                 cursor.execute('SELECT DISTINCT VIN FROM Bicycle')
             else:
-                cursor.execute('SELECT DISTINCT bike_id FROM BicycleSensor')
+                cursor.execute('SELECT DISTINCT bike_id FROM BicycleSensorNew')
                 attr_name = 'bike_id'
             rows = cursor.fetchall()
+            
             for result in rows:
                 car, status = self.getBicycle(result[attr_name])
                 if status == 200:
@@ -130,7 +139,7 @@ class BicycleHandler(metaclass=SingletonMeta):
 
             return response , 200
         except Exception as e:
-            print('No cars found.')
+            print('No bikes found.')
             return { 'error': e }, 500
 
     def get_bearing(self, lat1, lat2, long1, long2):

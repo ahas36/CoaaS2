@@ -18,13 +18,13 @@ class PhoneHandler(metaclass=SingletonMeta):
         cursor = self.__db.cursor(as_dict=True)
         try:
             index = 0
-            cursor.execute('SELECT * FROM phoneSensor WHERE person_id=%d', id)
+            cursor.execute('SELECT * FROM PhoneSensorNew WHERE person_id=%s', id)
             rows = cursor.fetchall()
             row_count = int(cursor.rowcount)
             curr_time = datetime.datetime.now()
 
             if(row_count == 0):
-                    raise Exception('Could not find the given bike.')
+                raise Exception('Could not find the given bike.')
             
             time_diff = curr_time - self.start_time
             delta_mins = time_diff.total_seconds()/4
@@ -34,13 +34,14 @@ class PhoneHandler(metaclass=SingletonMeta):
             
             response = { 
                 'id': row['person_id'],
-                'sensorId': row['sensor_id'],
                 'physicalAge': row['age'],
                 'respiratoryRate': row['respiratory_rate'],
                 'heartRate': row['heart_rate'],
-                "age": {
-                    "value": curr_time.second % 4,
-                    "unitText": "s"
+                'collisionState': row['collision_state'],
+                'injuryLevel': row['injury_level'],
+                'age': {
+                    'value': curr_time.second % 4,
+                    'unitText': "s"
                 }
             }
             return response , 200
@@ -52,7 +53,7 @@ class PhoneHandler(metaclass=SingletonMeta):
         cursor = self.__db.cursor(as_dict=True)
         try:
             response = []
-            cursor.execute('SELECT DISTINCT person_id FROM phoneSensor')
+            cursor.execute('SELECT DISTINCT person_id FROM PhoneSensorNew')
             rows = cursor.fetchall()
             for result in rows:
                 person, status = self.getPerson(result['person_id'])
